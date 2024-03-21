@@ -7,15 +7,19 @@ const PetController = require("../controllers/PetController");
 router.get("/", PetController.getAllPets);
 
 // GET a single pet by id
-router.get("/:id", PetController.getPetById);
+router.get("/:petId", PetController.getPetById);
 
 // POST a new pet and run the matching algorithm
 router.post("/", PetController.createPet);
 
 // PUT update a pet
-router.put("/:id", PetController.updatePet);
+router.put("/:petId", PetController.updatePet);
+
+router.get("/pets/latest", PetController.getLatestPets);
+
+router.get("/pets/favorites/:userId", PetController.getUserFavorites);
 
 // DELETE a pet
-router.delete("/:id", PetController.deletePet);
+router.delete("/:petId", PetController.deletePet);
 
 module.exports = router;

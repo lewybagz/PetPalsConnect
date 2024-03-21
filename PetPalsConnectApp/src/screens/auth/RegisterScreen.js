@@ -107,7 +107,7 @@ function RegisterScreen({ navigation }) {
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
-            autoCapitalize="none"
+            autoCapitalize="sentences"
             textContentType="emailAddress"
           />
         </View>
@@ -119,7 +119,7 @@ function RegisterScreen({ navigation }) {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            autoCapitalize="none"
+            autoCapitalize="sentences"
             textContentType="password"
             placeholderTextColor="#a1a1a1"
           />
@@ -132,7 +132,7 @@ function RegisterScreen({ navigation }) {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
-            autoCapitalize="none"
+            autoCapitalize="sentences"
             textContentType="password"
             placeholderTextColor="#a1a1a1"
           />

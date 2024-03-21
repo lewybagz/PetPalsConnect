@@ -806,6 +806,21 @@ const PetMatchController = {
     }
   },
 
+  async getPetMatchesByUser(req, res) {
+    try {
+      const userId = req.params.userId;
+      const petMatches = await PetMatch.find({ RelevantToUser: userId })
+        .populate("Pet1")
+        .populate("Pet2")
+        .populate("RelevantToUser")
+        .populate("Creator");
+
+      res.json(petMatches);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
   async createPetMatch(req, res) {
     const petMatch = new PetMatch({
       MatchScore: req.body.MatchScore,

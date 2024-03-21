@@ -80,7 +80,7 @@ function LoginScreen({ navigation }) {
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
-            autoCapitalize="none"
+            autoCapitalize="sentences"
             textContentType="emailAddress" // iOS only
             placeholderTextColor="gray"
           />
@@ -92,7 +92,7 @@ function LoginScreen({ navigation }) {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            autoCapitalize="none"
+            autoCapitalize="sentences"
             textContentType="password" // iOS only
             placeholderTextColor="gray"
           />

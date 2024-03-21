@@ -11,7 +11,7 @@ router.get("/:id", FriendController.getFriendById, (req, res) => {
 });
 
 // GET friends for a specific pet by petId
-router.get("/pet/:petId", FriendController.getPetFriends);
+router.get("/:petId/pets", FriendController.getPetFriends);
 
 // POST a new Friend relationship
 router.post("/", FriendController.createFriend);

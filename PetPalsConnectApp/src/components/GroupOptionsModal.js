@@ -16,7 +16,7 @@ const GroupOptionsModal = ({ isVisible, onClose }) => {
   const handleMuteNotifications = async () => {
     console.log("Mute Tapped");
     try {
-      const response = await axios.post("/api/groupchats/togglemute", {
+      const response = await axios.post("/api/groupchats/toggle-mute", {
         userId: userId,
         chatId: chatId,
         mute: true, // Toggle based on current mute state
@@ -49,11 +49,10 @@ const GroupOptionsModal = ({ isVisible, onClose }) => {
     console.log("Leave Group Tapped");
     try {
       // API call to remove the user from the group chat
-      const response = await axios.post("/api/groupchats/leave", {
+      await axios.post("/api/groupchats/leave", {
         userId: userId, // The ID of the user leaving the group
         chatId: chatId, // The ID of the chat they are leaving
       });
-      console.log(response.data.message);
 
       // Possibly navigate back to the chat list screen after leaving the group
       navigation.navigate("ChatsListScreen");

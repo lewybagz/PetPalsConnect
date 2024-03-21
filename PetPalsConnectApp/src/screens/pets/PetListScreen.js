@@ -34,7 +34,7 @@ const PetListScreen = () => {
 
     const fetchMatchedPets = async (userId) => {
       try {
-        const matchedResponse = await axios.get(`/api/pet-matches/${userId}`);
+        const matchedResponse = await axios.get(`/api/petmatches/${userId}`);
         setMatchedPets(matchedResponse.data);
       } catch (error) {
         Alert.alert("Error", "Failed to load matched pets");

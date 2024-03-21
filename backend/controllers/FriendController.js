@@ -49,17 +49,27 @@ const FriendController = {
       res.status(400).json({ message: err.message });
     }
   },
+
   async getPetFriends(req, res) {
     try {
       const petId = req.params.petId;
-      const friends = await Friend.find({
+      const friendRelations = await Friend.find({
         $or: [{ User1: petId }, { User2: petId }],
         Status: true, // Ensure they are confirmed friends
       })
         .populate("User1")
         .populate("User2");
 
-      res.json(friends);
+      const petFriends = friendRelations.reduce((pets, relation) => {
+        if (relation.User1._id.toString() === petId) {
+          pets.push(relation.User2); // Add User2 if User1 is the specified pet
+        } else {
+          pets.push(relation.User1); // Add User1 if User2 is the specified pet
+        }
+        return pets;
+      }, []);
+
+      res.json(petFriends);
     } catch (err) {
       res.status(500).json({ message: err.message });
     }

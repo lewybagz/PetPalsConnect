@@ -1,6 +1,7 @@
 const Pet = require("../models/Pet");
 const SubscriptionController = require("./SubscriptionController");
 const PetMatchController = require("./PetMatchController");
+const Favorite = require("../models/Favorite"); // or Pet model, as needed
 
 const PetController = {
   async getAllPets(req, res) {
@@ -39,6 +40,26 @@ const PetController = {
 
       const updatedPet = await pet.save();
       res.json(updatedPet);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  async getLatestPets(req, res) {
+    try {
+      const latestPets = await Pet.find().sort({ createdAt: -1 }).limit(10); // example logic
+      res.json(latestPets);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  async getUserFavorites(req, res) {
+    try {
+      const userId = req.params.userId;
+      const userFavorites = await Favorite.find({ user: userId }) // or relevant logic
+        .populate("pet");
+      res.json(userFavorites);
     } catch (err) {
       res.status(500).json({ message: err.message });
     }

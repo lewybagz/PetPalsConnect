@@ -1,19 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const FriendController = require("../controllers/FriendController");
+const FavoriteController = require("../controllers/FavoriteController"); // Adjust the path as necessary
 
-// GET all Friends
-router.get("/", FriendController.getAllFriends);
+// Route to get all favorites
+router.get("/", FavoriteController.getAllFavorites);
 
-// GET a single Friend by ID
-router.get("/:id", FriendController.getFriendById, (req, res) => {
-  res.json(res.friend);
-});
+// Route to get a specific favorite by ID
+router.get("/:id", FavoriteController.getFavoriteById);
 
-// POST a new Friend
-router.post("/", FriendController.createFriend);
-
-// GET friends of a specific pet
-router.get("/pet-friends/:petId", FriendController.getPetFriends);
+// Route to create a new favorite
+router.post("/", FavoriteController.createFavorite);
 
 module.exports = router;

@@ -3,7 +3,7 @@ const router = express.Router();
 const LocationController = require("../controllers/LocationController");
 
 // GET all Locations
-router.get("/", LocationController.getAllLocations);
+router.get("/playdate-locations", LocationController.getAllLocations); // Fetches all playdate locations
 
 // GET a single Location by ID
 router.get("/:id", LocationController.getLocationById, (req, res) => {

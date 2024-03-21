@@ -98,6 +98,61 @@ const GroupChatController = {
     }
   },
 
+  async getGroupChatPets(req, res) {
+    try {
+      const groupId = req.params.groupId;
+      const groupChat = await GroupChat.findById(groupId).populate({
+        path: "Participants",
+        populate: {
+          path: "pets", // Assuming each participant has a 'pets' field
+        },
+      });
+
+      if (!groupChat) {
+        return res.status(404).json({ message: "Group chat not found" });
+      }
+
+      // Extract pets from the participants
+      const pets = groupChat.Participants.reduce((acc, participant) => {
+        if (participant.pets) {
+          acc.push(...participant.pets);
+        }
+        return acc;
+      }, []);
+
+      res.json(pets);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+  async findOrCreateGroupChat(req, res) {
+    try {
+      const { GroupName, Participants, Creator } = req.body;
+
+      // Search for an existing group chat with the same participants and name
+      let groupChat = await GroupChat.findOne({
+        GroupName,
+        Participants: { $all: Participants },
+      });
+
+      if (!groupChat) {
+        // Create a new group chat if it does not exist
+        groupChat = new GroupChat({
+          GroupName,
+          Participants,
+          Creator,
+        });
+        await groupChat.save();
+        res.status(201).json(groupChat);
+      } else {
+        // If group chat exists, return it
+        res.status(200).json(groupChat);
+      }
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
   async createGroupChat(req, res) {
     const groupChat = new GroupChat({
       GroupName: req.body.GroupName,

@@ -26,31 +26,31 @@ const GroupChatCreationScreen = ({ route, navigation }) => {
     }
 
     try {
-      // Construct the payload for creating the group chat
       const groupChatData = {
         GroupName: groupName,
         Participants: selectedPets.map((pet) => pet.owner), // Assuming each pet has an 'owner' field with the user ID
-        Messages: [], // Initially empty, can be populated with the first message if needed
         Creator: auth.currentUser.uid, // Assuming you have the current user's ID
       };
 
-      // Making an API call to create the group chat
       const response = await axios.post(
-        "http://your-backend-url/api/groupchats",
+        "/api/groupchats/findOrCreate",
         groupChatData
       );
 
-      if (response.status === 201) {
-        Alert.alert("Success", "Group chat created successfully");
-
+      if (response.status === 201 || response.status === 200) {
+        Alert.alert(
+          "Success",
+          response.status === 201
+            ? "Group chat created successfully"
+            : "Group chat found"
+        );
         navigation.navigate("GroupChatScreen", { chatId: response.data._id });
       } else {
-        navigation.goBack(); // Go back to the previous screen
-        throw new Error("Failed to create group chat");
+        throw new Error("Failed to find or create group chat");
       }
     } catch (error) {
-      console.error("Error creating group chat:", error);
-      Alert.alert("Error", "Failed to create group chat. Please try again.");
+      console.error("Error with group chat:", error);
+      Alert.alert("Error", "Failed to process group chat. Please try again.");
     }
   };
 

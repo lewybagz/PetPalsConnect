@@ -10,31 +10,18 @@ router.get("/:id", UserController.getUserById, (req, res) => {
   res.json(res.user);
 });
 
-router.patch("/:userId/locationSharing", async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(
-      req.params.userId,
-      {
-        locationSharingEnabled: req.body.locationSharingEnabled,
-      },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.json({ message: "Location sharing preference updated", user });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+router.patch(
+  "/:userId/locationSharing",
+  UserController.updateUserLocationSharing
+);
 
 // POST a new User
 router.post("/", UserController.createUser);
 
 // UPDATE a User by ID
 router.put("/:id", UserController.getUserById, UserController.updateUser);
+
+router.patch("/users/:userId", UserController.updateUser);
 
 // DELETE a User
 router.delete("/:id", UserController.getUserById, UserController.deleteUser);

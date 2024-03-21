@@ -13,8 +13,9 @@ router.get("/:id", PetMatchController.getPetMatchById, (req, res) => {
 // POST to match pets
 router.post("/match", PetMatchController.matchPets);
 
-// POST to match pets
-router.post("/match", PetMatchController.matchPetsHandler);
+router.post("/matched-pets", PetMatchController.matchPetsHandler);
+
+router.get("/petmatches/:userId", PetMatchController.getPetMatchesByUser);
 
 // POST a new PetMatch
 router.post("/", PetMatchController.createPetMatch);

@@ -83,6 +83,24 @@ const UserController = {
     }
   },
 
+  async updateUserLocationSharing(req, res) {
+    try {
+      const user = await User.findByIdAndUpdate(
+        req.params.userId,
+        { locationSharingEnabled: req.body.locationSharingEnabled },
+        { new: true }
+      );
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ message: "Location sharing preference updated", user });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
   async deleteUser(req, res) {
     try {
       await res.user.remove();
