@@ -1,0 +1,90 @@
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
+import { useTailwind } from "nativewind";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Make sure to install this package
+
+const NotificationItem = ({ content, navigation }) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const tailwind = useTailwind();
+
+  return (
+    <View style={tailwind("flex-row justify-between items-center p-2")}>
+      <Text>{content}</Text>
+      <TouchableOpacity onPress={() => setModalVisible(true)}>
+        <Icon name="dots-vertical" size={20} />
+      </TouchableOpacity>
+
+      {/* Modal for options */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => {
+          setModalVisible(!modalVisible);
+        }}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            {/* Options */}
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                setModalVisible(!modalVisible);
+                navigation.navigate("NotificationPreferencesScreen");
+              }}
+            >
+              <Text style={styles.optionText}>Notification Settings</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                // Handle another action
+              }}
+            >
+              <Text style={styles.optionText}>Another Option</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setModalVisible(!modalVisible)}
+              style={styles.optionButton}
+            >
+              <Text style={styles.optionText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  centeredView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  optionButton: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+  },
+  optionText: {
+    fontSize: 16,
+  },
+});
+
+export default NotificationItem;
