@@ -69,7 +69,7 @@ const PostPlaydateReviewScreen = ({ route }) => {
     try {
       const response = await axios.get(`/api/pets/owner/${petId}`);
       if (response && response.data) {
-        return response.data.ownerId; // Assuming the response contains an ownerId field
+        return response.data.ownerId;
       } else {
         console.error("No owner data found for pet");
         return null;
@@ -114,7 +114,7 @@ const PostPlaydateReviewScreen = ({ route }) => {
     }
   };
 
-  // ... additional logic to determine when to show this screen based on playdate time ...
+  // TODO: ... additional logic to determine when to show this screen based on playdate time ...
 
   return (
     <ScrollView style={styles.container}>

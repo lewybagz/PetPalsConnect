@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-  View,
   Text,
   TextInput,
   TouchableOpacity,
@@ -8,28 +7,70 @@ import {
   Alert,
 } from "react-native";
 import { getAuth } from "firebase/auth";
+import { getFirestore, doc, updateDoc, getDoc } from "firebase/firestore";
 import { useTailwind } from "nativewind";
 
 const AccountInformationScreen = () => {
-  const [userInfo, setUserInfo] = useState({ name: "", email: "", phone: "" });
+  const [userInfo, setUserInfo] = useState({ email: "", phone: "" });
   const tailwind = useTailwind();
   const auth = getAuth();
+  const db = getFirestore();
 
   useEffect(() => {
-    // Fetch user information
-    // Replace with actual API call to fetch user data
-    const user = auth.currentUser;
-    setUserInfo({
-      name: user.displayName,
-      email: user.email,
-      phone: user.phoneNumber,
-    });
-  }, [auth.currentUser]);
+    // Fetch user information from Firestore
+    const getUserProfile = async () => {
+      const user = auth.currentUser;
 
-  const handleUpdate = () => {
-    // Logic to update user information
-    // Make an API call to update user details
-    Alert.alert("Info Updated", "Your account information has been updated.");
+      if (user) {
+        const userDocRef = doc(db, "users", user.uid);
+        try {
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (userDocSnap.exists()) {
+            const profileData = userDocSnap.data();
+            setUserInfo({
+              email: profileData.email || user.email,
+              phone: profileData.phone || "",
+            });
+          } else {
+            Alert.alert("Profile Error", "No such document!");
+          }
+        } catch (error) {
+          Alert.alert("Error", "An error occurred while fetching user data.");
+        }
+      } else {
+        Alert.alert("User Error", "No user logged in!");
+      }
+    };
+
+    getUserProfile();
+  }, []);
+
+  const handleUpdate = async () => {
+    // Logic to update user information in Firestore
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const userDocRef = doc(db, "users", user.uid);
+        await updateDoc(userDocRef, {
+          email: userInfo.email,
+          phone: userInfo.phone,
+        });
+
+        Alert.alert(
+          "Info Updated",
+          "Your account information has been updated."
+        );
+      } else {
+        Alert.alert("Update Failed", "No user logged in.");
+      }
+    } catch (error) {
+      console.error("Error updating user information:", error);
+      Alert.alert(
+        "Update Failed",
+        "Unable to update account information. Please try again."
+      );
+    }
   };
 
   return (
@@ -38,12 +79,9 @@ const AccountInformationScreen = () => {
         Account Information
       </Text>
 
-      <TextInput
-        style={tailwind("border border-gray-300 p-2 rounded mb-4")}
-        value={userInfo.name}
-        onChangeText={(text) => setUserInfo({ ...userInfo, name: text })}
-        placeholder="Name"
-      />
+      <Text style={tailwind("text-lg mb-4")}>
+        {auth.currentUser?.displayName || "User"}
+      </Text>
 
       <TextInput
         style={tailwind("border border-gray-300 p-2 rounded mb-4")}

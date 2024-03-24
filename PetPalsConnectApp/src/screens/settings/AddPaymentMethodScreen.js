@@ -7,6 +7,7 @@ const AddPaymentMethodScreen = ({ navigation }) => {
   const [cardNumber, setCardNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [cvv, setCvv] = useState("");
+  const { zipCode, setZipCode } = useState("");
   const tailwind = useTailwind();
 
   const handleAddPaymentMethod = async () => {
@@ -18,10 +19,11 @@ const AddPaymentMethodScreen = ({ navigation }) => {
 
     try {
       // API call to backend to add payment method
-      await axios.post("/api/payment-methods", {
+      await axios.post("/api/payments/payment-methods", {
         cardNumber,
         expiryDate,
         cvv,
+        zipCode,
       });
 
       // Handle successful response
@@ -30,6 +32,14 @@ const AddPaymentMethodScreen = ({ navigation }) => {
     } catch (error) {
       console.error("Error adding payment method:", error);
       Alert.alert("Error", "Failed to add payment method");
+    }
+  };
+
+  const handleExpiryDateChange = (text) => {
+    if (text.length === 2 && expiryDate.length < 2 && !text.includes("/")) {
+      setExpiryDate(`${text}/`);
+    } else {
+      setExpiryDate(text);
     }
   };
 
@@ -42,13 +52,15 @@ const AddPaymentMethodScreen = ({ navigation }) => {
         value={cardNumber}
         onChangeText={setCardNumber}
         keyboardType="numeric"
+        maxLength={16}
       />
       <TextInput
         style={tailwind("border border-gray-300 p-2 mb-2")}
         placeholder="Expiry Date (MM/YY)"
         value={expiryDate}
-        onChangeText={setExpiryDate}
+        onChangeText={handleExpiryDateChange}
         keyboardType="numeric"
+        maxLength={5}
       />
       <TextInput
         style={tailwind("border border-gray-300 p-2 mb-4")}
@@ -57,6 +69,14 @@ const AddPaymentMethodScreen = ({ navigation }) => {
         onChangeText={setCvv}
         keyboardType="numeric"
         maxLength={3}
+      />
+      <TextInput
+        style={tailwind("border border-gray-300 p-2 mb-4")}
+        placeholder="Zip Code"
+        value={zipCode}
+        onChangeText={setZipCode}
+        keyboardType="numeric"
+        maxLength={5}
       />
       <TouchableOpacity
         onPress={handleAddPaymentMethod}

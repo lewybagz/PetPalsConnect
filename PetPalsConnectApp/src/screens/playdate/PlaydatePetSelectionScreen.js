@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import axios from "axios";
 import UserPetCard from "../../components/UserPetCard";
+import { auth } from "../../../firebase/firbaseConfig";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { CheckBox } from "react-native-elements";
 
@@ -20,17 +21,19 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
   useEffect(() => {
     const fetchMatchedPets = async () => {
       try {
-        const matchedPetsResponse = await axios.get("/api/matched-pets");
+        const matchedPetsResponse = await axios.get(
+          "/api/petmatches/matched-pets"
+        );
         setMatchedPets(matchedPetsResponse.data);
       } catch (error) {
         console.error("Error fetching matched pets:", error);
       }
     };
 
-    // Fetch user's pets
     const fetchUserPets = async () => {
+      const userId = auth.currentUser.uid;
       try {
-        const userPetsResponse = await axios.get("/api/user-pets");
+        const userPetsResponse = await axios.get(`/api/users/${userId}/pets`);
         setUserPets(userPetsResponse.data);
       } catch (error) {
         console.error("Error fetching user's pets:", error);

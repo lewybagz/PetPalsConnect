@@ -12,7 +12,7 @@ const PaymentMethodsScreen = () => {
   useEffect(() => {
     // API call to backend to fetch payment methods
     axios
-      .get("/api/payment-methods")
+      .get("/api/payments/payment-methods")
       .then((response) => {
         setPaymentMethods(response.data);
       })
@@ -40,7 +40,7 @@ const PaymentMethodsScreen = () => {
           onPress: () => {
             // API call to backend to delete payment method
             axios
-              .delete(`/api/payment-methods/${id}`)
+              .delete(`/api/payments/payment-methods/${id}`)
               .then(() => {
                 // Refresh payment methods list upon successful deletion
                 setPaymentMethods(

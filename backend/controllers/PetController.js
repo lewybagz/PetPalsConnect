@@ -45,6 +45,20 @@ const PetController = {
     }
   },
 
+  async getPetOwnerById(req, res) {
+    try {
+      const pet = await Pet.findById(req.params.id);
+      if (!pet) {
+        return res.status(404).json({ message: "Cannot find pet" });
+      }
+
+      // Assuming the pet model has an 'owner' field that stores the owner's ID
+      res.json({ ownerId: pet.owner });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
   async getLatestPets(req, res) {
     try {
       const latestPets = await Pet.find().sort({ createdAt: -1 }).limit(10); // example logic

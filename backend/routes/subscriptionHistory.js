@@ -5,12 +5,11 @@ const router = express.Router();
 const Subscription = require("../models/Subscription"); // Make sure the path is correct for your Subscription model
 
 // Endpoint to get subscription history
-router.get("/subscription-history", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    // TODO: Ensure you have user identification logic (e.g., via authentication middleware)
     const userId = req.user._id;
-    const history = await Subscription.find({ user: userId }).sort({
-      startDate: -1,
+    const history = await Subscription.find({ User: userId }).sort({
+      StartDate: -1,
     });
     res.json(history);
   } catch (error) {

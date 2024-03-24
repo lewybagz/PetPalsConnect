@@ -25,6 +25,22 @@ const UserController = {
     next();
   },
 
+  async getUserPets(req, res) {
+    const userId = req.params.userId; // Get user ID from URL parameter
+
+    try {
+      const user = await User.findById(userId).populate("Pets"); // Use the userId from URL parameter
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json(user.Pets);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
   async createUser(req, res) {
     const user = new User({
       FriendsList: req.body.FriendsList,
@@ -83,6 +99,27 @@ const UserController = {
     }
   },
 
+  async deleteUserPet(req, res) {
+    const { petId } = req.params;
+    const userId = req.params.userId;
+
+    try {
+      // Find user and update their pets list
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Filter out the pet to delete
+      user.Pets = user.Pets.filter((pet) => pet._id.toString() !== petId);
+
+      await user.save();
+      res.json({ message: "Pet deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
   async updateUserLocationSharing(req, res) {
     try {
       const user = await User.findByIdAndUpdate(
@@ -98,6 +135,60 @@ const UserController = {
       res.json({ message: "Location sharing preference updated", user });
     } catch (error) {
       res.status(500).json({ message: error.message });
+    }
+  },
+
+  async updateTwoFactorAuthentication(req, res) {
+    const { userId, enable2FA } = req.body;
+    try {
+      // Assuming there is a field in your User model for 2FA settings
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { twoFactorAuthEnabled: enable2FA },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({
+        message: `Two-factor authentication has been ${
+          enable2FA ? "enabled" : "disabled"
+        }`,
+        twoFactorAuthEnabled: updatedUser.twoFactorAuthEnabled,
+      });
+    } catch (error) {
+      console.error("Error updating 2FA setting:", error);
+      res.status(500).json({ message: "Failed to update 2FA setting" });
+    }
+  },
+
+  async updateUserSettings(req, res) {
+    const { userId } = req.user; // Obtain user ID from authentication middleware
+    const { playdateRange, notificationsEnabled, locationSharingEnabled } =
+      req.body;
+
+    try {
+      // Assuming these are the names of the fields in your User model
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        {
+          playdateRange,
+          notificationsEnabled,
+          locationSharingEnabled,
+        },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ message: "Settings updated successfully", user: updatedUser });
+    } catch (error) {
+      console.error("Error updating user settings:", error);
+      res.status(500).json({ message: "Failed to update settings" });
     }
   },
 

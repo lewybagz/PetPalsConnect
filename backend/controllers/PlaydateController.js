@@ -1,5 +1,5 @@
 const Playdate = require("../models/Playdate");
-
+import { sendPlaydateNotification } from "./NotificationController";
 const PlaydateController = {
   async getAllPlaydates(req, res) {
     try {
@@ -13,69 +13,7 @@ const PlaydateController = {
     }
   },
 
-  async acceptPlaydate(playdateId) {
-    try {
-      // Assuming axios is used for API calls
-      const response = await axios.post(`/api/playdates/accept/${playdateId}`);
-
-      if (response.status === 200) {
-        sendNotificationToSender(
-          playdateId,
-          "Your playdate request has been accepted."
-        );
-      }
-    } catch (error) {
-      console.error("Error accepting playdate:", error);
-      // Handle the error appropriately
-    }
-  },
-
-  async declinePlaydate(playdateId) {
-    try {
-      // Assuming axios is used for API calls
-      const response = await axios.post(`/api/playdates/decline/${playdateId}`);
-
-      if (response.status === 200) {
-        sendNotificationToSender(
-          playdateId,
-          "Your playdate request has been declined."
-        );
-      }
-    } catch (error) {
-      console.error("Error declining playdate:", error);
-      // Handle the error appropriately
-    }
-  },
-
-  async sendNotificationToSender(playdateId, message) {
-    try {
-      // Fetch playdate details to get the sender's user ID
-      const playdateResponse = await axios.get(`/api/playdates/${playdateId}`);
-      const senderId = playdateResponse.data.senderId; // Assuming sender's ID is part of playdate details
-
-      // Fetch sender's FCM token from the database
-      const userResponse = await axios.get(`/api/users/${senderId}`);
-      const fcmToken = userResponse.data.fcmToken;
-
-      if (fcmToken) {
-        // Send notification logic, using Firebase Cloud Messaging (FCM) or similar service
-        await axios.post("/api/send-notification", {
-          token: fcmToken,
-          title: "Playdate Update",
-          body: message,
-          playdateId: playdateId,
-          // Additional payload data can be added here if needed
-        });
-      } else {
-        console.log("FCM token not found for the user");
-      }
-    } catch (error) {
-      console.error("Error sending notification:", error);
-      // Handle the error appropriately
-    }
-  },
-
-  async getPlaydateById(req, res, next) {
+  async getPlaydateById(req, res) {
     try {
       const playdate = await Playdate.findById(req.params.id)
         .populate({
@@ -117,6 +55,23 @@ const PlaydateController = {
     }
   },
 
+  // In PlaydateController
+  async getLocationDetails(req, res) {
+    try {
+      const placeId = req.params.placeId;
+      // Assuming you have a model or logic to fetch location details
+      const locationDetails = await Location.findById(placeId);
+
+      if (!locationDetails) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      res.json(locationDetails);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
   async acceptPlaydate(req, res) {
     const { playdateId, userId } = req.params; // Assuming userId is passed in the request
     try {
@@ -132,13 +87,18 @@ const PlaydateController = {
       }
       await playdate.save();
 
-      // Logic to send a notification to the playdate creator...
-      sendPushNotification({
-        recipientUserId: playdate.Creator, // Use the ID of the playdate creator
-        title: "Playdate Request Accepted",
-        message: "Your playdate request has been accepted.",
-        data: { playdateId }, // Additional data if needed
-      });
+      // Prepare internal request object for notification
+      const notificationReq = {
+        body: {
+          to: playdate.Creator, // ID of the playdate creator
+          title: "Playdate Request Accepted",
+          body: "Your playdate request has been accepted.",
+          data: { playdateId }, // Additional data if needed
+        },
+      };
+
+      // Call sendPlaydateNotification
+      await sendPlaydateNotification(notificationReq, res); // This might require adjustment based on how you handle responses
 
       return res.status(200).json({ message: "Playdate accepted" });
     } catch (error) {
@@ -149,7 +109,7 @@ const PlaydateController = {
   },
 
   async declinePlaydate(req, res) {
-    const { playdateId, userId } = req.params; // Assuming userId is passed in the request
+    const { playdateId } = req.params; // Assuming userId is passed in the request
     try {
       let playdate = await Playdate.findById(playdateId);
       if (!playdate) {
@@ -160,13 +120,19 @@ const PlaydateController = {
       playdate.Status = "declined";
       await playdate.save();
 
-      // Logic to send a notification to the playdate creator...
-      sendPushNotification({
-        recipientUserId: playdate.Creator, // Use the ID of the playdate creator
-        title: "Playdate Request Declined",
-        message: "Your playdate request has been declined.",
-        data: { playdateId }, // Additional data if needed
-      });
+      // Prepare internal request object for notification
+      const notificationReq = {
+        body: {
+          to: playdate.Creator, // ID of the playdate creator
+          title: "Playdate Request Declined",
+          body: "Your playdate request has been declined.",
+          data: { playdateId }, // Additional data if needed
+        },
+      };
+
+      // Call sendPlaydateNotification
+      await sendPlaydateNotification(notificationReq, res); // This might require adjustment based on how you handle responses
+
       return res.status(200).json({ message: "Playdate declined" });
     } catch (error) {
       return res
@@ -174,7 +140,6 @@ const PlaydateController = {
         .json({ message: "Error declining playdate", error });
     }
   },
-
   async createPlaydate(req, res) {
     const playdate = new Playdate({
       Date: req.body.Date,

@@ -21,7 +21,9 @@ const UsersPetsScreen = () => {
     const fetchUserPets = async () => {
       if (currentUser) {
         try {
-          const response = await axios.get(`/api/user-pets/${currentUser.uid}`);
+          const response = await axios.get(
+            `/api/users/pets/${currentUser.uid}`
+          );
           setUserPets(response.data);
         } catch (error) {
           Alert.alert("Error", "Failed to load your pets");
@@ -38,7 +40,7 @@ const UsersPetsScreen = () => {
 
   const handleDelete = async (petId) => {
     try {
-      await axios.delete(`/api/user-pets/${petId}`);
+      await axios.delete(`/api/users/pets/${petId}`);
       setUserPets(userPets.filter((pet) => pet._id !== petId));
     } catch (error) {
       Alert.alert("Error", "Failed to delete pet");

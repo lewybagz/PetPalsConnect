@@ -5,6 +5,8 @@ const LocationController = require("../controllers/LocationController");
 // GET all Locations
 router.get("/playdate-locations", LocationController.getAllLocations); // Fetches all playdate locations
 
+router.get("/", LocationController.getAllLocations);
+
 // GET a single Location by ID
 router.get("/:id", LocationController.getLocationById, (req, res) => {
   res.json(res.location);

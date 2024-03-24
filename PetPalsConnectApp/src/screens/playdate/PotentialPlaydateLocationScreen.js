@@ -12,6 +12,7 @@ import {
   ActionSheetIOS,
 } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
+import axios from "axios";
 
 const PotentialPlaydateLocationScreen = ({ route }) => {
   const { placeId } = route.params; // Assumed that placeId is passed in navigation
@@ -21,14 +22,8 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const res = await fetch(
-          `http://your-backend-url/api/reviews/location/${placeId}`
-        );
-        if (!res.ok) {
-          throw new Error("Failed to fetch reviews");
-        }
-        const data = await res.json();
-        setReviews(data);
+        const response = await axios.get(`/api/reviews/location/${placeId}`);
+        setReviews(response.data);
       } catch (error) {
         console.error("Error fetching reviews:", error);
       }
@@ -40,14 +35,8 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
   useEffect(() => {
     const fetchLocationDetails = async () => {
       try {
-        const response = await fetch(
-          `http://your-backend-url/api/potential-playdate-locations/${placeId}`
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch location details");
-        }
-        const data = await response.json();
-        setLocationDetails(data);
+        const response = await axios.get(`/api/playdates/locations/${placeId}`);
+        setLocationDetails(response.data);
       } catch (error) {
         console.error("Error fetching location details:", error);
       }

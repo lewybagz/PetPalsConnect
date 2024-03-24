@@ -8,12 +8,14 @@ import {
   Alert,
 } from "react-native";
 import axios from "axios";
+import { auth } from "../../../firebase/firbaseConfig";
 
 const ReportUserScreen = ({ route }) => {
   const [content, setContent] = useState("");
   const [status, setStatus] = useState("Pending"); // Default status for new reports
-  const reportedUser = route.params.userId; // The ID of the user being reported
-  const reporter = "CURRENT_USER_ID"; // Replace with current user's ID
+  const reportedUser = route.params.userId;
+  const userId = auth.currentUser.uid;
+  const reporter = userId; // Replace with current user's ID
 
   const submitReport = async () => {
     try {
@@ -46,7 +48,7 @@ const ReportUserScreen = ({ route }) => {
     // Implement the logic to block the user
     // This could involve sending a request to your API to update the blocklist
     try {
-      const blockResponse = await axios.post("/api/blocklist", {
+      const blockResponse = await axios.post("/api/blocklists", {
         BlockedUser: reportedUser,
         Owner: reporter, // Assuming the 'Owner' field refers to the user who is blocking
       });

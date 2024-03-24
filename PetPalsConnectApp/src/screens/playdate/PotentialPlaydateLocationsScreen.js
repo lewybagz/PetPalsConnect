@@ -11,12 +11,17 @@ const PotentialPlaydateLocationsScreen = () => {
   const playdateRange = 10; // Fetch this from user settings or AsyncStorage
 
   useEffect(() => {
-    const fetchLocations = async () => {
+    // Function to fetch locations
+    const fetchLocations = async (latitude, longitude) => {
       setLoading(true);
       try {
-        const response = await axios.get(
-          `/api/locations?range=${playdateRange}`
-        );
+        const response = await axios.get(`/api/locations`, {
+          params: {
+            range: playdateRange,
+            userLat: latitude,
+            userLng: longitude,
+          },
+        });
         setLocations(response.data);
       } catch (err) {
         setError(err.message);
@@ -25,7 +30,23 @@ const PotentialPlaydateLocationsScreen = () => {
       }
     };
 
-    fetchLocations();
+    // Get current position and then fetch locations
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          fetchLocations(latitude, longitude);
+        },
+        (err) => {
+          console.error(err);
+          setError(err.message);
+          setLoading(false);
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by this browser");
+      setLoading(false);
+    }
   }, [playdateRange]);
 
   return (

@@ -15,9 +15,11 @@ router.post("/", PetController.createPet);
 // PUT update a pet
 router.put("/:petId", PetController.updatePet);
 
-router.get("/pets/latest", PetController.getLatestPets);
+router.get("/latest", PetController.getLatestPets);
 
-router.get("/pets/favorites/:userId", PetController.getUserFavorites);
+router.get("/favorites/:userId", PetController.getUserFavorites);
+
+router.get("/owner/:id", PetController.getPetOwnerById);
 
 // DELETE a pet
 router.delete("/:petId", PetController.deletePet);

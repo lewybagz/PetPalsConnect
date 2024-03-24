@@ -5,6 +5,7 @@ import Slider from "@react-native-community/slider";
 import { useTailwind } from "nativewind";
 import { useAppTheme } from "../../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 
 const SettingsScreen = ({ navigation }) => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -20,33 +21,44 @@ const SettingsScreen = ({ navigation }) => {
     try {
       await AsyncStorage.setItem("playdateRange", value.toString());
       // Update the user's preference on the backend
+      await axios.post("/api/user/settings", {
+        playdateRange: value,
+        // Include other settings if they are sent together
+      });
     } catch (error) {
       Alert.alert("Error", "Failed to save playdate range preference.");
     }
   };
 
   const toggleNotifications = async () => {
-    setNotificationsEnabled((previousState) => !previousState);
+    const newNotificationsEnabledState = !notificationsEnabled;
+    setNotificationsEnabled(newNotificationsEnabledState);
     try {
       await AsyncStorage.setItem(
         "notificationsEnabled",
-        JSON.stringify(!notificationsEnabled)
+        JSON.stringify(newNotificationsEnabledState)
       );
-      // If using Firebase or another backend, send the preference to the backend
+      // Send the preference to the backend
+      await axios.post("/api/user/settings", {
+        notificationsEnabled: newNotificationsEnabledState,
+      });
     } catch (error) {
-      // Handle error saving setting
+      Alert.alert("Error", "Failed to save notifications setting.");
     }
   };
 
   const toggleLocationSharing = async () => {
-    const newState = !locationSharingEnabled;
-    setLocationSharingEnabled(newState);
+    const newLocationSharingState = !locationSharingEnabled;
+    setLocationSharingEnabled(newLocationSharingState);
     try {
       await AsyncStorage.setItem(
         "locationSharingEnabled",
-        JSON.stringify(newState)
+        JSON.stringify(newLocationSharingState)
       );
       // Here, you would also make an API call to update the user's preference on the backend
+      await axios.post("/api/user/settings", {
+        locationSharingEnabled: newLocationSharingState,
+      });
     } catch (error) {
       Alert.alert("Error", "Failed to save location sharing preference.");
     }

@@ -1,7 +1,5 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
-const { ContentSchema, PetSchema } = require("./Content");
-
 // Create Schema for User
 const UserSchema = new Schema({
   FcmToken: {
@@ -19,6 +17,15 @@ const UserSchema = new Schema({
     ref: "Location",
     required: false, // Set to false if you allow users to not share their location
   },
+  playdateRange: {
+    type: String,
+    enum: ["All", "Within 10 miles", "Within 20 miles", "Within 50 miles"],
+    default: "All",
+  },
+  notificationsEnabled: {
+    type: Boolean,
+    default: true,
+  },
   locationSharingEnabled: {
     type: Boolean,
     default: true,
@@ -35,7 +42,7 @@ const UserSchema = new Schema({
   },
   stripeCustomerId: {
     type: String,
-    required: false, // This field is not required because you will fill it when the user subscribes
+    required: false,
   },
   Username: {
     type: String,

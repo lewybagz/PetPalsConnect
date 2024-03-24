@@ -12,7 +12,6 @@ const SubscriptionHistoryScreen = () => {
         setHistory(response.data);
       } catch (error) {
         console.error("Error fetching subscription history:", error);
-        // Handle error - show alert or a message
       }
     };
 

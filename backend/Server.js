@@ -59,7 +59,8 @@ app.use("/api/blocklists", require("./routes/blockLists"));
 app.use("/api/friendrequests", require("./routes/friendRequests"));
 app.use("/api/playdates", playdateRoutes);
 app.use("/api/stripe-webhooks", stripeWebhooksRouter);
-app.use("/api", subscriptionHistoryRoutes);
+app.use("/api/subscription-history", subscriptionHistoryRoutes);
+app.use("/api/payments", require("./routes/payment"));
 
 // Error handling middleware
 app.use((err, req, res) => {

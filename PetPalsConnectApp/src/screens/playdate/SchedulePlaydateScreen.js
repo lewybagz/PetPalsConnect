@@ -29,17 +29,40 @@ const SchedulePlaydateScreen = ({ route }) => {
   const [selectedLocation, setSelectedLocation] = useState(null);
 
   useEffect(() => {
-    // Fetch playdate locations
-    const fetchLocations = async () => {
+    // Function to fetch locations
+    const fetchLocations = async (latitude, longitude, range) => {
       try {
-        const response = await axios.get("/api/potential-playdate-locations");
+        const response = await axios.get("/api/locations/playdate-locations", {
+          params: {
+            userLat: latitude,
+            userLng: longitude,
+            range: range, // Assuming you have a way to set this range (e.g., from user settings)
+          },
+        });
         setLocations(response.data);
       } catch (error) {
         console.error("Error fetching locations:", error);
       }
     };
 
-    fetchLocations();
+    // Get current position and then fetch locations
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const range = 10; // This should be dynamically set based on user preference or settings
+          fetchLocations(
+            position.coords.latitude,
+            position.coords.longitude,
+            range
+          );
+        },
+        (err) => {
+          console.error(err);
+        }
+      );
+    } else {
+      console.error("Geolocation is not supported by this browser");
+    }
   }, []);
 
   const handleSubmit = async () => {

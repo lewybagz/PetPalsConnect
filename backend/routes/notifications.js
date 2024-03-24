@@ -14,7 +14,7 @@ router.get("/user/:userId", NotificationController.getUserNotifications);
 
 // POST to send a push notification for a playdate
 router.post(
-  "/send-playdate-notification",
+  "/playdate/send-notification",
   NotificationController.sendPlaydateNotification
 );
 

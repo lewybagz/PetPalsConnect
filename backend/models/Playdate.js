@@ -27,11 +27,11 @@ const PlaydateSchema = new Schema({
       ref: "Pet", // Assuming 'Pet' is a separate schema/model we will create
     },
   ],
-  startTime: {
+  StartTime: {
     type: Date,
     required: true,
   },
-  status: {
+  Status: {
     type: String,
     enum: ["pending", "accepted", "declined", "completed"],
     default: "pending",

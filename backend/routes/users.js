@@ -10,10 +10,16 @@ router.get("/:id", UserController.getUserById, (req, res) => {
   res.json(res.user);
 });
 
+router.get("/pets/:userId", UserController.getUserPets);
+
 router.patch(
   "/:userId/locationSharing",
   UserController.updateUserLocationSharing
 );
+
+router.patch("/users/:userId", UserController.updateUser);
+
+router.post("/user/settings/2fa", UserController.updateTwoFactorAuthentication);
 
 // POST a new User
 router.post("/", UserController.createUser);
@@ -21,7 +27,9 @@ router.post("/", UserController.createUser);
 // UPDATE a User by ID
 router.put("/:id", UserController.getUserById, UserController.updateUser);
 
-router.patch("/users/:userId", UserController.updateUser);
+router.post("/user/settings", UserController.updateUserSettings);
+
+router.delete("/users/pets/:petId", UserController.deleteUserPet);
 
 // DELETE a User
 router.delete("/:id", UserController.getUserById, UserController.deleteUser);

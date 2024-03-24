@@ -12,8 +12,7 @@ import LoadingScreen from "../../components/LoadingScreenComponent";
 import axios from "axios";
 
 const PlaydateRequestScreen = ({ route, navigation }) => {
-  const { playdateId } = route.params; // Assuming this is passed through the navigation
-
+  const { playdateId } = route.params;
   const [playdate, setPlaydate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
@@ -34,13 +33,33 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
     fetchPlaydateDetails();
   }, [playdateId]);
 
+  // New function to send notification
+  const sendNotificationToSender = async (id, message) => {
+    try {
+      const playdateResponse = await axios.get(`/api/playdates/${id}`);
+      const senderId = playdateResponse.data.senderId;
+
+      await axios.post("/api/notifications/playdate/send-notification", {
+        to: senderId,
+        title: "Playdate Update",
+        body: message,
+        data: { playdateId: id },
+      });
+    } catch (error) {
+      console.error("Error sending notification:", error);
+    }
+  };
+
+  // Updated handleAccept function
   const handleAccept = async () => {
     setAccepting(true);
     try {
-      // API call to accept the playdate
       await axios.post(`/api/playdates/accept/${playdateId}`);
+      await sendNotificationToSender(
+        playdateId,
+        "Your playdate request has been accepted."
+      );
       Alert.alert("Accepted", "You have accepted the playdate request.");
-      // Navigate to scheduled playdates screen or update UI accordingly
       navigation.navigate("UpcomingPlaydatesScreen");
     } catch (error) {
       Alert.alert("Error", "Failed to accept the playdate request.");
@@ -48,14 +67,15 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
       setAccepting(false);
     }
   };
-
   const handleDecline = async () => {
     setDeclining(true);
     try {
-      // API call to decline the playdate
       await axios.post(`/api/playdates/decline/${playdateId}`);
+      await sendNotificationToSender(
+        playdateId,
+        "Your playdate request has been declined."
+      );
       Alert.alert("Declined", "You have declined the playdate request.");
-      // Navigate back or update UI accordingly
       navigation.goBack();
     } catch (error) {
       Alert.alert("Error", "Failed to decline the playdate request.");

@@ -55,7 +55,7 @@ const SubscriptionOptionsScreen = () => {
     setSelectedTier(tierId);
 
     axios
-      .post("/api/create-checkout-session", { planId: tierId })
+      .post("/api/subscriptions/create-checkout-session", { planId: tierId })
       .then((response) => {
         const sessionId = response.data.sessionId;
         const url = `https://checkout.stripe.com/pay/${sessionId}`; // Construct the Stripe checkout URL

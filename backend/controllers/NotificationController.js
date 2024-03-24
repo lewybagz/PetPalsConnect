@@ -99,7 +99,7 @@ export const sendPushNotification = async (userId, notificationData) => {
   }
 };
 
-exports.sendPlaydateNotification = async (req, res) => {
+export const sendPlaydateNotification = async (req, res) => {
   try {
     const { to, title, body, data } = req.body;
     await sendPushNotification(to, { title, body, data });
