@@ -10,17 +10,17 @@ import {
   Image,
   Switch,
 } from "react-native";
-import axios from "axios"; // Assuming axios is used for API calls
-import { useNavigation } from "@react-navigation/native"; // Import useNavigation hook
-import StarRating from "react-native-star-rating"; // Import a star rating package
+import axios from "axios";
+import { useNavigation } from "@react-navigation/native";
+import StarRating from "react-native-star-rating";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 
 const PostPlaydateReviewScreen = ({ route }) => {
-  const navigation = useNavigation(); // Hook to navigate between screens
-  const { playdateId, petId } = route.params; // Get the playdate ID and pet ID from the previous screen
+  const navigation = useNavigation();
+  const { playdateId, petId } = route.params;
   const { playdate, pet } = route.params;
 
-  const [rating, setRating] = useState(5); // Assuming a 5-star rating system
+  const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [reviewId, setReviewId] = useState(null);
   const [isReviewVisible, setIsReviewVisible] = useState(true);
@@ -35,7 +35,7 @@ const PostPlaydateReviewScreen = ({ route }) => {
   const getLocationData = async (locationId) => {
     try {
       const response = await axios.get(`/api/locations/${locationId}`);
-      return response.data; // Assuming the response contains location data
+      return response.data;
     } catch (error) {
       console.error("Error fetching location data:", error);
       return null;

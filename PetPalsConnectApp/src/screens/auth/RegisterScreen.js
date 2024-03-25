@@ -9,6 +9,7 @@ import {
   signInWithCredential,
   FacebookAuthProvider,
 } from "firebase/auth";
+import { isEmail } from "validator"; // You need to install 'validator' package for this
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { LoginManager, AccessToken } from "react-native-fbsdk-next";
 import AnimatedButton from "../../components/AnimatedButton";
@@ -30,25 +31,42 @@ function RegisterScreen({ navigation }) {
 
   const onRegisterPress = () => {
     if (password !== confirmPassword) {
+      setErrorMessage("Passwords don't match.");
       Alert.alert("Error", "Passwords don't match.");
+      return;
+    }
+
+    if (!isEmail(email)) {
+      setErrorMessage("Please enter a valid email address.");
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
       return;
     }
 
     createUserWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
-        // Signed in
         const user = userCredential.user;
-        // Send email verification
-        user.sendEmailVerification().then(() => {
-          Alert.alert(
-            "Verify your email",
-            "A verification email has been sent to your email address."
-          );
-          navigation.navigate("Login");
-        });
+        user
+          .sendEmailVerification()
+          .then(() => {
+            Alert.alert(
+              "Verify your email",
+              "A verification email has been sent to your email address."
+            );
+            navigation.navigate("Login");
+          })
+          .catch((verificationError) => {
+            // Use the error message from verificationError
+            const errorDetail =
+              verificationError.message ||
+              "There was a problem sending your verification email. Please check your email address and try again.";
+            setErrorMessage(errorDetail);
+            Alert.alert("Verification Email Error", errorDetail);
+          });
       })
       .catch((error) => {
-        setErrorMessage(error.message); // Set errorMessage when there is an error
+        // This catches errors related to user registration
+        setErrorMessage(error.message);
+        Alert.alert("Registration Error", error.message);
       });
   };
 

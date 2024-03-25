@@ -24,6 +24,18 @@ router.post("/user/settings/2fa", UserController.updateTwoFactorAuthentication);
 // POST a new User
 router.post("/", UserController.createUser);
 
+// Route for password change
+router.post(
+  "/user/settings/change-password",
+  UserController.changeUserPassword
+);
+
+// Route for security question update
+router.post(
+  "/user/settings/security-question",
+  UserController.updateSecurityQuestion
+);
+
 // UPDATE a User by ID
 router.put("/:id", UserController.getUserById, UserController.updateUser);
 

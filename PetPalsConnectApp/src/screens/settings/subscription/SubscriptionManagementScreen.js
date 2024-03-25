@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Button, StyleSheet, Alert } from "react-native";
 import LoadingScreen from "../../../components/LoadingScreenComponent";
 import axios from "axios";
-import { getAuth } from "firebase/auth";
+import { useSelector } from "react-redux";
 
 const SubscriptionManagementScreen = () => {
-  const auth = getAuth();
-  const currentUser = auth.currentUser;
+  const currentUser = useSelector((state) => state.user);
+  const userId = useSelector((state) => state.user.userId);
   const [subscription, setSubscription] = useState(null);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ const SubscriptionManagementScreen = () => {
   const handleRenew = async () => {
     try {
       const res = await axios.post(`/api/subscriptions/renew`, {
-        userId: currentUser.uid,
+        userId: userId,
       });
       setSubscription(res.data); // Update the subscription state
       Alert.alert("Success", "Subscription renewed successfully.");
@@ -40,7 +40,7 @@ const SubscriptionManagementScreen = () => {
   const handleChangePlan = async (planType) => {
     try {
       const res = await axios.post(`/api/subscriptions/change-plan`, {
-        userId: currentUser.uid,
+        userId: userId,
         newPlan: planType,
       });
       setSubscription(res.data); // Update the subscription state
@@ -54,7 +54,7 @@ const SubscriptionManagementScreen = () => {
   const handleCancel = async () => {
     try {
       const res = await axios.post(`/api/subscriptions/cancel`, {
-        userId: currentUser.uid,
+        userId: userId,
       });
       setSubscription(res.data); // Update the subscription state
       Alert.alert("Success", "Subscription cancelled successfully.");

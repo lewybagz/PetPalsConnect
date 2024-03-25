@@ -3,7 +3,7 @@ import { View, Text, TextInput, Button, Alert, StyleSheet } from "react-native";
 import axios from "axios";
 import DateTimePickerComponent from "../components/DateTimePickerComponent";
 import { sendPushNotification } from "../../../../backend/controllers/NotificationController";
-import { auth } from "../../firebase/firebaseConfig";
+import { useSelector } from "react-redux";
 
 const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
   const { petId, locationId } = route.params; // Retrieve passed petId and locationId
@@ -11,15 +11,15 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
   const [notes, setNotes] = useState("");
 
   const handleSubmit = async (selectedPet, pet) => {
-    const userID = auth.currentUser.uid;
+    const userId = useSelector((state) => state.user.userId);
     // Prepare playdate data
     const playdateData = {
       Date: date,
       Location: locationId,
       Notes: notes,
-      Participants: [userID],
+      Participants: [userId],
       PetsInvolved: [petId],
-      Creator: userID,
+      Creator: userId,
     };
 
     try {

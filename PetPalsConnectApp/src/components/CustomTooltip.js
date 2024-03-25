@@ -1,6 +1,8 @@
 // CustomTooltip.js
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import AnimatedButton from "./AnimatedButton";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 const CustomTooltip = ({ handleNext, handlePrev, handleStop, currentStep }) => {
   return (
@@ -9,20 +11,31 @@ const CustomTooltip = ({ handleNext, handlePrev, handleStop, currentStep }) => {
 
       {/* Step navigation buttons */}
       {handlePrev ? (
-        <TouchableOpacity onPress={handlePrev} style={styles.navButton}>
-          <Text style={styles.buttonText}>Prev</Text>
-        </TouchableOpacity>
+        <AnimatedButton
+          onPress={handlePrev}
+          buttonStyle={styles.navButton}
+          icon={<Icon name="arrow-left" size={20} color="white" />} // Example icon
+          text="Prev"
+          textStyle={styles.buttonText}
+        />
       ) : null}
       {handleNext ? (
-        <TouchableOpacity onPress={handleNext} style={styles.navButton}>
-          <Text style={styles.buttonText}>Next</Text>
-        </TouchableOpacity>
+        <AnimatedButton
+          onPress={handleNext}
+          buttonStyle={styles.navButton}
+          icon={<Icon name="arrow-right" size={20} color="white" />} // Example icon
+          text="Next"
+          textStyle={styles.buttonText}
+        />
       ) : null}
 
       {/* Skip button */}
-      <TouchableOpacity onPress={handleStop} style={styles.skipButton}>
-        <Text style={styles.buttonText}>Skip</Text>
-      </TouchableOpacity>
+      <AnimatedButton
+        onPress={handleStop}
+        buttonStyle={styles.skipButton}
+        text="Skip"
+        textStyle={styles.buttonText}
+      />
     </View>
   );
 };

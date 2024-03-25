@@ -1,12 +1,39 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import PlayDateLocationCard from "../components/PlayDateLocationCard"; // Assuming this component displays location details
 import { Image, Button } from "react-native";
+import messaging from "@react-native-firebase/messaging";
 import { useNavigation } from "@react-navigation/native";
 
 const PlaydateCreatedScreen = ({ route }) => {
   const { playdate, pet } = route.params;
   const navigation = useNavigation();
+
+  // This might be set up in a root component or a dedicated notification service
+  useEffect(() => {
+    const unsubscribe = messaging().onNotificationOpenedApp((remoteMessage) => {
+      if (remoteMessage.data.type === "playdateReview") {
+        navigation.navigate("PostPlaydateReviewScreen", {
+          playdateId: remoteMessage.data.playdateId,
+          petId: remoteMessage.data.petId,
+        });
+      }
+    });
+
+    // Check if the app was opened by a notification when it was in quit state
+    messaging()
+      .getInitialNotification()
+      .then((remoteMessage) => {
+        if (remoteMessage && remoteMessage.data.type === "playdateReview") {
+          navigation.navigate("PostPlaydateReviewScreen", {
+            playdateId: remoteMessage.data.playdateId,
+            petId: remoteMessage.data.petId,
+          });
+        }
+      });
+
+    return unsubscribe;
+  }, []);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);

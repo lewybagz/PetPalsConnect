@@ -15,7 +15,8 @@ import storage from "@react-native-firebase/storage";
 import { Picker } from "@react-native-picker/picker";
 import { matchPets } from "../../../../backend/controllers/";
 import DropDownPicker from "react-native-dropdown-picker";
-import { auth } from "../../firebase/firebaseConfig";
+import { useSelector } from "react-redux";
+import Realm from "realm";
 import axios from "axios";
 
 const AddPetScreen = () => {
@@ -24,8 +25,8 @@ const AddPetScreen = () => {
   const [petDetails, setPetDetails] = useState([]);
   const [isNewUser, setIsNewUser] = useState(false);
   const [open, setOpen] = useState(false);
-  const userId = auth.currentUser.uid;
-  const currentUser = auth.currentUser;
+  const userId = useSelector((state) => state.user.userId);
+  const currentUser = useSelector((state) => state.user);
   const [currentPet, setCurrentPet] = useState({
     name: "",
     breed: "",
@@ -243,6 +244,22 @@ const AddPetScreen = () => {
         const response = await axios.post("/api/pets", pet);
         const newPetId = response.data._id;
         petIds.push(newPetId);
+
+        Realm.write(() => {
+          Realm.create("Pet", {
+            _id: newPetId,
+            age: pet.age,
+            breed: pet.breed,
+            name: pet.name,
+            owner: pet.owner, // Assuming owner's ID is available in pet object
+            photos: pet.photos,
+            location: pet.location ? pet.location.toString() : null, // Handle optional fields
+            playdates: pet.playdates.map((pd) => pd.toString()), // Convert ObjectId to string
+            specialNeeds: pet.specialNeeds,
+            temperament: pet.temperament,
+            weight: pet.weight,
+          });
+        });
 
         // Run the matching algorithm
         await matchPets(newPetId, false);

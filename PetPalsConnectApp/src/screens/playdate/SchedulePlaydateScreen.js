@@ -10,7 +10,7 @@ import {
   FlatList,
 } from "react-native";
 import axios from "axios"; // Assuming axios is used for API calls
-import { auth } from "../../firebase/firebaseConfig";
+import { useSelector } from "react-redux";
 import { sendPushNotification } from "../services/NotificationService"; // a hypothetical service to handle notifications
 import { Image } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
@@ -66,8 +66,8 @@ const SchedulePlaydateScreen = ({ route }) => {
   }, []);
 
   const handleSubmit = async () => {
-    const userId = auth.currentUser.uid;
-    const userName = auth.currentUser.name;
+    const userId = useSelector((state) => state.user.userId);
+    const userName = useSelector((state) => state.user);
     // Prepare playdate data
     const playdateData = {
       Date: date,

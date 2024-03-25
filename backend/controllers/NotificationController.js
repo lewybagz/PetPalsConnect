@@ -2,6 +2,7 @@ const Notification = require("../models/Notification");
 const admin = require("firebase-admin");
 const User = require("../models/User");
 const serviceAccount = require("../config/serviceAccountKey.json");
+const Playdate = require("../models/Playdate");
 
 // Function to find a user's FCM token by their user ID
 export const findTokenByUserId = async (userId) => {
@@ -11,6 +12,16 @@ export const findTokenByUserId = async (userId) => {
   } catch (error) {
     console.error("Error finding user:", error);
     return null;
+  }
+};
+
+export const findPlaydateById = async (playdateId) => {
+  try {
+    const playdate = await Playdate.findById(playdateId);
+    return playdate;
+  } catch (error) {
+    console.error("Error finding playdate:", error);
+    throw error;
   }
 };
 
@@ -106,6 +117,32 @@ export const sendPlaydateNotification = async (req, res) => {
     res.json({ message: "Notification sent successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const pushPlaydateReviewReminderNotification = async (
+  playdateId,
+  userId
+) => {
+  try {
+    const playdate = await findPlaydateById(playdateId); // Retrieve the playdate details
+    if (!playdate) throw new Error("Playdate not found");
+    // Calculate the delay needed (1 hour after playdate start)
+    const delay =
+      new Date(playdate.StartTime).getTime() + 60 * 60 * 1000 - Date.now();
+    if (delay > 0) {
+      // Set a timeout to send the notification after the calculated delay
+      setTimeout(async () => {
+        await sendPushNotification(userId, {
+          title: "Playdate Review",
+          body: "Your playdate just ended! How was it?",
+          data: { screen: "PostPlaydateReviewScreen", playdateId: playdateId },
+        });
+      }, delay);
+    }
+  } catch (error) {
+    console.error("Error scheduling playdate review reminder:", error);
+    throw error;
   }
 };
 

@@ -11,7 +11,7 @@ import {
 import Icon from "react-native-vector-icons/FontAwesome";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
-import { auth } from "../../firebase/firebaseConfig";
+import { useSelector } from "react-redux";
 
 const PetDetailsScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -24,7 +24,7 @@ const PetDetailsScreen = ({ route }) => {
   const handleFavorite = async () => {
     try {
       // Assuming 'currentUser' holds the authenticated user's data
-      const userId = auth.currentUser.uid;
+      const userId = useSelector((state) => state.user.userId);
       const creatorID = userId;
 
       await axios.post("/api/favorites", {

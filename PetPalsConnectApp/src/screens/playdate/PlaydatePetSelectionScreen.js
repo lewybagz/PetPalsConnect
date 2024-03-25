@@ -8,9 +8,10 @@ import {
 } from "react-native";
 import axios from "axios";
 import UserPetCard from "../../components/UserPetCard";
-import { auth } from "../../../firebase/firbaseConfig";
+import { useSelector } from "react-redux";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { CheckBox } from "react-native-elements";
+import { getRealm } from "../../../../backend/models/Pet";
 
 const PlaydatePetSelectionScreen = ({ route, navigation }) => {
   const [matchedPets, setMatchedPets] = useState([]);
@@ -19,6 +20,17 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
   const [selectedPets, setSelectedPets] = useState([]);
 
   useEffect(() => {
+    const checkCachedPets = async () => {
+      const realm = await getRealm();
+      const cachedPets = realm.objects("Pet");
+
+      if (cachedPets.length > 0) {
+        setUserPets(cachedPets);
+      } else {
+        await fetchUserPets();
+      }
+    };
+
     const fetchMatchedPets = async () => {
       try {
         const matchedPetsResponse = await axios.get(
@@ -31,17 +43,33 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
     };
 
     const fetchUserPets = async () => {
-      const userId = auth.currentUser.uid;
+      const userId = useSelector((state) => state.user.userId);
       try {
-        const userPetsResponse = await axios.get(`/api/users/${userId}/pets`);
+        const userPetsResponse = await axios.get(`/api/users/pets/${userId}`);
         setUserPets(userPetsResponse.data);
+
+        const realm = await getRealm();
+
+        realm.write(() => {
+          userPetsResponse.data.forEach((pet) => {
+            // Use `true` or specific update mode in the third parameter of create
+            realm.create(
+              "Pet",
+              {
+                ...pet,
+                _id: pet._id.toString(),
+              },
+              true
+            );
+          });
+        });
       } catch (error) {
         console.error("Error fetching user's pets:", error);
       }
     };
 
     fetchMatchedPets();
-    fetchUserPets();
+    checkCachedPets();
   }, []);
 
   const handleSelectPet = (petId) => {
@@ -60,7 +88,6 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
         locationId,
       });
     } else {
-      // Show an alert or message to select at least one pet
       Alert.alert("Select Pets", "Please select at least one pet to continue.");
     }
   };

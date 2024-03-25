@@ -1,5 +1,9 @@
 const Playdate = require("../models/Playdate");
-import { sendPlaydateNotification } from "./NotificationController";
+import {
+  sendPlaydateNotification,
+  pushPlaydateReviewReminderNotification,
+} from "./NotificationController";
+
 const PlaydateController = {
   async getAllPlaydates(req, res) {
     try {
@@ -153,6 +157,13 @@ const PlaydateController = {
 
     try {
       const newPlaydate = await playdate.save();
+
+      // Schedule the review reminder notification
+      await pushPlaydateReviewReminderNotification(
+        newPlaydate._id,
+        req.body.Creator
+      );
+
       res.status(201).json(newPlaydate);
     } catch (err) {
       res.status(400).json({ message: err.message });

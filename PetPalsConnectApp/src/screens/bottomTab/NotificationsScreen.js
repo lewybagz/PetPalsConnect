@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { View, Text, FlatList, StyleSheet } from "react-native";
 import NotificationItem from "../../components/NotificationItemComponent";
 import axios from "axios";
+import { useSelector } from "react-redux";
 
 const NotificationsScreen = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
-  const userId = "user_id_here"; // Replace with actual user ID
+  const userId = useSelector((state) => state.user.userId);
 
   useEffect(() => {
     const fetchNotifications = async () => {

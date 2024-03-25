@@ -8,26 +8,25 @@ import {
   Alert,
 } from "react-native";
 import axios from "axios";
-import { auth } from "../../../firebase/firbaseConfig";
+import { useSelector } from "react-redux";
 
 const ReportUserScreen = ({ route }) => {
   const [content, setContent] = useState("");
-  const [status, setStatus] = useState("Pending"); // Default status for new reports
+  const [status, setStatus] = useState("Pending");
   const reportedUser = route.params.userId;
-  const userId = auth.currentUser.uid;
-  const reporter = userId; // Replace with current user's ID
-
+  const userId = useSelector((state) => state.user.userId);
+  const reporter = userId;
   const submitReport = async () => {
     try {
       const response = await axios.post("/api/reports", {
         Content: content,
         ReportedUser: reportedUser,
         Reporter: reporter,
-        Status: status, // Using the current status (default "Pending")
+        Status: status,
       });
 
       if (response.status === 201) {
-        setStatus("Submitted"); // Update the status to "Submitted"
+        setStatus("Submitted");
         Alert.alert(
           "Report Submitted",
           "Your report has been submitted successfully.",
@@ -39,14 +38,12 @@ const ReportUserScreen = ({ route }) => {
       }
     } catch (error) {
       console.error("Error submitting report:", error);
-      setStatus("Failed"); // Update the status to "Failed"
+      setStatus("Failed");
       Alert.alert("Error", "There was an error submitting the report.");
     }
   };
 
   const blockUser = async () => {
-    // Implement the logic to block the user
-    // This could involve sending a request to your API to update the blocklist
     try {
       const blockResponse = await axios.post("/api/blocklists", {
         BlockedUser: reportedUser,

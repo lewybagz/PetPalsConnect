@@ -30,6 +30,14 @@ const UserSchema = new Schema({
     type: Boolean,
     default: true,
   },
+  securityQuestions: [
+    {
+      question: String,
+      answer: String,
+      required: false,
+    },
+  ],
+
   Pets: [
     {
       type: Schema.Types.ObjectId,

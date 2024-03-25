@@ -9,12 +9,12 @@ import {
   Alert,
 } from "react-native";
 import axios from "axios";
-import { getAuth } from "firebase/auth";
+import { useSelector } from "react-redux";
 import UserPetCard from "./UserPetCard"; // Import UserPetCard component
 
 const PetListScreen = () => {
-  const auth = getAuth();
-  const currentUser = auth.currentUser;
+  const currentUser = useSelector((state) => state.user);
+  const userId = useSelector((state) => state.user.userId);
   const navigation = useNavigation();
   const [pets, setPets] = useState([]);
   const [matchedPets, setMatchedPets] = useState([]);
@@ -25,7 +25,7 @@ const PetListScreen = () => {
         const response = await axios.get("/api/pets");
         setPets(response.data);
         if (currentUser) {
-          fetchMatchedPets(currentUser.uid);
+          fetchMatchedPets(userId);
         }
       } catch (error) {
         Alert.alert("Error", "Failed to load pets");

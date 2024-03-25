@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import { useTailwind } from "nativewind";
 import MessageItemComponent from "../../components/MessageItemComponent";
-import { auth, firestore } from "../../firebase/firebaseConfig";
+import { firestore } from "../../firebase/firebaseConfig";
+import { useSelector } from "react-redux";
 import { FieldValue } from "firebase/firestore";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import Icon from "react-native-vector-icons/FontAwesome";
@@ -25,7 +26,7 @@ const ChatScreen = ({ route }) => {
   const [chatId, setChatId] = useState(null);
   const petInfo = route.params.pet;
   const flatListRef = useRef(null);
-  const userId = auth.currentUser.uid;
+  const userId = useSelector((state) => state.user.userId);
   const tailwind = useTailwind();
 
   const initiateChat = async () => {

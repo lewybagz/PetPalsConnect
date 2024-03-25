@@ -5,6 +5,9 @@ import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import AnimatedButton from "../../components/AnimatedButton";
 import { useTailwind } from "nativewind";
+import { useDispatch } from "react-redux";
+import { setUserId, setUser } from "../../redux/actions";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -12,53 +15,49 @@ function LoginScreen({ navigation }) {
   const [errorMessage, setErrorMessage] = useState("");
   const tailwind = useTailwind();
   const db = getFirestore();
-
   const auth = getAuth();
+  const dispatch = useDispatch();
 
   const onLoginPress = () => {
     signInWithEmailAndPassword(auth, email, password)
       .then(async (response) => {
         console.log("Logged in with:", response.user);
-        // Check if first time login
-        const isNewUser = !(await checkIfUserExists(response.user.email));
-        if (isNewUser) {
-          createUserProfile(response.user);
+
+        const userDocRef = doc(db, "users", response.user.email);
+        const docSnapshot = await getDoc(userDocRef);
+        dispatch(setUserId(response.user.uid));
+        dispatch(setUser(docSnapshot.data()));
+
+        if (!docSnapshot.exists()) {
+          await setDoc(userDocRef, {
+            email: response.user.email,
+            createdAt: new Date(),
+            // Add any additional initialization fields here
+          });
+          cacheUserData({
+            email: response.user.email,
+            // include other user details as needed
+          });
           navigation.navigate("AddPetScreen", { isNewUser: true });
         } else {
+          const userData = docSnapshot.data();
+          cacheUserData(userData);
           navigation.navigate("Home");
         }
       })
       .catch((error) => {
-        setErrorMessage(error.message);
-        // Display error message to the user
+        setErrorMessage(error.message); // Display error message to the user
       });
   };
 
-  async function createUserProfile(user) {
-    // Function to create a user profile in Firestore if it doesn't exist
-    const userDoc = doc(db, "users", user.email);
-    const docSnapshot = await getDoc(userDoc);
-
-    if (!docSnapshot.exists()) {
-      // Firestore document reference
-      await setDoc(userDoc, {
-        // Add initial user profile data here
-        email: user.email,
-        createdAt: new Date(),
-        // Any additional fields you want to initialize
-      });
+  const cacheUserData = async (userData) => {
+    try {
+      const jsonValue = JSON.stringify(userData);
+      await AsyncStorage.setItem("@userData", jsonValue);
+    } catch (e) {
+      console.error("Error caching user data:", e);
     }
-  }
-
-  async function checkIfUserExists(email) {
-    // Assuming you have a 'users' collection in Firestore
-    // where the document ID is the user's email.
-    const userDoc = doc(db, "users", email);
-    const docSnapshot = await getDoc(userDoc);
-
-    // If the document exists, it's not a new user.
-    return docSnapshot.exists();
-  }
+  };
 
   return (
     <View style={tailwind("flex-1 justify-center items-center bg-gray-100")}>
