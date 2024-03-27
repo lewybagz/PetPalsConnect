@@ -30,16 +30,27 @@ const initialChatState = {
 
 const chatReducer = (state = initialChatState, action) => {
   switch (action.type) {
-    case "SET_SINGLE_CHAT_ID":
+    case "SET_CHAT_ID":
       return {
         ...state,
         singleChatId: action.payload,
       };
-    case "SET_GROUP_CHAT_ID":
+    case "SET_CHAT":
       return {
         ...state,
-        groupChatId: action.payload,
+        currentChat: action.payload,
       };
+    case "UPDATE_CHAT_MESSAGES":
+      return {
+        ...state,
+        currentChat: { ...state.currentChat, messages: action.payload },
+      };
+    case "SET_ALL_CHATS":
+      return {
+        ...state,
+        allChats: action.payload,
+      };
+    // ... other cases as needed
     default:
       return state;
   }

@@ -11,20 +11,40 @@ import {
 import Icon from "react-native-vector-icons/FontAwesome";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { setChatId } from "../../redux/actions";
 
 const PetDetailsScreen = ({ route }) => {
   const navigation = useNavigation();
+  const userId = useSelector((state) => state.user.userId);
   const { pet } = route.params;
 
-  const handleChat = () => {
-    navigation.navigate("ChatScreen", { pet });
+  // Define the getOrCreateChatId function
+  const getOrCreateChatId = async (userId, petId) => {
+    try {
+      const response = await axios.post("/api/chats/findOrCreate", {
+        userId,
+        petId,
+      });
+      return response.data.chatId;
+    } catch (error) {
+      console.error("Error getting or creating chatId:", error);
+      return null;
+    }
+  };
+
+  const handleChat = async () => {
+    const dispatch = useDispatch();
+    // Assuming the function to get or create chatId
+    const chatId = await getOrCreateChatId(userId, pet._id);
+    dispatch(setChatId(chatId)); // Dispatch the chatId to Redux
+    navigation.navigate("ChatScreen", { pet, chatId });
   };
 
   const handleFavorite = async () => {
     try {
       // Assuming 'currentUser' holds the authenticated user's data
-      const userId = useSelector((state) => state.user.userId);
+
       const creatorID = userId;
 
       await axios.post("/api/favorites", {

@@ -16,6 +16,7 @@ import { firestore } from "../../firebase/firebaseConfig";
 import { useSelector } from "react-redux";
 import { FieldValue } from "firebase/firestore";
 import LoadingScreen from "../../components/LoadingScreenComponent";
+import ChatOptionsModal from "../../components/ChatOptionsModal";
 import Icon from "react-native-vector-icons/FontAwesome";
 import Clipboard from "@react-native-community/clipboard";
 
@@ -23,6 +24,7 @@ const ChatScreen = ({ route }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isModalVisible, setModalVisible] = useState(false);
   const [chatId, setChatId] = useState(null);
   const petInfo = route.params.pet;
   const flatListRef = useRef(null);
@@ -70,6 +72,10 @@ const ChatScreen = ({ route }) => {
 
     return unsubscribe;
   }, []);
+
+  const toggleModal = () => {
+    setModalVisible(!isModalVisible);
+  };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -179,6 +185,7 @@ const ChatScreen = ({ route }) => {
       <View style={styles.header}>
         <Image source={{ uri: petInfo.photo }} style={styles.petImage} />
         <Text style={tailwind("text-lg font-bold")}>{petInfo.name}</Text>
+        <ChatOptionsModal isVisible={isModalVisible} onClose={toggleModal} />
       </View>
       <FlatList
         ref={flatListRef}

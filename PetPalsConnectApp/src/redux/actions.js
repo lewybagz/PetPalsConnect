@@ -16,12 +16,25 @@ export const setUserId = (userId) => {
 };
 
 // Chat Actions
-export const setChatId = (chatId) => {
-  return {
-    type: "SET_CHAT_ID",
-    payload: chatId,
-  };
-};
+export const setChatId = (chatId) => ({
+  type: "SET_CHAT_ID",
+  payload: chatId,
+});
+
+export const setChat = (chat) => ({
+  type: "SET_CHAT",
+  payload: chat,
+});
+
+export const updateChatMessages = (messages) => ({
+  type: "UPDATE_CHAT_MESSAGES",
+  payload: messages,
+});
+
+export const setAllChats = (chats) => ({
+  type: "SET_ALL_CHATS",
+  payload: chats,
+});
 
 // Pet Actions
 export const setPets = (pets) => {

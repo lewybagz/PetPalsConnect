@@ -13,7 +13,7 @@ import {
 import { useTailwind } from "nativewind";
 import UserPetCard from "../../components/UserPetCardComponent";
 import LoadingScreen from "../../components/LoadingScreenComponent";
-import GroupOptionsModal from "../../components/GroupOptionsModalComponent";
+import GroupOptionsModal from "../../components/GroupOptionsModal";
 import MessageItemComponent from "../../components/MessageItemComponent";
 import { auth, firestore } from "../../firebase/firebaseConfig";
 import { FieldValue } from "firebase/firestore";
@@ -267,7 +267,7 @@ const GroupChatScreen = ({ route }) => {
         />
         <Text style={tailwind("text-lg font-bold")}>{groupInfo.groupName}</Text>
         <Text style={tailwind("text-sm")}>
-          {groupInfo.participantCount} members
+          {groupInfo.participantCount} Members
         </Text>
 
         <TouchableOpacity
@@ -364,3 +364,5 @@ const styles = StyleSheet.create({
 });
 
 export default GroupChatScreen;
+
+// TODO: show me how i can add onhold features that gives the users options for the chatcard, you should provide this code in its entirety

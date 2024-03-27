@@ -9,14 +9,18 @@ import {
   Alert,
 } from "react-native";
 import { auth } from "../../firebase/firebaseConfig";
+import { useDispatch } from "react-redux";
 import axios from "axios";
 
 const GroupChatCreationScreen = ({ route, navigation }) => {
   const { selectedPets } = route.params;
+  const [setChatId] = useState(null);
   const [groupName, setGroupName] = useState("");
   const [initialMessage, setInitialMessage] = useState("");
 
   const createGroupChat = async () => {
+    const dispatch = useDispatch();
+
     if (!groupName.trim()) {
       Alert.alert(
         "Group Name Required",
@@ -28,8 +32,8 @@ const GroupChatCreationScreen = ({ route, navigation }) => {
     try {
       const groupChatData = {
         GroupName: groupName,
-        Participants: selectedPets.map((pet) => pet.owner), // Assuming each pet has an 'owner' field with the user ID
-        Creator: auth.currentUser.uid, // Assuming you have the current user's ID
+        Participants: selectedPets.map((pet) => pet.owner), // userIds of participants
+        Creator: auth.currentUser.uid,
       };
 
       const response = await axios.post(
@@ -38,13 +42,9 @@ const GroupChatCreationScreen = ({ route, navigation }) => {
       );
 
       if (response.status === 201 || response.status === 200) {
-        Alert.alert(
-          "Success",
-          response.status === 201
-            ? "Group chat created successfully"
-            : "Group chat found"
-        );
-        navigation.navigate("GroupChatScreen", { chatId: response.data._id });
+        const groupChatId = response.data._id;
+        dispatch(setChatId(groupChatId));
+        navigation.navigate("GroupChatScreen", { chatId: groupChatId });
       } else {
         throw new Error("Failed to find or create group chat");
       }
