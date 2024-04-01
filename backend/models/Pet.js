@@ -1,34 +1,58 @@
-// RealmPetModel.js
-import Realm from "realm";
+const mongoose = require("mongoose");
+const { ContentSchema } = require("./Content");
+const Schema = mongoose.Schema;
 
-class Pet extends Realm.Object {}
-Pet.schema = {
-  name: "Pet",
-  primaryKey: "_id",
-  properties: {
-    _id: "string",
-    age: "int",
-    breed: "string",
-    name: "string",
-    owner: "string", // Assuming owner is represented by a unique identifier
-    photos: "string[]",
-    location: "string?", // Optional field, represented by a unique identifier
-    playdates: "string[]?", // Array of unique identifiers for playdates
-    specialNeeds: "string?",
-    temperament: "string?",
-    weight: "double",
+// Create Schema for Pet
+const PetSchema = new Schema(
+  {
+    age: {
+      type: Number,
+      required: true,
+    },
+    breed: {
+      type: String,
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+    },
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    photos: [
+      {
+        type: String, // URLs to the images
+      },
+    ],
+    location: {
+      type: Schema.Types.ObjectId,
+      ref: "Location",
+      required: false,
+    },
+    playdates: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Playdate",
+      },
+    ],
+    specialNeeds: {
+      type: String,
+    },
+    temperament: {
+      type: String,
+    },
+    weight: {
+      type: Number,
+      required: true,
+    },
   },
-};
+  { discriminatorKey: "contentType" }
+);
 
-const databaseOptions = {
-  path: "petPalsConnectApp.realm",
-  schema: [Pet],
-  schemaVersion: 0, // Increment this number when the schema changes
-};
+// The discriminator 'Pet' is used for the Pet type content
+const Pet = ContentSchema.discriminator("Pet", PetSchema);
 
-// Function to get the Realm database
-const getRealm = async () => {
-  return await Realm.open(databaseOptions);
-};
-
-export { getRealm, Pet };
+module.exports = Pet;
