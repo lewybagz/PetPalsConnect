@@ -15,40 +15,40 @@ const GeoSchema = new Schema({
 
 // Create Schema for Location
 const LocationSchema = new Schema({
-  Address: {
+  address: {
     type: String,
     required: true,
   },
-  Description: {
+  description: {
     type: String,
   },
-  Photo: {
+  photo: {
     type: String, // URL to the image
   },
-  Rating: {
+  rating: {
     type: Number,
   },
-  Reviews: [
+  reviews: [
     {
       type: String, // or ObjectId references to a 'Review' model
     },
   ],
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
   // Add the GeoSchema to store location coordinates
-  GeoLocation: GeoSchema,
+  geoLocation: GeoSchema,
 });
 
 // Create a model

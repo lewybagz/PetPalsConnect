@@ -3,36 +3,36 @@ const Schema = mongoose.Schema;
 
 // Create Schema for Service
 const ServiceSchema = new Schema({
-  ContactInfo: {
+  contactInfo: {
     type: String,
     required: true,
   },
-  Location: {
+  location: {
     type: String, // Could be more complex, like an object with lat/lon if needed
     required: true,
   },
-  Name: {
+  name: {
     type: String,
     required: true,
   },
-  ServiceType: {
+  serviceType: {
     type: String,
     required: true,
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User", // Assuming 'User' is another schema/model
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

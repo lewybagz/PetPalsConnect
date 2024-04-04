@@ -3,54 +3,54 @@ const Schema = mongoose.Schema;
 
 // Create Schema for Playdate
 const PlaydateSchema = new Schema({
-  Date: {
+  date: {
     type: Date,
     required: true,
   },
-  Location: {
+  location: {
     type: Schema.Types.ObjectId,
     ref: "Location",
     required: true,
   },
-  Notes: {
+  notes: {
     type: String,
   },
-  Participants: [
+  participants: [
     {
       type: Schema.Types.ObjectId,
       ref: "User",
     },
   ],
-  PetsInvolved: [
+  petsInvolved: [
     {
       type: Schema.Types.ObjectId,
-      ref: "Pet", // Assuming 'Pet' is a separate schema/model we will create
+      ref: "Pet",
     },
   ],
-  StartTime: {
+  startTime: {
     type: Date,
     required: true,
   },
-  Status: {
+  status: {
     type: String,
     enum: ["pending", "accepted", "declined", "completed"],
     default: "pending",
   },
-  Reviews: [{ type: Schema.Types.ObjectId, ref: "Review" }],
-  Creator: {
+  reviews: [{ type: Schema.Types.ObjectId, ref: "Review" }],
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

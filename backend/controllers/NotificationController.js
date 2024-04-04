@@ -1,10 +1,12 @@
 const Notification = require("../models/Notification");
+const {
+  findUserById,
+} = require("../../PetPalsConnectApp/services/UserService");
 const admin = require("firebase-admin");
 const User = require("../models/User");
 const serviceAccount = require("../config/serviceAccountKey.json");
 const Playdate = require("../models/Playdate");
 
-// Function to find a user's FCM token by their user ID
 export const findTokenByUserId = async (userId) => {
   try {
     const user = await User.findOne({ _id: userId });
@@ -29,8 +31,8 @@ const NotificationController = {
   async getAllNotifications(req, res) {
     try {
       const notifications = await Notification.find()
-        .populate("Recipient")
-        .populate("Creator");
+        .populate("recipient")
+        .populate("creator");
       res.json(notifications);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -39,11 +41,11 @@ const NotificationController = {
 
   async getUserNotifications(req, res) {
     try {
-      const userId = req.params.userId; // Extracting the userId from the request parameters
+      const userId = req.params.userId;
       const userNotifications = await Notification.find({ Recipient: userId })
-        .populate("Recipient")
-        .populate("Creator")
-        .sort({ Timestamp: -1 }); // Sorting by newest first
+        .populate("recipient")
+        .populate("creator")
+        .sort({ Timestamp: -1 });
 
       res.json(userNotifications);
     } catch (err) {
@@ -54,8 +56,8 @@ const NotificationController = {
   async getNotificationById(req, res) {
     try {
       const notification = await Notification.findById(req.params.id)
-        .populate("Recipient")
-        .populate("Creator");
+        .populate("recipient")
+        .populate("creator");
       if (!notification) {
         return res.status(404).json({ message: "Cannot find notification" });
       }
@@ -65,14 +67,40 @@ const NotificationController = {
     }
   },
 
+  async sendFriendRequestNotification(req, res) {
+    try {
+      const { userId, requesterId } = req.body;
+
+      const token = await findTokenByUserId(userId);
+      if (!token) throw new Error("FCM token not found for user");
+
+      const requester = await findUserById(requesterId);
+      const requesterName = requester.name;
+
+      const message = {
+        token: token,
+        notification: {
+          title: "New Friend Request",
+          body: `${requesterName} has sent you a friend request!`,
+        },
+      };
+
+      await admin.messaging().send(message);
+      res.json({ message: "Friend request notification sent successfully" });
+    } catch (error) {
+      console.log("Error sending friend request notification:", error);
+      res.status(500).json({ message: error.message });
+    }
+  },
+
   async createNotification(req, res) {
     const notification = new Notification({
-      Content: req.body.Content,
-      ReadStatus: req.body.ReadStatus,
-      Recipient: req.body.Recipient,
-      Type: req.body.Type,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      content: req.body.content,
+      readStatus: req.body.readStatus,
+      recipient: req.body.recipient,
+      type: req.body.type,
+      creator: req.body.creator,
+      slug: req.body.slug,
     });
 
     try {
@@ -90,7 +118,7 @@ admin.initializeApp({
 
 export const sendPushNotification = async (userId, notificationData) => {
   try {
-    const token = await findTokenByUserId(userId); // Retrieve FCM token for the user
+    const token = await findTokenByUserId(userId);
     if (!token) throw new Error("FCM token not found for user");
 
     const message = {
@@ -106,7 +134,7 @@ export const sendPushNotification = async (userId, notificationData) => {
     console.log("Successfully sent message");
   } catch (error) {
     console.log("Error sending message:", error);
-    throw error; // Rethrow the error if you want to handle it further up the chain
+    throw error;
   }
 };
 
@@ -145,5 +173,4 @@ export const pushPlaydateReviewReminderNotification = async (
     throw error;
   }
 };
-
 module.exports = NotificationController;

@@ -11,59 +11,77 @@ import {
 } from "react-native";
 import axios from "axios"; // Assuming axios is used for API calls
 import { useSelector } from "react-redux";
-import { sendPushNotification } from "../services/NotificationService"; // a hypothetical service to handle notifications
+import {
+  sendPushNotification,
+  createNotificationInDB,
+} from "../services/NotificationService"; // a hypothetical service to handle notifications
+import { getPetOwner } from "../../../services/PetService";
 import { Image } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { useNavigation } from "@react-navigation/native";
+import { fetchUserPreferences } from "../../../services/UserService";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const SchedulePlaydateScreen = ({ route }) => {
   const navigation = useNavigation();
   const { pet } = route.params;
-
   const [time, setTime] = useState(new Date());
   const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState("");
   const [locations, setLocations] = useState([]);
+  const [error, setError] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
 
   useEffect(() => {
-    // Function to fetch locations
-    const fetchLocations = async (latitude, longitude, range) => {
+    const initialize = async () => {
       try {
-        const response = await axios.get("/api/locations/playdate-locations", {
-          params: {
-            userLat: latitude,
-            userLng: longitude,
-            range: range, // Assuming you have a way to set this range (e.g., from user settings)
-          },
-        });
-        setLocations(response.data);
-      } catch (error) {
-        console.error("Error fetching locations:", error);
+        // Assuming you have a way to get the current user's ID
+        const userId = useSelector((state) => state.user.userId);
+        const userPrefs = await fetchUserPreferences(userId);
+        const playdateRange = userPrefs.playdateRange;
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              const { latitude, longitude } = position.coords;
+              await fetchLocations(latitude, longitude, playdateRange);
+            },
+            (err) => {
+              console.error(err);
+              setError(err.message);
+            }
+          );
+        } else {
+          setError("Geolocation is not supported by this browser");
+        }
+      } catch (err) {
+        console.error("Error initializing:", err);
+        setError("Initialization failed");
       }
     };
 
-    // Get current position and then fetch locations
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const range = 10; // This should be dynamically set based on user preference or settings
-          fetchLocations(
-            position.coords.latitude,
-            position.coords.longitude,
-            range
-          );
-        },
-        (err) => {
-          console.error(err);
-        }
-      );
-    } else {
-      console.error("Geolocation is not supported by this browser");
-    }
+    initialize();
   }, []);
+
+  const fetchLocations = async (latitude, longitude, playdateRange) => {
+    try {
+      const token = await getStoredToken();
+      const response = await axios.get("/api/locations/playdate-locations", {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          userLat: latitude,
+          userLng: longitude,
+          range: playdateRange,
+        },
+      });
+      setLocations(response.data);
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      setError(error.message);
+    }
+  };
 
   const handleSubmit = async () => {
     const userId = useSelector((state) => state.user.userId);
@@ -71,23 +89,39 @@ const SchedulePlaydateScreen = ({ route }) => {
     // Prepare playdate data
     const playdateData = {
       Date: date,
-      Location: selectedLocation._id, // Assuming the selectedLocation has an _id
+      Location: selectedLocation._id,
       Notes: notes,
-      Participants: [userId], // Assuming currentUser is the logged-in user
-      PetsInvolved: [pet._id], // Assuming pet is the selected pet for the playdate
-      Creator: userId, // currentUser._id represents the ID of the logged-in user
+      Participants: [userId],
+      PetsInvolved: [pet._id],
+      Creator: userId,
     };
 
     try {
+      const token = await getStoredToken(); // Retrieve the token
       // Send a POST request to create a playdate
-      const response = await axios.post("/api/playdates", playdateData);
+      const response = await axios.post("/api/playdates", playdateData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response.data) {
-        sendPushNotification({
-          recipientUserId: pet.owner._id, // Assuming you have the owner's ID
-          title: "Playdate Request",
-          message: `${userName} has requested a playdate with ${pet.name}`,
-          data: { playdateId: response.data._id }, // Include the playdate ID to navigate to the details
-        });
+        const ownerId = await getPetOwner(pet._id);
+
+        if (ownerId) {
+          sendPushNotification({
+            recipientUserId: ownerId,
+            title: "Playdate Request",
+            message: `${userName} has requested a playdate with ${pet.name}`,
+            data: { playdateId: response.data._id },
+          });
+
+          createNotificationInDB({
+            content: "A playdate has been requested",
+            recipientId: ownerId,
+            type: "Playdate Request",
+            creatorId: userId,
+          });
+        } else {
+          console.log("Owner ID not found for pet");
+        }
       }
       // Navigate to PlaydateCreatedScreen with the created playdate data
       navigation.navigate("PlaydateCreatedScreen", { playdate: response.data });
@@ -109,6 +143,7 @@ const SchedulePlaydateScreen = ({ route }) => {
 
   return (
     <ScrollView style={styles.container}>
+      {error && <Text style={styles.errorText}>Error: {error}</Text>}
       <Image source={{ uri: pet.photos[0] }} style={styles.petImage} />
       <Text style={styles.header}>
         <Icon name="calendar" size={20} color="#007bff" /> Schedule a Playdate

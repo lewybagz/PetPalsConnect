@@ -10,6 +10,7 @@ import {
 import axios from "axios";
 import { useTailwind } from "nativewind";
 import { useNavigation } from "@react-navigation/native";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const ScheduledPlaydatesScreen = () => {
   const [playdates, setPlaydates] = useState([]);
@@ -19,7 +20,10 @@ const ScheduledPlaydatesScreen = () => {
 
   const fetchPlaydates = async () => {
     try {
-      const response = await axios.get("/api/playdates/upcoming");
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.get("/api/playdates/upcoming", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setPlaydates(response.data);
     } catch (error) {
       console.error("Error fetching scheduled playdates:", error);

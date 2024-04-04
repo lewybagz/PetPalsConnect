@@ -4,9 +4,9 @@ const MessageController = {
   async getAllMessages(req, res) {
     try {
       const messages = await Message.find()
-        .populate("Receiver")
-        .populate("Sender")
-        .populate("Creator");
+        .populate("receiver")
+        .populate("sender")
+        .populate("creator", "name");
       res.json(messages);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -17,9 +17,9 @@ const MessageController = {
     let message;
     try {
       message = await Message.findById(req.params.id)
-        .populate("Receiver")
-        .populate("Sender")
-        .populate("Creator");
+        .populate("receiver")
+        .populate("sender")
+        .populate("creator", "name");
       if (message == null) {
         return res.status(404).json({ message: "Cannot find message" });
       }
@@ -33,13 +33,13 @@ const MessageController = {
 
   async createMessage(req, res) {
     const message = new Message({
-      ContentImage: req.body.ContentImage,
-      ContentText: req.body.ContentText,
-      ReadStatus: req.body.ReadStatus,
-      Receiver: req.body.Receiver,
-      Sender: req.body.Sender,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      contentImage: req.body.contentImage,
+      contentText: req.body.contentText,
+      readStatus: req.body.readStatus,
+      receiver: req.body.receiver,
+      sender: req.body.sender,
+      creator: req.body.creator,
+      slug: req.body.slug,
     });
 
     try {

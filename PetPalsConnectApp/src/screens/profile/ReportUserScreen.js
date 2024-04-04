@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import axios from "axios";
 import { useSelector } from "react-redux";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const ReportUserScreen = ({ route }) => {
   const [content, setContent] = useState("");
@@ -18,12 +19,19 @@ const ReportUserScreen = ({ route }) => {
   const reporter = userId;
   const submitReport = async () => {
     try {
-      const response = await axios.post("/api/reports", {
-        Content: content,
-        ReportedUser: reportedUser,
-        Reporter: reporter,
-        Status: status,
-      });
+      const token = await getStoredToken();
+      const response = await axios.post(
+        "/api/reports",
+        {
+          Content: content,
+          ReportedUser: reportedUser,
+          Reporter: reporter,
+          Status: status,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (response.status === 201) {
         setStatus("Submitted");
@@ -45,10 +53,17 @@ const ReportUserScreen = ({ route }) => {
 
   const blockUser = async () => {
     try {
-      const blockResponse = await axios.post("/api/blocklists", {
-        BlockedUser: reportedUser,
-        Owner: reporter, // Assuming the 'Owner' field refers to the user who is blocking
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      const blockResponse = await axios.post(
+        "/api/blocklists",
+        {
+          BlockedUser: reportedUser,
+          Owner: reporter,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (blockResponse.status === 201) {
         Alert.alert("User Blocked", "The user has been blocked successfully.");

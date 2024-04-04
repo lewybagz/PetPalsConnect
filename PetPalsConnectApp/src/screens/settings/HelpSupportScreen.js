@@ -16,6 +16,7 @@ const HelpSupportScreen = () => {
   const tailwind = useTailwind();
 
   const submitForm = () => {
+    // TODO:
     // Logic to submit the form data
     // You might want to send this data to your backend or an email service
     Alert.alert(

@@ -11,19 +11,28 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Make sure to install this package
 import axios from "axios";
-import { auth } from "../../firebase/firebaseConfig";
+import { sendPushNotification } from "../../services/NotificationService";
+import { useSelector } from "react-redux";
+import { getStoredToken } from "../../utils/tokenutil";
 
 const UserPetCard = ({ data, type, reviews }) => {
   const [modalVisible, setModalVisible] = useState(false);
-
+  const currentUser = useSelector((state) => state.user.currentUser);
   const navigation = useNavigation();
 
   const handleBlockUser = async (userIdToBlock) => {
     try {
-      const response = await axios.post("/api/blocklist", {
-        BlockedUser: userIdToBlock,
-        Owner: data.user._id, // Assuming 'data.user._id' is the current user's ID
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.post(
+        "/api/blocklist",
+        {
+          BlockedUser: userIdToBlock,
+          Owner: data.user._id,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (response.status === 201) {
         Alert.alert("User Blocked", "The user has been successfully blocked.");
         setModalVisible(false);
@@ -42,11 +51,18 @@ const UserPetCard = ({ data, type, reviews }) => {
 
   const handleAddToFavorites = async (petId) => {
     try {
-      const response = await axios.post("/api/favorites", {
-        content: petId, // Assuming you want to favorite the pet
-        user: data.user._id, // Assuming 'data.user._id' is the current user's ID
-        creator: data.user._id, // The ID of the user who is adding the favorite
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.post(
+        "/api/favorites",
+        {
+          content: petId,
+          user: data.user._id,
+          creator: data.user._id,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (response.status === 201) {
         Alert.alert("Favorite Added", "The pet has been added to favorites.");
         setModalVisible(false);
@@ -58,15 +74,34 @@ const UserPetCard = ({ data, type, reviews }) => {
   };
 
   const handleAddFriend = async (userId) => {
+    // Ensure currentUser is available
+    if (!currentUser) {
+      console.error("Current user not found");
+      return;
+    }
     try {
-      // The endpoint and body may vary based on your backend implementation
-      const response = await axios.post("/api/friends", {
-        User1: auth.currentUser.uid, // Assuming this is the current logged-in user's ID
-        User2: userId, // The ID of the user that is being added as a friend
-        Status: true, // Assuming you're immediately setting the friend request as accepted for simplicity
-      });
-
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.post(
+        "/api/friends",
+        {
+          senderId: currentUser,
+          recipientId: userId,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (response.status === 201) {
+        // Friend request sent successfully, now send notification
+        await sendPushNotification({
+          recipientUserId: userId, // ID of the user receiving the friend request
+          title: "New Friend Request",
+          message: "You have a new friend request!",
+          data: {
+            /* additional data if needed */
+          },
+        });
+
         Alert.alert("Friend Request Sent", "A friend request has been sent.");
         setModalVisible(false);
       } else {
@@ -76,14 +111,13 @@ const UserPetCard = ({ data, type, reviews }) => {
         );
       }
     } catch (error) {
-      console.error("Error sending friend request:", error);
+      console.error("Error:", error);
       Alert.alert(
         "Error",
         "There was an error when attempting to send a friend request."
       );
     }
   };
-
   const renderContent = () => {
     switch (type) {
       case "user":

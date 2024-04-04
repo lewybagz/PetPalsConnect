@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
 import { useTailwind } from "nativewind";
 import axios from "axios";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const AddPaymentMethodScreen = ({ navigation }) => {
   const [cardNumber, setCardNumber] = useState("");
@@ -11,22 +12,27 @@ const AddPaymentMethodScreen = ({ navigation }) => {
   const tailwind = useTailwind();
 
   const handleAddPaymentMethod = async () => {
-    // Perform validation
     if (!cardNumber || !expiryDate || !cvv) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     try {
+      const token = await getStoredToken();
       // API call to backend to add payment method
-      await axios.post("/api/payments/payment-methods", {
-        cardNumber,
-        expiryDate,
-        cvv,
-        zipCode,
-      });
+      await axios.post(
+        "/api/payments/payment-methods",
+        {
+          cardNumber,
+          expiryDate,
+          cvv,
+          zipCode,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-      // Handle successful response
       Alert.alert("Success", "Payment method added successfully");
       navigation.goBack();
     } catch (error) {

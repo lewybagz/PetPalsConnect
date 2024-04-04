@@ -10,40 +10,54 @@ import {
 } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
+import { getStoredToken } from "../../../utils/tokenutil";
+import {
+  sendPushNotification,
+  createNotificationInDB,
+} from "../../../services/NotificationService";
+import { fetchPlaydateDetails } from "../../redux/actions";
 
 const PlaydateRequestScreen = ({ route, navigation }) => {
   const { playdateId } = route.params;
-  const [playdate, setPlaydate] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  const { playdateDetails, loading, error } = useSelector(
+    (state) => state.yourReducerName
+  );
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
 
   useEffect(() => {
-    const fetchPlaydateDetails = async () => {
-      try {
-        const response = await axios.get(`/api/playdates/${playdateId}`);
-        setPlaydate(response.data);
-      } catch (error) {
-        Alert.alert("Error", "Failed to load playdate details.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    dispatch(fetchPlaydateDetails(playdateId));
+  }, [dispatch, playdateId]);
 
-    fetchPlaydateDetails();
-  }, [playdateId]);
-
-  // New function to send notification
-  const sendNotificationToSender = async (id, message) => {
+  const sendNotificationToSender = async (
+    playdateId,
+    message,
+    recipientId,
+    type,
+    creatorId
+  ) => {
     try {
-      const playdateResponse = await axios.get(`/api/playdates/${id}`);
+      const token = await getStoredToken(); // Retrieve the token if needed for axios call
+      const playdateResponse = await axios.get(`/api/playdates/${playdateId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const senderId = playdateResponse.data.senderId;
 
-      await axios.post("/api/notifications/playdate/send-notification", {
-        to: senderId,
+      // Use the sendPushNotification service
+      await sendPushNotification({
+        recipientUserId: senderId,
         title: "Playdate Update",
-        body: message,
-        data: { playdateId: id },
+        message: message,
+        data: { playdateId: playdateId },
+      });
+
+      await createNotificationInDB({
+        content: message,
+        recipientId,
+        type,
+        creatorId,
       });
     } catch (error) {
       console.error("Error sending notification:", error);
@@ -54,7 +68,14 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
   const handleAccept = async () => {
     setAccepting(true);
     try {
-      await axios.post(`/api/playdates/accept/${playdateId}`);
+      const token = await getStoredToken(); // Retrieve the token
+      await axios.post(
+        `/api/playdates/accept/${playdateId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       await sendNotificationToSender(
         playdateId,
         "Your playdate request has been accepted."
@@ -67,10 +88,18 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
       setAccepting(false);
     }
   };
+
   const handleDecline = async () => {
     setDeclining(true);
     try {
-      await axios.post(`/api/playdates/decline/${playdateId}`);
+      const token = await getStoredToken(); // Retrieve the token
+      await axios.post(
+        `/api/playdates/decline/${playdateId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       await sendNotificationToSender(
         playdateId,
         "Your playdate request has been declined."
@@ -88,7 +117,15 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
     return <LoadingScreen />;
   }
 
-  if (!playdate) {
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text>Error loading playdate details.</Text>
+      </View>
+    );
+  }
+
+  if (!playdateDetails) {
     return (
       <View style={styles.centered}>
         <Text>No playdate details available.</Text>
@@ -98,12 +135,15 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Image source={{ uri: playdate.petPhoto }} style={styles.petImage} />
-      <Text style={styles.petName}>{playdate.petName}</Text>
-      <Text style={styles.ownerName}>Owner: {playdate.ownerName}</Text>
-      <Text style={styles.location}>Location: {playdate.location}</Text>
+      <Image
+        source={{ uri: playdateDetails.petPhoto }}
+        style={styles.petImage}
+      />
+      <Text style={styles.petName}>{playdateDetails.petName}</Text>
+      <Text style={styles.ownerName}>Owner: {playdateDetails.ownerName}</Text>
+      <Text style={styles.location}>Location: {playdateDetails.location}</Text>
       <Text style={styles.dateTime}>
-        {new Date(playdate.date).toLocaleString()}
+        {new Date(playdateDetails.date).toLocaleString()}
       </Text>
 
       <View style={styles.buttonsContainer}>

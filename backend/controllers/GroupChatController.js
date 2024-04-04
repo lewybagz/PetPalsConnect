@@ -1,16 +1,54 @@
 const GroupChat = require("../models/GroupChat");
 const Media = require("../models/Media");
+const SHA256 = require("crypto-js/sha256");
 
 const GroupChatController = {
   async getAllGroupChats(req, res) {
     try {
       const groupChats = await GroupChat.find()
-        .populate("Messages")
-        .populate("Participants")
-        .populate("Creator");
+        .populate("messages")
+        .populate("participants")
+        .populate("creator");
       res.json(groupChats);
     } catch (err) {
       res.status(500).json({ message: err.message });
+    }
+  },
+
+  async getGroupChatDetails(req, res) {
+    const { chatId } = req.params;
+    try {
+      const chat = await GroupChat.findById(chatId)
+        .populate("messages") // You may want to populate additional fields in messages
+        .populate("participants", "name breed photo ownerId")
+        .populate("media"); // Populate this if media contains references to another collection
+
+      if (!chat) {
+        return res.status(404).json({ message: "GroupChat not found" });
+      }
+
+      res.json(chat);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  async archiveGroupChat(req, res) {
+    const groupChatId = req.params.chatId;
+    try {
+      const updatedGroupChat = await GroupChat.findByIdAndUpdate(
+        groupChatId,
+        { isArchived: true },
+        { new: true }
+      );
+
+      if (!updatedGroupChat) {
+        return res.status(404).json({ message: "GroupChat not found" });
+      }
+
+      res.json(updatedGroupChat);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
   },
 
@@ -18,11 +56,11 @@ const GroupChatController = {
     let groupChat;
     try {
       groupChat = await GroupChat.findById(req.params.id)
-        .populate("Messages")
-        .populate("Participants")
-        .populate("Creator");
+        .populate("messages")
+        .populate("participants")
+        .populate("creator");
       if (groupChat == null) {
-        return res.status(404).json({ message: "Cannot find group chat" });
+        return res.status(404).json({ message: "Cannot find GroupChat" });
       }
     } catch (err) {
       return res.status(500).json({ message: err.message });
@@ -102,7 +140,7 @@ const GroupChatController = {
     try {
       const groupId = req.params.groupId;
       const groupChat = await GroupChat.findById(groupId).populate({
-        path: "Participants",
+        path: "participants",
         populate: {
           path: "pets", // Assuming each participant has a 'pets' field
         },
@@ -126,40 +164,72 @@ const GroupChatController = {
     }
   },
   async findOrCreateGroupChat(req, res) {
+    const { Participants, GroupName, Creator } = req.body;
+
+    // Generate a base ID using the first 3 characters of each userId
+    let baseId = Participants.map((id) => id.substring(0, 3)).join("");
+    baseId = baseId.length > 50 ? baseId.substring(0, 50) : baseId;
+    let chatId = SHA256(baseId).toString();
+
     try {
-      const { GroupName, Participants, Creator } = req.body;
+      let chat = await chat.findOne({ chatId });
 
-      // Search for an existing group chat with the same participants and name
-      let groupChat = await GroupChat.findOne({
-        GroupName,
-        Participants: { $all: Participants },
-      });
-
-      if (!groupChat) {
-        // Create a new group chat if it does not exist
-        groupChat = new GroupChat({
-          GroupName,
-          Participants,
-          Creator,
-        });
-        await groupChat.save();
-        res.status(201).json(groupChat);
-      } else {
-        // If group chat exists, return it
-        res.status(200).json(groupChat);
+      // Check for existing chat and compare participants
+      while (
+        chat &&
+        !this.isEqualParticipants(chat.participants, Participants)
+      ) {
+        baseId = this.scrambleId(baseId); // Scramble the baseId
+        chatId = SHA256(baseId).toString();
+        chat = await chat.findOne({ chatId });
       }
+
+      if (!chat) {
+        chat = new chat({
+          chatId,
+          participants: Participants,
+          groupName: GroupName,
+          creator: Creator,
+          // other chat properties
+        });
+        await chat.save();
+      }
+
+      res.status(200).json(chat);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
   },
 
+  async isEqualParticipants(existingParticipants, newParticipants) {
+    // Create sets for easy comparison
+    const setExisting = new Set(existingParticipants);
+    const setNew = new Set(newParticipants);
+
+    // Check if both sets have the same size
+    if (setExisting.size !== setNew.size) return false;
+
+    // Check if every element in one set is present in the other
+    for (const id of setExisting) {
+      if (!setNew.has(id)) return false;
+    }
+
+    return true;
+  },
+
+  async scrambleId(id) {
+    // Append a random character or string to the ID
+    const randomString = Math.random().toString(36).substring(2, 7); // Generate a random string
+    return id + randomString;
+  },
+
   async createGroupChat(req, res) {
     const groupChat = new GroupChat({
-      GroupName: req.body.GroupName,
-      Messages: [], // Initially empty
-      Participants: req.body.Participants, // Array of User IDs
-      Creator: req.body.Creator,
-      Media: req.body.Media || [], // Handle media (optional)
+      groupName: req.body.groupName,
+      messages: [], // Initially empty
+      participants: req.body.participants, // Array of User IDs
+      creator: req.body.creator,
+      media: req.body.media || [], // Handle media (optional)
     });
 
     try {
@@ -167,6 +237,24 @@ const GroupChatController = {
       res.status(201).json(newGroupChat);
     } catch (err) {
       res.status(400).json({ message: err.message });
+    }
+  },
+
+  async deleteGroupChat(req, res) {
+    const { chatId } = req.params;
+    try {
+      const groupChat = await GroupChat.findById(chatId);
+      if (!groupChat) {
+        return res.status(404).json({ message: "Group Chat not found" });
+      }
+
+      // Optionally, remove associated messages or other related data
+      // ...
+
+      await groupChat.remove();
+      res.status(200).json({ message: "Group Chat deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
   },
 };

@@ -2,8 +2,20 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const MediaSchema = new Schema({
-  url: String, // URL to the media
-  type: String, // 'image', 'video', etc.
+  url: {
+    type: String, // URL to the media
+    required: true,
+  },
+  type: {
+    type: String, // 'image', 'video', etc.
+    required: true,
+  },
+  thumbnail: {
+    type: String, // URL to the thumbnail, mainly for videos
+    required: function () {
+      return this.type === "video";
+    }, // Conditional requirement based on media type
+  },
   createdBy: {
     type: Schema.Types.ObjectId,
     ref: "User",
@@ -12,7 +24,6 @@ const MediaSchema = new Schema({
     type: Date,
     default: Date.now,
   },
-  // ... other fields like thumbnail for videos, etc.
 });
 
 const Media = mongoose.model("Media", MediaSchema);

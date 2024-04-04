@@ -12,6 +12,7 @@ import axios from "axios";
 import UserPetCard from "../components/UserPetCard";
 import PlayDateLocationCard from "../components/PlayDateLocationCardComponent";
 import CustomTooltip from "../../components/CustomTooltip";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 // Walkthroughable components
 const WalkthroughableText = walkthroughable(Text);
@@ -24,13 +25,19 @@ const FavoritesScreen = ({ route, start }) => {
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
-        const response = await axios.get("/api/favorites");
+        const token = await getStoredToken(); // Retrieve the token
+        const response = await axios.get("/api/favorites", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setFavorites(response.data);
       } catch (error) {
+        console.error("Error fetching favorites:", error);
         Alert.alert("Error", "Failed to load favorites");
       }
     };
+
     fetchFavorites();
+
     if (route.params?.showTutorial) {
       start(); // Start copilot tutorial
     }

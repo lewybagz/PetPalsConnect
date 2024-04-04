@@ -3,43 +3,43 @@ const Schema = mongoose.Schema;
 
 // Create Schema for PetMatch
 const PetMatchSchema = new Schema({
-  MatchScore: {
+  matchScore: {
     type: Number,
     required: true,
   },
-  Pet1: {
+  pet1: {
     type: Schema.Types.ObjectId,
     ref: "Pet", // Assuming 'Pet' is a separate schema/model
     required: true,
   },
-  Pet2: {
+  pet2: {
     type: Schema.Types.ObjectId,
     ref: "Pet", // Assuming 'Pet' is a separate schema/model
     required: true,
   },
-  RelevantToUser: {
+  relevantToUser: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Timestamp: {
+  timestamp: {
     type: Date,
     default: Date.now,
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

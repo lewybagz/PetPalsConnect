@@ -12,6 +12,7 @@ import { useSelector } from "react-redux";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { CheckBox } from "react-native-elements";
 import { getRealm } from "../../../../backend/models/Pet";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const PlaydatePetSelectionScreen = ({ route, navigation }) => {
   const [matchedPets, setMatchedPets] = useState([]);
@@ -33,8 +34,10 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
 
     const fetchMatchedPets = async () => {
       try {
+        const token = await getStoredToken(); // Retrieve the token
         const matchedPetsResponse = await axios.get(
-          "/api/petmatches/matched-pets"
+          "/api/petmatches/matched-pets",
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setMatchedPets(matchedPetsResponse.data);
       } catch (error) {
@@ -45,14 +48,16 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
     const fetchUserPets = async () => {
       const userId = useSelector((state) => state.user.userId);
       try {
-        const userPetsResponse = await axios.get(`/api/users/pets/${userId}`);
+        const token = await getStoredToken(); // Retrieve the token
+        const userPetsResponse = await axios.get(`/api/users/pets/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setUserPets(userPetsResponse.data);
 
         const realm = await getRealm();
 
         realm.write(() => {
           userPetsResponse.data.forEach((pet) => {
-            // Use `true` or specific update mode in the third parameter of create
             realm.create(
               "Pet",
               {

@@ -3,57 +3,57 @@ const Schema = mongoose.Schema;
 
 // Create Schema for Review
 const ReviewSchema = new Schema({
-  Comment: {
+  comment: {
     type: String,
     required: true,
   },
-  Date: {
+  date: {
     type: Date,
     default: Date.now,
   },
-  Rating: {
+  rating: {
     type: Number,
     required: true,
   },
-  RelatedArticle: {
+  relatedArticle: {
     type: Schema.Types.ObjectId,
     ref: "Article", // Replace with the actual Article model reference
   },
-  RelatedPlaydate: {
+  relatedPlaydate: {
     type: Schema.Types.ObjectId,
     ref: "Playdate", // Link to Playdate
   },
-  RelatedService: {
+  relatedService: {
     type: Schema.Types.ObjectId,
     ref: "Service", // Assuming 'Service' is another schema/model we created
   },
-  RelatedLocation: {
+  relatedLocation: {
     type: Schema.Types.ObjectId,
     ref: "Location", // Assuming 'Location' is your location model
   },
-  Reviewer: {
+  reviewer: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Visibility: {
+  visibility: {
     type: Boolean,
     default: true, // true for 'yes', false for 'no'
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

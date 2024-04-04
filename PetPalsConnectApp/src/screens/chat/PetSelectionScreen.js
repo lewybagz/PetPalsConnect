@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import axios from "axios";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const PetSelectionScreen = ({ navigation, route }) => {
   const [pets, setPets] = useState([]); // All available pets for selection
@@ -16,10 +17,19 @@ const PetSelectionScreen = ({ navigation, route }) => {
   const { userPetId } = route.params;
 
   useEffect(() => {
-    axios
-      .get(`/api/friends/${userPetId}/pets`) // Adjust API endpoint as necessary
-      .then((response) => setPets(response.data))
-      .catch((error) => console.error("Error fetching pet friends:", error));
+    const fetchPetFriends = async () => {
+      try {
+        const token = await getStoredToken(); // Retrieve the token
+        const response = await axios.get(`/api/friends/${userPetId}/pets`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setPets(response.data);
+      } catch (error) {
+        console.error("Error fetching pet friends:", error);
+      }
+    };
+
+    fetchPetFriends();
   }, []);
 
   const handlePetSelect = (pet) => {

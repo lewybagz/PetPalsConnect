@@ -2,11 +2,16 @@ import React, { useState } from "react";
 import { View, Text, TextInput, Button, Alert, StyleSheet } from "react-native";
 import axios from "axios";
 import DateTimePickerComponent from "../components/DateTimePickerComponent";
-import { sendPushNotification } from "../../../../backend/controllers/NotificationController";
+import {
+  sendPushNotification,
+  createNotificationInDB,
+} from "../../../services/NotificationService";
+import { getPetOwner } from "../../../services/PetService";
 import { useSelector } from "react-redux";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
-  const { petId, locationId } = route.params; // Retrieve passed petId and locationId
+  const { petId, locationId } = route.params;
   const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState("");
 
@@ -23,13 +28,24 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
     };
 
     try {
-      const response = await axios.post("/api/playdates", playdateData);
+      const token = await getStoredToken();
+      const response = await axios.post("/api/playdates", playdateData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response.data) {
+        const ownerId = await getPetOwner(pet._id);
+
         sendPushNotification({
-          recipientUserId: pet.owner._id,
+          recipientUserId: ownerId,
           title: "Playdate Request",
           message: `${selectedPet.name} has requested a playdate with ${pet.name}`,
           data: { playdateId: response.data._id },
+        });
+        createNotificationInDB({
+          content: "A playdate has been requested",
+          recipientId: ownerId,
+          type: "Playdate Request",
+          creatorId: userId,
         });
       }
       navigation.navigate("PlaydateCreatedScreen", { playdate: response.data });

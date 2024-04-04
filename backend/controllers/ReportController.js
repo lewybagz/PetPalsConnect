@@ -4,9 +4,9 @@ const ReportController = {
   async getAllReports(req, res) {
     try {
       const reports = await Report.find()
-        .populate("ReportedUser")
-        .populate("Reporter")
-        .populate("Creator");
+        .populate("reportedUser")
+        .populate("reporter")
+        .populate("creator");
       res.json(reports);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -17,9 +17,9 @@ const ReportController = {
     let report;
     try {
       report = await Report.findById(req.params.id)
-        .populate("ReportedUser")
-        .populate("Reporter")
-        .populate("Creator");
+        .populate("reportedUser")
+        .populate("reporter")
+        .populate("creator");
       if (report == null) {
         return res.status(404).json({ message: "Cannot find report" });
       }
@@ -32,14 +32,14 @@ const ReportController = {
   },
 
   async createReport(req, res) {
-    const report = new Report({
-      Content: req.body.Content,
-      ReportedContent: req.body.ReportedContent,
-      ReportedUser: req.body.ReportedUser,
-      Reporter: req.body.Reporter,
-      Status: req.body.Status,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+    const report = new report({
+      content: req.body.content,
+      reportedContent: req.body.reportedContent,
+      reportedUser: req.body.reportedUser,
+      reporter: req.body.reporter,
+      status: req.body.status,
+      creator: req.body.creator,
+      slug: req.body.slug,
     });
 
     try {

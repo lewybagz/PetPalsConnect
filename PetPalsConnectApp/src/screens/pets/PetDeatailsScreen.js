@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { useSelector, useDispatch } from "react-redux";
 import { setChatId } from "../../redux/actions";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const PetDetailsScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -22,10 +23,17 @@ const PetDetailsScreen = ({ route }) => {
   // Define the getOrCreateChatId function
   const getOrCreateChatId = async (userId, petId) => {
     try {
-      const response = await axios.post("/api/chats/findOrCreate", {
-        userId,
-        petId,
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.post(
+        "/api/chats/findOrCreate",
+        {
+          userId,
+          petId,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       return response.data.chatId;
     } catch (error) {
       console.error("Error getting or creating chatId:", error);
@@ -43,21 +51,27 @@ const PetDetailsScreen = ({ route }) => {
 
   const handleFavorite = async () => {
     try {
-      // Assuming 'currentUser' holds the authenticated user's data
-
+      const token = await getStoredToken(); // Retrieve the token
       const creatorID = userId;
 
-      await axios.post("/api/favorites", {
-        content: pet._id, // pet's ID
-        user: userId, // Current user's ID
-        creator: creatorID, // ID of the user who created the pet profile
-      });
+      await axios.post(
+        "/api/favorites",
+        {
+          content: pet._id, // pet's ID
+          user: userId, // Current user's ID
+          creator: creatorID, // ID of the user who created the pet profile
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       Alert.alert(
         "Favorite Added",
         `${pet.name} has been added to your favorites.`
       );
     } catch (error) {
+      console.error("Error adding to favorites:", error);
       Alert.alert("Error", "Failed to add to favorites");
     }
   };

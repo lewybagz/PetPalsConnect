@@ -3,21 +3,61 @@ import React, { useState } from "react";
 import { View, Text, TextInput, Alert, TouchableOpacity } from "react-native";
 import axios from "axios";
 import { useTailwind } from "nativewind";
+import { getStoredToken } from "../../../utils/tokenutil";
+import { useSelector } from "react-redux";
+import {
+  sendPushNotification,
+  createNotificationInDB,
+} from "../../../services/NotificationService";
 
 const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
   const [message, setMessage] = useState("");
-  const { playdateId } = route.params; // Get playdateId from navigation params
+  const { playdateId } = route.params;
   const tailwind = useTailwind();
 
-  const handleCancellation = async () => {
+  const handleCancellation = async (recipientId, type, creatorId) => {
     try {
-      await axios.post(`/api/playdates/cancel/${playdateId}`, { message });
+      const token = await getStoredToken();
+      const playdateResponse = await axios.get(`/api/playdates/${playdateId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const participants = playdateResponse.data.participants;
+      const currentUser = useSelector((state) => state.user.userId);
+
+      const otherParticipants = participants.filter(
+        (userId) => userId !== currentUser
+      );
+
+      otherParticipants.forEach(async (participantId) => {
+        await sendPushNotification({
+          recipientUserId: participantId,
+          title: "Playdate Cancelled",
+          message: "A scheduled playdate has been cancelled.",
+          data: { playdateId },
+        });
+        await createNotificationInDB({
+          content: message,
+          recipientId,
+          type,
+          creatorId,
+        });
+      });
+
+      await axios.post(
+        `/api/playdates/cancel/${playdateId}`,
+        { message },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       Alert.alert(
         "Playdate Cancelled",
         "Your playdate has been successfully cancelled."
       );
       navigation.goBack(); // or navigate to a confirmation screen
     } catch (error) {
+      console.error("Error cancelling playdate:", error);
       Alert.alert("Error", "There was an error cancelling the playdate.");
     }
   };

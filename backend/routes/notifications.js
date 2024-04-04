@@ -12,6 +12,11 @@ router.get("/:id", NotificationController.getNotificationById, (req, res) => {
 
 router.get("/user/:userId", NotificationController.getUserNotifications);
 
+router.post(
+  "/sendFriendRequestNotification",
+  NotificationController.sendFriendRequestNotification
+);
+
 // POST to send a push notification for a playdate
 router.post(
   "/playdate/send-notification",

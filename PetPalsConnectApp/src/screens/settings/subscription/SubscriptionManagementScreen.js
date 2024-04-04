@@ -3,6 +3,7 @@ import { View, Text, Button, StyleSheet, Alert } from "react-native";
 import LoadingScreen from "../../../components/LoadingScreenComponent";
 import axios from "axios";
 import { useSelector } from "react-redux";
+import { getStoredToken } from "../../../../utils/tokenutil";
 
 const SubscriptionManagementScreen = () => {
   const currentUser = useSelector((state) => state.user);
@@ -13,7 +14,10 @@ const SubscriptionManagementScreen = () => {
     const fetchSubscription = async () => {
       if (currentUser) {
         try {
-          const res = await axios.get(`/api/subscriptions/${currentUser.uid}`);
+          const token = await getStoredToken();
+          const res = await axios.get(`/api/subscriptions/${currentUser.uid}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
           setSubscription(res.data);
         } catch (error) {
           Alert.alert("Error", "Could not load subscription information.");
@@ -26,9 +30,16 @@ const SubscriptionManagementScreen = () => {
 
   const handleRenew = async () => {
     try {
-      const res = await axios.post(`/api/subscriptions/renew`, {
-        userId: userId,
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      const res = await axios.post(
+        `/api/subscriptions/renew`,
+        {
+          userId: userId,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setSubscription(res.data); // Update the subscription state
       Alert.alert("Success", "Subscription renewed successfully.");
     } catch (error) {
@@ -39,10 +50,17 @@ const SubscriptionManagementScreen = () => {
 
   const handleChangePlan = async (planType) => {
     try {
-      const res = await axios.post(`/api/subscriptions/change-plan`, {
-        userId: userId,
-        newPlan: planType,
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      const res = await axios.post(
+        `/api/subscriptions/change-plan`,
+        {
+          userId: userId,
+          newPlan: planType,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setSubscription(res.data); // Update the subscription state
       Alert.alert("Success", "Plan changed successfully.");
     } catch (error) {
@@ -53,9 +71,16 @@ const SubscriptionManagementScreen = () => {
 
   const handleCancel = async () => {
     try {
-      const res = await axios.post(`/api/subscriptions/cancel`, {
-        userId: userId,
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      const res = await axios.post(
+        `/api/subscriptions/cancel`,
+        {
+          userId: userId,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setSubscription(res.data); // Update the subscription state
       Alert.alert("Success", "Subscription cancelled successfully.");
     } catch (error) {

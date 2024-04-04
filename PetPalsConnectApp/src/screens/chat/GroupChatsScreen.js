@@ -3,6 +3,7 @@ import { FlatList, Text, StyleSheet, RefreshControl } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import ChatCard from "../../components/ChatCardComponent";
 import axios from "axios";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const GroupChatsScreen = ({ navigation }) => {
   const [chats, setChats] = useState([]);
@@ -13,7 +14,10 @@ const GroupChatsScreen = ({ navigation }) => {
   const fetchChats = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/groupchats");
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.get("/api/groupchats", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setChats(response.data); // Assuming the response data is the array of chats
     } catch (e) {
       setError("Failed to load group chats: " + e.message);

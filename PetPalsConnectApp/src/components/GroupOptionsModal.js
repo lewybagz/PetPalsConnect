@@ -3,6 +3,7 @@ import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useTailwind } from "nativewind";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
+import { getStoredToken } from "../../utils/tokenutil";
 import { useSelector } from "react-redux";
 
 const GroupOptionsModal = ({ isVisible, onClose }) => {
@@ -16,11 +17,18 @@ const GroupOptionsModal = ({ isVisible, onClose }) => {
   const handleMuteNotifications = async () => {
     console.log("Mute Tapped");
     try {
-      const response = await axios.post("/api/groupchats/toggle-mute", {
-        userId: userId,
-        chatId: chatId,
-        mute: true, // Toggle based on current mute state
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.post(
+        "/api/groupchats/toggle-mute",
+        {
+          userId: userId,
+          chatId: chatId,
+          mute: true, // Toggle based on current mute state
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       console.log(response.data.message);
     } catch (error) {
       console.error("Error updating mute settings:", error);
@@ -31,8 +39,10 @@ const GroupOptionsModal = ({ isVisible, onClose }) => {
   const handleViewMedia = async () => {
     console.log("View Media Tapped");
     try {
-      // Replace with the actual chatId
-      const response = await axios.get(`/api/chats/${chatId}/media`);
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.get(`/api/groupchats/${chatId}/media`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const mediaArray = response.data.media;
       if (mediaArray.length > 0) {
         navigation.navigate("MediaViewScreen", { mediaItems: mediaArray });
@@ -48,13 +58,18 @@ const GroupOptionsModal = ({ isVisible, onClose }) => {
   const handleLeaveGroup = async () => {
     console.log("Leave Group Tapped");
     try {
-      // API call to remove the user from the group chat
-      await axios.post("/api/groupchats/leave", {
-        userId: userId, // The ID of the user leaving the group
-        chatId: chatId, // The ID of the chat they are leaving
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      await axios.post(
+        "/api/groupchats/leave",
+        {
+          userId: userId, // The ID of the user leaving the group
+          chatId: chatId, // The ID of the chat they are leaving
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-      // Possibly navigate back to the chat list screen after leaving the group
       navigation.navigate("ChatsListScreen");
     } catch (error) {
       console.error("Error leaving group chat:", error);

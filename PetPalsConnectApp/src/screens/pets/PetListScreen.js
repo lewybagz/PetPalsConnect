@@ -10,39 +10,49 @@ import {
 } from "react-native";
 import axios from "axios";
 import { useSelector } from "react-redux";
-import UserPetCard from "./UserPetCard"; // Import UserPetCard component
+import UserPetCard from "./UserPetCard";
+import { getStoredToken } from "../../../utils/tokenutil";
 
-const PetListScreen = () => {
+const PetListScreen = ({ route }) => {
+  const { participants } = route.params || {};
   const currentUser = useSelector((state) => state.user);
   const userId = useSelector((state) => state.user.userId);
   const navigation = useNavigation();
-  const [pets, setPets] = useState([]);
+  const [pets, setPets] = useState(participants || []);
   const [matchedPets, setMatchedPets] = useState([]);
 
   useEffect(() => {
-    const fetchPets = async () => {
-      try {
-        const response = await axios.get("/api/pets");
-        setPets(response.data);
-        if (currentUser) {
-          fetchMatchedPets(userId);
-        }
-      } catch (error) {
-        Alert.alert("Error", "Failed to load pets");
-      }
-    };
-
     const fetchMatchedPets = async (userId) => {
       try {
-        const matchedResponse = await axios.get(`/api/petmatches/${userId}`);
+        const token = await getStoredToken();
+        const matchedResponse = await axios.get(`/api/petmatches/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setMatchedPets(matchedResponse.data);
       } catch (error) {
         Alert.alert("Error", "Failed to load matched pets");
       }
     };
 
-    fetchPets();
-  }, [currentUser]);
+    if (!participants) {
+      const fetchPets = async () => {
+        try {
+          const token = await getStoredToken();
+          const response = await axios.get("/api/pets", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setPets(response.data);
+          if (currentUser) {
+            fetchMatchedPets(userId);
+          }
+        } catch (error) {
+          Alert.alert("Error", "Failed to load pets");
+        }
+      };
+
+      fetchPets();
+    }
+  }, [currentUser, participants]);
 
   const isPetMatched = (petId) => {
     return matchedPets.some(
@@ -54,15 +64,16 @@ const PetListScreen = () => {
 
   const filteredPets = pets.filter((pet) => isPetMatched(pet._id));
   const handleDelete = async (petId) => {
-    // Delete pet logic
     try {
-      await axios.delete(`/api/pets/${petId}`);
+      const token = await getStoredToken(); // Retrieve the token
+      await axios.delete(`/api/pets/${petId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setPets(pets.filter((pet) => pet._id !== petId));
     } catch (error) {
       Alert.alert("Error", "Failed to delete pet");
     }
   };
-
   return (
     <View style={styles.container}>
       <FlatList

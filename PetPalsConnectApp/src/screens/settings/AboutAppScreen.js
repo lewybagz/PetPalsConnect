@@ -15,7 +15,7 @@ const AboutAppScreen = () => {
       </Text>
 
       <Image
-        source={{ uri: "image-url" }} // Replace with your app logo or relevant image
+        source={{ uri: "image-url" }}
         style={tailwind("self-center w-40 h-40 mb-4")}
       />
 

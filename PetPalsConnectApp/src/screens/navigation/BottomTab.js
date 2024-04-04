@@ -4,7 +4,7 @@ import MainStackNavigator from "./MainStackNavigator";
 import ChatTabsScreen from "../chat/ChatTabsScreen";
 import ProfileScreen from "../profile/ProfileScreen";
 import PetListScreen from "../petsPetListScreen";
-import MoreScreen from "../bottomTab/MoreScreen"; // Ensure this screen is correctly implemented with its own navigator
+import MoreScreen from "../bottomTab/MoreScreen";
 import { Ionicons } from "@expo/vector-icons";
 
 const Tab = createBottomTabNavigator();

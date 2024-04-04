@@ -14,6 +14,8 @@ router.get(
   }
 );
 
+router.get("/:userId", UserPreferencesController.getUserPreferences);
+
 // POST a new UserPreferences
 router.post("/", UserPreferencesController.createUserPreferences);
 

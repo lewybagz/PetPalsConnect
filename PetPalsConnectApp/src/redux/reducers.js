@@ -68,10 +68,38 @@ const petReducer = (state = {}, action) => {
   }
 };
 
+const initialPlaydateState = {
+  playdateDetails: null,
+  playdates: [],
+  loading: false,
+  error: null,
+};
+
+const playdateReducer = (state = initialPlaydateState, action) => {
+  switch (action.type) {
+    // ... other case statements
+    case "FETCH_PLAYDATES_START":
+      return { ...state, loading: true, error: null };
+    case "FETCH_PLAYDATES_SUCCESS":
+      return { ...state, loading: false, playdates: action.payload };
+    case "FETCH_PLAYDATES_FAIL":
+      return { ...state, loading: false, error: action.payload };
+    case "FETCH_PLAYDATE_DETAILS_START":
+      return { ...state, loading: true, error: null };
+    case "FETCH_PLAYDATE_DETAILS_SUCCESS":
+      return { ...state, loading: false, playdateDetails: action.payload };
+    case "FETCH_PLAYDATE_DETAILS_FAIL":
+      return { ...state, loading: false, error: action.payload };
+    default:
+      return state;
+  }
+};
+
 const rootReducer = combineReducers({
   user: userReducer,
   chat: chatReducer,
   pet: petReducer,
+  playdate: playdateReducer,
   // Add other reducers as needed
 });
 

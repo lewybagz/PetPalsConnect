@@ -4,11 +4,25 @@ const UserPreferencesController = {
   async getAllUserPreferences(req, res) {
     try {
       const userPreferences = await UserPreferences.find()
-        .populate("User")
-        .populate("Creator");
+        .populate("user")
+        .populate("creator");
       res.json(userPreferences);
     } catch (err) {
       res.status(500).json({ message: err.message });
+    }
+  },
+
+  async getUserPreferences(req, res) {
+    try {
+      const userPreferences = await UserPreferences.findOne({
+        user: req.params.userId,
+      });
+      if (!userPreferences) {
+        return res.status(404).json({ message: "User preferences not found" });
+      }
+      res.json({ notificationsEnabled: userPreferences.notificationsEnabled });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
   },
 
@@ -16,8 +30,8 @@ const UserPreferencesController = {
     let userPreferences;
     try {
       userPreferences = await UserPreferences.findById(req.params.id)
-        .populate("User")
-        .populate("Creator");
+        .populate("user")
+        .populate("creator");
       if (userPreferences == null) {
         return res
           .status(404)
@@ -33,11 +47,11 @@ const UserPreferencesController = {
 
   async createUserPreferences(req, res) {
     const userPreferences = new UserPreferences({
-      NotificationSettings: req.body.NotificationSettings,
-      SearchSettings: req.body.SearchSettings,
-      User: req.body.User,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      notificationSettings: req.body.notificationSettings,
+      searchSettings: req.body.searchSettings,
+      user: req.body.user,
+      creator: req.body.creator,
+      slug: req.body.slug,
     });
 
     try {
@@ -49,17 +63,17 @@ const UserPreferencesController = {
   },
 
   async updateUserPreferences(req, res) {
-    if (req.body.NotificationSettings != null) {
-      res.userPreferences.NotificationSettings = req.body.NotificationSettings;
+    if (req.body.notificationSettings != null) {
+      res.userPreferences.notificationSettings = req.body.notificationSettings;
     }
-    if (req.body.SearchSettings != null) {
-      res.userPreferences.SearchSettings = req.body.SearchSettings;
+    if (req.body.searchSettings != null) {
+      res.userPreferences.searchSettings = req.body.searchSettings;
     }
-    if (req.body.User != null) {
-      res.userPreferences.User = req.body.User;
+    if (req.body.user != null) {
+      res.userPreferences.user = req.body.user;
     }
-    if (req.body.ModifiedDate != null) {
-      res.userPreferences.ModifiedDate = req.body.ModifiedDate;
+    if (req.body.modifiedDate != null) {
+      res.userPreferences.modifiedDate = req.body.modifiedDate;
     }
 
     try {

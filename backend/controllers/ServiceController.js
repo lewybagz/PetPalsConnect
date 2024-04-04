@@ -26,13 +26,13 @@ const ServiceController = {
   },
 
   async createService(req, res) {
-    const service = new Service({
-      ContactInfo: req.body.ContactInfo,
-      Location: req.body.Location,
-      Name: req.body.Name,
-      ServiceType: req.body.ServiceType,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+    const service = new service({
+      contactInfo: req.body.contactInfo,
+      location: req.body.location,
+      name: req.body.name,
+      serviceType: req.body.serviceType,
+      creator: req.body.creator,
+      slug: req.body.slug,
     });
 
     try {

@@ -2,17 +2,17 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 // Create Schema for User
 const UserSchema = new Schema({
-  FcmToken: {
+  fcmToken: {
     type: String,
     required: false, // This is not a required field because not all users may have an FCM token (e.g., web users)
   },
-  FriendsList: [
+  friendsList: [
     {
       type: Schema.Types.ObjectId,
       ref: "User",
     },
   ],
-  Location: {
+  location: {
     type: Schema.Types.ObjectId,
     ref: "Location",
     required: false, // Set to false if you allow users to not share their location
@@ -38,13 +38,13 @@ const UserSchema = new Schema({
     },
   ],
 
-  Pets: [
+  pets: [
     {
       type: Schema.Types.ObjectId,
       ref: "Pet", // Refers to the Pet discriminator of the Content model
     },
   ],
-  Subscribed: {
+  subscribed: {
     type: Boolean,
     default: false,
   },
@@ -52,30 +52,30 @@ const UserSchema = new Schema({
     type: String,
     required: false,
   },
-  Username: {
+  username: {
     type: String,
     required: true,
   },
-  UserPhoto: {
+  userPhoto: {
     type: String, // URL to the user's photo
   },
-  Verified: {
+  verified: {
     type: Boolean,
     default: false,
   },
-  Email: {
+  email: {
     type: String,
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

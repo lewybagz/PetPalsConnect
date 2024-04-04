@@ -9,6 +9,8 @@ import {
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import axios from "axios";
 import Icon from "react-native-vector-icons/FontAwesome5";
+import { getStoredToken } from "../../../utils/tokenutil";
+// TODO: import playdate card component
 
 const PlaydateHistoryScreen = ({ navigation }) => {
   const [pastPlaydates, setPastPlaydates] = useState([]);
@@ -18,8 +20,11 @@ const PlaydateHistoryScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchPastPlaydates = async () => {
       try {
-        // Replace with your actual API endpoint
-        const response = await axios.get("/api/playdates/past");
+        setLoading(true);
+        const token = await getStoredToken();
+        const response = await axios.get("/api/playdates/past", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setPastPlaydates(response.data);
       } catch (err) {
         setError(err.message);

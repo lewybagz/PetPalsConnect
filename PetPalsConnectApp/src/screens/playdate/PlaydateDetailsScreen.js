@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import axios from "axios";
-import UserPetCard from "../components/UserPetCard"; // Import your UserPetCard component
-import ReviewComponent from "../../components/ReviewComponent"; // Import ReviewComponent
+import UserPetCard from "../components/UserPetCard";
+import ReviewComponent from "../../components/ReviewComponent";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const PlaydateDetailsScreen = ({ route }) => {
   const [playdateDetails, setPlaydateDetails] = useState(null);
@@ -10,8 +11,10 @@ const PlaydateDetailsScreen = ({ route }) => {
   useEffect(() => {
     const fetchPlaydateDetails = async () => {
       try {
+        const token = await getStoredToken(); // Retrieve the token
         const response = await axios.get(
-          `/api/playdates/${route.params.playdateId}`
+          `/api/playdates/${route.params.playdateId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setPlaydateDetails(response.data);
       } catch (error) {
@@ -27,21 +30,19 @@ const PlaydateDetailsScreen = ({ route }) => {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Playdate Details</Text>
-      <Text>Date: {new Date(playdateDetails.date).toLocaleDateString()}</Text>
-      <Text>Location: {playdateDetails.location.name}</Text>
-      <Text>Notes: {playdateDetails.notes}</Text>
-
       <Text style={styles.subtitle}>Participants</Text>
       {playdateDetails.participants.map((user) => (
         <UserPetCard key={user._id} data={user} type="user" />
       ))}
-
       <Text style={styles.subtitle}>Pets Involved</Text>
       {playdateDetails.petsInvolved.map((pet) => (
+        // TODO: navigate to pet details screen
         <UserPetCard key={pet._id} data={pet} type="pet" />
       ))}
-
+      <Text style={styles.title}>Playdate Details</Text>
+      <Text>Date: {new Date(playdateDetails.date).toLocaleDateString()}</Text>
+      <Text>Location: {playdateDetails.location.name}</Text>
+      <Text>Notes: {playdateDetails.notes}</Text>
       <Text style={styles.subtitle}>Reviews</Text>
       {playdateDetails.reviews.map((review) => (
         <ReviewComponent key={review._id} reviewData={review} />

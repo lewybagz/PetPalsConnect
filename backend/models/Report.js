@@ -3,45 +3,45 @@ const Schema = mongoose.Schema;
 
 // Create Schema for Report
 const ReportSchema = new Schema({
-  Content: {
+  content: {
     type: String,
     required: true,
   },
-  ReportedContent: {
+  reportedContent: {
     type: String, // This may need to be an ObjectId if it refers to a specific reported item
     required: true,
   },
-  ReportedUser: {
+  reportedUser: {
     type: Schema.Types.ObjectId,
     ref: "User",
   },
-  Reporter: {
+  reporter: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Status: {
+  status: {
     type: String,
     required: true,
   },
-  Timestamp: {
+  timestamp: {
     type: Date,
     default: Date.now,
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

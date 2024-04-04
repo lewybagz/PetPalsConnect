@@ -3,51 +3,67 @@ import { View, Text, StyleSheet, FlatList } from "react-native";
 import PlayDateLocationCard from "../components/PlayDateLocationCard";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import axios from "axios";
+import { getStoredToken } from "../../../utils/tokenutil";
+import { fetchUserPreferences } from "../../../services/UserService";
+import { useSelector } from "react-redux";
 
 const PotentialPlaydateLocationsScreen = () => {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const playdateRange = 10; // Fetch this from user settings or AsyncStorage
 
   useEffect(() => {
-    // Function to fetch locations
-    const fetchLocations = async (latitude, longitude) => {
+    const initialize = async () => {
       setLoading(true);
+
       try {
-        const response = await axios.get(`/api/locations`, {
-          params: {
-            range: playdateRange,
-            userLat: latitude,
-            userLng: longitude,
-          },
-        });
-        setLocations(response.data);
+        // Assuming you have a way to get the current user's ID
+        const userId = useSelector((state) => state.user.userId);
+        const userPrefs = await fetchUserPreferences(userId);
+        const playdateRange = userPrefs.playdateRange; // Use fetched playdate range
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              const { latitude, longitude } = position.coords;
+              await fetchLocations(latitude, longitude, playdateRange);
+            },
+            (err) => {
+              console.error(err);
+              setError(err.message);
+            }
+          );
+        } else {
+          setError("Geolocation is not supported by this browser");
+        }
       } catch (err) {
-        setError(err.message);
+        console.error("Error initializing:", err);
+        setError("Initialization failed");
       } finally {
         setLoading(false);
       }
     };
 
-    // Get current position and then fetch locations
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          fetchLocations(latitude, longitude);
+    initialize();
+  }, []);
+
+  const fetchLocations = async (latitude, longitude, playdateRange) => {
+    try {
+      const token = await getStoredToken();
+      const response = await axios.get(`/api/locations`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          range: playdateRange,
+          userLat: latitude,
+          userLng: longitude,
         },
-        (err) => {
-          console.error(err);
-          setError(err.message);
-          setLoading(false);
-        }
-      );
-    } else {
-      setError("Geolocation is not supported by this browser");
-      setLoading(false);
+      });
+      setLocations(response.data);
+    } catch (err) {
+      console.error("Error fetching locations:", err);
+      setError(err.message);
     }
-  }, [playdateRange]);
+  };
 
   return (
     <View style={styles.container}>

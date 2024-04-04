@@ -22,6 +22,7 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import BottomSheet from "@gorhom/bottom-sheet";
 import CustomTooltip from "../../components/CustomTooltip";
 import { useNavigation } from "@react-navigation/native";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const WalkthroughableMapView = walkthroughable(MapView);
 const WalkthroughableText = walkthroughable(Text);
@@ -78,7 +79,10 @@ const MapScreen = ({ start, route }) => {
 
   const fetchMatchedPets = async () => {
     try {
-      const response = await axios.get("/api/matched-pets");
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.get("/api/matched-pets", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setMatchedPets(response.data);
     } catch (error) {
       console.error("Error fetching matched pets:", error);
@@ -87,7 +91,10 @@ const MapScreen = ({ start, route }) => {
 
   const fetchPlaydateLocations = async () => {
     try {
-      const response = await axios.get("/api/playdate-locations");
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.get("/api/playdate-locations", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setPlaydateLocations(response.data);
     } catch (error) {
       console.error("Error fetching playdate locations:", error);

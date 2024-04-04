@@ -20,6 +20,7 @@ import { FieldValue } from "firebase/firestore";
 import Icon from "react-native-vector-icons/FontAwesome";
 import Clipboard from "@react-native-community/clipboard";
 import { useNavigation } from "@react-navigation/native";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const GroupChatScreen = ({ route }) => {
   const [pets, setPets] = useState([]); // State for storing pets in the group
@@ -73,8 +74,10 @@ const GroupChatScreen = ({ route }) => {
 
   const fetchPetsData = async (groupId) => {
     try {
-      // Assuming you have an endpoint to get pets for a given group
-      const response = await fetch(`/api/groupchats/${groupId}/pets`);
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await fetch(`/api/groupchats/${groupId}/pets`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
@@ -85,12 +88,15 @@ const GroupChatScreen = ({ route }) => {
       Alert.alert("Error", "Failed to load pets data");
     }
   };
+
   const fetchGroupInfo = async () => {
     try {
-      // Replace with your actual API endpoint
-      const response = await fetch(`api/groupchats/${route.params.group.id}`);
+      const token = await getStoredToken();
+      const response = await fetch(`api/groupchats/${route.params.group.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const updatedGroupInfo = await response.json();
-      setGroupInfo(updatedGroupInfo); // Update the state
+      setGroupInfo(updatedGroupInfo);
     } catch (error) {
       console.error("Error fetching group info:", error);
     }
@@ -109,7 +115,7 @@ const GroupChatScreen = ({ route }) => {
 
   const toggleSearch = () => {
     setSearchEnabled(!isSearchEnabled);
-    setSearchQuery(""); // Optionally clear the search query when toggling
+    setSearchQuery("");
   };
   const handleReply = (message) => {
     const replyString = `@${message.sender}: `; // Assuming message.sender is the name of the person to reply to
@@ -364,5 +370,3 @@ const styles = StyleSheet.create({
 });
 
 export default GroupChatScreen;
-
-// TODO: show me how i can add onhold features that gives the users options for the chatcard, you should provide this code in its entirety

@@ -11,6 +11,8 @@ import axios from "axios";
 import { getAuth } from "firebase/auth";
 import UserPetCard from "../../components/UserPetCardComponent";
 import { useNavigation } from "@react-navigation/native";
+import { getStoredToken } from "../../../utils/tokenutil";
+
 const UsersPetsScreen = () => {
   const auth = getAuth();
   const currentUser = auth.currentUser;
@@ -21,8 +23,10 @@ const UsersPetsScreen = () => {
     const fetchUserPets = async () => {
       if (currentUser) {
         try {
+          const token = await getStoredToken();
           const response = await axios.get(
-            `/api/users/pets/${currentUser.uid}`
+            `/api/users/pets/${currentUser.uid}`,
+            { headers: { Authorization: `Bearer ${token}` } }
           );
           setUserPets(response.data);
         } catch (error) {
@@ -40,7 +44,10 @@ const UsersPetsScreen = () => {
 
   const handleDelete = async (petId) => {
     try {
-      await axios.delete(`/api/users/pets/${petId}`);
+      const token = await getStoredToken();
+      await axios.delete(`/api/users/pets/${petId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setUserPets(userPets.filter((pet) => pet._id !== petId));
     } catch (error) {
       Alert.alert("Error", "Failed to delete pet");

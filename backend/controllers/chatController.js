@@ -1,5 +1,6 @@
 const Chat = require("../models/Chat");
 const Message = require("../models/Message");
+const Media = require("../models/Media");
 const SHA256 = require("crypto-js/sha256"); // Ensure you've installed crypto-js
 
 const ChatController = {
@@ -53,6 +54,74 @@ const ChatController = {
         return res.status(404).json({ message: "Chat not found" });
       }
       res.status(200).json(chat);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  async fetchChatMedia(req, res) {
+    const chatId = req.params.chatId;
+    try {
+      const chat = await Chat.findById(chatId).populate("media");
+      res.json({ media: chat.media });
+    } catch (error) {
+      console.error("Error fetching media:", error);
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  async getChatDetails(req, res) {
+    const { chatId } = req.params;
+    try {
+      const chat = await Chat.findById(chatId)
+        .populate("messages") // Modify as per your schema
+        .populate("participants"); // Modify as per your schema
+
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+
+      res.json(chat);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  async handleSendMedia(req, res) {
+    const { chatId, mediaUrl, mediaType, userId } = req.body;
+
+    try {
+      const newMedia = new Media({
+        url: mediaUrl,
+        type: mediaType,
+        createdBy: userId,
+      });
+      await newMedia.save();
+
+      const chat = await Chat.findById(chatId);
+      chat.media.push(newMedia);
+      await chat.save();
+      res.status(200).json({ message: "Media sent successfully" });
+    } catch (error) {
+      console.error("Error sending media:", error);
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  async archiveChat(req, res) {
+    const chatId = req.params.chatId;
+    try {
+      const updatedChat = await Chat.findByIdAndUpdate(
+        chatId,
+        { isArchived: true },
+        { new: true }
+      );
+
+      if (!updatedChat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+
+      res.json(updatedChat);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }

@@ -3,22 +3,22 @@ const Schema = mongoose.Schema;
 
 const PotentialPlaydateLocationSchema = new Schema({
   // The name of the location
-  Name: {
+  name: {
     type: String,
     required: true,
   },
   // Detailed address
-  Address: {
+  address: {
     type: String,
     required: true,
   },
   // The place's unique identifier from Google Places API
-  PlaceId: {
+  placeId: {
     type: String,
     required: true,
   },
   // GeoJSON format for location
-  GeoLocation: {
+  geoLocation: {
     type: {
       type: String,
       default: "Point",
@@ -29,15 +29,15 @@ const PotentialPlaydateLocationSchema = new Schema({
     },
   },
   // URL to the photo of the location (if available)
-  Photo: {
+  photo: {
     type: String,
   },
   // Additional descriptive information
-  Description: {
+  description: {
     type: String,
   },
   // Creator of the location entry
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
   },

@@ -26,33 +26,33 @@ const UserController = {
     next();
   },
 
-  async getUserPets(req, res) {
+  async getUserpets(req, res) {
     const userId = req.params.userId; // Get user ID from URL parameter
 
     try {
-      const user = await User.findById(userId).populate("Pets"); // Use the userId from URL parameter
+      const user = await User.findById(userId).populate("pets"); // Use the userId from URL parameter
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      res.json(user.Pets);
+      res.json(user.pets);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
   },
 
   async createUser(req, res) {
-    const user = new User({
-      FriendsList: req.body.FriendsList,
-      Location: req.body.Location,
-      Pets: req.body.Pets,
-      Subscribed: req.body.Subscribed,
-      Username: req.body.Username,
-      UserPhoto: req.body.UserPhoto,
-      Verified: req.body.Verified,
-      Email: req.body.Email,
-      Slug: req.body.Slug,
+    const user = new user({
+      friendsList: req.body.friendsList,
+      location: req.body.location,
+      pets: req.body.pets,
+      subscribed: req.body.subscribed,
+      username: req.body.username,
+      userPhoto: req.body.userPhoto,
+      verified: req.body.verified,
+      email: req.body.email,
+      slug: req.body.slug,
     });
 
     try {
@@ -67,29 +67,29 @@ const UserController = {
     if (req.body.Username != null) {
       res.user.Username = req.body.Username;
     }
-    if (req.body.Email != null) {
-      res.user.Email = req.body.Email;
+    if (req.body.email != null) {
+      res.user.email = req.body.email;
     }
-    if (req.body.Location != null) {
-      res.user.Location = req.body.Location;
+    if (req.body.location != null) {
+      res.user.location = req.body.location;
     }
-    if (req.body.UserPhoto != null) {
-      res.user.UserPhoto = req.body.UserPhoto;
+    if (req.body.userPhoto != null) {
+      res.user.userPhoto = req.body.userPhoto;
     }
-    if (req.body.Subscribed != null) {
-      res.user.Subscribed = req.body.Subscribed;
+    if (req.body.subscribed != null) {
+      res.user.subscribed = req.body.subscribed;
     }
-    if (req.body.Verified != null) {
-      res.user.Verified = req.body.Verified;
+    if (req.body.verified != null) {
+      res.user.verified = req.body.verified;
     }
-    if (req.body.Slug != null) {
-      res.user.Slug = req.body.Slug;
+    if (req.body.slug != null) {
+      res.user.slug = req.body.slug;
     }
-    if (req.body.FriendsList != null) {
-      res.user.FriendsList = req.body.FriendsList;
+    if (req.body.friendsList != null) {
+      res.user.friendsList = req.body.friendsList;
     }
-    if (req.body.Pets != null) {
-      res.user.Pets = req.body.Pets;
+    if (req.body.pets != null) {
+      res.user.pets = req.body.pets;
     }
 
     try {
@@ -112,7 +112,7 @@ const UserController = {
       }
 
       // Filter out the pet to delete
-      user.Pets = user.Pets.filter((pet) => pet._id.toString() !== petId);
+      user.pets = user.pets.filter((pet) => pet._id.toString() !== petId);
 
       await user.save();
       res.json({ message: "Pet deleted successfully" });
@@ -133,7 +133,7 @@ const UserController = {
         return res.status(404).json({ message: "User not found" });
       }
 
-      res.json({ message: "Location sharing preference updated", user });
+      res.json({ message: "location sharing preference updated", user });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }

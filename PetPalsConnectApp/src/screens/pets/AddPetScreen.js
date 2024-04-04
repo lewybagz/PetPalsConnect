@@ -18,6 +18,7 @@ import DropDownPicker from "react-native-dropdown-picker";
 import { useSelector } from "react-redux";
 import Realm from "realm";
 import axios from "axios";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const AddPetScreen = () => {
   const MAX_PHOTOS = 5;
@@ -240,8 +241,11 @@ const AddPetScreen = () => {
   const submitPets = async () => {
     try {
       let petIds = [];
+      const token = await getStoredToken(); // Retrieve the token
       for (const pet of petDetails) {
-        const response = await axios.post("/api/pets", pet);
+        const response = await axios.post("/api/pets", pet, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const newPetId = response.data._id;
         petIds.push(newPetId);
 
@@ -253,8 +257,8 @@ const AddPetScreen = () => {
             name: pet.name,
             owner: pet.owner, // Assuming owner's ID is available in pet object
             photos: pet.photos,
-            location: pet.location ? pet.location.toString() : null, // Handle optional fields
-            playdates: pet.playdates.map((pd) => pd.toString()), // Convert ObjectId to string
+            location: pet.location ? pet.location.toString() : null,
+            playdates: pet.playdates.map((pd) => pd.toString()),
             specialNeeds: pet.specialNeeds,
             temperament: pet.temperament,
             weight: pet.weight,
@@ -269,16 +273,21 @@ const AddPetScreen = () => {
         // Create a complete user profile in MongoDB for new users
         await createUserProfileInMongoDB(currentUser, petIds);
         navigation.navigate("Home", { showPopup: true, showTutorial: true });
-        setIsNewUser(false); // Reset the flag to avoid showing the popup again
+        setIsNewUser(false);
       } else {
         // Update existing user document with new pet IDs
-        await axios.patch(`/api/users/${userId}`, { pets: petIds });
+        await axios.patch(
+          `/api/users/${userId}`,
+          { pets: petIds },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         navigation.navigate("Home");
       }
       Alert.alert("Success", "Pets added successfully!");
       setPetDetails([]);
 
-      // Navigate to HomeScreen
       navigation.navigate("Home", { showPopup: isNewUser });
     } catch (error) {
       console.error("Error submitting pets:", error);
@@ -288,20 +297,22 @@ const AddPetScreen = () => {
 
   // Function to create user profile in MongoDB
   const createUserProfileInMongoDB = async (user, petIds) => {
-    // Define user profile data structure here
     const userProfile = {
       email: user.email,
       pets: petIds,
       // Add other user details as required
     };
 
-    // Send a POST request to your backend to create a user document
     try {
-      await axios.post("/api/users", userProfile);
+      const token = await getStoredToken(); // Retrieve the token
+      await axios.post("/api/users", userProfile, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
     } catch (error) {
       console.error("Error creating user profile in MongoDB:", error);
     }
   };
+
   return (
     <ScrollView style={{ padding: 20 }}>
       <Text>Add Your Pet&rsquo;s Details</Text>

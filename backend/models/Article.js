@@ -3,20 +3,20 @@ const { ContentSchema } = require("./Content"); // Ensure Content.js exports Con
 
 // Extend Content Schema for Article
 const ArticleSchema = new mongoose.Schema({
-  Content: {
+  content: {
     type: String,
     required: true,
   },
-  PublishedDate: {
+  publishedDate: {
     type: Date,
     default: Date.now,
   },
-  Tags: [
+  tags: [
     {
       type: String,
     },
   ],
-  Title: {
+  title: {
     type: String,
     required: true,
   },

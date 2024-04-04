@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, Switch, TouchableOpacity, Alert } from "react-native";
 import { getAuth, signOut } from "firebase/auth";
 import Slider from "@react-native-community/slider";
 import { useTailwind } from "nativewind";
 import { useAppTheme } from "../../context/ThemeContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { getRealm } from "../../../../backend/models/Settings";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const SettingsScreen = ({ navigation }) => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationSharingEnabled, setLocationSharingEnabled] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const tailwind = useTailwind();
@@ -16,34 +16,109 @@ const SettingsScreen = ({ navigation }) => {
   const { toggleAppTheme } = useAppTheme();
   const [playdateRange, setPlaydateRange] = useState(5);
 
+  useEffect(() => {
+    const realm = getRealm();
+    let settings = realm.objectForPrimaryKey("Settings", "unique_settings_id");
+    if (settings) {
+      setLocationSharingEnabled(settings.locationSharingEnabled);
+      setPlaydateRange(settings.playdateRange);
+      setDarkMode(settings.darkMode);
+      setNotificationPreferences(JSON.parse(settings.notificationPreferences));
+    }
+  }, []);
+
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    petPalsMapUpdates: false,
+    playdateReminders: false,
+    appUpdates: false,
+  });
+
+  // Example function to update playdate range
   const handlePlaydateRangeChange = async (value) => {
+    const realm = await getRealm();
     setPlaydateRange(value);
     try {
-      await AsyncStorage.setItem("playdateRange", value.toString());
-      // Update the user's preference on the backend
-      await axios.post("/api/user/settings", {
-        playdateRange: value,
-        // Include other settings if they are sent together
+      realm.write(() => {
+        let settings = realm.objectForPrimaryKey(
+          "Settings",
+          "unique_settings_id"
+        );
+        if (!settings) {
+          // Create new settings if not exists
+          settings = realm.create("Settings", {
+            _id: "unique_settings_id",
+            playdateRange: value,
+            locationSharingEnabled: locationSharingEnabled,
+            darkMode: darkMode,
+            notificationPreferences: JSON.stringify(notificationPreferences),
+          });
+        } else {
+          // Update existing settings
+          settings.playdateRange = value;
+        }
       });
+
+      const token = await getStoredToken(); // Retrieve the token
+      // Update the user's preference on the backend
+      await axios.post(
+        "/api/user/settings",
+        { playdateRange: value },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
     } catch (error) {
       Alert.alert("Error", "Failed to save playdate range preference.");
     }
   };
 
-  const toggleNotifications = async () => {
-    const newNotificationsEnabledState = !notificationsEnabled;
-    setNotificationsEnabled(newNotificationsEnabledState);
+  // The function now accepts the key of the notification setting to toggle
+  const toggleNotificationSetting = async (key) => {
+    const newPreferences = {
+      ...notificationPreferences,
+      [key]: !notificationPreferences[key],
+    };
+
     try {
-      await AsyncStorage.setItem(
-        "notificationsEnabled",
-        JSON.stringify(newNotificationsEnabledState)
-      );
-      // Send the preference to the backend
-      await axios.post("/api/user/settings", {
-        notificationsEnabled: newNotificationsEnabledState,
+      // Update state
+      setNotificationPreferences(newPreferences);
+
+      // Get the Realm instance
+      const realm = await getRealm();
+
+      realm.write(() => {
+        let settings = realm.objectForPrimaryKey(
+          "Settings",
+          "unique_settings_id"
+        );
+        if (settings) {
+          // Update existing settings
+          settings.notificationPreferences = JSON.stringify(newPreferences);
+        } else {
+          // Create new settings if not exists
+          realm.create("Settings", {
+            _id: "unique_settings_id",
+            playdateRange: playdateRange,
+            locationSharingEnabled: locationSharingEnabled,
+            darkMode: darkMode,
+            notificationPreferences: JSON.stringify(notificationPreferences),
+          });
+        }
       });
+
+      const token = await getStoredToken(); // Retrieve the token
+      // Send the preference to the backend
+      await axios.post(
+        "/api/user/notification-preferences",
+        {
+          [key]: newPreferences[key],
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
     } catch (error) {
-      Alert.alert("Error", "Failed to save notifications setting.");
+      Alert.alert("Error", `Failed to save the setting for ${key}.`);
     }
   };
 
@@ -51,14 +126,40 @@ const SettingsScreen = ({ navigation }) => {
     const newLocationSharingState = !locationSharingEnabled;
     setLocationSharingEnabled(newLocationSharingState);
     try {
-      await AsyncStorage.setItem(
-        "locationSharingEnabled",
-        JSON.stringify(newLocationSharingState)
-      );
-      // Here, you would also make an API call to update the user's preference on the backend
-      await axios.post("/api/user/settings", {
-        locationSharingEnabled: newLocationSharingState,
+      // Get the Realm instance
+      const realm = await getRealm();
+
+      realm.write(() => {
+        let settings = realm.objectForPrimaryKey(
+          "Settings",
+          "unique_settings_id"
+        );
+        if (settings) {
+          // Update existing settings
+          settings.locationSharingEnabled = newLocationSharingState;
+        } else {
+          // Create new settings if not exists
+          realm.create("Settings", {
+            _id: "unique_settings_id",
+            playdateRange: playdateRange,
+            locationSharingEnabled: locationSharingEnabled,
+            darkMode: darkMode,
+            notificationPreferences: JSON.stringify(notificationPreferences),
+          });
+        }
       });
+
+      const token = await getStoredToken(); // Retrieve the token
+      // Update the user's preference on the backend
+      await axios.post(
+        "/api/user/settings",
+        {
+          locationSharingEnabled: newLocationSharingState,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
     } catch (error) {
       Alert.alert("Error", "Failed to save location sharing preference.");
     }
@@ -78,6 +179,13 @@ const SettingsScreen = ({ navigation }) => {
   return (
     <View style={tailwind("p-4")}>
       <Text style={tailwind("text-xl font-bold")}>Settings</Text>
+
+      <TouchableOpacity
+        onPress={() => navigation.navigate("ManageSubscription")}
+        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+      >
+        <Text>Manage Subscription</Text>
+      </TouchableOpacity>
 
       {/* Location Sharing Setting */}
       <View style={tailwind("flex-row justify-between py-2")}>
@@ -170,16 +278,20 @@ const SettingsScreen = ({ navigation }) => {
         <Text>About PetPalsConnect</Text>
       </TouchableOpacity>
 
-      {/* Notifications Setting */}
-      <View style={tailwind("flex-row justify-between py-2")}>
-        <Text>Enable Notifications</Text>
-        <Switch
-          trackColor={{ false: "#767577", true: "#81b0ff" }}
-          thumbColor={notificationsEnabled ? "#f5dd4b" : "#f4f3f4"}
-          onValueChange={toggleNotifications}
-          value={notificationsEnabled}
-        />
-      </View>
+      {Object.entries(notificationPreferences).map(([key, value]) => (
+        <View style={tailwind("flex-row justify-between py-2")} key={key}>
+          <Text>
+            {key.replace(/([A-Z])/g, " $1")}{" "}
+            {/* Make the key more user-friendly */}
+          </Text>
+          <Switch
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={value ? "#f5dd4b" : "#f4f3f4"}
+            onValueChange={() => toggleNotificationSetting(key)}
+            value={value}
+          />
+        </View>
+      ))}
 
       {/* Dark Mode Setting */}
       <View style={tailwind("flex-row justify-between py-2")}>

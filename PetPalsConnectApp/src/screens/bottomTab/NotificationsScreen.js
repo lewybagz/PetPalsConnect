@@ -3,6 +3,7 @@ import { View, Text, FlatList, StyleSheet } from "react-native";
 import NotificationItem from "../../components/NotificationItemComponent";
 import axios from "axios";
 import { useSelector } from "react-redux";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const NotificationsScreen = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
@@ -11,15 +12,19 @@ const NotificationsScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await axios.get(`/api/notifications/user/${userId}`);
+        const token = await getStoredToken(); // Retrieve the token
+        const response = await axios.get(`/api/notifications/user/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const fetchedNotifications = response.data; // Assuming the response data is an array of notifications
         setNotifications(fetchedNotifications);
       } catch (error) {
         console.error("Error fetching notifications:", error);
       }
     };
+
     fetchNotifications();
-  }, []);
+  }, [userId]); // Include userId in the dependency array
 
   return (
     <View style={styles.container}>

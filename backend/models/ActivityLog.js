@@ -3,37 +3,37 @@ const Schema = mongoose.Schema;
 
 // Create Schema for ActivityLog
 const ActivityLogSchema = new Schema({
-  ActionDetails: {
+  actionDetails: {
     type: String,
     required: true,
   },
-  ActionType: {
+  actionType: {
     type: String,
     required: true,
   },
-  Timestamp: {
+  timestamp: {
     type: Date,
     default: Date.now,
   },
-  User: {
+  user: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

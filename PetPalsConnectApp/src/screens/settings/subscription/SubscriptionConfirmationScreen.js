@@ -6,7 +6,7 @@ const SubscriptionConfirmationScreen = ({ route, navigation }) => {
   const { action, planType, startDate, endDate } = route.params;
 
   const handleGoBack = () => {
-    navigation.goBack(); // Navigate back to the previous screen
+    navigation.goBack();
   };
 
   return (

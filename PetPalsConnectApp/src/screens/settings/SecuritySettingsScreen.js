@@ -12,6 +12,7 @@ import {
 import { useTailwind } from "nativewind";
 import { auth } from "../../../firebase/firbaseConfig";
 import axios from "axios";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const SecuritySettingsScreen = () => {
   const [twoFactorAuthEnabled, setTwoFactorAuthEnabled] = useState(false);
@@ -25,10 +26,17 @@ const SecuritySettingsScreen = () => {
 
   const handleTwoFactorAuthChange = async (isEnabled) => {
     try {
-      await axios.post("/api/user/settings/2fa", {
-        userId: userId,
-        enable2FA: isEnabled,
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      await axios.post(
+        "/api/user/settings/2fa",
+        {
+          userId: userId,
+          enable2FA: isEnabled,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       setTwoFactorAuthEnabled(isEnabled);
       Alert.alert(
@@ -52,11 +60,18 @@ const SecuritySettingsScreen = () => {
       return;
     }
     try {
-      await axios.post("/api/user/settings/change-password", {
-        userId: userId,
-        currentPassword,
-        newPassword,
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      await axios.post(
+        "/api/user/settings/change-password",
+        {
+          userId: userId,
+          currentPassword,
+          newPassword,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       Alert.alert("Success", "Password changed successfully");
     } catch (error) {
       console.error("Error changing password:", error);
@@ -66,12 +81,19 @@ const SecuritySettingsScreen = () => {
 
   const handleSecurityQuestionChange = async () => {
     try {
+      const token = await getStoredToken(); // Retrieve the token
       // Replace with your actual API call for security question update
-      await axios.post("/api/user/settings/security-question", {
-        userId: userId,
-        question: selectedQuestion,
-        answer: securityAnswer,
-      });
+      await axios.post(
+        "/api/user/settings/security-question",
+        {
+          userId: userId,
+          question: selectedQuestion,
+          answer: securityAnswer,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       Alert.alert("Success", "Security question updated successfully");
     } catch (error) {
       console.error("Error updating security question:", error);

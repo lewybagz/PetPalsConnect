@@ -47,13 +47,13 @@ const LocationController = {
 
   async createLocation(req, res) {
     const location = new Location({
-      Address: req.body.Address,
-      Description: req.body.Description,
-      Photo: req.body.Photo,
-      Rating: req.body.Rating,
-      Reviews: req.body.Reviews,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      address: req.body.address,
+      description: req.body.description,
+      photo: req.body.photo,
+      rating: req.body.rating,
+      reviews: req.body.reviews,
+      creator: req.body.creator,
+      slug: req.body.slug,
     });
 
     try {

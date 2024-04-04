@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from "react";
-import {
-  FlatList,
-  Text,
-  StyleSheet,
-  Easing,
-  RefreshControl,
-} from "react-native";
+import { FlatList, Text, StyleSheet, RefreshControl } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import ChatCard from "../../components/ChatCardComponent";
 import axios from "axios";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const ChatsScreen = ({ navigation }) => {
   const [chats, setChats] = useState([]);
@@ -19,7 +14,10 @@ const ChatsScreen = ({ navigation }) => {
   const fetchChats = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/chats"); // Adjust the endpoint as needed
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.get("/api/chats", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setChats(response.data); // Assuming the response data is the array of chats
     } catch (e) {
       setError("Failed to load chats: " + e.message);

@@ -3,38 +3,38 @@ const Schema = mongoose.Schema;
 
 // Create Schema for Friend
 const FriendSchema = new Schema({
-  Status: {
+  status: {
     type: Boolean,
     default: false, // false for 'no', true for 'yes'
   },
-  Timestamp: {
+  timestamp: {
     type: Date,
     default: Date.now,
   },
-  User1: {
+  user1: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  User2: {
+  user2: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 const Friend = mongoose.model("Friend", FriendSchema);

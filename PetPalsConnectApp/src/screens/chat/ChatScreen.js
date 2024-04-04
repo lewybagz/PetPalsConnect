@@ -19,6 +19,7 @@ import LoadingScreen from "../../components/LoadingScreenComponent";
 import ChatOptionsModal from "../../components/ChatOptionsModal";
 import Icon from "react-native-vector-icons/FontAwesome";
 import Clipboard from "@react-native-community/clipboard";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const ChatScreen = ({ route }) => {
   const [messages, setMessages] = useState([]);
@@ -33,11 +34,15 @@ const ChatScreen = ({ route }) => {
 
   const initiateChat = async () => {
     try {
+      const token = await getStoredToken(); // Retrieve the token
       const petId = petInfo.id;
 
       const response = await fetch("/api/chat/findOrCreate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ userId, petId }),
       });
 

@@ -3,11 +3,11 @@ const Schema = mongoose.Schema;
 
 // Create Schema for GroupChat
 const GroupChatSchema = new Schema({
-  GroupName: {
+  groupName: {
     type: String,
     required: true,
   },
-  Messages: [
+  messages: [
     {
       type: Schema.Types.ObjectId,
       ref: "Message",
@@ -19,33 +19,36 @@ const GroupChatSchema = new Schema({
       ref: "Media",
     },
   ],
-  Participants: [
+  participants: [
     {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Pet",
     },
   ],
   isMuted: {
     type: Boolean,
     default: false,
   },
-  Creator: {
+  isArchived: { type: Boolean, default: false },
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  lastUpdated: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  createdDate: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 // Create a model
 const GroupChat = mongoose.model("GroupChat", GroupChatSchema);
-
 module.exports = GroupChat;

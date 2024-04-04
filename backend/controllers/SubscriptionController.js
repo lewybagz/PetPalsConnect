@@ -5,8 +5,8 @@ const SubscriptionController = {
   async getAllSubscriptions(req, res) {
     try {
       const subscriptions = await Subscription.find()
-        .populate("User")
-        .populate("Creator");
+        .populate("user")
+        .populate("creator");
       res.json(subscriptions);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -17,8 +17,8 @@ const SubscriptionController = {
     let subscription;
     try {
       subscription = await Subscription.findById(req.params.id)
-        .populate("User")
-        .populate("Creator");
+        .populate("user")
+        .populate("creator");
       if (subscription == null) {
         return res.status(404).json({ message: "Cannot find subscription" });
       }
@@ -56,7 +56,7 @@ const SubscriptionController = {
           quantity: 1,
         },
       ],
-      mode: "subscription",
+      mode: "Subscription",
       // Add other necessary session details
       success_url: "your_success_url",
       cancel_url: "your_cancel_url",
@@ -72,7 +72,6 @@ const SubscriptionController = {
         return res.status(404).json({ error: "Plan not found" });
       }
 
-      // Corrected call to createStripeCheckoutSession
       const session = await this.createStripeCheckoutSession(
         planId,
         planDetails
@@ -129,7 +128,7 @@ const SubscriptionController = {
   async cancelSubscription(req, res) {
     try {
       const userId = req.user.id; // Make sure this is set correctly
-      const subscription = await Subscription.findOne({ User: userId });
+      const subscription = await Subscription.findOne({ user: userId });
 
       if (!subscription) {
         return res.status(404).json({ message: "Subscription not found" });
@@ -140,7 +139,7 @@ const SubscriptionController = {
       );
 
       // Update subscription status in your database
-      subscription.Status = "canceled"; // Example status update
+      subscription.status = "canceled"; // Example status update
       await subscription.save();
 
       res.status(200).json({ canceledSubscription });
@@ -151,14 +150,14 @@ const SubscriptionController = {
 
   async createSubscription(req, res) {
     const subscription = new Subscription({
-      EndDate: req.body.EndDate,
-      PlanType: req.body.PlanType,
-      StartDate: req.body.StartDate,
-      Status: req.body.Status,
-      SubscriptionLife: req.body.SubscriptionLife,
-      User: req.body.User,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      EndDate: req.body.endDate,
+      PlanType: req.body.planType,
+      StartDate: req.body.startDate,
+      Status: req.body.status,
+      SubscriptionLife: req.body.subscriptionLife,
+      user: req.body.user,
+      creator: req.body.creator,
+      Slug: req.body.slug,
     });
 
     try {
@@ -171,11 +170,11 @@ const SubscriptionController = {
 
   async checkSubscriptionStatus(userId) {
     try {
-      const subscription = await Subscription.findOne({ User: userId }).exec();
+      const subscription = await Subscription.findOne({ user: userId }).exec();
       return (
         subscription &&
-        subscription.Status === "Active" &&
-        new Date(subscription.EndDate) > new Date()
+        subscription.status === "Active" &&
+        new Date(subscription.endDate) > new Date()
       );
     } catch (err) {
       console.error("Error checking subscription status:", err);

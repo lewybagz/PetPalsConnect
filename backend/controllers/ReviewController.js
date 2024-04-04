@@ -4,11 +4,11 @@ const ReviewController = {
   async getAllReviews(req, res) {
     try {
       const reviews = await Review.find()
-        .populate("RelatedArticle")
-        .populate("RelatedPlaydate")
-        .populate("RelatedService")
-        .populate("Reviewer")
-        .populate("Creator");
+        .populate("relatedArticle")
+        .populate("relatedPlaydate")
+        .populate("relatedService")
+        .populate("reviewer")
+        .populate("creator");
       res.json(reviews);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -19,11 +19,11 @@ const ReviewController = {
     let review;
     try {
       review = await Review.findById(req.params.id)
-        .populate("RelatedArticle")
-        .populate("RelatedPlaydate")
-        .populate("RelatedService")
-        .populate("Reviewer")
-        .populate("Creator");
+        .populate("relatedArticle")
+        .populate("relatedPlaydate")
+        .populate("relatedService")
+        .populate("reviewer")
+        .populate("creator");
       if (review == null) {
         return res.status(404).json({ message: "Cannot find review" });
       }
@@ -59,9 +59,9 @@ const ReviewController = {
   async getReviewsByLocation(req, res) {
     try {
       const locationId = req.params.locationId;
-      const reviews = await Review.find({ RelatedLocation: locationId }) // Now referencing the RelatedLocation field
-        .populate("Reviewer")
-        .populate("Creator"); // Add other necessary populate methods
+      const reviews = await Review.find({ relatedLocation: locationId }) // Now referencing the relatedLocation field
+        .populate("reviewer")
+        .populate("creator"); // Add other necessary populate methods
 
       res.json(reviews);
     } catch (err) {
@@ -76,16 +76,16 @@ const ReviewController = {
 
   async createReview(req, res) {
     const review = new Review({
-      Comment: req.body.Comment,
-      Date: req.body.Date,
-      Rating: req.body.Rating,
-      RelatedArticle: req.body.RelatedArticle,
-      RelatedPlaydate: req.body.RelatedPlaydate,
-      RelatedService: req.body.RelatedService,
-      Reviewer: req.body.Reviewer,
-      Visibility: req.body.Visibility,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      comment: req.body.comment,
+      date: req.body.date,
+      rating: req.body.rating,
+      relatedArticle: req.body.relatedArticle,
+      relatedPlaydate: req.body.relatedPlaydate,
+      relatedService: req.body.relatedService,
+      reviewer: req.body.reviewer,
+      visibility: req.body.visibility,
+      creator: req.body.creator,
+      slug: req.body.slug,
     });
 
     try {

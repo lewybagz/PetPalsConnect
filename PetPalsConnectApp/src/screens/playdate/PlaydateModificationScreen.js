@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Button, Alert } from "react-native";
 import axios from "axios";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
+import {
+  sendPushNotification,
+  createNotificationInDB,
+} from "../../../services/NotificationService";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const PlaydateModificationScreen = ({ route, navigation }) => {
   const { playdateId } = route.params;
@@ -10,7 +15,6 @@ const PlaydateModificationScreen = ({ route, navigation }) => {
   const [location, setLocation] = useState(null);
 
   useEffect(() => {
-    // Listen for changes in the navigation and update the location state
     const unsubscribe = navigation.addListener("focus", () => {
       if (route.params?.selectedLocation) {
         setLocation(route.params.selectedLocation);
@@ -21,35 +25,23 @@ const PlaydateModificationScreen = ({ route, navigation }) => {
 
   const updatePlaydate = async () => {
     try {
-      await axios.patch(`/api/playdates/update/${playdateId}`, {
-        date,
-        time,
-        location,
-      });
+      const token = await getStoredToken();
+      await axios.patch(
+        `/api/playdates/update/${playdateId}`,
+        {
+          date,
+          time,
+          location,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       Alert.alert("Success", "Playdate updated successfully.");
       sendNotificationToParticipant(playdateId, "Playdate details updated");
       navigation.goBack();
     } catch (error) {
       Alert.alert("Error", "Failed to update playdate details.");
-    }
-  };
-
-  const createNotificationInDB = async (
-    content,
-    recipientId,
-    type,
-    creatorId
-  ) => {
-    try {
-      const response = await axios.post(`/api/notifications/create`, {
-        Content: content,
-        Recipient: recipientId,
-        Type: type,
-        Creator: creatorId,
-      });
-      console.log("Notification created in database:", response.data);
-    } catch (error) {
-      console.error("Error creating notification in database:", error);
     }
   };
 
@@ -61,13 +53,21 @@ const PlaydateModificationScreen = ({ route, navigation }) => {
     creatorId
   ) => {
     try {
-      await axios.post(`/api/notifications/send`, {
-        playdateId,
-        message,
+      await sendPushNotification({
+        recipientUserId: recipientId,
+        title: `Playdate Update (${type})`,
+        message: message,
+        data: { playdateId },
       });
+
       console.log("Notification sent to participant.");
-      // Create a notification in the database
-      await createNotificationInDB(message, recipientId, type, creatorId);
+
+      await createNotificationInDB({
+        content: message,
+        recipientId,
+        type,
+        creatorId,
+      });
     } catch (error) {
       console.error("Error sending notification:", error);
     }

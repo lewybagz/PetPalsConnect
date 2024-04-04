@@ -1,17 +1,17 @@
 // MoreStackNavigator.js
 import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
-import MoreScreen from "../screens/MoreScreen";
-import AddPetScreen from "../screens/AddPetScreen";
+import MoreScreen from "../bottomTab/MapScreen";
+import AddPetScreen from "../pets/AddPetScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
-import GroupChatCreationScreen from "../screens/GroupChatCreationScreen";
-import NotificationsScreen from "../screens/NotificationsScreen";
+import GroupChatCreationScreen from "../chat/GroupChatCreationScreen";
+import NotificationsScreen from "../bottomTab/NotificationsScreen";
 
 const MoreStack = createStackNavigator();
 
 const MoreStackNavigator = () => {
   return (
-    <MoreStack.Navigator>
+    <MoreStack.Navigator initialRouteName="MoreHome" gestureEnabled:true>
       <MoreStack.Screen
         name="MoreHome"
         component={MoreScreen}
@@ -22,6 +22,7 @@ const MoreStackNavigator = () => {
         component={AddPetScreen}
         options={{ title: "Add Pet" }}
       />
+      TODO: create favorites screen
       <MoreStack.Screen
         name="Favorites"
         component={FavoritesScreen}
@@ -37,7 +38,6 @@ const MoreStackNavigator = () => {
         component={NotificationsScreen}
         options={{ title: "Notifications" }}
       />
-      {/* Add other screens as needed */}
     </MoreStack.Navigator>
   );
 };

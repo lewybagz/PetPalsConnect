@@ -3,41 +3,41 @@ const Schema = mongoose.Schema;
 
 // Create Schema for Notification
 const NotificationSchema = new Schema({
-  Content: {
+  content: {
     type: String,
     required: true,
   },
-  ReadStatus: {
+  readStatus: {
     type: Boolean,
     default: false, // false for 'no', true for 'yes'
   },
-  Recipient: {
+  recipient: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Timestamp: {
+  timestamp: {
     type: Date,
     default: Date.now,
   },
-  Type: {
+  type: {
     type: String,
     required: true,
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

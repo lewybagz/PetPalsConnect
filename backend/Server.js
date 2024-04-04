@@ -1,9 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
-const stripeWebhooksRouter = require("./routes/stripeWebhooks");
-const subscriptionHistoryRoutes = require("./routes/subscriptionHistory");
 const { ServerApiVersion } = require("mongoose");
+const authenticate = require("./middleware/authenticate");
 
 const cors = require("cors");
 
@@ -34,35 +33,49 @@ app.use(bodyParser.json());
 // Enable CORS
 app.use(cors());
 
-const playdateRoutes = require("./routes/playdates");
+// Protected Routes
+app.use("/api/articles", authenticate, require("./routes/articles"));
+app.use("/api/pets", authenticate, require("./routes/pets"));
+app.use(
+  "/api/userpreferences",
+  authenticate,
+  require("./routes/userPreferences")
+);
+app.use("/api/events", authenticate, require("./routes/events"));
+app.use("/api/favorites", authenticate, require("./routes/favorites"));
+app.use("/api/groupchats", authenticate, require("./routes/groupChats"));
+app.use("/api/messages", authenticate, require("./routes/messages"));
+app.use("/api/petmatches", authenticate, require("./routes/petMatches"));
+app.use("/api/playdates", authenticate, require("./routes/playdates"));
+app.use("/api/reviews", authenticate, require("./routes/reviews"));
+app.use("/api/notifications", authenticate, require("./routes/notifications"));
+app.use("/api/reports", authenticate, require("./routes/reports"));
+app.use("/api/services", authenticate, require("./routes/services"));
+app.use("/api/subscriptions", authenticate, require("./routes/subscriptions"));
+app.use("/api/friends", authenticate, require("./routes/friends"));
+app.use("/api/locations", authenticate, require("./routes/locations"));
+app.use("/api/activitylogs", authenticate, require("./routes/activityLogs"));
+app.use("/api/blocklists", authenticate, require("./routes/blockLists"));
+app.use(
+  "/api/friendrequests",
+  authenticate,
+  require("./routes/friendRequests")
+);
+app.use("/api/playdates", authenticate, require("./routes/playdates"));
+app.use("/api/users", authenticate, require("./routes/users"));
+app.use(
+  "/api/stripe-webhooks",
+  authenticate,
+  require("./routes/stripeWebhooks")
+);
+app.use(
+  "/api/subscription-history",
+  authenticate,
+  require("./routes/subscriptionHistory")
+);
+app.use("/api/payments", authenticate, require("./routes/payment"));
+app.use("/api/media", authenticate, require("./routes/media"));
 
-// Define routes
-app.use("/api/articles", require("./routes/articles"));
-app.use("/api/pets", require("./routes/pets"));
-app.use("/api/users", require("./routes/users"));
-app.use("/api/userpreferences", require("./routes/userPreferences"));
-app.use("/api/subscriptions", require("./routes/subscriptions"));
-app.use("/api/events", require("./routes/events"));
-app.use("/api/favorites", require("./routes/favorites"));
-app.use("/api/friends", require("./routes/friends"));
-app.use("/api/groupchats", require("./routes/groupChats"));
-app.use("/api/locations", require("./routes/locations"));
-app.use("/api/messages", require("./routes/messages"));
-app.use("/api/notifications", require("./routes/notifications"));
-app.use("/api/petmatches", require("./routes/petMatches"));
-app.use("/api/playdates", require("./routes/playdates"));
-app.use("/api/reports", require("./routes/reports"));
-app.use("/api/reviews", require("./routes/reviews"));
-app.use("/api/services", require("./routes/services"));
-app.use("/api/activitylogs", require("./routes/activityLogs"));
-app.use("/api/blocklists", require("./routes/blockLists"));
-app.use("/api/friendrequests", require("./routes/friendRequests"));
-app.use("/api/playdates", playdateRoutes);
-app.use("/api/stripe-webhooks", stripeWebhooksRouter);
-app.use("/api/subscription-history", subscriptionHistoryRoutes);
-app.use("/api/payments", require("./routes/payment"));
-
-// Error handling middleware
 app.use((err, req, res) => {
   console.error(err.stack);
   res.status(500).send("Something broke!");

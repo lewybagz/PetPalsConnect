@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useTailwind } from "nativewind";
 import { useNavigation } from "@react-navigation/native";
+import { getStoredToken } from "../../utils/tokenutil";
 import axios from "axios";
 
 const ChatCard = ({ chat, onPress, isGroupChat, setChats }) => {
@@ -21,11 +22,18 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats }) => {
 
   const handleArchiveChat = async () => {
     try {
+      const token = await getStoredToken(); // Retrieve the stored token
       const endpoint = isGroupChat
         ? `/api/groupchats/${chat.id}/archive`
         : `/api/chats/${chat.id}/archive`;
 
-      const response = await axios.post(endpoint); // Capture the response
+      const response = await axios.post(
+        endpoint,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       const updatedChat = response.data;
 
       // Update local chats state
@@ -41,11 +49,14 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats }) => {
 
   const handleDeleteChat = async () => {
     try {
+      const token = await getStoredToken();
       const endpoint = isGroupChat
         ? `/api/groupchats/${chat.id}`
         : `/api/chats/${chat.id}`;
 
-      const response = await axios.delete(endpoint); // Capture the response
+      const response = await axios.delete(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const updatedChat = response.data;
       setChats((prevChats) =>
         prevChats.map((c) => (c.id === chat.id ? updatedChat : c))
@@ -58,18 +69,25 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats }) => {
   };
 
   const handleViewDetails = () => {
-    // If you need to fetch details, you can make an API call here.
-    // Or navigate to a screen with detailed information about the chat.
-    // For example:
-    navigation.navigate("ChatDetailsScreen", { chatId: chat.id });
+    // Assuming you have navigation passed as a prop to this component
+    navigation.navigate("ChatDetailsScreen", {
+      chatId: chat.id,
+      isGroupChat: isGroupChat,
+    });
 
     handleCloseModal();
   };
 
   const handlePinChat = async () => {
     try {
-      await axios.post(`/api/chats/${chat.id}/pin`);
-      // Optionally update local state or trigger re-fetch
+      const token = await getStoredToken();
+      await axios.post(
+        `/api/chats/${chat.id}/pin`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
     } catch (error) {
       console.error("Failed to pin chat:", error);
       // Handle error

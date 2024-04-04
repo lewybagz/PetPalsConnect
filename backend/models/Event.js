@@ -3,43 +3,43 @@ const Schema = mongoose.Schema;
 
 // Create Schema for Event
 const EventSchema = new Schema({
-  Attendees: [
+  attendees: [
     {
       type: Schema.Types.ObjectId,
       ref: "User",
     },
   ],
-  Date: {
+  date: {
     type: Date,
     required: true,
   },
-  Description: {
+  description: {
     type: String,
     required: true,
   },
-  Organizer: {
+  organizer: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Title: {
+  title: {
     type: String,
     required: true,
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

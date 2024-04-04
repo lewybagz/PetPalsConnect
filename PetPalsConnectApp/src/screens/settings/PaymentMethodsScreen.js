@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useTailwind } from "nativewind";
 import axios from "axios";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const PaymentMethodsScreen = () => {
   const navigation = useNavigation();
@@ -11,14 +12,19 @@ const PaymentMethodsScreen = () => {
 
   useEffect(() => {
     // API call to backend to fetch payment methods
-    axios
-      .get("/api/payments/payment-methods")
-      .then((response) => {
+    const fetchPaymentMethods = async () => {
+      try {
+        const token = await getStoredToken(); // Retrieve the token
+        const response = await axios.get("/api/payments/payment-methods", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setPaymentMethods(response.data);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Error fetching payment methods:", error);
-      });
+      }
+    };
+
+    fetchPaymentMethods();
   }, []);
 
   const handleAddPaymentMethod = () => {
@@ -37,19 +43,20 @@ const PaymentMethodsScreen = () => {
         },
         {
           text: "Delete",
-          onPress: () => {
-            // API call to backend to delete payment method
-            axios
-              .delete(`/api/payments/payment-methods/${id}`)
-              .then(() => {
-                // Refresh payment methods list upon successful deletion
-                setPaymentMethods(
-                  paymentMethods.filter((method) => method.id !== id)
-                );
-              })
-              .catch((error) => {
-                console.error("Error deleting payment method:", error);
+          onPress: async () => {
+            try {
+              const token = await getStoredToken(); // Retrieve the token
+              // API call to backend to delete payment method
+              await axios.delete(`/api/payments/payment-methods/${id}`, {
+                headers: { Authorization: `Bearer ${token}` },
               });
+              // Refresh payment methods list upon successful deletion
+              setPaymentMethods(
+                paymentMethods.filter((method) => method.id !== id)
+              );
+            } catch (error) {
+              console.error("Error deleting payment method:", error);
+            }
           },
           style: "destructive",
         },

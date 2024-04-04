@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import axios from "axios";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const PotentialPlaydateLocationScreen = ({ route }) => {
   const { placeId } = route.params; // Assumed that placeId is passed in navigation
@@ -22,7 +23,10 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const response = await axios.get(`/api/reviews/location/${placeId}`);
+        const token = await getStoredToken(); // Retrieve the token
+        const response = await axios.get(`/api/reviews/location/${placeId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setReviews(response.data);
       } catch (error) {
         console.error("Error fetching reviews:", error);
@@ -35,7 +39,13 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
   useEffect(() => {
     const fetchLocationDetails = async () => {
       try {
-        const response = await axios.get(`/api/playdates/locations/${placeId}`);
+        const token = await getStoredToken(); // Retrieve the token
+        const response = await axios.get(
+          `/api/playdates/locations/${placeId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setLocationDetails(response.data);
       } catch (error) {
         console.error("Error fetching location details:", error);
@@ -45,6 +55,7 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     fetchLocationDetails();
   }, [placeId]);
 
+  // Assuming handleOpenDirections is a function you have defined
   {
     locationDetails && (
       <Button title="Get Directions" onPress={handleOpenDirections} />

@@ -687,10 +687,10 @@ const PetMatchController = {
   async getAllPetMatches(req, res) {
     try {
       const petMatches = await PetMatch.find()
-        .populate("Pet1")
-        .populate("Pet2")
-        .populate("RelevantToUser")
-        .populate("Creator");
+        .populate("pet1")
+        .populate("pet2")
+        .populate("relevantToUser")
+        .populate("creator");
       res.json(petMatches);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -701,10 +701,10 @@ const PetMatchController = {
     let petMatch;
     try {
       petMatch = await PetMatch.findById(req.params.id)
-        .populate("Pet1")
-        .populate("Pet2")
-        .populate("RelevantToUser")
-        .populate("Creator");
+        .populate("pet1")
+        .populate("pet2")
+        .populate("relevantToUser")
+        .populate("creator");
       if (petMatch == null) {
         return res.status(404).json({ message: "Cannot find pet match" });
       }
@@ -786,8 +786,8 @@ const PetMatchController = {
     for (const match of matches) {
       await this.createPetMatch({
         MatchScore: match.score,
-        Pet1: petId,
-        Pet2: match.matchId,
+        pet1: petId,
+        pet2: match.matchId,
         RelevantToUser: currentPet.owner,
         Creator: currentPet.owner,
       });
@@ -810,10 +810,10 @@ const PetMatchController = {
     try {
       const userId = req.params.userId;
       const petMatches = await PetMatch.find({ RelevantToUser: userId })
-        .populate("Pet1")
-        .populate("Pet2")
-        .populate("RelevantToUser")
-        .populate("Creator");
+        .populate("pet1")
+        .populate("pet2")
+        .populate("relevantToUser")
+        .populate("creator");
 
       res.json(petMatches);
     } catch (err) {
@@ -823,12 +823,12 @@ const PetMatchController = {
 
   async createPetMatch(req, res) {
     const petMatch = new PetMatch({
-      MatchScore: req.body.MatchScore,
-      Pet1: req.body.Pet1,
-      Pet2: req.body.Pet2,
-      RelevantToUser: req.body.RelevantToUser,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      matchScore: req.body.matchScore,
+      pet1: req.body.pet1,
+      pet2: req.body.pet2,
+      relevantToUser: req.body.relevantToUser,
+      creator: req.body.creator,
+      slug: req.body.slug,
     });
 
     try {

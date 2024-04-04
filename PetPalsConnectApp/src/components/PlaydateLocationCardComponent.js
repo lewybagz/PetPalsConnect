@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import ReviewComponent from "./ReviewComponent";
+import { getStoredToken } from "../../utils/tokenutil";
 import axios from "axios";
 
 const PlayDateLocationCard = ({ locationData }) => {
@@ -17,12 +18,22 @@ const PlayDateLocationCard = ({ locationData }) => {
 
   useEffect(() => {
     if (locationData._id) {
-      axios
-        .get(`/api/reviews/location/${locationData._id}`)
-        .then((response) => {
+      const fetchReviews = async () => {
+        try {
+          const token = await getStoredToken(); // Retrieve the token
+          const response = await axios.get(
+            `/api/reviews/location/${locationData._id}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
           setReviews(response.data);
-        })
-        .catch((error) => console.error("Error fetching reviews:", error));
+        } catch (error) {
+          console.error("Error fetching reviews:", error);
+        }
+      };
+
+      fetchReviews();
     }
   }, [locationData]);
 

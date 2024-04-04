@@ -8,9 +8,24 @@ const PlaydateController = {
   async getAllPlaydates(req, res) {
     try {
       const playdates = await Playdate.find()
-        .populate("Participants")
-        .populate("PetsInvolved")
-        .populate("Creator");
+        .populate("participants")
+        .populate("petsInvolved")
+        .populate("creator", "name");
+      res.json(playdates);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  async getUserPlaydates(req, res) {
+    try {
+      const userId = req.user._id; // Assuming req.user._id contains the current user's ID
+      const playdates = await Playdate.find({
+        $or: [{ participants: userId }, { creator: userId }],
+      })
+        .populate("participants")
+        .populate("petsInvolved")
+        .populate("creator", "name");
       res.json(playdates);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -22,19 +37,19 @@ const PlaydateController = {
       const playdate = await Playdate.findById(req.params.id)
         .populate({
           path: "Location",
-          match: { "Creator.locationSharingEnabled": { $ne: false } },
+          match: { "creator.locationSharingEnabled": { $ne: false } },
         })
-        .populate("Participants")
-        .populate("PetsInvolved")
-        .populate("Creator");
+        .populate("participants")
+        .populate("petsInvolved")
+        .populate("creator", "name");
 
       if (!playdate) {
         return res.status(404).json({ message: "Playdate not found" });
       }
 
       // Modify the playdate data to remove location if the creator's locationSharingEnabled is false
-      if (playdate.Creator.locationSharingEnabled === false) {
-        playdate.Location = null; // or handle it as needed
+      if (playdate.creator.locationSharingEnabled === false) {
+        playdate.location = null; // or handle it as needed
       }
 
       res.json(playdate);
@@ -47,12 +62,12 @@ const PlaydateController = {
     try {
       const now = new Date();
       const playdates = await Playdate.find({
-        Date: { $gte: now }, // Fetch playdates with a date greater than or equal to now
-        Status: "accepted", // Assuming there's a Status field in your Playdate schema
+        date: { $gte: now }, // Fetch playdates with a date greater than or equal to now
+        status: "accepted", // Assuming there's a Status field in your Playdate schema
       })
-        .populate("Participants")
-        .populate("PetsInvolved")
-        .populate("Creator");
+        .populate("participants")
+        .populate("petsInvolved")
+        .populate("creator", "name");
       res.json(playdates);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -85,16 +100,16 @@ const PlaydateController = {
       }
 
       // Update playdate status to 'accepted' and add the user to participants
-      playdate.Status = "accepted";
-      if (!playdate.Participants.includes(userId)) {
-        playdate.Participants.push(userId);
+      playdate.status = "accepted";
+      if (!playdate.participants.includes(userId)) {
+        playdate.participants.push(userId);
       }
       await playdate.save();
 
       // Prepare internal request object for notification
       const notificationReq = {
         body: {
-          to: playdate.Creator, // ID of the playdate creator
+          to: playdate.creator, // ID of the playdate creator
           title: "Playdate Request Accepted",
           body: "Your playdate request has been accepted.",
           data: { playdateId }, // Additional data if needed
@@ -121,13 +136,13 @@ const PlaydateController = {
       }
 
       // Update playdate status to 'declined'
-      playdate.Status = "declined";
+      playdate.status = "declined";
       await playdate.save();
 
       // Prepare internal request object for notification
       const notificationReq = {
         body: {
-          to: playdate.Creator, // ID of the playdate creator
+          to: playdate.creator, // ID of the playdate creator
           title: "Playdate Request Declined",
           body: "Your playdate request has been declined.",
           data: { playdateId }, // Additional data if needed
@@ -146,13 +161,13 @@ const PlaydateController = {
   },
   async createPlaydate(req, res) {
     const playdate = new Playdate({
-      Date: req.body.Date,
-      Location: req.body.Location,
-      Notes: req.body.Notes,
-      Participants: req.body.Participants,
-      PetsInvolved: req.body.PetsInvolved,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      date: req.body.date,
+      location: req.body.location,
+      notes: req.body.notes,
+      participants: req.body.participants,
+      petsInvolved: req.body.petsInvolved,
+      creator: req.body.creator,
+      slug: req.body.slug,
     });
 
     try {
@@ -161,7 +176,7 @@ const PlaydateController = {
       // Schedule the review reminder notification
       await pushPlaydateReviewReminderNotification(
         newPlaydate._id,
-        req.body.Creator
+        req.body.creator
       );
 
       res.status(201).json(newPlaydate);

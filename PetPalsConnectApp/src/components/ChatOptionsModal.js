@@ -4,6 +4,7 @@ import { useTailwind } from "nativewind";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { useSelector } from "react-redux";
+import { getStoredToken } from "../../utils/tokenutil";
 
 const ChatOptionsModal = ({ isVisible, onClose }) => {
   const tailwind = useTailwind();
@@ -16,11 +17,18 @@ const ChatOptionsModal = ({ isVisible, onClose }) => {
   const handleMuteNotifications = async () => {
     console.log("Mute Tapped");
     try {
-      const response = await axios.post("/api/groupchats/toggle-mute", {
-        userId: userId,
-        chatId: chatId,
-        mute: true, // Toggle based on current mute state
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.post(
+        "/api/groupchats/toggle-mute",
+        {
+          userId: userId,
+          chatId: chatId,
+          mute: true,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       console.log(response.data.message);
     } catch (error) {
       console.error("Error updating mute settings:", error);
@@ -31,8 +39,10 @@ const ChatOptionsModal = ({ isVisible, onClose }) => {
   const handleViewMedia = async () => {
     console.log("View Media Tapped");
     try {
-      // Replace with the actual chatId
-      const response = await axios.get(`/api/groupchats/${chatId}/media`);
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.get(`/api/chats/${chatId}/media`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const mediaArray = response.data.media;
       if (mediaArray.length > 0) {
         navigation.navigate("MediaViewScreen", { mediaItems: mediaArray });

@@ -9,7 +9,8 @@ import {
   Linking,
 } from "react-native";
 import axios from "axios";
-// Mock Subscription Data
+import { getStoredToken } from "../../../../utils/tokenutil";
+
 const subscriptionTiers = [
   {
     id: "basic",
@@ -51,23 +52,27 @@ const subscriptionTiers = [
 const SubscriptionOptionsScreen = () => {
   const [selectedTier, setSelectedTier] = useState(null);
 
-  const handleSelectTier = (tierId) => {
+  const handleSelectTier = async (tierId) => {
     setSelectedTier(tierId);
 
-    axios
-      .post("/api/subscriptions/create-checkout-session", { planId: tierId })
-      .then((response) => {
-        const sessionId = response.data.sessionId;
-        const url = `https://checkout.stripe.com/pay/${sessionId}`; // Construct the Stripe checkout URL
-        Linking.openURL(url).catch((err) => {
-          console.error("Error opening Stripe:", err);
-          Alert.alert("Error", "Unable to open Stripe checkout.");
-        });
-      })
-      .catch((error) => {
-        console.error("Error creating Stripe checkout session:", error);
-        Alert.alert("Error", "Failed to initiate payment process.");
+    try {
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.post(
+        "/api/subscriptions/create-checkout-session",
+        { planId: tierId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const sessionId = response.data.sessionId;
+      const url = `https://checkout.stripe.com/pay/${sessionId}`; // Construct the Stripe checkout URL
+      Linking.openURL(url).catch((err) => {
+        console.error("Error opening Stripe:", err);
+        Alert.alert("Error", "Unable to open Stripe checkout.");
       });
+    } catch (error) {
+      console.error("Error creating Stripe checkout session:", error);
+      Alert.alert("Error", "Failed to initiate payment process.");
+    }
   };
 
   return (

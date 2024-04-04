@@ -14,12 +14,22 @@ const chatSchema = new Schema({
       required: true,
     },
   ],
+  media: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Media",
+    },
+  ],
   messages: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Message",
     },
   ],
+  isMuted: {
+    type: Boolean,
+    default: false,
+  },
   petId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Pet",
@@ -33,6 +43,7 @@ const chatSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  isArchived: { type: Boolean, default: false },
 });
 
 const Chat = mongoose.model("Chat", chatSchema);

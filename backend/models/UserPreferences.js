@@ -3,33 +3,58 @@ const Schema = mongoose.Schema;
 
 // Create Schema for UserPreferences
 const UserPreferencesSchema = new Schema({
-  NotificationSettings: {
-    type: String, // This could be JSON or a specific schema if the settings are complex
-    default: "",
+  locationSharingEnabled: {
+    type: Boolean,
+    default: false,
   },
-  SearchSettings: {
-    type: String, // This could also be JSON or a specific schema if the settings are complex
-    default: "",
+  playdateRange: {
+    type: Number,
+    default: 5,
   },
-  User: {
+  notificationPreferences: {
+    petPalsMapUpdates: { type: Boolean, default: true },
+    playdateReminders: { type: Boolean, default: true },
+    appUpdates: { type: Boolean, default: true },
+    pushNotificationsEnabled: { type: Boolean, default: true },
+    emailNotificationsEnabled: { type: Boolean, default: false },
+  },
+  darkModeEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  profileVisibility: {
+    type: Boolean,
+    default: true,
+  },
+  twoFactorAuthenticationEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  securityQuestions: [
+    {
+      question: String,
+      answer: String,
+    },
+  ],
+  user: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Creator: {
-    type: Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: {
+    type: String,
+    lowercase: true,
+    unique: true,
+    trim: true,
+  },
 });
 
 // Create a model

@@ -3,45 +3,45 @@ const Schema = mongoose.Schema;
 
 // Create Schema for Subscription
 const SubscriptionSchema = new Schema({
-  EndDate: {
+  endDate: {
     type: Date,
     default: Date.now,
   },
-  PlanType: {
+  planType: {
     type: String,
     required: true,
   },
-  StartDate: {
+  startDate: {
     type: Date,
     default: Date.now,
   },
-  Status: {
+  status: {
     type: String,
     required: true,
   },
-  Amount: {
+  amount: {
     type: Number,
     required: true,
   },
-  User: {
+  user: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

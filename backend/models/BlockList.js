@@ -3,35 +3,35 @@ const Schema = mongoose.Schema;
 
 // Create Schema for BlockList
 const BlockListSchema = new Schema({
-  BlockedUser: {
+  blockedUser: {
     type: Schema.Types.ObjectId,
     ref: "User",
   },
-  BlockedUserList: [
+  blockedUserList: [
     {
       type: Schema.Types.ObjectId,
       ref: "User",
     },
   ],
-  Owner: {
+  owner: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
+  slug: String,
 });
 
 // Create a model

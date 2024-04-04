@@ -10,6 +10,13 @@ router.get("/:id", ArticleController.getArticleById, (req, res) => {
   res.json(res.article);
 });
 
+router.get("/latest", ArticleController.getLatestArticle);
+
+// Endpoint to get the latest 20 articles
+router.get("/latest", ArticleController.getLatestArticles);
+
+router.get("/search", ArticleController.searchArticles);
+
 // POST a new Article
 router.post("/", ArticleController.createArticle);
 

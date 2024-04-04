@@ -11,14 +11,13 @@ import SecuritySettingsScreen from "../settings/SecuritySettingsScreen";
 import NotificationPreferencesScreen from "../settings/NotificationPreferencesScreen";
 import HelpSupportScreen from "../settings/HelpSupportScreen";
 import LegalPoliciesScreen from "../settings/LegalPoliciesScreen";
-
-// ... import other screens ...
+import SubscriptionManagementScreen from "../settings/subscription/SubscriptionManagementScreen";
 
 const Stack = createStackNavigator();
 
 const SettingsStack = () => {
   return (
-    <Stack.Navigator initialRouteName="SettingsScreen">
+    <Stack.Navigator initialRouteName="SettingsScreen" gestureEnabled:true>
       <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
       <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
@@ -38,8 +37,13 @@ const SettingsStack = () => {
       />
       <Stack.Screen
         name="NotificationPreferences"
+        component={SubscriptionManagementScreen}
+      />
+      <Stack.Screen
+        name="ManageSubscription"
         component={NotificationPreferencesScreen}
       />
+
       <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
       <Stack.Screen name="LegalPolicies" component={LegalPoliciesScreen} />
     </Stack.Navigator>

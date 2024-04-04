@@ -11,6 +11,7 @@ import {
 import { auth } from "../../firebase/firebaseConfig";
 import { useDispatch } from "react-redux";
 import axios from "axios";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const GroupChatCreationScreen = ({ route, navigation }) => {
   const { selectedPets } = route.params;
@@ -30,6 +31,7 @@ const GroupChatCreationScreen = ({ route, navigation }) => {
     }
 
     try {
+      const token = await getStoredToken(); // Retrieve the token
       const groupChatData = {
         GroupName: groupName,
         Participants: selectedPets.map((pet) => pet.owner), // userIds of participants
@@ -38,7 +40,8 @@ const GroupChatCreationScreen = ({ route, navigation }) => {
 
       const response = await axios.post(
         "/api/groupchats/findOrCreate",
-        groupChatData
+        groupChatData,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.status === 201 || response.status === 200) {

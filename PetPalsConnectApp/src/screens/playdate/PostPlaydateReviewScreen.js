@@ -14,6 +14,7 @@ import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import StarRating from "react-native-star-rating";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
+import { getStoredToken } from "../../../utils/tokenutil";
 
 const PostPlaydateReviewScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -34,7 +35,10 @@ const PostPlaydateReviewScreen = ({ route }) => {
 
   const getLocationData = async (locationId) => {
     try {
-      const response = await axios.get(`/api/locations/${locationId}`);
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.get(`/api/locations/${locationId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error) {
       console.error("Error fetching location data:", error);
@@ -44,16 +48,22 @@ const PostPlaydateReviewScreen = ({ route }) => {
 
   const handleVisibilityToggle = async (newValue) => {
     setIsReviewVisible(newValue);
-
     if (!reviewId) {
       Alert.alert("Error", "Review ID is not available.");
       return;
     }
 
     try {
-      await axios.patch(`/api/reviews/${reviewId}/visibility`, {
-        Visibility: newValue,
-      });
+      const token = await getStoredToken(); // Retrieve the token
+      await axios.patch(
+        `/api/reviews/${reviewId}/visibility`,
+        {
+          Visibility: newValue,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       Alert.alert(
         "Visibility Updated",
         "Your review's visibility has been updated successfully."
@@ -67,7 +77,10 @@ const PostPlaydateReviewScreen = ({ route }) => {
 
   const getOwnerIdFromPetId = async (petId) => {
     try {
-      const response = await axios.get(`/api/pets/owner/${petId}`);
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.get(`/api/pets/owner/${petId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response && response.data) {
         return response.data.ownerId;
       } else {
@@ -101,7 +114,10 @@ const PostPlaydateReviewScreen = ({ route }) => {
     };
 
     try {
-      const response = await axios.post("/api/reviews", reviewData);
+      const token = await getStoredToken(); // Retrieve the token
+      const response = await axios.post("/api/reviews", reviewData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       Alert.alert(
         "Review Submitted",
         "Your review has been successfully submitted."

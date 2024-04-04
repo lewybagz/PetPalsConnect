@@ -3,45 +3,44 @@ const Schema = mongoose.Schema;
 
 // Create Schema for Message
 const MessageSchema = new Schema({
-  ContentImage: {
+  contentImage: {
     type: String, // Assuming this will be a URL to the image
   },
-  ContentText: {
+  contentText: {
     type: String,
     required: true,
   },
-  ReadStatus: {
+  readStatus: {
     type: Boolean,
     default: false, // false for 'no', true for 'yes'
   },
-  Receiver: {
+  receiver: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Sender: {
+  sender: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  Timestamp: {
+  timestamp: {
     type: Date,
     default: Date.now,
   },
-  Creator: {
+  creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  ModifiedDate: {
+  modifiedDate: {
     type: Date,
     default: Date.now,
   },
-  CreatedDate: {
+  createdDate: {
     type: Date,
     default: Date.now,
   },
-  Slug: String,
 });
 
 // Create a model
