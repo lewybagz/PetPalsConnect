@@ -10,7 +10,7 @@ import LoadingScreen from "../../components/LoadingScreenComponent";
 import axios from "axios";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import { getStoredToken } from "../../../utils/tokenutil";
-// TODO: import playdate card component
+import PlaydateCardComponent from "../../components/PlaydateCardComponent";
 
 const PlaydateHistoryScreen = ({ navigation }) => {
   const [pastPlaydates, setPastPlaydates] = useState([]);
@@ -38,15 +38,11 @@ const PlaydateHistoryScreen = ({ navigation }) => {
 
   const renderPlaydateItem = ({ item }) => (
     <TouchableOpacity
-      style={styles.item}
       onPress={() =>
         navigation.navigate("PlaydateDetail", { playdateId: item._id })
       }
     >
-      <Text style={styles.title}>{item.petName}</Text>
-      <Text>Date: {new Date(item.date).toLocaleDateString()}</Text>
-      <Text>Location: {item.locationName}</Text>
-      <Text>With: {item.partnerPetName}</Text>
+      <PlaydateCardComponent playdate={item} />
     </TouchableOpacity>
   );
 
@@ -63,7 +59,7 @@ const PlaydateHistoryScreen = ({ navigation }) => {
         <FlatList
           data={pastPlaydates}
           renderItem={renderPlaydateItem}
-          keyExtractor={(item) => item._id.toString()}
+          keyExtractor={(item) => item._id.toString()} // Make sure to have .toString() if _id is a number
         />
       )}
     </View>

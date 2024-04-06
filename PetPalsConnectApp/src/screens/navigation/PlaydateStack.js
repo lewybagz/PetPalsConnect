@@ -9,7 +9,6 @@ import PlaydateHistoryScreen from "../playdate/PlaydateHistoryScreen";
 import PlaydateModificationScreen from "../playdate/PlaydateModificationScreen";
 import PlaydatePetSelectionScreen from "../playdate/PlaydatePetSelectionScreen";
 import PlaydateRequestScreen from "../playdate/PlaydateRequestScreen";
-// TODO: Maybe confirmation screen for playdate actions
 import PostPlaydateReviewScreen from "../playdate/PostPlaydateReviewScreen";
 import PotentialPlaydateLocationScreen from "../playdate/PotentialPlaydateLocationScreen";
 import PotentialPlaydateLocationsScreen from "../playdate/PotentialPlaydateLocationsScreen";

@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
+import { Text, ScrollView, StyleSheet } from "react-native";
 import axios from "axios";
+import LoadingScreen from "../../components/LoadingScreenComponent";
 import UserPetCard from "../components/UserPetCard";
 import ReviewComponent from "../../components/ReviewComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-const PlaydateDetailsScreen = ({ route }) => {
+const PlaydateDetailsScreen = ({ route, navigation }) => {
   const [playdateDetails, setPlaydateDetails] = useState(null);
 
   useEffect(() => {
     const fetchPlaydateDetails = async () => {
       try {
-        const token = await getStoredToken(); // Retrieve the token
+        const token = await getStoredToken();
         const response = await axios.get(
           `/api/playdates/${route.params.playdateId}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -25,8 +26,12 @@ const PlaydateDetailsScreen = ({ route }) => {
   }, [route.params.playdateId]);
 
   if (!playdateDetails) {
-    return <ActivityIndicator size="small" color="#0000ff" />;
+    return <LoadingScreen />;
   }
+
+  const navigateToPetDetails = (petId) => {
+    navigation.navigate("PetDetailsScreen", { petId: petId });
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -36,8 +41,12 @@ const PlaydateDetailsScreen = ({ route }) => {
       ))}
       <Text style={styles.subtitle}>Pets Involved</Text>
       {playdateDetails.petsInvolved.map((pet) => (
-        // TODO: navigate to pet details screen
-        <UserPetCard key={pet._id} data={pet} type="pet" />
+        <UserPetCard
+          key={pet._id}
+          data={pet}
+          type="pet"
+          onPress={() => navigateToPetDetails(pet._id)}
+        />
       ))}
       <Text style={styles.title}>Playdate Details</Text>
       <Text>Date: {new Date(playdateDetails.date).toLocaleDateString()}</Text>

@@ -19,7 +19,7 @@ const PlaydateController = {
 
   async getUserPlaydates(req, res) {
     try {
-      const userId = req.user._id; // Assuming req.user._id contains the current user's ID
+      const userId = req.user._id;
       const playdates = await Playdate.find({
         $or: [{ participants: userId }, { creator: userId }],
       })
@@ -99,7 +99,6 @@ const PlaydateController = {
         return res.status(404).json({ message: "Playdate not found" });
       }
 
-      // Update playdate status to 'accepted' and add the user to participants
       playdate.status = "accepted";
       if (!playdate.participants.includes(userId)) {
         playdate.participants.push(userId);
@@ -109,15 +108,15 @@ const PlaydateController = {
       // Prepare internal request object for notification
       const notificationReq = {
         body: {
-          to: playdate.creator, // ID of the playdate creator
+          to: playdate.creator,
           title: "Playdate Request Accepted",
           body: "Your playdate request has been accepted.",
-          data: { playdateId }, // Additional data if needed
+          data: { playdateId },
         },
       };
 
       // Call sendPlaydateNotification
-      await sendPlaydateNotification(notificationReq, res); // This might require adjustment based on how you handle responses
+      await sendPlaydateNotification(notificationReq, res);
 
       return res.status(200).json({ message: "Playdate accepted" });
     } catch (error) {
@@ -127,8 +126,62 @@ const PlaydateController = {
     }
   },
 
+  async cancelPlaydate(req, res) {
+    const { playdateId, userId } = req.params; // Assuming userId is the one who is cancelling the playdate
+
+    try {
+      let playdate = await Playdate.findById(playdateId);
+      if (!playdate) {
+        return res.status(404).json({ message: "Playdate not found" });
+      }
+
+      playdate.status = "cancelled";
+      playdate.participants = playdate.participants.filter(
+        (participant) => participant !== userId
+      );
+
+      await playdate.save();
+
+      // Notify the playdate creator about the cancellation
+      if (userId !== playdate.creator) {
+        const creatorNotificationReq = {
+          body: {
+            to: playdate.creator,
+            title: "Playdate Cancelled",
+            body: "A participant has cancelled the playdate.",
+            data: { playdateId },
+          },
+        };
+        await sendPlaydateNotification(creatorNotificationReq, res);
+      }
+
+      // Notify other participants about the cancellation
+      playdate.participants.forEach(async (participantId) => {
+        if (participantId !== userId) {
+          const participantNotificationReq = {
+            body: {
+              to: participantId,
+              title: "Playdate Cancelled",
+              body: "The playdate has been cancelled.",
+              data: { playdateId },
+            },
+          };
+          await sendPlaydateNotification(participantNotificationReq, res); // Adjust based on your notification handler
+        }
+      });
+
+      return res
+        .status(200)
+        .json({ message: "Playdate cancelled successfully" });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Error cancelling playdate", error });
+    }
+  },
+
   async declinePlaydate(req, res) {
-    const { playdateId } = req.params; // Assuming userId is passed in the request
+    const { playdateId } = req.params;
     try {
       let playdate = await Playdate.findById(playdateId);
       if (!playdate) {
@@ -182,6 +235,57 @@ const PlaydateController = {
       res.status(201).json(newPlaydate);
     } catch (err) {
       res.status(400).json({ message: err.message });
+    }
+  },
+
+  async updatePlaydateDetails(req, res) {
+    const { playdateId } = req.params;
+    const { date, time, location, userId } = req.body;
+
+    try {
+      let playdate = await Playdate.findById(playdateId);
+      if (!playdate) {
+        return res.status(404).json({ message: "Playdate not found" });
+      }
+
+      // Authorization check: make sure the user making the request has permission to update the playdate
+      if (playdate.creator.toString() !== userId) {
+        return res.status(403).json({
+          message: "User does not have permission to update this playdate",
+        });
+      }
+
+      playdate.date = date;
+      playdate.time = time;
+      playdate.location = location;
+
+      await playdate.save();
+
+      // Prepare internal request object for notification
+      const participants = playdate.participants;
+      participants.forEach(async (participantId) => {
+        if (participantId.toString() !== userId) {
+          const notificationReq = {
+            body: {
+              to: participantId,
+              title: "Playdate Updated",
+              body: `The details for the playdate on ${date} have been updated. Check out the new details!`,
+              data: { playdateId },
+            },
+          };
+
+          // Call sendPlaydateNotification
+          await sendPlaydateNotification(notificationReq, res); // You may need to handle this differently if you're sending multiple notifications
+        }
+      });
+
+      return res
+        .status(200)
+        .json({ message: "Playdate updated successfully", playdate });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Error updating playdate details", error });
     }
   },
 };

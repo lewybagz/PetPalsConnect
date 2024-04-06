@@ -45,6 +45,10 @@ export const setPets = (pets) => {
   };
 };
 
+export const FETCH_PLAYDATE_DETAILS_REQUEST = "FETCH_PLAYDATE_DETAILS_REQUEST";
+export const FETCH_PLAYDATE_DETAILS_SUCCESS = "FETCH_PLAYDATE_DETAILS_SUCCESS";
+export const FETCH_PLAYDATE_DETAILS_FAILURE = "FETCH_PLAYDATE_DETAILS_FAILURE";
+
 export const FETCH_PLAYDATES_START = "FETCH_PLAYDATES_START";
 export const FETCH_PLAYDATES_SUCCESS = "FETCH_PLAYDATES_SUCCESS";
 export const FETCH_PLAYDATES_FAIL = "FETCH_PLAYDATES_FAIL";
@@ -80,8 +84,6 @@ export const fetchPlaydates = () => {
   };
 };
 
-// In your actions.js or a similar file
-
 export const fetchPlaydateDetails = (playdateId) => async (dispatch) => {
   try {
     dispatch({ type: "FETCH_PLAYDATE_DETAILS_START" });
@@ -104,4 +106,17 @@ export const fetchPlaydateDetails = (playdateId) => async (dispatch) => {
   }
 };
 
-// Add other actions as needed
+// Notifications Actions
+
+export const SET_NOTIFICATIONS = "SET_NOTIFICATIONS";
+export const ADD_NOTIFICATION = "ADD_NOTIFICATION";
+
+export const setNotifications = (notifications) => ({
+  type: SET_NOTIFICATIONS,
+  payload: notifications,
+});
+
+export const addNotification = (notification) => ({
+  type: ADD_NOTIFICATION,
+  payload: notification,
+});

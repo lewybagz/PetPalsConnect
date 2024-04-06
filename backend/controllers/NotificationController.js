@@ -93,6 +93,23 @@ const NotificationController = {
     }
   },
 
+  async fetchRecentNotifications(req, res) {
+    try {
+      const userId = req.user.id; // Adjust based on how you get the current user's ID
+      const threshold = new Date(new Date().getTime() - 73 * 60 * 60 * 1000);
+
+      const notifications = await Notification.find({
+        user: userId,
+        createdAt: { $gte: threshold },
+      }).sort({ createdAt: -1 });
+
+      res.status(200).json(notifications);
+    } catch (error) {
+      console.error("Error fetching recent notifications:", error);
+      res.status(500).json({ message: "Error fetching notifications", error });
+    }
+  },
+
   async createNotification(req, res) {
     const notification = new Notification({
       content: req.body.content,

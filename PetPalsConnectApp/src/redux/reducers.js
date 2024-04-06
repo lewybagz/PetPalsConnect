@@ -1,5 +1,8 @@
 // rootReducer.js
 import { combineReducers } from "redux";
+import { SET_NOTIFICATIONS, ADD_NOTIFICATION } from "./actions";
+
+// TODO: ASK ABOUT WHEN TO USE EACH REDUCER
 
 const initialUserState = {
   user: null,
@@ -95,11 +98,33 @@ const playdateReducer = (state = initialPlaydateState, action) => {
   }
 };
 
+const initialNotificationsState = {
+  notifications: [],
+};
+
+const notificationsReducer = (state = initialNotificationsState, action) => {
+  switch (action.type) {
+    case SET_NOTIFICATIONS:
+      return {
+        ...state,
+        notifications: action.payload,
+      };
+    case ADD_NOTIFICATION:
+      return {
+        ...state,
+        notifications: [...state.notifications, action.payload],
+      };
+    default:
+      return state;
+  }
+};
+
 const rootReducer = combineReducers({
   user: userReducer,
   chat: chatReducer,
   pet: petReducer,
   playdate: playdateReducer,
+  notifications: notificationsReducer,
   // Add other reducers as needed
 });
 

@@ -15,7 +15,7 @@ import { sendPushNotification } from "../../services/NotificationService";
 import { useSelector } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
 
-const UserPetCard = ({ data, type, reviews }) => {
+const UserPetCard = ({ data, type, reviews, onPress }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const currentUser = useSelector((state) => state.user.currentUser);
   const navigation = useNavigation();
@@ -146,13 +146,13 @@ const UserPetCard = ({ data, type, reviews }) => {
 
   const renderPetCard = (petData) => {
     return (
-      <View style={styles.UserPetCard}>
+      <TouchableOpacity style={styles.UserPetCard} onPress={onPress}>
         <Image style={styles.image} source={{ uri: petData.photo }} />
         <Text style={styles.name}>{petData.name}</Text>
         <Text style={styles.details}>Breed: {petData.breed}</Text>
         <TouchableOpacity
           style={styles.addFriendIcon}
-          onPress={() => handleAddFriend(petData.ownerId)} // Replace ownerId with the actual owner's ID
+          onPress={() => handleAddFriend(petData.ownerId)}
         >
           <Icon name="account-plus" size={24} color="#5cb85c" />
         </TouchableOpacity>
@@ -170,7 +170,7 @@ const UserPetCard = ({ data, type, reviews }) => {
           </View>
         ))}
         {renderKebabMenu()}
-      </View>
+      </TouchableOpacity>
     );
   };
   const renderKebabMenu = () => {

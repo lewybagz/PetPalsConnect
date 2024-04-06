@@ -7,28 +7,21 @@ export const sendPushNotification = async ({
   message,
   data,
 }) => {
-  try {
-    // First, check if the user has notifications enabled
-    const prefResponse = await axios.get(
-      `/api/userpreferences/${recipientUserId}`
-    );
-    if (prefResponse.data.notificationsEnabled) {
-      // If notifications are enabled, proceed to send the notification
-      await axios.post("/api/send-notification", {
-        to: recipientUserId,
-        title: title,
-        body: message,
-        data: data,
-      });
-      console.log("Notification sent successfully.");
-    } else {
-      console.log("Notification not sent: User has disabled notifications.");
-    }
-  } catch (error) {
-    console.error(
-      "Error in sending notification or fetching preferences:",
-      error
-    );
+  // First, check if the user has notifications enabled
+  const prefResponse = await axios.get(
+    `/api/userpreferences/${recipientUserId}`
+  );
+  if (prefResponse.data.notificationsEnabled) {
+    // If notifications are enabled, proceed to send the notification
+    await axios.post("/api/send-notification", {
+      to: recipientUserId,
+      title: title,
+      body: message,
+      data: data,
+    });
+    console.log("Notification sent successfully.");
+  } else {
+    console.log("Notification not sent: User has disabled notifications.");
   }
 };
 
@@ -45,22 +38,17 @@ export const createNotificationInDB = async ({
   type,
   creatorId,
 }) => {
-  try {
-    const token = await getStoredToken();
-    const response = await axios.post(
-      `/api/notifications`,
-      {
-        Content: content,
-        Recipient: recipientId,
-        Type: type,
-        Creator: creatorId,
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    console.log("Notification created in database:", response.data);
-  } catch (error) {
-    console.error("Error creating notification in database:", error);
-  }
+  const token = await getStoredToken();
+  await axios.post(
+    `/api/notifications`,
+    {
+      Content: content,
+      Recipient: recipientId,
+      Type: type,
+      Creator: creatorId,
+    },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
 };

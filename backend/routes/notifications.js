@@ -12,6 +12,9 @@ router.get("/:id", NotificationController.getNotificationById, (req, res) => {
 
 router.get("/user/:userId", NotificationController.getUserNotifications);
 
+// Route to fetch recent notifications
+router.get("/recent", NotificationController.fetchRecentNotifications);
+
 router.post(
   "/sendFriendRequestNotification",
   NotificationController.sendFriendRequestNotification

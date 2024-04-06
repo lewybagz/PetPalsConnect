@@ -2,8 +2,8 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import MainStackNavigator from "./MainStackNavigator";
 import ChatTabsScreen from "../chat/ChatTabsScreen";
-import ProfileScreen from "../profile/ProfileScreen";
-import PetListScreen from "../petsPetListScreen";
+import ScheduledPlaydatesScreen from "../playdate/ScheduledPlaydatesScreen";
+import NotificationsScreen from "../bottomTab/NotificationsScreen";
 import MoreScreen from "../bottomTab/MoreScreen";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -24,13 +24,14 @@ const BottomTabNavigator = () => {
                 ? "ios-chatbubbles"
                 : "ios-chatbubbles-outline";
               break;
-            case "Profile":
-              iconName = focused ? "ios-person" : "ios-person-outline";
+            case "Playdates":
+              iconName = focused ? "ios-paw" : "ios-paw-outline";
               break;
-            case "PetList":
+            case "Notifications":
               iconName = focused ? "ios-paw" : "ios-paw-outline";
               break;
             case "More":
+              // TODO: include profile in more screen
               iconName = focused ? "ios-menu" : "ios-menu-outline";
               break;
           }
@@ -42,8 +43,16 @@ const BottomTabNavigator = () => {
     >
       <Tab.Screen name="HomeStack" component={MainStackNavigator} />
       <Tab.Screen name="Chats" component={ChatTabsScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-      <Tab.Screen name="PetList" component={PetListScreen} />
+      <Tab.Screen name="Playdates" component={ScheduledPlaydatesScreen} />
+      <Tab.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <NotificationTabIcon focused={focused} />
+          ),
+        }}
+      />
       <Tab.Screen name="More" component={MoreScreen} />
     </Tab.Navigator>
   );

@@ -12,6 +12,7 @@ import LoadingScreen from "../../components/LoadingScreenComponent";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { addNotification } from "../../redux/actions";
 import {
   sendPushNotification,
   createNotificationInDB,
@@ -21,8 +22,9 @@ import { fetchPlaydateDetails } from "../../redux/actions";
 const PlaydateRequestScreen = ({ route, navigation }) => {
   const { playdateId } = route.params;
   const dispatch = useDispatch();
+  const userId = useSelector((state) => state.user.userId);
   const { playdateDetails, loading, error } = useSelector(
-    (state) => state.yourReducerName
+    (state) => state.playdateReducer
   );
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
@@ -45,26 +47,66 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
       });
       const senderId = playdateResponse.data.senderId;
 
-      // Use the sendPushNotification service
+      // Notify the sender of the playdate
       await sendPushNotification({
         recipientUserId: senderId,
         title: "Playdate Update",
         message: message,
-        data: { playdateId: playdateId },
+        data: { playdateId },
       });
 
+      // Create a notification in the database for the sender
       await createNotificationInDB({
         content: message,
-        recipientId,
+        recipientId: senderId,
         type,
         creatorId,
+      });
+
+      // If there are other participants, notify them as well
+      const participants = playdateResponse.data.participants.filter(
+        (pid) => pid !== creatorId
+      );
+      for (const participantId of participants) {
+        await sendPushNotification({
+          recipientUserId: participantId,
+          title: "Playdate Update",
+          message: `Participant update for playdate on ${playdateResponse.data.date}`,
+          data: { playdateId },
+        });
+
+        await createNotificationInDB({
+          content: `Participant update for playdate on ${playdateResponse.data.date}`,
+          recipientId: participantId,
+          type: "PlaydateParticipantUpdate",
+          creatorId,
+        });
+      }
+      // For sender
+      dispatch(
+        addNotification({
+          content: message,
+          recipientId: senderId,
+          type,
+          creatorId,
+        })
+      );
+
+      participants.forEach((participantId) => {
+        dispatch(
+          addNotification({
+            content: `Participant update for playdate on ${playdateResponse.data.date}`,
+            recipientId: participantId,
+            type: "PlaydateParticipantUpdate",
+            creatorId,
+          })
+        );
       });
     } catch (error) {
       console.error("Error sending notification:", error);
     }
   };
 
-  // Updated handleAccept function
   const handleAccept = async () => {
     setAccepting(true);
     try {
@@ -76,10 +118,16 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+
+      // Assuming 'userId' is the ID of the user who is accepting the request
       await sendNotificationToSender(
         playdateId,
-        "Your playdate request has been accepted."
+        "Your playdate request has been accepted.",
+        null, // replace with recipientId if needed
+        "PlaydateAcceptance",
+        userId
       );
+
       Alert.alert("Accepted", "You have accepted the playdate request.");
       navigation.navigate("UpcomingPlaydatesScreen");
     } catch (error) {
@@ -92,7 +140,7 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
   const handleDecline = async () => {
     setDeclining(true);
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      const token = await getStoredToken();
       await axios.post(
         `/api/playdates/decline/${playdateId}`,
         {},

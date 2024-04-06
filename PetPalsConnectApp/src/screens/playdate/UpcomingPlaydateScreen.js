@@ -47,7 +47,7 @@ const UpcomingPlaydateScreen = () => {
   };
 
   const handleCancel = (playdateId) => {
-    navigation.navigate("PlaydateCancellationConfirmationScreen", {
+    navigation.navigate("PlaydateCancellationConfirmation", {
       playdateId,
     });
   };

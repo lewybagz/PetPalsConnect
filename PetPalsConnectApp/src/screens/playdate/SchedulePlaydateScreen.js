@@ -10,22 +10,24 @@ import {
   FlatList,
 } from "react-native";
 import axios from "axios"; // Assuming axios is used for API calls
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import {
   sendPushNotification,
   createNotificationInDB,
-} from "../services/NotificationService"; // a hypothetical service to handle notifications
+} from "../services/NotificationService";
 import { getPetOwner } from "../../../services/PetService";
 import { Image } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
-import { useNavigation } from "@react-navigation/native";
 import { fetchUserPreferences } from "../../../services/UserService";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { addNotification } from "../../redux/actions";
 
-const SchedulePlaydateScreen = ({ route }) => {
-  const navigation = useNavigation();
+const SchedulePlaydateScreen = ({ route, navigation }) => {
+  const dispatch = useDispatch();
+  const userId = useSelector((state) => state.user.userId);
+  const userName = useSelector((state) => state.user.name);
   const { pet } = route.params;
   const [time, setTime] = useState(new Date());
   const [date, setDate] = useState(new Date());
@@ -98,10 +100,10 @@ const SchedulePlaydateScreen = ({ route }) => {
 
     try {
       const token = await getStoredToken(); // Retrieve the token
-      // Send a POST request to create a playdate
       const response = await axios.post("/api/playdates", playdateData, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (response.data) {
         const ownerId = await getPetOwner(pet._id);
 
@@ -113,27 +115,32 @@ const SchedulePlaydateScreen = ({ route }) => {
             data: { playdateId: response.data._id },
           });
 
-          createNotificationInDB({
+          const notificationData = {
             content: "A playdate has been requested",
             recipientId: ownerId,
             type: "Playdate Request",
             creatorId: userId,
-          });
+          };
+
+          createNotificationInDB(notificationData);
+
+          // Dispatch the notification to Redux
+          dispatch(addNotification(notificationData));
         } else {
           console.log("Owner ID not found for pet");
         }
       }
-      // Navigate to PlaydateCreatedScreen with the created playdate data
       navigation.navigate("PlaydateCreatedScreen", { playdate: response.data });
     } catch (error) {
       console.error("Error creating playdate:", error);
-      // Show an error message
       Alert.alert(
         "Playdate Creation Failed",
         "Unable to create playdate. Please try again."
       );
     }
   };
+
+  const handleSubmitWrapper = () => handleSubmit(dispatch, userId, userName);
 
   const renderLocationItem = ({ item }) => (
     <TouchableOpacity onPress={() => setSelectedLocation(item)}>
@@ -189,7 +196,7 @@ const SchedulePlaydateScreen = ({ route }) => {
         multiline
       />
 
-      <Button title="Schedule Playdate" onPress={handleSubmit} />
+      <Button title="Schedule Playdate" onPress={handleSubmitWrapper} />
     </ScrollView>
   );
 };

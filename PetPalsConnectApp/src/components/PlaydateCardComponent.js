@@ -11,14 +11,12 @@ const PlaydateCardComponent = ({ playdate }) => {
     return new Date(date).toLocaleDateString();
   };
 
-  // Helper function to render pet cards
   const renderPetCard = ({ item }) => <UserPetCardComponent petData={item} />;
 
   const displayCreatorName = () => {
     return playdate.creator === currentUser ? "You" : playdate.creator;
   };
 
-  // Determine if playdate is upcoming or past
   const isUpcoming = new Date(playdate.date) > new Date();
 
   return (
@@ -65,7 +63,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 5,
   },
-  // Add more styles as needed
 });
 
 export default PlaydateCardComponent;

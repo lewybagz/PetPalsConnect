@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, Button, Alert } from "react-native";
-import axios from "axios";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
-import {
-  sendPushNotification,
-  createNotificationInDB,
-} from "../../../services/NotificationService";
-import { getStoredToken } from "../../../utils/tokenutil";
+import { useSelector } from "react-redux";
 
 const PlaydateModificationScreen = ({ route, navigation }) => {
+  const userId = useSelector((state) => state.user.userId);
   const { playdateId } = route.params;
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
@@ -23,54 +19,20 @@ const PlaydateModificationScreen = ({ route, navigation }) => {
     return unsubscribe;
   }, [navigation, route.params?.selectedLocation]);
 
-  const updatePlaydate = async () => {
-    try {
-      const token = await getStoredToken();
-      await axios.patch(
-        `/api/playdates/update/${playdateId}`,
-        {
-          date,
-          time,
-          location,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      Alert.alert("Success", "Playdate updated successfully.");
-      sendNotificationToParticipant(playdateId, "Playdate details updated");
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert("Error", "Failed to update playdate details.");
+  const navigateToConfirmation = () => {
+    if (!userId || !userId) {
+      Alert.alert("Error", "User not authenticated.");
+      return;
     }
-  };
 
-  const sendNotificationToParticipant = async (
-    playdateId,
-    message,
-    recipientId,
-    type,
-    creatorId
-  ) => {
-    try {
-      await sendPushNotification({
-        recipientUserId: recipientId,
-        title: `Playdate Update (${type})`,
-        message: message,
-        data: { playdateId },
-      });
-
-      console.log("Notification sent to participant.");
-
-      await createNotificationInDB({
-        content: message,
-        recipientId,
-        type,
-        creatorId,
-      });
-    } catch (error) {
-      console.error("Error sending notification:", error);
-    }
+    // Just navigate to the confirmation screen with necessary data
+    navigation.navigate("PlaydateModificationConfirmation", {
+      playdateId,
+      date,
+      time,
+      location,
+      userId: userId, // Send the userId along with other data
+    });
   };
 
   return (
@@ -82,8 +44,10 @@ const PlaydateModificationScreen = ({ route, navigation }) => {
         title="Choose Location"
         onPress={() => navigation.navigate("PotentialPlaydateLocationsScreen")}
       />
-      <Button title="Update Playdate" onPress={updatePlaydate} />
+      <Button title="Update Playdate" onPress={navigateToConfirmation} />
       {location && <Text>Selected Location: {location.name}</Text>}
+      <Button title="Cancel" onPress={() => navigation.goBack()} />
+      {/* TODO: ASK ABOUT OTHER FUNCTIONALITIES OF THIS BUTTON. */}
     </View>
   );
 };

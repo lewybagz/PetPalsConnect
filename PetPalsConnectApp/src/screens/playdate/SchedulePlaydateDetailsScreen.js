@@ -7,16 +7,18 @@ import {
   createNotificationInDB,
 } from "../../../services/NotificationService";
 import { getPetOwner } from "../../../services/PetService";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { addNotification } from "../../redux/actions";
 
 const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
+  const dispatch = useDispatch();
+  const userId = useSelector((state) => state.user.userId);
   const { petId, locationId } = route.params;
   const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState("");
 
-  const handleSubmit = async (selectedPet, pet) => {
-    const userId = useSelector((state) => state.user.userId);
+  const handleSubmit = async (selectedPet, pet, dispatch) => {
     // Prepare playdate data
     const playdateData = {
       Date: date,
@@ -41,12 +43,18 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
           message: `${selectedPet.name} has requested a playdate with ${pet.name}`,
           data: { playdateId: response.data._id },
         });
-        createNotificationInDB({
+
+        const notificationData = {
           content: "A playdate has been requested",
           recipientId: ownerId,
           type: "Playdate Request",
           creatorId: userId,
-        });
+        };
+
+        createNotificationInDB(notificationData);
+
+        // Dispatch the notification to Redux
+        dispatch(addNotification(notificationData));
       }
       navigation.navigate("PlaydateCreatedScreen", { playdate: response.data });
     } catch (error) {
@@ -57,6 +65,9 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
       );
     }
   };
+
+  const handleSubmitWrapper = (selectedPet, pet) =>
+    handleSubmit(selectedPet, pet, dispatch);
 
   return (
     <View style={styles.container}>
@@ -71,7 +82,7 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
         onChangeText={setNotes}
         value={notes}
       />
-      <Button title="Submit Playdate" onPress={handleSubmit} />
+      <Button title="Submit Playdate" onPress={handleSubmitWrapper} />
     </View>
   );
 };
