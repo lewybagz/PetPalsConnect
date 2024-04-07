@@ -127,9 +127,6 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
       console.error(error);
     }
   };
-
-  // TODO: ... additional logic to determine when to show this screen based on playdate time ...
-
   return (
     <ScrollView style={styles.container}>
       {/* Display Pet Information at the top */}
