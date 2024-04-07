@@ -1,23 +1,21 @@
 import React from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useTailwind } from "nativewind";
-import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
 
-const ChatOptionsModal = ({ isVisible, onClose }) => {
+const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
   const tailwind = useTailwind();
-  const navigation = useNavigation();
 
   // Access user ID and chat ID from Redux store
-  const userId = useSelector((state) => state.user.userId); // Replace with your actual path to the user ID in the Redux store
-  const chatId = useSelector((state) => state.chat.chatId); // Replace with the path to the chat ID
+  const userId = useSelector((state) => state.user.userId);
+  const chatId = useSelector((state) => state.chat.chatId);
 
   const handleMuteNotifications = async () => {
     console.log("Mute Tapped");
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      const token = await getStoredToken();
       const response = await axios.post(
         "/api/groupchats/toggle-mute",
         {

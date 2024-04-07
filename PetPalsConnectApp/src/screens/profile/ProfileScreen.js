@@ -97,7 +97,9 @@ const ProfileScreen = ({ navigation }) => {
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item._id}
-        renderItem={({ item }) => <PlaydateCardComponent playdate={item} />}
+        renderItem={({ item }) => (
+          <PlaydateCardComponent playdate={item} navigation={navigation} />
+        )}
       />
       <TouchableOpacity
         onPress={viewAllPlaydates}

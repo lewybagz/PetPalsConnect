@@ -10,14 +10,12 @@ import {
 import axios from "axios";
 import { getAuth } from "firebase/auth";
 import UserPetCard from "../../components/UserPetCardComponent";
-import { useNavigation } from "@react-navigation/native";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-const UsersPetsScreen = () => {
+const UsersPetsScreen = (navigation) => {
   const auth = getAuth();
   const currentUser = auth.currentUser;
   const [userPets, setUserPets] = useState([]);
-  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchUserPets = async () => {

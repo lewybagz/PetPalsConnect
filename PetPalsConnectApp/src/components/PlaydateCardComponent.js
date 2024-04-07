@@ -4,14 +4,16 @@ import UserPetCardComponent from "../components/UserPetCardComponent";
 import PlayDateLocationCard from "./PlaydateLocationCardComponent";
 import { useSelector } from "react-redux";
 
-const PlaydateCardComponent = ({ playdate }) => {
+const PlaydateCardComponent = ({ playdate, navigation }) => {
   const currentUser = useSelector((state) => state.user.currentUser);
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString();
   };
 
-  const renderPetCard = ({ item }) => <UserPetCardComponent petData={item} />;
+  const renderPetCard = ({ item }) => (
+    <UserPetCardComponent petData={item} navigation={navigation} />
+  );
 
   const displayCreatorName = () => {
     return playdate.creator === currentUser ? "You" : playdate.creator;
@@ -31,7 +33,10 @@ const PlaydateCardComponent = ({ playdate }) => {
         horizontal={true}
       />
       {playdate.location && (
-        <PlayDateLocationCard locationData={playdate.location} />
+        <PlayDateLocationCard
+          locationData={playdate.location}
+          navigation={navigation}
+        />
       )}
       <Text>Notes: {playdate.notes || "N/A"}</Text>
       <Text>Date: {formatDate(playdate.date)}</Text>

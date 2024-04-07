@@ -11,13 +11,11 @@ import {
   Switch,
 } from "react-native";
 import axios from "axios";
-import { useNavigation } from "@react-navigation/native";
 import StarRating from "react-native-star-rating";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-const PostPlaydateReviewScreen = ({ route }) => {
-  const navigation = useNavigation();
+const PostPlaydateReviewScreen = ({ route, navigation }) => {
   const { playdateId, petId } = route.params;
   const { playdate, pet } = route.params;
 
@@ -141,7 +139,10 @@ const PostPlaydateReviewScreen = ({ route }) => {
           <View>
             <Text style={styles.petName}>{pet.name}</Text>
             {locationData && (
-              <PlayDateLocationCard locationData={locationData} />
+              <PlayDateLocationCard
+                locationData={locationData}
+                navigation={navigation}
+              />
             )}
             {/* Other pet details if necessary */}
           </View>

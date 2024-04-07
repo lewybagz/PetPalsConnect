@@ -33,7 +33,7 @@ const PlaydateList = ({ type, navigation }) => {
 
     return (
       <TouchableOpacity onPress={handlePress}>
-        <PlaydateCardComponent playdate={item} />
+        <PlaydateCardComponent playdate={item} navigation={navigation} />
       </TouchableOpacity>
     );
   };

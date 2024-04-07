@@ -1,7 +1,12 @@
 import React from "react";
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
-const MatchingAlgorithmPopup = ({ visible, onClose }) => {
+const MatchingAlgorithmPopup = ({ visible, onClose, navigation }) => {
+  const onNavigateToSubscription = () => {
+    onClose(); // Close the current modal
+    navigation.navigate("ChoosePlan");
+  };
+
   return (
     <Modal
       animationType="slide"
@@ -14,30 +19,38 @@ const MatchingAlgorithmPopup = ({ visible, onClose }) => {
           <Text style={styles.modalText}>
             🌟 Discover the Perfect Pals for Your Pet! 🌟
           </Text>
+
+          {/* Basic Matching Section */}
           <Text style={styles.modalText}>
-            1. Basic Matching - A Paw-some Start!{"\n"}
-            🐾 Breed Buddies: We start by finding potential pals that have
-            similar or compatible breeds.{"\n"}
-            🐕 Temperament Twins: We look at temperament too! If your pet is a
-            couch potato or a playful pup, we find them a match with a similar
-            vibe.
+            🐾{" "}
+            <Text style={styles.featureTitle}>
+              Basic Matching - A Paw-some Start!
+            </Text>
+            {"\n"}Find friends based on breed and temperament compatibility.
           </Text>
+
+          {/* Premium Matching Section */}
           <Text style={styles.modalText}>
-            2. Premium Playmates - Tail Wagging Deluxe! (Exclusive for
-            Subscribed Users){"\n"}
-            🎉 Activity Allies: For our subscribed members, we go the extra
-            mile!{"\n"}
-            🐩 Social Stars: We also consider how social your pet is.{"\n"}✨
-            Extra Special Matches: We delve deeper for our subscribed users,
-            considering even more details to ensure every playdate is just
-            perfect.
+            🎉{" "}
+            <Text style={styles.featureTitle}>
+              Premium Playmates - Tail Wagging Deluxe!
+            </Text>{" "}
+            (Exclusive for Subscribers)
+            {"\n"}Enhanced matching considering activity preferences, social
+            behavior, and more for the most compatible playdates.
           </Text>
-          <Text style={styles.modalText}>
-            Every match is a chance for a new friendship, a new adventure, and
-            countless tail wags! Whether you’re using our basic or premium
-            service, we&rsquo;re dedicated to finding the most paw-fect pals for
-            your pet. Let&rsquo;s embark on this exciting journey together! 🐾✨
-          </Text>
+
+          {/* Success Story/Testimonial */}
+          {/* Add this section if you have testimonials or success stories */}
+
+          {/* Subscription Call to Action */}
+          <TouchableOpacity
+            style={styles.subscribeButton}
+            onPress={onNavigateToSubscription}
+          >
+            <Text style={styles.buttonText}>Upgrade for Better Matches</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.button} onPress={onClose}>
             <Text style={styles.buttonText}>Got It!</Text>
           </TouchableOpacity>
@@ -48,6 +61,9 @@ const MatchingAlgorithmPopup = ({ visible, onClose }) => {
 };
 
 const styles = StyleSheet.create({
+  featureTitle: {
+    fontWeight: "bold",
+  },
   centeredView: {
     flex: 1,
     justifyContent: "center",

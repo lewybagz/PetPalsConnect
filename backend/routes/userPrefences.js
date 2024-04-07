@@ -26,4 +26,9 @@ router.put(
   UserPreferencesController.updateUserPreferences
 );
 
+router.patch(
+  "/:userId/mute-all",
+  UserPreferencesController.muteAllNotifications
+);
+
 module.exports = router;

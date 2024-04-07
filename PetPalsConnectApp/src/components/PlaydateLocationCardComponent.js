@@ -7,20 +7,18 @@ import {
   FlatList,
   TouchableOpacity,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import ReviewComponent from "./ReviewComponent";
 import { getStoredToken } from "../../utils/tokenutil";
 import axios from "axios";
 
-const PlayDateLocationCard = ({ locationData }) => {
-  const navigation = useNavigation();
+const PlayDateLocationCard = ({ locationData, navigation }) => {
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     if (locationData._id) {
       const fetchReviews = async () => {
         try {
-          const token = await getStoredToken(); // Retrieve the token
+          const token = await getStoredToken();
           const response = await axios.get(
             `/api/reviews/location/${locationData._id}`,
             {
@@ -38,7 +36,7 @@ const PlayDateLocationCard = ({ locationData }) => {
   }, [locationData]);
 
   const handleSchedulePlaydate = () => {
-    navigation.navigate("PetSelectionScreen", { locationId: locationData._id }); // Pass location data as needed
+    navigation.navigate("PetSelectionScreen", { locationId: locationData._id });
   };
   return (
     <View style={styles.card}>

@@ -62,6 +62,34 @@ const UserPreferencesController = {
     }
   },
 
+  async muteAllNotifications(req, res) {
+    try {
+      const userPreferences = await UserPreferences.findOne({
+        user: req.params.userId,
+      });
+
+      if (!userPreferences) {
+        return res.status(404).json({ message: "User preferences not found" });
+      }
+
+      userPreferences.notificationPreferences.petPalsMapUpdates = false;
+      userPreferences.notificationPreferences.playdateReminders = false;
+      userPreferences.notificationPreferences.appUpdates = false;
+      userPreferences.notificationPreferences.pushNotificationsEnabled = false;
+      userPreferences.notificationPreferences.emailNotificationsEnabled = false;
+
+      await userPreferences.save();
+      res
+        .status(200)
+        .json({
+          message: "All notifications have been muted",
+          userPreferences,
+        });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
   async updateUserPreferences(req, res) {
     if (req.body.notificationSettings != null) {
       res.userPreferences.notificationSettings = req.body.notificationSettings;

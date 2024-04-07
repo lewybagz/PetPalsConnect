@@ -164,6 +164,7 @@ const HomeScreen = ({ navigation, route, start }) => {
         <MatchingAlgorithmPopup
           visible={showMatchingAlgorithmPopup}
           onClose={() => setShowMatchingAlgorithmPopup(false)}
+          navigation={navigation}
         />
       )}
       <View>

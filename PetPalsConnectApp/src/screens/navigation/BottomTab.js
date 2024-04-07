@@ -6,6 +6,7 @@ import ScheduledPlaydatesScreen from "../playdate/ScheduledPlaydatesScreen";
 import NotificationsScreen from "../bottomTab/NotificationsScreen";
 import MoreScreen from "../bottomTab/MoreScreen";
 import { Ionicons } from "@expo/vector-icons";
+import NotificationTabIcon from "../../components/TabIcon";
 
 const Tab = createBottomTabNavigator();
 
@@ -31,7 +32,6 @@ const BottomTabNavigator = () => {
               iconName = focused ? "ios-paw" : "ios-paw-outline";
               break;
             case "More":
-              // TODO: include profile in more screen
               iconName = focused ? "ios-menu" : "ios-menu-outline";
               break;
           }

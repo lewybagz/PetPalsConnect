@@ -1,11 +1,46 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { useTailwind } from "nativewind";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Make sure to install this package
-
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { useSelector } from "react-redux";
+import { getStoredToken } from "../../utils/tokenutil";
+import axios from "axios";
 const NotificationItem = ({ content, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const tailwind = useTailwind();
+
+  const handleMuteNotifications = async () => {
+    try {
+      const token = await getStoredToken();
+      const userId = useSelector((state) => state.user.userId); // Assuming you're using Redux to store user ID
+
+      const updatedPreferences = {
+        notificationPreferences: {
+          petPalsMapUpdates: false,
+          playdateReminders: false,
+          appUpdates: false,
+          pushNotificationsEnabled: false,
+          emailNotificationsEnabled: false,
+        },
+      };
+
+      await axios.patch(`/api/userpreferences/${userId}`, updatedPreferences, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      Alert.alert("Notifications Muted", "All notifications have been muted.");
+    } catch (error) {
+      console.error("Error updating notification preferences:", error);
+      Alert.alert("Error", "Failed to update notification preferences.");
+    }
+  };
 
   return (
     <View style={tailwind("flex-row justify-between items-center p-2")}>
@@ -38,10 +73,11 @@ const NotificationItem = ({ content, navigation }) => {
             <TouchableOpacity
               style={styles.optionButton}
               onPress={() => {
-                // Handle another action
+                setModalVisible(!modalVisible);
+                handleMuteNotifications();
               }}
             >
-              <Text style={styles.optionText}>Another Option</Text>
+              <Text style={styles.optionText}>Mute Notifications</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setModalVisible(!modalVisible)}

@@ -22,7 +22,6 @@ const MoreStackNavigator = () => {
         component={AddPetScreen}
         options={{ title: "Add Pet" }}
       />
-      TODO: create favorites screen
       <MoreStack.Screen
         name="Favorites"
         component={FavoritesScreen}

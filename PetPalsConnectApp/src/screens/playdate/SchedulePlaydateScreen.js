@@ -144,7 +144,7 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
 
   const renderLocationItem = ({ item }) => (
     <TouchableOpacity onPress={() => setSelectedLocation(item)}>
-      <PlayDateLocationCard locationData={item} />
+      <PlayDateLocationCard locationData={item} navigation={navigation} />
     </TouchableOpacity>
   );
 

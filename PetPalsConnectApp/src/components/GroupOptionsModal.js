@@ -1,29 +1,26 @@
 import React from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useTailwind } from "nativewind";
-import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { getStoredToken } from "../../utils/tokenutil";
 import { useSelector } from "react-redux";
 
-const GroupOptionsModal = ({ isVisible, onClose }) => {
+const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
   const tailwind = useTailwind();
-  const navigation = useNavigation();
 
   // Access user ID and chat ID from Redux store
-  const userId = useSelector((state) => state.user.userId); // Replace with your actual path to the user ID in the Redux store
-  const chatId = useSelector((state) => state.chat.chatId); // Replace with the path to the chat ID
-
+  const userId = useSelector((state) => state.user.userId);
+  const chatId = useSelector((state) => state.chat.chatId);
   const handleMuteNotifications = async () => {
     console.log("Mute Tapped");
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      const token = await getStoredToken();
       const response = await axios.post(
         "/api/groupchats/toggle-mute",
         {
           userId: userId,
           chatId: chatId,
-          mute: true, // Toggle based on current mute state
+          mute: true,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -39,7 +36,7 @@ const GroupOptionsModal = ({ isVisible, onClose }) => {
   const handleViewMedia = async () => {
     console.log("View Media Tapped");
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      const token = await getStoredToken();
       const response = await axios.get(`/api/groupchats/${chatId}/media`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -58,12 +55,12 @@ const GroupOptionsModal = ({ isVisible, onClose }) => {
   const handleLeaveGroup = async () => {
     console.log("Leave Group Tapped");
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      const token = await getStoredToken();
       await axios.post(
         "/api/groupchats/leave",
         {
-          userId: userId, // The ID of the user leaving the group
-          chatId: chatId, // The ID of the chat they are leaving
+          userId: userId,
+          chatId: chatId,
         },
         {
           headers: { Authorization: `Bearer ${token}` },

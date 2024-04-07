@@ -9,14 +9,12 @@ import {
   Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
-import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { useSelector, useDispatch } from "react-redux";
 import { setChatId } from "../../redux/actions";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-const PetDetailsScreen = ({ route }) => {
-  const navigation = useNavigation();
+const PetDetailsScreen = ({ route, navigation }) => {
   const userId = useSelector((state) => state.user.userId);
   const { pet } = route.params;
 

@@ -3,11 +3,9 @@ import { View, Text, StyleSheet, ScrollView } from "react-native";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent"; // Assuming this component displays location details
 import { Image, Button } from "react-native";
 import messaging from "@react-native-firebase/messaging";
-import { useNavigation } from "@react-navigation/native";
 
-const PlaydateCreatedScreen = ({ route }) => {
+const PlaydateCreatedScreen = ({ route, navigation }) => {
   const { playdate, pet } = route.params;
-  const navigation = useNavigation();
 
   useEffect(() => {
     const unsubscribe = messaging().onNotificationOpenedApp((remoteMessage) => {
@@ -48,8 +46,10 @@ const PlaydateCreatedScreen = ({ route }) => {
         <Text style={styles.detail}>{formatDate(playdate.Date)}</Text>
 
         <Text style={styles.label}>Location:</Text>
-        {/* Assuming PlayDateLocationCard takes locationData prop for rendering */}
-        <PlayDateLocationCard locationData={playdate.Location} />
+        <PlayDateLocationCard
+          locationData={playdate.Location}
+          navigation={navigation}
+        />
 
         {playdate.Notes && (
           <>

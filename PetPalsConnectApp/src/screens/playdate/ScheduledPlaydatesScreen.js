@@ -9,14 +9,12 @@ import {
 } from "react-native";
 import axios from "axios";
 import { useTailwind } from "nativewind";
-import { useNavigation } from "@react-navigation/native";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-const ScheduledPlaydatesScreen = () => {
+const ScheduledPlaydatesScreen = (navigation) => {
   const [playdates, setPlaydates] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const tailwind = useTailwind();
-  const navigation = useNavigation();
 
   const fetchPlaydates = async () => {
     try {

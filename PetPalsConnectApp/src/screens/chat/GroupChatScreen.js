@@ -19,11 +19,10 @@ import { auth, firestore } from "../../firebase/firebaseConfig";
 import { FieldValue } from "firebase/firestore";
 import Icon from "react-native-vector-icons/FontAwesome";
 import Clipboard from "@react-native-community/clipboard";
-import { useNavigation } from "@react-navigation/native";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-const GroupChatScreen = ({ route }) => {
-  const [pets, setPets] = useState([]); // State for storing pets in the group
+const GroupChatScreen = ({ route, navigation }) => {
+  const [pets, setPets] = useState([]);
   const [searchType, setSearchType] = useState("messages"); // 'messages' or 'pets'
   const [isModalVisible, setModalVisible] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -36,7 +35,6 @@ const GroupChatScreen = ({ route }) => {
   const [groupInfo, setGroupInfo] = useState(route.params.group);
   const flatListRef = useRef(null);
   const tailwind = useTailwind();
-  const navigation = useNavigation();
 
   useEffect(() => {
     if (flatListRef.current) {
@@ -222,7 +220,7 @@ const GroupChatScreen = ({ route }) => {
 
   const renderPetItem = ({ item }) => (
     <TouchableOpacity onPress={() => handlePetSelect(item)}>
-      <UserPetCard data={item} type="pet" />
+      <UserPetCard data={item} type="pet" navigation={navigation} />
     </TouchableOpacity>
   );
 
@@ -288,7 +286,12 @@ const GroupChatScreen = ({ route }) => {
           <Icon name="ellipsis-v" size={20} color="#007bff" />
         </TouchableOpacity>
 
-        <GroupOptionsModal isVisible={isModalVisible} onClose={toggleModal} />
+        <GroupOptionsModal
+          isVisible={isModalVisible}
+          onClose={toggleModal}
+          navigation={navigation}
+          groupId={groupInfo.id}
+        />
       </View>
 
       <FlatList

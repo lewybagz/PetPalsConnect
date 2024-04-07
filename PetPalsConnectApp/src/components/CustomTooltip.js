@@ -9,7 +9,6 @@ const CustomTooltip = ({ handleNext, handlePrev, handleStop, currentStep }) => {
     <View style={styles.tooltipContainer}>
       <Text style={styles.tooltipText}>{currentStep.text}</Text>
 
-      {/* Step navigation buttons */}
       {handlePrev ? (
         <AnimatedButton
           onPress={handlePrev}

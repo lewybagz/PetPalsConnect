@@ -18,14 +18,14 @@ import { getStoredToken } from "../../../utils/tokenutil";
 const WalkthroughableText = walkthroughable(Text);
 const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
 
-const FavoritesScreen = ({ route, start }) => {
+const FavoritesScreen = ({ route, start, navigation }) => {
   const [favorites, setFavorites] = useState([]);
   const [activeTab, setActiveTab] = useState("pets");
 
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
-        const token = await getStoredToken(); // Retrieve the token
+        const token = await getStoredToken();
         const response = await axios.get("/api/favorites", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -47,8 +47,12 @@ const FavoritesScreen = ({ route, start }) => {
     if (activeTab === "pets" && item.type === "pet") {
       return <UserPetCard data={item.content} type="pet" />;
     } else if (activeTab === "places" && item.type === "place") {
-      // Render place item using PlayDateLocationCard component
-      return <PlayDateLocationCard locationData={item.content} />;
+      return (
+        <PlayDateLocationCard
+          locationData={item.content}
+          navigation={navigation}
+        />
+      );
     }
   };
 
@@ -58,7 +62,6 @@ const FavoritesScreen = ({ route, start }) => {
 
   return (
     <View style={styles.container}>
-      {/* Tabs for selecting pet or place favorites */}
       <CopilotStep
         text="Here you can switch between your favorite pets and places."
         order={1}

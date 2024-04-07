@@ -21,7 +21,7 @@ import Icon from "react-native-vector-icons/FontAwesome";
 import Clipboard from "@react-native-community/clipboard";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-const ChatScreen = ({ route }) => {
+const ChatScreen = ({ route, navigation }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +34,7 @@ const ChatScreen = ({ route }) => {
 
   const initiateChat = async () => {
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      const token = await getStoredToken();
       const petId = petInfo.id;
 
       const response = await fetch("/api/chat/findOrCreate", {
@@ -190,7 +190,11 @@ const ChatScreen = ({ route }) => {
       <View style={styles.header}>
         <Image source={{ uri: petInfo.photo }} style={styles.petImage} />
         <Text style={tailwind("text-lg font-bold")}>{petInfo.name}</Text>
-        <ChatOptionsModal isVisible={isModalVisible} onClose={toggleModal} />
+        <ChatOptionsModal
+          isVisible={isModalVisible}
+          onClose={toggleModal}
+          navigation={navigation}
+        />
       </View>
       <FlatList
         ref={flatListRef}

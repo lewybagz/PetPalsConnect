@@ -8,13 +8,11 @@ import {
   Modal,
 } from "react-native";
 import { useTailwind } from "nativewind";
-import { useNavigation } from "@react-navigation/native";
 import { getStoredToken } from "../../utils/tokenutil";
 import axios from "axios";
 
-const ChatCard = ({ chat, onPress, isGroupChat, setChats }) => {
+const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
   const tailwind = useTailwind();
-  const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleLongPress = () => setModalVisible(true);

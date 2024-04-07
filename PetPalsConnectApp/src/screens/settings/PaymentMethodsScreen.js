@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import { useTailwind } from "nativewind";
 import axios from "axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-const PaymentMethodsScreen = () => {
-  const navigation = useNavigation();
+const PaymentMethodsScreen = (navigation) => {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const tailwind = useTailwind();
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigation } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -13,11 +12,10 @@ import { useSelector } from "react-redux";
 import UserPetCard from "./UserPetCard";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-const PetListScreen = ({ route }) => {
+const PetListScreen = ({ route, navigation }) => {
   const { participants } = route.params || {};
   const currentUser = useSelector((state) => state.user);
   const userId = useSelector((state) => state.user.userId);
-  const navigation = useNavigation();
   const [pets, setPets] = useState(participants || []);
   const [matchedPets, setMatchedPets] = useState([]);
 

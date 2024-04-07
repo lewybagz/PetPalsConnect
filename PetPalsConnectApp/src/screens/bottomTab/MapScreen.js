@@ -21,14 +21,13 @@ import { useTailwind } from "nativewind";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import BottomSheet from "@gorhom/bottom-sheet";
 import CustomTooltip from "../../components/CustomTooltip";
-import { useNavigation } from "@react-navigation/native";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const WalkthroughableMapView = walkthroughable(MapView);
 const WalkthroughableText = walkthroughable(Text);
 const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
 
-const MapScreen = ({ start, route }) => {
+const MapScreen = ({ start, route, navigation }) => {
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [matchedPets, setMatchedPets] = useState([]);
@@ -39,7 +38,6 @@ const MapScreen = ({ start, route }) => {
   const [mapTheme, setMapTheme] = useState("standard");
   const tailwind = useTailwind();
   const bottomSheetRef = useRef(null);
-  const navigation = useNavigation();
 
   useEffect(() => {
     (async () => {

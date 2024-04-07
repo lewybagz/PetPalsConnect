@@ -10,7 +10,6 @@ import {
   Button,
 } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
-import { useNavigation } from "@react-navigation/native";
 import storage from "@react-native-firebase/storage";
 import { Picker } from "@react-native-picker/picker";
 import { matchPets } from "../../../../backend/controllers/";
@@ -20,9 +19,8 @@ import Realm from "realm";
 import axios from "axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-const AddPetScreen = () => {
+const AddPetScreen = (navigation) => {
   const MAX_PHOTOS = 5;
-  const navigation = useNavigation();
   const [petDetails, setPetDetails] = useState([]);
   const [isNewUser, setIsNewUser] = useState(false);
   const [open, setOpen] = useState(false);

@@ -3,15 +3,13 @@ import { View, Text, FlatList, StyleSheet, Alert } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import axios from "axios";
 import Icon from "react-native-vector-icons/FontAwesome";
-import { useNavigation } from "@react-navigation/native";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 import ScheduledPlaydateCardComponent from "../../components/ScheduledPlaydateCardComponent";
-const UpcomingPlaydateScreen = () => {
+const UpcomingPlaydateScreen = (navigation) => {
   const [playdates, setPlaydates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchUpcomingPlaydates = async () => {

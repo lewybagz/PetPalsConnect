@@ -35,10 +35,7 @@ const NotificationsScreen = ({ navigation }) => {
           data={notifications}
           keyExtractor={(item) => item._id} // Assuming each notification has a unique '_id' field
           renderItem={({ item }) => (
-            <NotificationItem
-              content={item.Content} // Make sure these field names match your MongoDB document structure
-              navigation={navigation}
-            />
+            <NotificationItem content={item.Content} navigation={navigation} />
           )}
         />
       )}

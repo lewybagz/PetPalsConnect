@@ -8,21 +8,19 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Make sure to install this package
 import axios from "axios";
 import { sendPushNotification } from "../../services/NotificationService";
 import { useSelector } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
 
-const UserPetCard = ({ data, type, reviews, onPress }) => {
+const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const currentUser = useSelector((state) => state.user.currentUser);
-  const navigation = useNavigation();
 
   const handleBlockUser = async (userIdToBlock) => {
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      const token = await getStoredToken();
       const response = await axios.post(
         "/api/blocklist",
         {
@@ -39,7 +37,7 @@ const UserPetCard = ({ data, type, reviews, onPress }) => {
       }
     } catch (error) {
       console.error("Error blocking user:", error);
-      // Handle error - show alert or a message
+      Alert.alert("Error", "Failed to block user.");
     }
   };
 

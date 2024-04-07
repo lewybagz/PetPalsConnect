@@ -7,7 +7,7 @@ import { getStoredToken } from "../../../utils/tokenutil";
 import { fetchUserPreferences } from "../../../services/UserService";
 import { useSelector } from "react-redux";
 
-const PotentialPlaydateLocationsScreen = () => {
+const PotentialPlaydateLocationsScreen = (navigation) => {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,10 +17,9 @@ const PotentialPlaydateLocationsScreen = () => {
       setLoading(true);
 
       try {
-        // Assuming you have a way to get the current user's ID
         const userId = useSelector((state) => state.user.userId);
         const userPrefs = await fetchUserPreferences(userId);
-        const playdateRange = userPrefs.playdateRange; // Use fetched playdate range
+        const playdateRange = userPrefs.playdateRange;
 
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
@@ -73,7 +72,9 @@ const PotentialPlaydateLocationsScreen = () => {
       <FlatList
         data={locations}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <PlayDateLocationCard locationData={item} />}
+        renderItem={({ item }) => (
+          <PlayDateLocationCard locationData={item} navigation={navigation} />
+        )}
       />
     </View>
   );

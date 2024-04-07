@@ -42,7 +42,7 @@ const PlaydateHistoryScreen = ({ navigation }) => {
         navigation.navigate("PlaydateDetail", { playdateId: item._id })
       }
     >
-      <PlaydateCardComponent playdate={item} />
+      <PlaydateCardComponent playdate={item} navigation={navigation} />
     </TouchableOpacity>
   );
 

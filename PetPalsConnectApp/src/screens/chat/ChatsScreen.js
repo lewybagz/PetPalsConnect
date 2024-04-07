@@ -55,7 +55,11 @@ const ChatsScreen = ({ navigation }) => {
     <FlatList
       data={chats}
       renderItem={({ item }) => (
-        <ChatCard chat={item} onPress={handleChatPress} />
+        <ChatCard
+          chat={item}
+          onPress={handleChatPress}
+          navigation={navigation}
+        />
       )}
       keyExtractor={(item) => item.id}
       refreshControl={

@@ -1,7 +1,6 @@
 // MoreScreen.js
 import React, { useEffect } from "react";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import { copilot, walkthroughable, CopilotStep } from "react-native-copilot";
 import CustomTooltip from "../../components/CustomTooltip";
 
@@ -9,9 +8,7 @@ import CustomTooltip from "../../components/CustomTooltip";
 const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
 const WalkthroughableText = walkthroughable(Text);
 
-const MoreScreen = ({ route, start }) => {
-  const navigation = useNavigation();
-
+const MoreScreen = ({ route, start, navigation }) => {
   useEffect(() => {
     if (route.params?.showTutorial) {
       start(); // Start copilot tutorial
@@ -63,6 +60,18 @@ const MoreScreen = ({ route, start }) => {
         >
           <WalkthroughableText style={styles.buttonText}>
             Notifications
+          </WalkthroughableText>
+        </WalkthroughableTouchableOpacity>
+      </CopilotStep>
+
+      {/* PROFILE */}
+      <CopilotStep text="View and edit your profile." order={5} name="profile">
+        <WalkthroughableTouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("ProfileScreen")}
+        >
+          <WalkthroughableText style={styles.buttonText}>
+            Profile
           </WalkthroughableText>
         </WalkthroughableTouchableOpacity>
       </CopilotStep>

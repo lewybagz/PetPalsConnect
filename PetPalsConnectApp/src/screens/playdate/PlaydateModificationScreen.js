@@ -19,19 +19,40 @@ const PlaydateModificationScreen = ({ route, navigation }) => {
     return unsubscribe;
   }, [navigation, route.params?.selectedLocation]);
 
+  const handleCancel = () => {
+    Alert.alert(
+      "Discard Changes",
+      "Are you sure you want to discard your changes?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "OK",
+          onPress: () => {
+            setDate(new Date());
+            setTime(new Date());
+            setLocation(null);
+            navigation.goBack();
+          },
+        },
+      ]
+    );
+  };
+
   const navigateToConfirmation = () => {
     if (!userId || !userId) {
       Alert.alert("Error", "User not authenticated.");
       return;
     }
 
-    // Just navigate to the confirmation screen with necessary data
     navigation.navigate("PlaydateModificationConfirmation", {
       playdateId,
       date,
       time,
       location,
-      userId: userId, // Send the userId along with other data
+      userId: userId,
     });
   };
 
@@ -46,8 +67,7 @@ const PlaydateModificationScreen = ({ route, navigation }) => {
       />
       <Button title="Update Playdate" onPress={navigateToConfirmation} />
       {location && <Text>Selected Location: {location.name}</Text>}
-      <Button title="Cancel" onPress={() => navigation.goBack()} />
-      {/* TODO: ASK ABOUT OTHER FUNCTIONALITIES OF THIS BUTTON. */}
+      <Button title="Cancel" onPress={handleCancel} />
     </View>
   );
 };
