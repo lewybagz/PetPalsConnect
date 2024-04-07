@@ -30,7 +30,7 @@ const PlaydateDetailsScreen = ({ route, navigation }) => {
   }
 
   const navigateToPetDetails = (petId) => {
-    navigation.navigate("PetDetailsScreen", { petId: petId });
+    navigation.navigate("PetDetails", { petId: petId });
   };
 
   return (

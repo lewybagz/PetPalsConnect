@@ -33,7 +33,7 @@ const UpcomingPlaydateScreen = (navigation) => {
 
   const navigateToReview = (playdate) => {
     if (new Date(playdate.startTime) <= new Date()) {
-      navigation.navigate("PostPlaydateReviewScreen", {
+      navigation.navigate("PostPlaydateReview", {
         playdateId: playdate._id,
       });
     } else {

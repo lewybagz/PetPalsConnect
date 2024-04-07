@@ -88,7 +88,7 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
   const handleSubmitSelection = () => {
     if (selectedPets.length > 0) {
       // Navigate with the selected pet IDs
-      navigation.navigate("SchedulePlaydateDetailsScreen", {
+      navigation.navigate("SchedulePlaydateDetails", {
         petIds: selectedPets,
         locationId,
       });

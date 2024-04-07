@@ -36,7 +36,7 @@ const ChatsScreen = ({ navigation }) => {
   };
 
   const handleChatPress = (chat) => {
-    navigation.navigate("ChatDetailScreen", { chatId: chat.id });
+    navigation.navigate("ChatDetail", { chatId: chat.id });
   };
 
   if (loading) {

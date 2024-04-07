@@ -26,7 +26,7 @@ const MoreScreen = ({ route, start, navigation }) => {
       >
         <WalkthroughableTouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("GroupChatCreationScreen")}
+          onPress={() => navigation.navigate("GroupChatCreation")}
         >
           <WalkthroughableText style={styles.buttonText}>
             Group Chat Creation
@@ -41,7 +41,7 @@ const MoreScreen = ({ route, start, navigation }) => {
       >
         <WalkthroughableTouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("FavoritesScreen")}
+          onPress={() => navigation.navigate("Favorites")}
         >
           <WalkthroughableText style={styles.buttonText}>
             Favorites
@@ -56,7 +56,7 @@ const MoreScreen = ({ route, start, navigation }) => {
       >
         <WalkthroughableTouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("NotificationsScreen")}
+          onPress={() => navigation.navigate("Notifications")}
         >
           <WalkthroughableText style={styles.buttonText}>
             Notifications
@@ -68,7 +68,7 @@ const MoreScreen = ({ route, start, navigation }) => {
       <CopilotStep text="View and edit your profile." order={5} name="profile">
         <WalkthroughableTouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("ProfileScreen")}
+          onPress={() => navigation.navigate("Profile")}
         >
           <WalkthroughableText style={styles.buttonText}>
             Profile
@@ -83,7 +83,7 @@ const MoreScreen = ({ route, start, navigation }) => {
       >
         <WalkthroughableTouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("AddPetScreen")}
+          onPress={() => navigation.navigate("AddPet")}
         >
           <WalkthroughableText style={styles.buttonText}>
             Add Pet

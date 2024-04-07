@@ -65,7 +65,7 @@ const NotificationItem = ({ content, navigation }) => {
               style={styles.optionButton}
               onPress={() => {
                 setModalVisible(!modalVisible);
-                navigation.navigate("NotificationPreferencesScreen");
+                navigation.navigate("NotificationPreferences");
               }}
             >
               <Text style={styles.optionText}>Notification Settings</Text>

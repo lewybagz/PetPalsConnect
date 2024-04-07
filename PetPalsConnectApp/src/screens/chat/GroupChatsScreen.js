@@ -36,7 +36,7 @@ const GroupChatsScreen = ({ navigation }) => {
   };
 
   const handleChatPress = (chat) => {
-    navigation.navigate("GroupChatScreen", { chatId: chat.id });
+    navigation.navigate("GroupChat", { chatId: chat.id });
   };
 
   if (loading) {

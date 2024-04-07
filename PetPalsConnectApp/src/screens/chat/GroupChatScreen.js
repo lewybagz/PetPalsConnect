@@ -108,7 +108,7 @@ const GroupChatScreen = ({ route, navigation }) => {
 
   const handlePetSelect = (pet) => {
     console.log("Selected Pet:", pet.name);
-    navigation.navigate("PetDetailsScreen", { petId: pet.id });
+    navigation.navigate("PetDetails", { petId: pet.id });
   };
 
   const toggleSearch = () => {
@@ -276,7 +276,7 @@ const GroupChatScreen = ({ route, navigation }) => {
 
         <TouchableOpacity
           onPress={() =>
-            navigation.navigate("GroupInfoScreen", { groupId: groupInfo.id })
+            navigation.navigate("GroupInfo", { groupId: groupInfo.id })
           }
         >
           <Icon name="info-circle" size={20} color="#007bff" />

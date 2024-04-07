@@ -63,7 +63,7 @@ const PlaydateModificationScreen = ({ route, navigation }) => {
       <DateTimePickerComponent date={time} mode="time" onDateChange={setTime} />
       <Button
         title="Choose Location"
-        onPress={() => navigation.navigate("PotentialPlaydateLocationsScreen")}
+        onPress={() => navigation.navigate("PotentialPlaydateLocations")}
       />
       <Button title="Update Playdate" onPress={navigateToConfirmation} />
       {location && <Text>Selected Location: {location.name}</Text>}

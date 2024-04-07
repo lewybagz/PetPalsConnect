@@ -54,7 +54,7 @@ const ProfileScreen = ({ navigation }) => {
 
   const viewAllPlaydates = () => {
     // Navigate to MyPlaydatesScreen when 'View All' is pressed
-    navigation.navigate("MyPlaydatesScreen");
+    navigation.navigate("MyPlaydates");
   };
 
   const navigateToEditProfile = () => {

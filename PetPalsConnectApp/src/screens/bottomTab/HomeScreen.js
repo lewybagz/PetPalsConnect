@@ -179,7 +179,7 @@ const HomeScreen = ({ navigation, route, start }) => {
 
         <AnimatedButton
           text="View All Articles"
-          onPress={() => navigation.navigate("ArticlesScreen")}
+          onPress={() => navigation.navigate("Articles")}
           buttonStyle={styles.animatedButton}
           textStyle={styles.animatedButtonText}
         />

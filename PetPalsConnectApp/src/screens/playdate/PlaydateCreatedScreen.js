@@ -10,7 +10,7 @@ const PlaydateCreatedScreen = ({ route, navigation }) => {
   useEffect(() => {
     const unsubscribe = messaging().onNotificationOpenedApp((remoteMessage) => {
       if (remoteMessage.data.type === "playdateReview") {
-        navigation.navigate("PostPlaydateReviewScreen", {
+        navigation.navigate("PostPlaydateReview", {
           playdateId: remoteMessage.data.playdateId,
           petId: remoteMessage.data.petId,
         });
@@ -22,7 +22,7 @@ const PlaydateCreatedScreen = ({ route, navigation }) => {
       .getInitialNotification()
       .then((remoteMessage) => {
         if (remoteMessage && remoteMessage.data.type === "playdateReview") {
-          navigation.navigate("PostPlaydateReviewScreen", {
+          navigation.navigate("PostPlaydateReview", {
             playdateId: remoteMessage.data.playdateId,
             petId: remoteMessage.data.petId,
           });

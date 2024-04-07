@@ -36,7 +36,7 @@ const VerificationSelectionScreen = ({ navigation, route }) => {
         ]}
         onPressIn={() => animateScale(0.95)} // Scales down the button
         onPressOut={() => animateScale(1)} // Scales up the button back to normal
-        onPress={() => navigation.navigate("PhoneAuthScreen")}
+        onPress={() => navigation.navigate("PhoneAuth")}
       >
         <Text style={[styles.buttonText, tailwind("text-white")]}>
           Verify by Phone
@@ -47,7 +47,7 @@ const VerificationSelectionScreen = ({ navigation, route }) => {
         style={[styles.buttonContainer, tailwind("bg-green-500")]}
         onPressIn={() => animateScale(0.95)}
         onPressOut={() => animateScale(1)}
-        onPress={() => navigation.navigate("EmailAuthScreen", { email })}
+        onPress={() => navigation.navigate("EmailAuth", { email })}
       >
         <Text style={[styles.buttonText, tailwind("text-white")]}>
           Verify by Email

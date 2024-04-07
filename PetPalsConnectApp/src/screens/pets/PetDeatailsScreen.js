@@ -44,7 +44,7 @@ const PetDetailsScreen = ({ route, navigation }) => {
     // Assuming the function to get or create chatId
     const chatId = await getOrCreateChatId(userId, pet._id);
     dispatch(setChatId(chatId)); // Dispatch the chatId to Redux
-    navigation.navigate("ChatScreen", { pet, chatId });
+    navigation.navigate("Chat", { pet, chatId });
   };
 
   const handleFavorite = async () => {
@@ -75,7 +75,7 @@ const PetDetailsScreen = ({ route, navigation }) => {
   };
 
   const handleSchedulePlaydate = () => {
-    navigation.navigate("SchedulePlaydateScreen", { pet });
+    navigation.navigate("SchedulePlaydate", { pet });
   };
 
   return (

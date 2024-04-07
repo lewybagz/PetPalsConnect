@@ -56,7 +56,7 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
         // Dispatch the notification to Redux
         dispatch(addNotification(notificationData));
       }
-      navigation.navigate("PlaydateCreatedScreen", { playdate: response.data });
+      navigation.navigate("PlaydateCreated", { playdate: response.data });
     } catch (error) {
       console.error("Error creating playdate:", error);
       Alert.alert(

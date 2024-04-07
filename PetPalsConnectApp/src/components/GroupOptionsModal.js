@@ -42,7 +42,7 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
       });
       const mediaArray = response.data.media;
       if (mediaArray.length > 0) {
-        navigation.navigate("MediaViewScreen", { mediaItems: mediaArray });
+        navigation.navigate("MediaView", { mediaItems: mediaArray });
       } else {
         console.log("No media available for this chat.");
       }
@@ -67,7 +67,7 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
         }
       );
 
-      navigation.navigate("ChatsListScreen");
+      navigation.navigate("ChatsList");
     } catch (error) {
       console.error("Error leaving group chat:", error);
     }

@@ -39,7 +39,7 @@ const ScheduledPlaydatesScreen = (navigation) => {
   }, []);
 
   const navigateToDetails = (playdateId) => {
-    navigation.navigate("PlaydateDetailsScreen", { playdateId });
+    navigation.navigate("PlaydateDetails", { playdateId });
   };
 
   const renderPlaydateItem = ({ item }) => (

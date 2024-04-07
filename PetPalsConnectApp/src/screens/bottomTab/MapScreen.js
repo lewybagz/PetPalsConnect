@@ -263,11 +263,11 @@ const MapScreen = ({ start, route, navigation }) => {
                   style={tailwind("bg-blue-500 py-2 px-4 rounded")}
                   onPress={() => {
                     if (selectedMarker.type === "pet") {
-                      navigation.navigate("PetDetailsScreen", {
+                      navigation.navigate("PetDetails", {
                         petId: selectedMarker._id,
                       });
                     } else if (selectedMarker.type === "playdate") {
-                      navigation.navigate("PotentialPlaydateLocationScreen", {
+                      navigation.navigate("PotentialPlaydateLocation", {
                         playdateId: selectedMarker._id,
                       });
                     }

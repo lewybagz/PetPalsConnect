@@ -36,7 +36,7 @@ const PlayDateLocationCard = ({ locationData, navigation }) => {
   }, [locationData]);
 
   const handleSchedulePlaydate = () => {
-    navigation.navigate("PetSelectionScreen", { locationId: locationData._id });
+    navigation.navigate("PetSelection", { locationId: locationData._id });
   };
   return (
     <View style={styles.card}>

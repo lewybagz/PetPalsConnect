@@ -34,7 +34,7 @@ function App() {
     if (event.nativeEvent.oldState === State.ACTIVE) {
       if (event.nativeEvent.translationX < -100) {
         // Threshold for swipe length
-        navigation.navigate("Map"); // Navigate to MapScreen
+        navigation.navigate("Map");
       }
 
       Animated.timing(translateX, {
@@ -66,7 +66,6 @@ function App() {
     }
   };
   useEffect(() => {
-    // Assume you have a function to request permissions
     requestUserPermission();
 
     // Handle incoming messages
@@ -84,7 +83,7 @@ function App() {
             "Notification caused app to open from quit state:",
             remoteMessage
           );
-          navigation.navigate("NotificationScreen", { remoteMessage });
+          navigation.navigate("Notification", { remoteMessage });
           // You might want to set some state here to use in your navigation
         }
       });

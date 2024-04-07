@@ -28,7 +28,7 @@ const PlaydateList = ({ type, navigation }) => {
 
   const renderPlaydate = ({ item }) => {
     const handlePress = () => {
-      navigation.navigate("PlaydateDetailScreen", { playdateId: item._id });
+      navigation.navigate("PlaydateDetail", { playdateId: item._id });
     };
 
     return (

@@ -129,7 +129,7 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
       );
 
       Alert.alert("Accepted", "You have accepted the playdate request.");
-      navigation.navigate("UpcomingPlaydatesScreen");
+      navigation.navigate("UpcomingPlaydates");
     } catch (error) {
       Alert.alert("Error", "Failed to accept the playdate request.");
     } finally {

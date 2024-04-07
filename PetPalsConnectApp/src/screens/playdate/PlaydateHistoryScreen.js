@@ -39,7 +39,7 @@ const PlaydateHistoryScreen = ({ navigation }) => {
   const renderPlaydateItem = ({ item }) => (
     <TouchableOpacity
       onPress={() =>
-        navigation.navigate("PlaydateDetail", { playdateId: item._id })
+        navigation.navigate("PlaydateDetails", { playdateId: item._id })
       }
     >
       <PlaydateCardComponent playdate={item} navigation={navigation} />

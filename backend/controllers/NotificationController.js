@@ -1,4 +1,6 @@
 const Notification = require("../models/Notification");
+const Bull = require("bull");
+
 const {
   findUserById,
 } = require("../../PetPalsConnectApp/services/UserService");
@@ -165,25 +167,27 @@ export const sendPlaydateNotification = async (req, res) => {
   }
 };
 
+const notificationQueue = new Bull("notificationQueue");
+
 export const pushPlaydateReviewReminderNotification = async (
   playdateId,
   userId
 ) => {
   try {
-    const playdate = await findPlaydateById(playdateId); // Retrieve the playdate details
+    const playdate = await findPlaydateById(playdateId);
     if (!playdate) throw new Error("Playdate not found");
-    // Calculate the delay needed (1 hour after playdate start)
+
     const delay =
-      new Date(playdate.StartTime).getTime() + 60 * 60 * 1000 - Date.now();
+      new Date(playdate.startTime).getTime() + 60 * 60 * 1000 - Date.now();
+
     if (delay > 0) {
-      // Set a timeout to send the notification after the calculated delay
-      setTimeout(async () => {
-        await sendPushNotification(userId, {
-          title: "Playdate Review",
-          body: "Your playdate just ended! How was it?",
-          data: { screen: "PostPlaydateReviewScreen", playdateId: playdateId },
-        });
-      }, delay);
+      notificationQueue.add(
+        {
+          userId: userId,
+          playdateId: playdateId,
+        },
+        { delay: delay }
+      );
     }
   } catch (error) {
     console.error("Error scheduling playdate review reminder:", error);

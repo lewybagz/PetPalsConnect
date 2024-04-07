@@ -130,7 +130,7 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
           console.log("Owner ID not found for pet");
         }
       }
-      navigation.navigate("PlaydateCreatedScreen", { playdate: response.data });
+      navigation.navigate("PlaydateCreated", { playdate: response.data });
     } catch (error) {
       console.error("Error creating playdate:", error);
       Alert.alert(

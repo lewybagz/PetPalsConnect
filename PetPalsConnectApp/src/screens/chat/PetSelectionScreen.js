@@ -49,7 +49,7 @@ const PetSelectionScreen = ({ navigation, route }) => {
       Alert.alert("Select Pets", "Please select at least one pet to continue.");
       return;
     }
-    navigation.navigate("GroupChatCreationScreen", { selectedPets });
+    navigation.navigate("GroupChatCreation", { selectedPets });
   };
 
   return (

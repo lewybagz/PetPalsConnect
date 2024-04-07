@@ -68,7 +68,7 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
 
   const handleViewDetails = () => {
     // Assuming you have navigation passed as a prop to this component
-    navigation.navigate("ChatDetailsScreen", {
+    navigation.navigate("ChatDetails", {
       chatId: chat.id,
       isGroupChat: isGroupChat,
     });

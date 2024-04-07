@@ -57,7 +57,7 @@ function LoginScreen({ navigation }) {
             email: response.user.email,
             // include other user details as needed
           });
-          navigation.navigate("AddPetScreen", { isNewUser: true });
+          navigation.navigate("AddPet", { isNewUser: true });
         } else {
           const userData = docSnapshot.data();
           cacheUserData(userData);

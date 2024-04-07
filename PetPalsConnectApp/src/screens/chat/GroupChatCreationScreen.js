@@ -47,7 +47,7 @@ const GroupChatCreationScreen = ({ route, navigation }) => {
       if (response.status === 201 || response.status === 200) {
         const groupChatId = response.data._id;
         dispatch(setChatId(groupChatId));
-        navigation.navigate("GroupChatScreen", { chatId: groupChatId });
+        navigation.navigate("GroupChat", { chatId: groupChatId });
       } else {
         throw new Error("Failed to find or create group chat");
       }

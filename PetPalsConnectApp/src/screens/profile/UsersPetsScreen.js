@@ -37,7 +37,7 @@ const UsersPetsScreen = (navigation) => {
   }, [currentUser]);
 
   const handleNavigateToPetDetails = (petId) => {
-    navigation.navigate("PetDetailsScreen", { petId });
+    navigation.navigate("PetDetails", { petId });
   };
 
   const handleDelete = async (petId) => {

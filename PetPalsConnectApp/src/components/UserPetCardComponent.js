@@ -43,7 +43,7 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
 
   const navigateToReportUser = (userIdToReport) => {
     // Navigate to the ReportUserScreen and pass the userID to report
-    navigation.navigate("ReportUserScreen", { userId: userIdToReport });
+    navigation.navigate("ReportUser", { userId: userIdToReport });
     setModalVisible(false); // Close the modal
   };
 
@@ -139,7 +139,7 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   };
 
   const navigateToLocation = (locationId) => {
-    navigation.navigate("PotentialPlaydateLocationScreen", { locationId });
+    navigation.navigate("PotentialPlaydateLocation", { locationId });
   };
 
   const renderPetCard = (petData) => {
