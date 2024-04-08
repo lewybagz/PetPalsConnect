@@ -8,16 +8,32 @@ import {
   Alert,
 } from "react-native";
 import axios from "axios";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import UserPetCard from "./UserPetCard";
 import { getStoredToken } from "../../../utils/tokenutil";
+import LoadingScreen from "../../components/LoadingScreenComponent";
+import { clearError } from "../../redux/actions";
 
 const PetListScreen = ({ route, navigation }) => {
   const { participants } = route.params || {};
-  const currentUser = useSelector((state) => state.user);
-  const userId = useSelector((state) => state.user.userId);
+  const dispatch = useDispatch();
+
+  const currentUser = useSelector((state) => state.userReducer.currentUser);
+  const userId = useSelector((state) => state.userReducer.userId);
+  const isLoading = useSelector((state) => state.userReducer.isLoading);
+  const error = useSelector((state) => state.userReducer.error);
+
   const [pets, setPets] = useState(participants || []);
   const [matchedPets, setMatchedPets] = useState([]);
+
+  // Handle the display and clearing of errors
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error, [
+        { text: "OK", onPress: () => dispatch(clearError()) },
+      ]);
+    }
+  }, [error, dispatch]);
 
   useEffect(() => {
     const fetchMatchedPets = async (userId) => {
@@ -31,6 +47,10 @@ const PetListScreen = ({ route, navigation }) => {
         Alert.alert("Error", "Failed to load matched pets");
       }
     };
+
+    if (isLoading) {
+      return <LoadingScreen />;
+    }
 
     if (!participants) {
       const fetchPets = async () => {

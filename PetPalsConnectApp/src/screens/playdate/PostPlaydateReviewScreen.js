@@ -14,6 +14,7 @@ import axios from "axios";
 import StarRating from "react-native-star-rating";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { setError } from "../../redux/actions";
 
 const PostPlaydateReviewScreen = ({ route, navigation }) => {
   const { playdateId, petId } = route.params;
@@ -24,16 +25,23 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
   const [reviewId, setReviewId] = useState(null);
   const [isReviewVisible, setIsReviewVisible] = useState(true);
   const [locationData, setLocationData] = useState(null);
-
+  const getToken = async () => {
+    try {
+      const token = await getStoredToken();
+      return token;
+    } catch (err) {
+      setError(err.message);
+    }
+  };
   useEffect(() => {
     if (playdate && playdate.locationId) {
       getLocationData(playdate.locationId).then(setLocationData);
     }
   }, [playdate]);
 
-  const getLocationData = async (locationId) => {
+  const getLocationData = async (locationId, token) => {
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      getToken();
       const response = await axios.get(`/api/locations/${locationId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -44,7 +52,7 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleVisibilityToggle = async (newValue) => {
+  const handleVisibilityToggle = async (newValue, token) => {
     setIsReviewVisible(newValue);
     if (!reviewId) {
       Alert.alert("Error", "Review ID is not available.");
@@ -52,7 +60,7 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
     }
 
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      getToken();
       await axios.patch(
         `/api/reviews/${reviewId}/visibility`,
         {
@@ -73,9 +81,9 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
     }
   };
 
-  const getOwnerIdFromPetId = async (petId) => {
+  const getOwnerIdFromPetId = async (petId, token) => {
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      getToken();
       const response = await axios.get(`/api/pets/owner/${petId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -91,7 +99,7 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleSubmitReview = async () => {
+  const handleSubmitReview = async (token) => {
     const ownerId = await getOwnerIdFromPetId(petId);
 
     if (rating === 0) {
@@ -108,11 +116,10 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
       RelatedPlaydate: playdateId,
       Reviewer: ownerId,
       Visibility: isReviewVisible,
-      // ...other fields as needed
     };
 
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      getToken();
       const response = await axios.post("/api/reviews", reviewData, {
         headers: { Authorization: `Bearer ${token}` },
       });

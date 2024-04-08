@@ -1,12 +1,20 @@
 // rootReducer.js
 import { combineReducers } from "redux";
-import { SET_NOTIFICATIONS, ADD_NOTIFICATION } from "./actions";
-
-// TODO: ASK ABOUT WHEN TO USE EACH REDUCER
+import {
+  SET_NOTIFICATIONS,
+  ADD_NOTIFICATION,
+  START_LOADING,
+  END_LOADING,
+  SET_ERROR,
+  CLEAR_ERROR,
+} from "./actions";
 
 const initialUserState = {
   user: null,
+  name: "",
   userId: null,
+  isLoading: false,
+  error: null,
 };
 
 const userReducer = (state = initialUserState, action) => {
@@ -21,6 +29,19 @@ const userReducer = (state = initialUserState, action) => {
         ...state,
         userId: action.payload,
       };
+    case START_LOADING:
+    case END_LOADING:
+    case SET_ERROR:
+      return {
+        ...state,
+        isLoading: action.type === START_LOADING,
+        error: action.type === SET_ERROR ? action.payload : null,
+      };
+    case CLEAR_ERROR:
+      return {
+        ...state,
+        error: null,
+      };
     default:
       return state;
   }
@@ -29,6 +50,8 @@ const userReducer = (state = initialUserState, action) => {
 const initialChatState = {
   singleChatId: null,
   groupChatId: null,
+  isLoading: false,
+  error: null,
 };
 
 const chatReducer = (state = initialChatState, action) => {
@@ -53,18 +76,52 @@ const chatReducer = (state = initialChatState, action) => {
         ...state,
         allChats: action.payload,
       };
-    // ... other cases as needed
+    case START_LOADING:
+    case END_LOADING:
+    case SET_ERROR:
+      return {
+        ...state,
+        isLoading: action.type === START_LOADING,
+        error: action.type === SET_ERROR ? action.payload : null,
+      };
+    case CLEAR_ERROR:
+      return {
+        ...state,
+        error: null,
+      };
     default:
       return state;
   }
 };
 
-const petReducer = (state = {}, action) => {
+// Add isLoading and error to petReducer
+const initialPetState = {
+  // TODO: USE IN FRONTEND
+  pets: [],
+  names: [],
+  name: "",
+  isLoading: false,
+  error: null,
+};
+const petReducer = (state = initialPetState, action) => {
   switch (action.type) {
     case "SET_PETS":
       return {
         ...state,
         pets: action.payload,
+      };
+    case START_LOADING:
+    case END_LOADING:
+    case SET_ERROR:
+      return {
+        ...state,
+        isLoading: action.type === START_LOADING,
+        error: action.type === SET_ERROR ? action.payload : null,
+      };
+    case CLEAR_ERROR:
+      return {
+        ...state,
+        error: null,
       };
     default:
       return state;
@@ -76,6 +133,7 @@ const initialPlaydateState = {
   playdates: [],
   loading: false,
   error: null,
+  isLoading: false,
 };
 
 const playdateReducer = (state = initialPlaydateState, action) => {
@@ -93,6 +151,19 @@ const playdateReducer = (state = initialPlaydateState, action) => {
       return { ...state, loading: false, playdateDetails: action.payload };
     case "FETCH_PLAYDATE_DETAILS_FAIL":
       return { ...state, loading: false, error: action.payload };
+    case START_LOADING:
+    case END_LOADING:
+    case SET_ERROR:
+      return {
+        ...state,
+        isLoading: action.type === START_LOADING,
+        error: action.type === SET_ERROR ? action.payload : null,
+      };
+    case CLEAR_ERROR:
+      return {
+        ...state,
+        error: null,
+      };
     default:
       return state;
   }
@@ -100,6 +171,8 @@ const playdateReducer = (state = initialPlaydateState, action) => {
 
 const initialNotificationsState = {
   notifications: [],
+  isLoading: false,
+  error: null,
 };
 
 const notificationsReducer = (state = initialNotificationsState, action) => {
@@ -114,6 +187,19 @@ const notificationsReducer = (state = initialNotificationsState, action) => {
         ...state,
         notifications: [...state.notifications, action.payload],
       };
+    case START_LOADING:
+    case END_LOADING:
+    case SET_ERROR:
+      return {
+        ...state,
+        isLoading: action.type === START_LOADING,
+        error: action.type === SET_ERROR ? action.payload : null,
+      };
+    case CLEAR_ERROR:
+      return {
+        ...state,
+        error: null,
+      };
     default:
       return state;
   }
@@ -125,7 +211,6 @@ const rootReducer = combineReducers({
   pet: petReducer,
   playdate: playdateReducer,
   notifications: notificationsReducer,
-  // Add other reducers as needed
 });
 
 export default rootReducer;

@@ -19,7 +19,7 @@ const NotificationItem = ({ content, navigation }) => {
   const handleMuteNotifications = async () => {
     try {
       const token = await getStoredToken();
-      const userId = useSelector((state) => state.user.userId); // Assuming you're using Redux to store user ID
+      const userId = useSelector((state) => state.userReducer.userId); // Assuming you're using Redux to store user ID
 
       const updatedPreferences = {
         notificationPreferences: {

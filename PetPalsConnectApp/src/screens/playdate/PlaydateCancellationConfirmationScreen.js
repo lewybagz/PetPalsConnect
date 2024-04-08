@@ -16,7 +16,7 @@ const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
   const { playdateId } = route.params;
   const dispatch = useDispatch();
   const tailwind = useTailwind();
-  const userId = useSelector((state) => state.user.userId);
+  const userId = useSelector((state) => state.userReducer.userId);
 
   const handleCancellation = async () => {
     try {

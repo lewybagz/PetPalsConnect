@@ -13,6 +13,7 @@ import { useTailwind } from "nativewind";
 import { auth } from "../../../firebase/firbaseConfig";
 import axios from "axios";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { setError } from "../../redux/actions";
 
 const SecuritySettingsScreen = () => {
   const [twoFactorAuthEnabled, setTwoFactorAuthEnabled] = useState(false);
@@ -23,10 +24,18 @@ const SecuritySettingsScreen = () => {
   const [securityAnswer, setSecurityAnswer] = useState("");
   const userId = auth.currentUser.uid;
   const tailwind = useTailwind();
-
-  const handleTwoFactorAuthChange = async (isEnabled) => {
+  const getToken = async () => {
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      const token = await getStoredToken();
+      return token;
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleTwoFactorAuthChange = async (isEnabled, token) => {
+    try {
+      getToken();
       await axios.post(
         "/api/user/settings/2fa",
         {
@@ -54,13 +63,13 @@ const SecuritySettingsScreen = () => {
     handleTwoFactorAuthChange(newTwoFactorState);
   };
 
-  const handlePasswordChange = async () => {
+  const handlePasswordChange = async (token) => {
     if (newPassword !== confirmNewPassword) {
       Alert.alert("Error", "New passwords do not match");
       return;
     }
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      getToken();
       await axios.post(
         "/api/user/settings/change-password",
         {
@@ -79,10 +88,9 @@ const SecuritySettingsScreen = () => {
     }
   };
 
-  const handleSecurityQuestionChange = async () => {
+  const handleSecurityQuestionChange = async (token) => {
     try {
-      const token = await getStoredToken(); // Retrieve the token
-      // Replace with your actual API call for security question update
+      getToken();
       await axios.post(
         "/api/user/settings/security-question",
         {

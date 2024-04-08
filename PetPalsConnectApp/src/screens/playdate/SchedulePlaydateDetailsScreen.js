@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, Button, Alert, StyleSheet } from "react-native";
 import axios from "axios";
 import DateTimePickerComponent from "../components/DateTimePickerComponent";
+import { clearError } from "../../redux/actions";
 import {
   sendPushNotification,
   createNotificationInDB,
@@ -13,10 +14,19 @@ import { addNotification } from "../../redux/actions";
 
 const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
-  const userId = useSelector((state) => state.user.userId);
+  const userId = useSelector((state) => state.userReducer.userId);
+  const error = useSelector((state) => state.userReducer.error);
   const { petId, locationId } = route.params;
   const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error, [
+        { text: "OK", onPress: () => dispatch(clearError()) },
+      ]);
+    }
+  }, [error, dispatch]);
 
   const handleSubmit = async (selectedPet, pet, dispatch) => {
     // Prepare playdate data

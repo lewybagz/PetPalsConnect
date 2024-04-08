@@ -4,7 +4,7 @@ import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 import { useSelector } from "react-redux";
 
 const PlaydateModificationScreen = ({ route, navigation }) => {
-  const userId = useSelector((state) => state.user.userId);
+  const userId = useSelector((state) => state.userReducer.userId);
   const { playdateId } = route.params;
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());

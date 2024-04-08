@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   Text,
   TextInput,
@@ -9,29 +9,28 @@ import {
 import { getAuth } from "firebase/auth";
 import { getFirestore, doc, updateDoc, getDoc } from "firebase/firestore";
 import { useTailwind } from "nativewind";
+import { useSelector, useDispatch } from "react-redux";
+import LoadingScreen from "../../components/LoadingScreenComponent";
 
 const AccountInformationScreen = () => {
-  const [userInfo, setUserInfo] = useState({ email: "", phone: "" });
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.userReducer.user);
+  const isLoading = useSelector((state) => state.userReducer.isLoading); // Access isLoading
+  const error = useSelector((state) => state.userReducer.error); // Access error
   const tailwind = useTailwind();
   const auth = getAuth();
   const db = getFirestore();
 
   useEffect(() => {
-    // Fetch user information from Firestore
     const getUserProfile = async () => {
-      const user = auth.currentUser;
-
-      if (user) {
-        const userDocRef = doc(db, "users", user.uid);
+      const authUser = auth.currentUser;
+      if (authUser) {
+        const userDocRef = doc(db, "users", authUser.uid);
         try {
           const userDocSnap = await getDoc(userDocRef);
-
           if (userDocSnap.exists()) {
-            const profileData = userDocSnap.data();
-            setUserInfo({
-              email: profileData.email || user.email,
-              phone: profileData.phone || "",
-            });
+            const fetchedUserInfo = userDocSnap.data();
+            dispatch({ type: "SET_USER", payload: fetchedUserInfo });
           } else {
             Alert.alert("Profile Error", "No such document!");
           }
@@ -42,21 +41,18 @@ const AccountInformationScreen = () => {
         Alert.alert("User Error", "No user logged in!");
       }
     };
-
     getUserProfile();
-  }, []);
+  }, [auth, db, dispatch]);
 
   const handleUpdate = async () => {
-    // Logic to update user information in Firestore
     try {
-      const user = auth.currentUser;
-      if (user) {
-        const userDocRef = doc(db, "users", user.uid);
+      const authUser = auth.currentUser;
+      if (authUser) {
+        const userDocRef = doc(db, "users", authUser.uid);
         await updateDoc(userDocRef, {
-          email: userInfo.email,
-          phone: userInfo.phone,
+          email: user.email,
+          phone: user.phone,
         });
-
         Alert.alert(
           "Info Updated",
           "Your account information has been updated."
@@ -73,28 +69,39 @@ const AccountInformationScreen = () => {
     }
   };
 
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (error) {
+    Alert.alert("Error", error);
+  }
+
   return (
     <ScrollView style={tailwind("p-4")}>
       <Text style={tailwind("text-xl font-bold mb-4")}>
         Account Information
       </Text>
-
       <Text style={tailwind("text-lg mb-4")}>
-        {auth.currentUser?.displayName || "User"}
+        {user?.displayName || "User"}
       </Text>
 
       <TextInput
         style={tailwind("border border-gray-300 p-2 rounded mb-4")}
-        value={userInfo.email}
-        onChangeText={(text) => setUserInfo({ ...userInfo, email: text })}
+        value={user?.email || ""}
+        onChangeText={(text) =>
+          dispatch({ type: "SET_USER", payload: { ...user, email: text } })
+        }
         placeholder="Email"
         keyboardType="email-address"
       />
 
       <TextInput
         style={tailwind("border border-gray-300 p-2 rounded mb-4")}
-        value={userInfo.phone}
-        onChangeText={(text) => setUserInfo({ ...userInfo, phone: text })}
+        value={user?.phone || ""}
+        onChangeText={(text) =>
+          dispatch({ type: "SET_USER", payload: { ...user, phone: text } })
+        }
         placeholder="Phone Number"
         keyboardType="phone-pad"
       />

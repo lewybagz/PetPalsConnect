@@ -13,14 +13,22 @@ import axios from "axios";
 import { sendPushNotification } from "../../services/NotificationService";
 import { useSelector } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
+import { setError } from "../redux/actions";
 
 const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const currentUser = useSelector((state) => state.user.currentUser);
-
-  const handleBlockUser = async (userIdToBlock) => {
+  const currentUser = useSelector((state) => state.userReducer.currentUser);
+  const getToken = async () => {
     try {
       const token = await getStoredToken();
+      return token;
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  const handleBlockUser = async (userIdToBlock, token) => {
+    try {
+      getToken();
       const response = await axios.post(
         "/api/blocklist",
         {
@@ -42,14 +50,13 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   };
 
   const navigateToReportUser = (userIdToReport) => {
-    // Navigate to the ReportUserScreen and pass the userID to report
     navigation.navigate("ReportUser", { userId: userIdToReport });
-    setModalVisible(false); // Close the modal
+    setModalVisible(false);
   };
 
-  const handleAddToFavorites = async (petId) => {
+  const handleAddToFavorites = async (petId, token) => {
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      getToken();
       const response = await axios.post(
         "/api/favorites",
         {
@@ -67,18 +74,17 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
       }
     } catch (error) {
       console.error("Error adding to favorites:", error);
-      // Handle error - show alert or a message
+      Alert.alert("Error adding to favorites:", error);
     }
   };
 
-  const handleAddFriend = async (userId) => {
-    // Ensure currentUser is available
+  const handleAddFriend = async (userId, token) => {
     if (!currentUser) {
       console.error("Current user not found");
       return;
     }
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      getToken();
       const response = await axios.post(
         "/api/friends",
         {
@@ -92,7 +98,7 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
       if (response.status === 201) {
         // Friend request sent successfully, now send notification
         await sendPushNotification({
-          recipientUserId: userId, // ID of the user receiving the friend request
+          recipientUserId: userId,
           title: "New Friend Request",
           message: "You have a new friend request!",
           data: {

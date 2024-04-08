@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,26 +14,43 @@ import storage from "@react-native-firebase/storage";
 import { Picker } from "@react-native-picker/picker";
 import { matchPets } from "../../../../backend/controllers/";
 import DropDownPicker from "react-native-dropdown-picker";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import Realm from "realm";
 import axios from "axios";
 import { getStoredToken } from "../../../utils/tokenutil";
-
+import { clearError } from "../../redux/actions";
+import LoadingScreen from "../../components/LoadingScreenComponent";
 const AddPetScreen = (navigation) => {
   const MAX_PHOTOS = 5;
   const [petDetails, setPetDetails] = useState([]);
   const [isNewUser, setIsNewUser] = useState(false);
   const [open, setOpen] = useState(false);
-  const userId = useSelector((state) => state.user.userId);
-  const currentUser = useSelector((state) => state.user);
+  const dispatch = useDispatch();
+
+  const userId = useSelector((state) => state.userReducer.userId);
+  const currentUser = useSelector((state) => state.userReducer.currentUser);
+  const isLoading = useSelector((state) => state.userReducer.isLoading);
+  const error = useSelector((state) => state.userReducer.error);
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error, [
+        { text: "OK", onPress: () => dispatch(clearError()) },
+      ]);
+    }
+  }, [error, dispatch]);
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
   const [currentPet, setCurrentPet] = useState({
     name: "",
     breed: "",
     age: "",
-    photos: [], // Array to store photo URLs
+    photos: [],
     specialNeeds: "",
     temperament: "",
-    weight: { value: 0, unit: "lbs" }, // Default unit is lbs, can be lbs or kg
+    weight: { value: 0, unit: "lbs" },
     favoriteActivities: [],
   });
 

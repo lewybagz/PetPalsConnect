@@ -2,6 +2,18 @@
 import axios from "axios";
 import { getStoredToken } from "../../utils/tokenutil";
 // User Actions
+
+// TODO: USE IN FRONTEND
+export const startLoading = () => ({ type: "START_LOADING" });
+export const endLoading = () => ({ type: "END_LOADING" });
+export const setError = (error) => ({ type: "SET_ERROR", payload: error });
+
+export const CLEAR_ERROR = "CLEAR_ERROR";
+
+export const clearError = () => ({
+  type: CLEAR_ERROR,
+});
+
 export const setUser = (user) => {
   return {
     type: "SET_USER",
@@ -68,13 +80,12 @@ export const fetchPlaydatesFail = (error) => ({
   payload: error,
 });
 
-// Asynchronous action creator for fetching playdates
 export const fetchPlaydates = () => {
   return async (dispatch) => {
     dispatch(fetchPlaydatesStart());
     try {
       const token = await getStoredToken();
-      const response = await axios.get("/api/playdates/user", {
+      const response = await axios.get("/api/playdates/${userId}", {
         headers: { Authorization: `Bearer ${token}` },
       });
       dispatch(fetchPlaydatesSuccess(response.data));

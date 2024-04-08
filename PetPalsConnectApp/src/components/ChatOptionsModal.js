@@ -1,21 +1,39 @@
-import React from "react";
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useEffect } from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { useTailwind } from "nativewind";
 import axios from "axios";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
+import LoadingScreen from "./LoadingScreenComponent";
+import { clearError, setError } from "../redux/actions";
 
 const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
   const tailwind = useTailwind();
-
-  // Access user ID and chat ID from Redux store
-  const userId = useSelector((state) => state.user.userId);
-  const chatId = useSelector((state) => state.chat.chatId);
-
-  const handleMuteNotifications = async () => {
-    console.log("Mute Tapped");
+  const dispatch = useDispatch();
+  const userId = useSelector((state) => state.userReducer.userId);
+  const chatId = useSelector((state) => state.chatReducer.chatId);
+  const isLoading = useSelector((state) => state.chatReducer.isLoading);
+  const error = useSelector((state) => state.chatReducer.error);
+  const getToken = async () => {
     try {
       const token = await getStoredToken();
+      return token;
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleMuteNotifications = async (token) => {
+    console.log("Mute Tapped");
+    try {
+      getToken();
       const response = await axios.post(
         "/api/groupchats/toggle-mute",
         {
@@ -34,10 +52,10 @@ const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
     onClose();
   };
 
-  const handleViewMedia = async () => {
+  const handleViewMedia = async (token) => {
     console.log("View Media Tapped");
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      getToken();
       const response = await axios.get(`/api/chats/${chatId}/media`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -52,6 +70,19 @@ const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
     }
     onClose();
   };
+
+  // Show loading indicator if loading
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error, [
+        { text: "OK", onPress: () => dispatch(clearError()) },
+      ]);
+    }
+  }, [error, dispatch]);
 
   return (
     <Modal visible={isVisible} animationType="slide" transparent>

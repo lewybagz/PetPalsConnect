@@ -26,8 +26,8 @@ import { addNotification } from "../../redux/actions";
 
 const SchedulePlaydateScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
-  const userId = useSelector((state) => state.user.userId);
-  const userName = useSelector((state) => state.user.name);
+  const userId = useSelector((state) => state.userReducer.userId);
+  const userName = useSelector((state) => state.userReducer.name);
   const { pet } = route.params;
   const [time, setTime] = useState(new Date());
   const [date, setDate] = useState(new Date());
@@ -35,12 +35,20 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
   const [locations, setLocations] = useState([]);
   const [error, setError] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const getToken = async () => {
+    try {
+      const token = await getStoredToken();
+      return token;
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   useEffect(() => {
     const initialize = async () => {
       try {
         // Assuming you have a way to get the current user's ID
-        const userId = useSelector((state) => state.user.userId);
+        const userId = useSelector((state) => state.userReducer.userId);
         const userPrefs = await fetchUserPreferences(userId);
         const playdateRange = userPrefs.playdateRange;
 
@@ -67,9 +75,9 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
     initialize();
   }, []);
 
-  const fetchLocations = async (latitude, longitude, playdateRange) => {
+  const fetchLocations = async (latitude, longitude, playdateRange, token) => {
     try {
-      const token = await getStoredToken();
+      getToken();
       const response = await axios.get("/api/locations/playdate-locations", {
         headers: { Authorization: `Bearer ${token}` },
         params: {
@@ -85,9 +93,7 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleSubmit = async () => {
-    const userId = useSelector((state) => state.user.userId);
-    const userName = useSelector((state) => state.user);
+  const handleSubmit = async (token) => {
     // Prepare playdate data
     const playdateData = {
       Date: date,
@@ -99,7 +105,7 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
     };
 
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      getToken();
       const response = await axios.post("/api/playdates", playdateData, {
         headers: { Authorization: `Bearer ${token}` },
       });

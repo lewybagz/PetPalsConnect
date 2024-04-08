@@ -1,11 +1,30 @@
-import React from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import React, { useEffect } from "react";
+import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
 import UserPetCardComponent from "../components/UserPetCardComponent";
 import PlayDateLocationCard from "./PlaydateLocationCardComponent";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import LoadingScreen from "./LoadingScreenComponent";
+import { clearError } from "../redux/actions";
 
 const PlaydateCardComponent = ({ playdate, navigation }) => {
-  const currentUser = useSelector((state) => state.user.currentUser);
+  const dispatch = useDispatch();
+  const currentUser = useSelector((state) => state.userReducer.currentUser);
+  const isLoading = useSelector((state) => state.playdate.isLoading);
+  const error = useSelector((state) => state.playdate.error);
+
+  // Display a loading indicator when data is loading
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  // Handle the display and clearing of errors
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error, [
+        { text: "OK", onPress: () => dispatch(clearError()) },
+      ]);
+    }
+  }, [error, dispatch]);
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString();

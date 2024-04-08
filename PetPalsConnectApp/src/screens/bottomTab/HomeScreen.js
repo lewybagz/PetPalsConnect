@@ -44,12 +44,10 @@ const HomeScreen = ({ navigation, route, start }) => {
     fetchLatestPets().then(setLatestPets);
     fetchUserFavorites(auth.currentUser.uid).then(setFavorites);
 
-    // Start the copilot tutorial if it's a new user
     if (route.params?.showTutorial) {
       start();
     }
 
-    // Check if the matching algorithm popup should be shown
     const shouldShowPopup = route.params?.showPopup;
     setShowMatchingAlgorithmPopup(shouldShowPopup);
   }, [start, route.params?.showPopup, auth.currentUser.uid]);
@@ -59,7 +57,7 @@ const HomeScreen = ({ navigation, route, start }) => {
   useEffect(() => {
     const fetchLatestArticle = async () => {
       try {
-        const token = await getStoredToken(); // Retrieve the token
+        const token = await getStoredToken();
         const response = await axios.get("/api/articles/latest", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -73,12 +71,11 @@ const HomeScreen = ({ navigation, route, start }) => {
   }, []);
 
   const renderFavoriteItem = (favorite) => {
-    // Determine if the favorite is a pet or a playdate based on its structure or a specific field
-    const isPet = favorite.breed; // Example condition
+    const isPet = favorite.breed;
     if (isPet) {
-      return <Text>Pet: {favorite.name}</Text>; // Customize as needed
+      return <Text>Pet: {favorite.name}</Text>;
     } else {
-      return <Text>Playdate at: {favorite.location}</Text>; // Customize as needed
+      return <Text>Playdate at: {favorite.location}</Text>;
     }
   };
 

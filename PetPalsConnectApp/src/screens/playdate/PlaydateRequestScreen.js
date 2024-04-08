@@ -18,11 +18,20 @@ import {
   createNotificationInDB,
 } from "../../../services/NotificationService";
 import { fetchPlaydateDetails } from "../../redux/actions";
+import { setError } from "../../redux/actions";
 
 const PlaydateRequestScreen = ({ route, navigation }) => {
   const { playdateId } = route.params;
   const dispatch = useDispatch();
-  const userId = useSelector((state) => state.user.userId);
+  const userId = useSelector((state) => state.userReducer.userId);
+  const getToken = async () => {
+    try {
+      const token = await getStoredToken();
+      return token;
+    } catch (err) {
+      setError(err.message);
+    }
+  };
   const { playdateDetails, loading, error } = useSelector(
     (state) => state.playdateReducer
   );
@@ -38,10 +47,11 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
     message,
     recipientId,
     type,
-    creatorId
+    creatorId,
+    token
   ) => {
     try {
-      const token = await getStoredToken(); // Retrieve the token if needed for axios call
+      getToken();
       const playdateResponse = await axios.get(`/api/playdates/${playdateId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -107,10 +117,10 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleAccept = async () => {
+  const handleAccept = async (token, recipientId) => {
     setAccepting(true);
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      getToken();
       await axios.post(
         `/api/playdates/accept/${playdateId}`,
         {},
@@ -123,7 +133,7 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
       await sendNotificationToSender(
         playdateId,
         "Your playdate request has been accepted.",
-        null, // replace with recipientId if needed
+        recipientId,
         "PlaydateAcceptance",
         userId
       );
@@ -137,10 +147,10 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleDecline = async () => {
+  const handleDecline = async (token) => {
     setDeclining(true);
     try {
-      const token = await getStoredToken();
+      getToken();
       await axios.post(
         `/api/playdates/decline/${playdateId}`,
         {},

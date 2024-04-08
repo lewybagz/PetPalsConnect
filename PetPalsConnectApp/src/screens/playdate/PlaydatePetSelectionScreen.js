@@ -34,7 +34,7 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
 
     const fetchMatchedPets = async () => {
       try {
-        const token = await getStoredToken(); // Retrieve the token
+        const token = await getStoredToken();
         const matchedPetsResponse = await axios.get(
           "/api/petmatches/matched-pets",
           { headers: { Authorization: `Bearer ${token}` } }
@@ -46,9 +46,9 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
     };
 
     const fetchUserPets = async () => {
-      const userId = useSelector((state) => state.user.userId);
+      const userId = useSelector((state) => state.userReducer.userId);
       try {
-        const token = await getStoredToken(); // Retrieve the token
+        const token = await getStoredToken();
         const userPetsResponse = await axios.get(`/api/users/pets/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -87,7 +87,6 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
 
   const handleSubmitSelection = () => {
     if (selectedPets.length > 0) {
-      // Navigate with the selected pet IDs
       navigation.navigate("SchedulePlaydateDetails", {
         petIds: selectedPets,
         locationId,

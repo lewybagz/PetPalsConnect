@@ -13,24 +13,41 @@ import {
 import { useTailwind } from "nativewind";
 import MessageItemComponent from "../../components/MessageItemComponent";
 import { firestore } from "../../firebase/firebaseConfig";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { FieldValue } from "firebase/firestore";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import ChatOptionsModal from "../../components/ChatOptionsModal";
 import Icon from "react-native-vector-icons/FontAwesome";
 import Clipboard from "@react-native-community/clipboard";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { clearError } from "../../redux/actions";
+import { startLoading, endLoading, setError } from "../../redux/actions";
 
 const ChatScreen = ({ route, navigation }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
   const [chatId, setChatId] = useState(null);
   const petInfo = route.params.pet;
   const flatListRef = useRef(null);
-  const userId = useSelector((state) => state.user.userId);
+  const dispatch = useDispatch();
   const tailwind = useTailwind();
+
+  const userId = useSelector((state) => state.userReducer.userId);
+  const isLoading = useSelector((state) => state.chatReducer.isLoading);
+  const error = useSelector((state) => state.chatReducer.error);
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Chat Error", error, [
+        { text: "OK", onPress: () => dispatch(clearError()) },
+      ]);
+    }
+  }, [error, dispatch]);
 
   const initiateChat = async () => {
     try {
@@ -84,7 +101,7 @@ const ChatScreen = ({ route, navigation }) => {
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
-    setIsLoading(true);
+    dispatch(startLoading());
     Keyboard.dismiss();
 
     try {
@@ -103,9 +120,10 @@ const ChatScreen = ({ route, navigation }) => {
       setNewMessage("");
     } catch (error) {
       Alert.alert("Error", "Failed to send message");
+      dispatch(setError("Error sending message"));
       console.error("Error sending message:", error);
     } finally {
-      setIsLoading(false);
+      dispatch(endLoading());
     }
   };
 

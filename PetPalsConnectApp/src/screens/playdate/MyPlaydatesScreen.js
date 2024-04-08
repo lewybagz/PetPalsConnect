@@ -5,20 +5,40 @@ import {
   createMaterialTopTabNavigator,
   Text,
 } from "@react-navigation/material-top-tabs";
-import { StyleSheet, FlatList, TouchableOpacity } from "react-native";
+import { StyleSheet, FlatList, TouchableOpacity, Alert } from "react-native";
 import PlaydateCardComponent from "../../components/PlaydateCardComponent";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPlaydates } from "../../redux/actions";
+import { clearError } from "../../redux/actions";
+import LoadingScreen from "../../components/LoadingScreenComponent";
 const Tab = createMaterialTopTabNavigator();
 
 const PlaydateList = ({ type, navigation }) => {
   const dispatch = useDispatch();
-  const playdates = useSelector((state) => state.playdatesReducer.playdates); // Adjust according to your Redux setup
+  const playdates = useSelector((state) => state.playdateReducer.playdates);
+  const isLoading = useSelector((state) => state.playdateReducer.isLoading);
+  const error = useSelector((state) => state.playdateReducer.error);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchPlaydates());
-  }, [dispatch, type]);
+    if (!playdates.length) {
+      dispatch(fetchPlaydates());
+    }
+  }, [dispatch, playdates.length]);
+
+  // Handle error display
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error, [
+        { text: "OK", onPress: () => dispatch(clearError()) },
+      ]);
+    }
+  }, [error, dispatch]);
+
+  // Display a loading indicator while fetching playdates
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   const filteredPlaydates = playdates.filter((playdate) =>
     type === "upcoming"

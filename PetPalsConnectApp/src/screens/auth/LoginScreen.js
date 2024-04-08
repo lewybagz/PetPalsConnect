@@ -1,5 +1,5 @@
 // LoginScreen.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import * as SecureStore from "expo-secure-store";
+import { clearError } from "../../redux/actions";
+import LoadingScreen from "../../components/LoadingScreenComponent";
 
 function LoginScreen({ navigation }) {
   const [showTwoFAModal, setShowTwoFAModal] = useState(false);
@@ -28,8 +30,19 @@ function LoginScreen({ navigation }) {
   const [errorMessage, setErrorMessage] = useState("");
   const tailwind = useTailwind();
   const db = getFirestore();
-  const userId = useSelector((state) => state.user.userId);
+  const userId = useSelector((state) => state.userReducer.userId);
+  const isLoading = useSelector((state) => state.userReducer.isLoading);
+  const error = useSelector((state) => state.userReducer.error);
   const dispatch = useDispatch();
+
+  // Handle the display and clearing of errors
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Login Error", error, [
+        { text: "OK", onPress: () => dispatch(clearError()) }, // Clear error when user presses "OK"
+      ]);
+    }
+  }, [error, dispatch]);
 
   const onLoginPress = () => {
     const auth = getAuth();
@@ -39,7 +52,7 @@ function LoginScreen({ navigation }) {
 
         // Securely store the token
         response.user.getIdToken().then((token) => {
-          SecureStore.setItemAsync("userToken", token); // Store the token
+          SecureStore.setItemAsync("userToken", token);
         });
 
         const userDocRef = doc(db, "users", response.user.email);
@@ -70,9 +83,13 @@ function LoginScreen({ navigation }) {
         }
       })
       .catch((error) => {
-        setErrorMessage(error.message); // Display error message to the user
+        setErrorMessage(error.message);
       });
   };
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   const TwoFAModal = ({ visible, onClose, onEnable }) => {
     const [method, setMethod] = useState("phone"); // Default to phone

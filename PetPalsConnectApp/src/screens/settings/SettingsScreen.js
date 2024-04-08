@@ -7,6 +7,7 @@ import { useAppTheme } from "../../context/ThemeContext";
 import axios from "axios";
 import { getRealm } from "../../../../backend/models/Settings";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { setError } from "../../redux/actions";
 
 const SettingsScreen = ({ navigation }) => {
   const [locationSharingEnabled, setLocationSharingEnabled] = useState(true);
@@ -15,7 +16,14 @@ const SettingsScreen = ({ navigation }) => {
   const auth = getAuth();
   const { toggleAppTheme } = useAppTheme();
   const [playdateRange, setPlaydateRange] = useState(5);
-
+  const getToken = async () => {
+    try {
+      const token = await getStoredToken();
+      return token;
+    } catch (err) {
+      setError(err.message);
+    }
+  };
   useEffect(() => {
     const realm = getRealm();
     let settings = realm.objectForPrimaryKey("Settings", "unique_settings_id");
@@ -33,8 +41,7 @@ const SettingsScreen = ({ navigation }) => {
     appUpdates: false,
   });
 
-  // Example function to update playdate range
-  const handlePlaydateRangeChange = async (value) => {
+  const handlePlaydateRangeChange = async (value, token) => {
     const realm = await getRealm();
     setPlaydateRange(value);
     try {
@@ -44,7 +51,6 @@ const SettingsScreen = ({ navigation }) => {
           "unique_settings_id"
         );
         if (!settings) {
-          // Create new settings if not exists
           settings = realm.create("Settings", {
             _id: "unique_settings_id",
             playdateRange: value,
@@ -53,13 +59,11 @@ const SettingsScreen = ({ navigation }) => {
             notificationPreferences: JSON.stringify(notificationPreferences),
           });
         } else {
-          // Update existing settings
           settings.playdateRange = value;
         }
       });
 
-      const token = await getStoredToken(); // Retrieve the token
-      // Update the user's preference on the backend
+      getToken();
       await axios.post(
         "/api/user/settings",
         { playdateRange: value },
@@ -72,8 +76,7 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
-  // The function now accepts the key of the notification setting to toggle
-  const toggleNotificationSetting = async (key) => {
+  const toggleNotificationSetting = async (key, token) => {
     const newPreferences = {
       ...notificationPreferences,
       [key]: !notificationPreferences[key],
@@ -83,7 +86,6 @@ const SettingsScreen = ({ navigation }) => {
       // Update state
       setNotificationPreferences(newPreferences);
 
-      // Get the Realm instance
       const realm = await getRealm();
 
       realm.write(() => {
@@ -92,10 +94,8 @@ const SettingsScreen = ({ navigation }) => {
           "unique_settings_id"
         );
         if (settings) {
-          // Update existing settings
           settings.notificationPreferences = JSON.stringify(newPreferences);
         } else {
-          // Create new settings if not exists
           realm.create("Settings", {
             _id: "unique_settings_id",
             playdateRange: playdateRange,
@@ -106,8 +106,7 @@ const SettingsScreen = ({ navigation }) => {
         }
       });
 
-      const token = await getStoredToken(); // Retrieve the token
-      // Send the preference to the backend
+      getToken();
       await axios.post(
         "/api/user/notification-preferences",
         {
@@ -122,11 +121,10 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
-  const toggleLocationSharing = async () => {
+  const toggleLocationSharing = async (token) => {
     const newLocationSharingState = !locationSharingEnabled;
     setLocationSharingEnabled(newLocationSharingState);
     try {
-      // Get the Realm instance
       const realm = await getRealm();
 
       realm.write(() => {
@@ -135,10 +133,8 @@ const SettingsScreen = ({ navigation }) => {
           "unique_settings_id"
         );
         if (settings) {
-          // Update existing settings
           settings.locationSharingEnabled = newLocationSharingState;
         } else {
-          // Create new settings if not exists
           realm.create("Settings", {
             _id: "unique_settings_id",
             playdateRange: playdateRange,
@@ -149,8 +145,7 @@ const SettingsScreen = ({ navigation }) => {
         }
       });
 
-      const token = await getStoredToken(); // Retrieve the token
-      // Update the user's preference on the backend
+      getToken();
       await axios.post(
         "/api/user/settings",
         {

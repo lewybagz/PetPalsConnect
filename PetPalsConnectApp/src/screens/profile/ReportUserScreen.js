@@ -15,7 +15,7 @@ const ReportUserScreen = ({ route }) => {
   const [content, setContent] = useState("");
   const [status, setStatus] = useState("Pending");
   const reportedUser = route.params.userId;
-  const userId = useSelector((state) => state.user.userId);
+  const userId = useSelector((state) => state.userReducer.userId);
   const reporter = userId;
   const submitReport = async () => {
     try {

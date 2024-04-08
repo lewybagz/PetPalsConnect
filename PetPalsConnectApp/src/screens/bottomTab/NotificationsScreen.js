@@ -7,7 +7,7 @@ import { getStoredToken } from "../../../utils/tokenutil";
 
 const NotificationsScreen = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
-  const userId = useSelector((state) => state.user.userId);
+  const userId = useSelector((state) => state.userReducer.userId);
 
   useEffect(() => {
     const fetchNotifications = async () => {

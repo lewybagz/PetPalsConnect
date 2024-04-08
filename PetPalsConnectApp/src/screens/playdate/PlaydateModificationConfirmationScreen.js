@@ -12,7 +12,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 
 const PlaydateModificationConfirmationScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
-  const userId = useSelector((state) => state.user.userId);
+  const userId = useSelector((state) => state.userReducer.userId);
   const { playdateId, date, time, location } = route.params;
 
   const confirmModifications = async () => {

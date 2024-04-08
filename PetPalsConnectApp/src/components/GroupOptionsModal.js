@@ -1,20 +1,51 @@
-import React from "react";
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useEffect } from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { useTailwind } from "nativewind";
 import axios from "axios";
 import { getStoredToken } from "../../utils/tokenutil";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { clearError, setError } from "../redux/actions";
+import LoadingScreen from "./LoadingScreenComponent";
 
 const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
   const tailwind = useTailwind();
-
+  const dispatch = useDispatch();
   // Access user ID and chat ID from Redux store
-  const userId = useSelector((state) => state.user.userId);
-  const chatId = useSelector((state) => state.chat.chatId);
-  const handleMuteNotifications = async () => {
-    console.log("Mute Tapped");
+  const userId = useSelector((state) => state.userReducer.userId);
+  const chatId = useSelector((state) => state.chatReducer.chatId);
+  const error = useSelector((state) => state.chatReducer.error);
+  const isLoading = useSelector((state) => state.chatReducer.isLoading);
+  const getToken = async () => {
     try {
       const token = await getStoredToken();
+      return token;
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  // Handle error alert
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error, [
+        { text: "OK", onPress: () => dispatch(clearError()) },
+      ]);
+    }
+  }, [error, dispatch]);
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+  const handleMuteNotifications = async (token) => {
+    console.log("Mute Tapped");
+    try {
+      getToken();
       const response = await axios.post(
         "/api/groupchats/toggle-mute",
         {
@@ -33,10 +64,10 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
     onClose();
   };
 
-  const handleViewMedia = async () => {
+  const handleViewMedia = async (token) => {
     console.log("View Media Tapped");
     try {
-      const token = await getStoredToken();
+      getToken();
       const response = await axios.get(`/api/groupchats/${chatId}/media`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -52,10 +83,10 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
     onClose();
   };
 
-  const handleLeaveGroup = async () => {
+  const handleLeaveGroup = async (token) => {
     console.log("Leave Group Tapped");
     try {
-      const token = await getStoredToken();
+      getToken();
       await axios.post(
         "/api/groupchats/leave",
         {

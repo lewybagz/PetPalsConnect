@@ -15,7 +15,7 @@ import { setChatId } from "../../redux/actions";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const PetDetailsScreen = ({ route, navigation }) => {
-  const userId = useSelector((state) => state.user.userId);
+  const userId = useSelector((state) => state.userReducer.userId);
   const { pet } = route.params;
 
   // Define the getOrCreateChatId function
