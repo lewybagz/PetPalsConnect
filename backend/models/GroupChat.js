@@ -6,6 +6,7 @@ const GroupChatSchema = new Schema({
   groupName: {
     type: String,
     required: true,
+    unique: true,
   },
   messages: [
     {

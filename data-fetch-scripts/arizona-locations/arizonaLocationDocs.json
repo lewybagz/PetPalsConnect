@@ -1,0 +1,193 @@
+[
+  {
+    "address": "4110 E River Rd, Tucson, AZ 85718, United States",
+    "description": "Smiling Dog Ranch Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJYZP5y3xMCUyXDhrT9hqWgmaWD5GvI3MjAnWGUfvyDKAvYCgXK5Wd3VgOLc7b_T64z-LByP98Bnt0LEf9NQAoNdcINMxVzQz9esJj0mGv9NrNFvz0WC11NmfyphjxVJxNskydbLMP5SP0xN9r-1_yHas4D86ZuMpswiAbADS4VCaZtd&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.9046291, 32.2761748]
+    },
+    "placeId": "ChIJHYPdlv9x1oYRqDFmGASiysM"
+  },
+  {
+    "address": "S Country Club Rd, Tucson, AZ 85716, United States",
+    "description": "Miko's Corner Playground Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJYLkiEopIGSCa9iohSYlkiWmUYw_Zq0agr6goxUwu5jdNlyZPPaoVry2SB_7fTRkDBRdNR2DG1Bb41t82Oo3fnmItZIs97c6dZnDbMkGjTc8Y6IF5M22f6bw0O4N9luiiiA3AiObEjCJqSgFE9Kp-nVLZYfPcr7siEOO9iWp2Vr-2J_&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.925739, 32.2099884]
+    },
+    "placeId": "ChIJBwQ-7z9w1oYRg29HyTKrj3A"
+  },
+  {
+    "address": "9820 Rees Loop, Tucson, AZ 85747, United States",
+    "description": "Ivan's Spot Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJYKJ6c0s3MokAQJJHpcSKbKo22QVVsNNRfba7t4Aqb2FRap3JdRIOtxQWXrQ1xwsl9bzyyep4pGkqPA9zd6jluUg0So9nKCbUvvmwN-QmilHgg8FCAtYdmCtLOcIAQO4BKjWZcRnCkzCLoVUsDTqW9CMVcN445vHLHA-nSbTftyzbQQ&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.7829031, 32.1025212]
+    },
+    "placeId": "ChIJq3StNhVh1oYRedPKNBnjhu0"
+  },
+  {
+    "address": "7290 E Tanque Verde Rd, Tucson, AZ 85715, United States",
+    "description": "Udall Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZ_D4p86TA5hvrjpEXN5zSpjxQaFOI5bwmcMlrwp1-XiWqIOS0Oi701BGMA33WmIv7iRIow39hKjIUR-_iWSAqeIsjazrBDEkvP4PuUMZbIVCaK7tj2u4sZqhFsxJiYnU4CKOpsRZI8go_HfHiYi5UvRZVaxRJpWstPvzs3l8lgYZv3&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.8376422, 32.2480436]
+    },
+    "placeId": "ChIJC4QrJuJu1oYRnY0nrZ6P54Y"
+  },
+  {
+    "address": "1905 S Old Nogales Hwy, Green Valley, AZ 85614, United States",
+    "description": "Quail Creek Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZ_NWXoAgoFq3RPXZovWcS6SROA7nKsz_42zFsYCFh2St4Z2kXX7Ceg_33SkQOZ7nmwSfelspSs10VLB476bzscoWLSRPJN3BILZrpdjbhM5LNlEXk3hZ_h6j6-nb0voC8kxOZnCsXg-X0ayyrdpizL_dW9OlmJQABiOQ5nxWAVZ1ug&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.9652776, 31.896556]
+    },
+    "placeId": "ChIJpS2VpkeE1oYRQijVOXfjsAM"
+  },
+  {
+    "address": "Parking lot, 2075 N 6th Ave, Tucson, AZ 85705, United States",
+
+    "description": "North Sixth Avenue Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJaXtKngErz7nX-U2-d1CHs7p7uzqlJwSjhc-6qJW_t5V3ApxWnKcHqN5cggqHt42WWl2LukknhoyqLt8oaViZ5Zl6ArTaF06ITYZ_BGbYmlzdk37Gf5KmNBWX9wOBCaJv7FfEhz_NFHxrWB4-E6S_sYi3WjXYGcpDrA9acXKs9a5Qxh&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.969183, 32.246561]
+    },
+    "placeId": "ChIJc-9IZmtx1oYRyDPIOYPUuxk"
+  },
+  {
+    "address": "Unnamed Rd, Tucson, AZ 85705, United States",
+    "description": "Jacobs Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJY42LZ0BieVH96Nb64Uns1P9DIadq7cZwAQ4JpyycXtUUvhiJ06Xb8N_1H8tD8zoAfJvtoOZjINtQXG4XxRzuPezgT09JmFeH1r6_89qumTke-8Nta1a6yww91hTtmNDGI2CtNrGQIXGsMhzLMyds49tsgYV9ZxSa8wu2OsFsyFpe-z&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.9899161, 32.2682607]
+    },
+    "placeId": "ChIJfYCCmO5z1oYRYJEuJcFg5wU"
+  },
+  {
+    "address": "W Camino Mazatlan, Sahuarita, AZ 85629, United States",
+    "description": "Anamax Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJbmDRjXeT2pyO6bCPxsT2V9ZqWmOhpWLRZ9Shox0XqjKDy2irT9ybD_foYaSX9Bbcmr5xAQaE_3o7SnPQlKB6XBgnlzUNKtKIaD1N2mVKGk9zgUb8fcxTt5lTAHXdWj0ylMUomlKXLMzUHlof14yBU7YvEda4cabcuKR5mxDx0V4CU&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.9879101, 31.9333518]
+    },
+    "placeId": "ChIJ7xeUSLeG1oYRJK6uo5DbyVQ"
+  },
+  {
+    "address": "2502 E Ray Rd, Gilbert, AZ 85296, United States",
+    "description": "Cosmo Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJYHWBDtU7XmAVpAKrmM96mBhxYFgWG1hpfctBgQV5uRuGiaAvxlHeh3UxS45knFTLTF-hp6wrxFCPgX4VqJ-RDz6yxyY2l6bB0BT_1w5BQVSmQ3LlQHPBSAX1NOoiewdELsC4Ob1I_dKY0R0a_VIRtlmiAPRI8tLtQXWMnVb_lAL_ZS&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-111.7350094, 33.3226413]
+    },
+    "placeId": "ChIJnWBJET2sK4cRT2kJGVbxKEw"
+  },
+  {
+    "address": "3123 N Thistle Rd, Sierra Vista, AZ 85635, United States",
+    "description": "Lazy Dog Ranch Bed and Breakfast",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJbsJw5n5vAuTgD7u3DQTO0q-9kqrLvGJcwb_dWP14lOgF1pVeVQ1Qovq2CeboeEavDG8_ryB3TlbNtcFnUBtAdpq_ksy1rU1eGfpORgOvzyOvXIfvsTSHwFgNL4uJ4_7OuqceTGV7vhV7btmZus9f85VWMHOIGDpDOEcuWiE_ptYIIW&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.1530184, 31.6015612]
+    },
+    "placeId": "ChIJYwAMLeYv14YRCDrH-4x_AuQ"
+  },
+  {
+    "address": "17010 S 48th St, Phoenix, AZ 85048, United States",
+    "description": "RJ Dog Park at Pecos Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZZwhXfM1GuM7GNFilJWdjnKAO63_2X_G7V3U1uwM4BerN_H29cNVIsav9Ey4CipL4-NvCNnTwLMybzVV6Q4YgIWdXj-9TTgCBbg87iDDDTLeU9G0atlpZrJqdxctrS4KAAydujyJN1stnQoRlmdRrYUgYHntfXwgTk-e3EMjoemORt&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-111.9742827, 33.2917367]
+    },
+    "placeId": "ChIJu2XbxXUEK4cR_f-_YbFuBOI"
+  },
+  {
+    "address": "3400 E Zoo Ct, Tucson, AZ 85716, United States",
+    "description": "Flamingo Grill at Reid Park Zoo",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZsM0MrA7ckw_5H0M3X7BK7JsnTimY3t9CFWZ6xbBV098CN7uSeOvO_tC5Vg9hkjwlOK8wOO2v53Mr9RQYK8afwt9iY2FTuIxRTOJuTQXwQkclHmKmRleFv5EhiPLyM_ObFZSf1HK6G0Wlk4Lec5zPfEcYCdoOAp0mrlKRSMfyg3gUe&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.9208856, 32.2096273]
+    },
+    "placeId": "ChIJKbP-_RVw1oYRmlgv0hafXNU"
+  },
+  {
+    "address": "950 Soldiers Pass Rd, Sedona, AZ 86336, United States",
+    "description": "Sedona Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJYZyCiUY4veqmFzLWYLIEyKYP_e5QCQm5JmWVpChLiNzDXyK10gu6hXesXvRySMor92rDA_o38CbI5XgETKTNY_qOl3_Gi5IaVro3l7mf76VDTTwDAFCryn4E0jFlXxMGGMH0bI2m4Pl-8OWHn0nlZ6cufiSSrapDMb6tEt7VLNKymI&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-111.7834539, 34.8698534]
+    },
+    "placeId": "ChIJ6Q5s6UChLYcRdrZfqOlLjI4"
+  },
+  {
+    "address": "14301 E Speedway Blvd, Tucson, AZ 85749, United States",
+    "description": "The Dog House Saloon at The Tanque Verde Ranch",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJY6ep5nWbIbtCKpmIGrCBHF5fr6e1mxPjgXtTKsZzSG8UaeMyTxyw19kQq8AsVg-V0ruVX_WKyA98yzOp1t63bzbElmw84mOS6cjLqB84qvbazK-Xsb3l4kNvT98tDP9E-tWguAKEdsbv3lrFQFMfAK4neqdgurlxEkTSTgie64TkM&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.6839852, 32.2410676]
+    },
+    "placeId": "ChIJ8-XrXcZC1oYRFJJJvU05E8Q"
+  },
+  {
+    "address": "7569-, 7585 N Mona Lisa Rd, Tucson, AZ 85742, United States",
+    "description": "Northwest Community Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZ0YdrGq1B9ESWzAVpr4MeM0i-b3kQlVVq2azcL6lio5JGI2Dmzm9xlBxT24jT-ALHUZLxc8ReqgMTXmLxGHCpyaOY2C1ZG__7wsDICusTTFrjD6Zuv9N963gM2IF8K4v6xqmhadrXVdwIsfS4878T0g2qRBmx49Ej1Ytunxlzr8iY1&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-111.0208854, 32.3461798]
+    },
+    "placeId": "ChIJO5mn7UoL1oYRq9Tr44xEQ4I"
+  },
+  {
+    "address": "2003 E 14th St, Tucson, AZ 85719, United States",
+    "description": "Sit! Stay! Play!",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJbGwLR2WTQQRgsdDM6sVS3ReMzmp8A8c02-_PdK-53Tkek9sbHL51EnVjwAkkQEYPD44ofGQ9rJl0HqAIdbZmDAlm-P8EAqr0QdH5u3r-IDo0YgnKcFgZeblKbGI3bHizT_31ClL_ArQB2sX02LMD_RkhKFh5XgWEHc9S2dz17cZ4gy&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.9421747, 32.2176285]
+    },
+    "placeId": "ChIJFXHEhVBw1oYRwaPLmLRVUM8"
+  },
+  {
+    "address": "3805 W River Rd #105, Tucson, AZ 85741, United States",
+    "description": "Dogs of Tucson",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJbvnMZvE5TLOXnbnznZ4P48InQi9vsj6D7oVllxqf9N7h6YQxcZbHZFK6pGnM5WDdme99DZmx76G5Jmb-BGF5Bsc0udFC9NCGruUghfjT0k6it5k1uPuADcsg3I6yQWZ2YVBUafHx9gcs8V7dbgFTGIG0yQri5VhDgZOABeYW6-5kGj&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-111.0465762, 32.3212565]
+    },
+    "placeId": "ChIJcZ4u_Et11oYRnGnmLqv3sWo"
+  },
+  {
+    "address": "39984 S Sand Crest Dr, Tucson, AZ 85739, United States",
+    "description": "SaddleBrooke Dog Park - Private Community Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZmSJVCoopL8I3kacheeaqwI5fh8kwt-cXH0NEhIjrr1HfbYfrEQ-BSAzjhK5JkI00FxboZU-VlcQfsVHtgomMsJnFGXj4xevnTxuv71i6jzBh4NMnx48s3YbvjEDmrowKi61sUQlCvz_hGqPvBakK3n01iKivmeS42nvfU1rq7x_wg&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-110.9040427, 32.51299729999999]
+    },
+    "placeId": "ChIJbzBrdd8P1oYRzie-5FzNf1o"
+  },
+  {
+    "address": "1490 E Weber Dr, Tempe, AZ 85288, United States",
+    "description": "The Barking Bodega",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJYbbSeMfy8gt9IjK1LhK4-ectIBWsQ0JCaWXojq-grlYyovFX-zJifPLDxNBo4vO5rsrzaBe5tsCTkH146rzGpzudesnWwjcASajzEpjvB39MkfGoPkDEsReMWtbJqzyWFq9aDG3wZ3wiHZTZwqci1nYeXlUKhqk0ywR9MjO-urU3o&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [-111.9141025, 33.4443114]
+    },
+    "placeId": "ChIJH2aFpzwJK4cR_MsD2l4u7RA"
+  }
+]

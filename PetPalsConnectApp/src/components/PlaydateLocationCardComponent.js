@@ -40,7 +40,9 @@ const PlayDateLocationCard = ({ locationData, navigation }) => {
   };
   return (
     <View style={styles.card}>
-      <Image source={{ uri: locationData.photo }} style={styles.image} />
+      {locationData.photo && (
+        <Image source={{ uri: locationData.photo }} style={styles.image} />
+      )}
       <Text style={styles.title}>{locationData.address}</Text>
       {locationData.description && (
         <Text style={styles.description}>{locationData.description}</Text>

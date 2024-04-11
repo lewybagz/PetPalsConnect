@@ -78,7 +78,6 @@ const PlaydateController = {
   async getLocationDetails(req, res) {
     try {
       const placeId = req.params.placeId;
-      // Assuming you have a model or logic to fetch location details
       const locationDetails = await Location.findById(placeId);
 
       if (!locationDetails) {

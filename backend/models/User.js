@@ -55,15 +55,21 @@ const UserSchema = new Schema({
   username: {
     type: String,
     required: true,
+    unique: true,
   },
   userPhoto: {
-    type: String, // URL to the user's photo
+    type: String,
   },
   verified: {
     type: Boolean,
     default: false,
   },
   email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  password: {
     type: String,
     required: true,
   },

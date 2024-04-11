@@ -1,0 +1,262 @@
+[
+  {
+    "address": "Huntington Beach, 20211, Huntington Bch Bike Trl, Huntington Beach, CA 92648, United States",
+    "description": "Dog Beach",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJalOLbCFxCb5X1pNdiLWNL2pZek_7gQcEpqhODlvr-zupmBi2haKzXBQ7I30PHTQDTgO1NHjwlpFN_x_AfXuvCBM-2HSkJGB6xYQeuZn2FJRJfnvI0gW9dsZJmu5UcghHaVjFQFikPr9bBZdanS2QUBbxum6yvDFi3PwVCoCvx4lPkH&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -118.026172,
+        33.6743838
+      ]
+    },
+    "placeId": "ChIJg-mkmQYk3YARcpxkeMZoDA0"
+  },
+  {
+    "address": "39212 Big Bear Blvd, Big Bear Lake, CA 92315, United States",
+    "description": "Big Bear Pet Friendly Cabins",
+    "photo": null,
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -116.9465942,
+        34.2388949
+      ]
+    },
+    "placeId": "ChIJAS6D1kmyxIARUKRdCPmZ92g"
+  },
+  {
+    "address": "7965 N Blackstone Ave, Fresno, CA 93720, United States",
+    "description": "Lazy Dog Restaurant & Bar",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZbYkYc-qkMOiklNrsDES3HZEQPPCsORNtUzyK2bSjRg-2HKFgeZs4AmixBNQvKPVddUf6EwIaORY7e6822JVTGrI3Z9usR2Fg2b6MdesnSoLWf4LGAq5F_O-H_d7HfCYofXAG0VtscvPHyO8qIDzlN9vvmZMsFIAY944e-6qB3MvmU&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -119.7915028,
+        36.85114069999999
+      ]
+    },
+    "placeId": "ChIJZU_LODlplIART9Q7ItTa6qM"
+  },
+  {
+    "address": "Ocean Blvd, Coronado, CA 92118, United States",
+    "description": "Coronado Dog Beach",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJYRwanLKjFnccL8ViwG9KXPd9KvDoGB4gefNfHyGZK9D_FGJy9SrYYHg8pmFt5li6twKCAJPABd8LApSkcoDlk3UZvKPT6e0ZKPYKbYHTv8R-VcdUpUFwNiKg7A8_mHG_1cKWOwEz5dO3qAwBjgn62AnvLe3tI37JBlWjDZ6UGRCzsb&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -117.193616,
+        32.68657
+      ]
+    },
+    "placeId": "ChIJ3wp3fL-s3oAR4GD0WCY-MMY"
+  },
+  {
+    "address": "5000 E Ocean Blvd, Long Beach, CA 90803, United States",
+    "description": "Rosie's Dog Beach",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJaqDcr4vmqA6q4dFe1kCiJbaElGxqr8-KE9M6BYEUikLuTOaT_73HoenFHPMy0kSSUBaphBbFl-BuZuuLB4whYK-ybvnzmmYnnSpMto_4jUExg5XrEETfA2bvKsDfSKdaJH7QTdy07diaz7cUu05l4_e4ZyFbl-WPsuEFkTb6rg5-oD&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -118.139697,
+        33.755441
+      ]
+    },
+    "placeId": "ChIJMV5M_U4w3YAR_icBoHviVX0"
+  },
+  {
+    "address": "8260 Mulholland Dr, Los Angeles, CA 90046, United States",
+    "description": "Laurel Canyon Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZBEO9QPdjphZzW9CKxS8aOYIl3tpMS9wksTfuf5KxFIA1UnnFVyRwsG3JlzvWJkt6zfqKdvInBiiU6yrupXIKwP93FN7QLEN0uv_e9tEjVet8rCQF3pCYP1YvZn_5JoxXSn_8wQahUxpvjPUAC-cJQ1ou6A50LnOOjB3RAJ4iAPEjA&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -118.3799781,
+        34.121367
+      ]
+    },
+    "placeId": "ChIJzTEzomS-woARCmLL3rbzDWU"
+  },
+  {
+    "address": "20672 Laguna Canyon Rd, Laguna Beach, CA 92651, United States",
+    "description": "Laguna Beach Dog Park",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJYDLqoKKHQ_vOhdPsdKsc8R8FrBFJEC2EIn-45GMRmQ1uuUNxiWi5mgU7P-O3tdo0E1VfbbOGuDPHpTVI3Z3pSXTeyz7k0CGzNBY0IbzpEz87vgLgEnCGpoi5PxXIt-H3NygBilnIXnpwcwndQ2FjPQvvibUFf5FndXbNedirkAQWWz&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -117.762558,
+        33.570864
+      ]
+    },
+    "placeId": "ChIJbZjEnnTm3IARUCXvmj_itX0"
+  },
+  {
+    "address": "100 Goldenwest St, Huntington Beach, CA 92648, United States",
+    "description": "Dog Beach | Huntington Beach",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZNeMdopVnO7rZqzXC9WKF7VlaE6ON-p7ZRfwDMAGak1N8gS5q32y25Lgs52vdxmZwCcEa35NnmIeciBEoOSBEFhzTAyAXqBgaC9_Y9exIm5gafQ69lbn3qx1Dz69AvqHf5ZstLQXoFXTJtnejKgPJnTbBhwUHAu-v6K_bhM3585wsN&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -118.0179027,
+        33.667799
+      ]
+    },
+    "placeId": "ChIJd5S8Vx8h3YARIxrPG-S6eSA"
+  },
+  {
+    "address": "3902 29th St, Del Mar, CA 92014, United States",
+    "description": "Dog Beach",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJa214lXrYVffj4LUYEDoZCTxwEFIQ4X_cbADDyC_y8G3T8hKEHBuGlrPa5899B7y9_mN-4_UGMFp-zn6FaQgpMjRUyIFGmAjUPmS4nqk5mZLIdbRuqlJG-U15qrBKk75otMZ_Pa7zZXNkeTWWOtI9oTlZrmHOWg54NlU8ACwf5LAg9d&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -117.2702026,
+        32.9773737
+      ]
+    },
+    "placeId": "ChIJp1QXtHgP3IARvMf47l5rhI4"
+  },
+  {
+    "address": "84 Burnham Rd, Oak View, CA 93022, United States",
+    "description": "OJAI DOG FRIENDLY",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJalNdfHZhToCi5kbTF67WIMYrdofYjwjTcOc87ytsswjECMu4cS-Vsf-z7Yi4YL619piFYslsvB9OExsO8ohgJMVldQnUQyT-7A0PTa0HC3-qlu6xWkzlwND8z2djQfY7AqvsCW24HxvTkIr9IeeXSQNLVa-mfEYWIoyTns2o3UJG_X&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -119.3124114,
+        34.4010385
+      ]
+    },
+    "placeId": "ChIJ69GsEFqv6YARvgLaHhTC6Fo"
+  },
+  {
+    "address": "Dog Beach, San Diego, CA 92107, United States",
+    "description": "Dog Beach Ocean Beach",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJa98hugqZHue6RaWC7lFxJnXHahJlC9fGNs97XtYvTNM_6BrOUYZIGEo7Utx3ndirf9yWeVJH_H4klONFFKIzmmGkUb5e2rIznFr--dxuZXUJbHUasLhYkM2RiIAhBttWzdwKvM6F7IsWJmpAgzr_XKV6AginrNYe2xDiBNIRYCUizT&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -117.2511508,
+        32.7559746
+      ]
+    },
+    "placeId": "ChIJObYoTc6r3oARWZ3Y1mYb43k"
+  },
+  {
+    "address": "20063 E Clinton Rd, Jackson, CA 95642, United States",
+    "description": "Dog & Pony Ranch",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJahcjnyfZS1jLxwLLXNm_1IxyY630xTGIWwQn06anlWq9747UwKVKbaoG-oWkm3eByHWtJK1lSsAyafoY1Uif6rDfwq5PaEcm37SVW3GjEWDUvHNt7wt5rmiQJpt6SnNB5D0N7oZyTsdc4sJjq5BLroo2_XLQKfuNHduF2gopKroLOX&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -120.64771,
+        38.3682852
+      ]
+    },
+    "placeId": "ChIJVWLEyJ93moARm7Q_LqAyZq8"
+  },
+  {
+    "address": "3325 Main St Box 7247, Mammoth Lakes, CA 93546, United States",
+    "description": "Pet Friendly Rentals by Mammoth Reservations",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZaJGFSOs6-ts_SnohDkOOJFK9EbsJiTOXM9DSq2vMov8Zjy2gzYNAUbf3ROQ6l3sptHORXEFl3Jq6uwOfm4pBFLZMf90gUD62jbmrjENmHvFy_OT9AK7zc-J1qeoLysFnuYPdJqVW6S6rpYQycqnL2WLrxHN7q-ov69xffxn6bY1M&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -118.9712538,
+        37.6475752
+      ]
+    },
+    "placeId": "ChIJdy5fyfcNloARupaVUkCPqx8"
+  },
+  {
+    "address": "350 Artisan Dr, Laguna Beach, CA 92651, United States",
+    "description": "Pet Friendly Paws Pet Care",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJY2XccIjieKgX2DXSr8AY5pwtEbclHd8MxBi4AGRqu_vg2jlKrZFubDhi8l3vlyVBiEdpSmQaG841nebALkGcJ0UolP_iCk09-8ztLUFh1YxAVcCTeeVNx5FMIO4EctSIzJhgrd5lGZb8kAEhpHzXZJE_c3IsAC5W44uYDTmL6XMgD6&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -117.7522266,
+        33.5945983
+      ]
+    },
+    "placeId": "ChIJBTX6mNbaimkR1fCSOUTf70w"
+  },
+  {
+    "address": "1914 Meridian Blvd Box 7054, Mammoth Lakes, CA 93546, United States",
+    "description": "Pet Friendly Rentals by Mammoth Sierra Reservations",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJZYCvNT3CG1f3-lvjKadUIF41ECa6tPdEMPqjPsPPD3ozKeW8UjlOeMhKpXW0dAeixVesPq5CZkdMWmb-aoAg-fhnWSK2ezzRFRgIYqDb29EgWKYyH65QoazZJmGgOU5rQ6qoF7Ybu1IiJMY7h6kUzua20szXg3Eroz4DJaQVEevrQT&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -118.965158,
+        37.6404589
+      ]
+    },
+    "placeId": "ChIJc9nB4_wNloARAcDBcN7kLxY"
+  },
+  {
+    "address": "407 E Pine St, Santa Ana, CA 92701, United States",
+    "description": "PetHotels.com - Santa Ana Dog Boarding ( Cat & Dog Friendly Hotels)",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJabNQbJyW4_lK3PUC1z_WFBVmIhsuTFqlgjqBq07rCRn0bx40U3EKqA2UuvYz8RBoLjoaCJi2fz0Nzja49sBIUhxjSZfGdzMfhJ7brCv0CNmBeQGsXYYQwDTMByKCNL46Lg7i1hfu4a4WrzXMnnjAZj5gJLDgnSnDqlHLM4KRy5uQq3&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -117.8630216,
+        33.7435755
+      ]
+    },
+    "placeId": "ChIJtTiHAQ_Z3IARi-fFYivhUEI"
+  },
+  {
+    "address": "16672 Parsley Ln, Fontana, CA 92337, United States",
+    "description": "PetHotels.com - Fontana Dog Boarding ( Cat & Dog Friendly Hotels)",
+    "photo": null,
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -117.4405427,
+        34.0592574
+      ]
+    },
+    "placeId": "ChIJa54LEEGz3IARkHuxWjHpPDg"
+  },
+  {
+    "address": "5870 Arlington Ave #54, Riverside, CA 92504, United States",
+    "description": "PetHotels.com - Riverside Dog Boarding ( Cat & Dog Friendly Hotels)",
+    "photo": null,
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -117.4315996,
+        33.9457288
+      ]
+    },
+    "placeId": "ChIJjXSbCemx3IARbhvpEh3cKWY"
+  },
+  {
+    "address": "448 W Locust Ave SPC 54, Pinedale, CA 93650, United States",
+    "description": "PetHotels.com - Fresno Dog Boarding ( Cat & Dog Friendly Hotels)",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJazlhqEjsFkEF2Fvh2WkMfH3eTLTAz3mRP3SDs_R6y4SuC-5xEnPqNN_z7so5DVBTJdJxdQ9xLsxO6M-3YKtXdnjqH9DjMEfrQgKUwyudTgyg-Bcf9RlrKeGZd3glzMgZHmqXF-ngWDkw322wRO2Lb500I63UwcipSFG57rUUjVECHW&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -119.8007294,
+        36.8401846
+      ]
+    },
+    "placeId": "ChIJ6xX9ElJplIAR35QzhYwwWqg"
+  },
+  {
+    "address": "236 Pine Ave, Long Beach, CA 90802, United States",
+    "description": "PetHotels.com - Long Beach Dog Boarding ( Cat & Dog Friendly Hotels)",
+    "photo": "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=ATplDJYQliCJldUK2n3I4GbKxoP60BZ68tk-6ns8gf3aq1fUQmcSSPyvw-AK4v3hhUAV6Q4C1e4xkiBA0IMEF7L2uQoo7mGP5PeXXAXk5vJmauQ5cr9p4REIFBb-LVMbUAvKW0-TQIrwZQjGCDmh4m-sFnqJUnB20qswOGDxlxViZYZhJSmV&key=AIzaSyDXmDi9dkZ3e7wPxBGmgPhZeotiuVS-xVI",
+    "geoLocation": {
+      "type": "Point",
+      "coordinates": [
+        -118.1920796,
+        33.7700617
+      ]
+    },
+    "placeId": "ChIJg1PlRGUx3YAR4JuxelkbOc4"
+  }
+]

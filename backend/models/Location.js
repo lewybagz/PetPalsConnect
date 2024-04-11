@@ -8,8 +8,8 @@ const GeoSchema = new Schema({
     default: "Point",
   },
   coordinates: {
-    type: [Number], // format will be [longitude, latitude]
-    index: "2dsphere", // Create a geospatial index
+    type: [Number],
+    index: "2dsphere",
   },
 });
 
@@ -23,19 +23,21 @@ const LocationSchema = new Schema({
     type: String,
   },
   photo: {
-    type: String, // URL to the image
+    type: String,
   },
   rating: {
     type: Number,
+    required: false,
   },
   reviews: [
     {
-      type: String, // or ObjectId references to a 'Review' model
+      type: Schema.Types.ObjectId,
+      ref: "Review",
+      required: false,
     },
   ],
-  creator: {
-    type: Schema.Types.ObjectId,
-    ref: "User",
+  placeId: {
+    type: String,
     required: true,
   },
   modifiedDate: {
@@ -46,12 +48,13 @@ const LocationSchema = new Schema({
     type: Date,
     default: Date.now,
   },
-  slug: String,
-  // Add the GeoSchema to store location coordinates
+  slug: {
+    type: String,
+    required: false,
+  },
   geoLocation: GeoSchema,
 });
 
-// Create a model
 const Location = mongoose.model("Location", LocationSchema);
 
 module.exports = Location;

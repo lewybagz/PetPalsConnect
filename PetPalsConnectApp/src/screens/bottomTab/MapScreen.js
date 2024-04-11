@@ -77,7 +77,7 @@ const MapScreen = ({ start, route, navigation }) => {
 
   const fetchMatchedPets = async () => {
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      const token = await getStoredToken();
       const response = await axios.get("/api/matched-pets", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -87,10 +87,15 @@ const MapScreen = ({ start, route, navigation }) => {
     }
   };
 
-  const fetchPlaydateLocations = async () => {
+  const fetchPlaydateLocations = async (latitude, longitude, range) => {
     try {
-      const token = await getStoredToken(); // Retrieve the token
-      const response = await axios.get("/api/playdate-locations", {
+      const token = await getStoredToken();
+      const response = await axios.get("/api/playdates/playdate-locations", {
+        params: {
+          userLat: latitude,
+          userLng: longitude,
+          range: range,
+        },
         headers: { Authorization: `Bearer ${token}` },
       });
       setPlaydateLocations(response.data);
@@ -100,7 +105,7 @@ const MapScreen = ({ start, route, navigation }) => {
   };
 
   const handleMarkerPress = (marker, type) => {
-    setSelectedMarker({ ...marker, type }); // 'type' can be 'pet' or 'playdate'
+    setSelectedMarker({ ...marker, type });
     bottomSheetRef.current.show();
   };
 
@@ -108,7 +113,6 @@ const MapScreen = ({ start, route, navigation }) => {
     setMapTheme(mapTheme === "standard" ? "night" : "standard");
   };
 
-  // Default region to use if location is null
   const defaultRegion = {
     latitude: 37.78825, // Example coordinates (e.g., a central location in your area)
     longitude: -122.4324,

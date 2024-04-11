@@ -3,6 +3,9 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const { ServerApiVersion } = require("mongoose");
 const authenticate = require("./middleware/authenticate");
+const cron = require("node-cron");
+// TODO: FINISH
+const { updateLocations } = require("./controllers/LocationController");
 
 const cors = require("cors");
 
@@ -79,6 +82,11 @@ app.use("/api/media", authenticate, require("./routes/media"));
 app.use((err, req, res) => {
   console.error(err.stack);
   res.status(500).send("Something broke!");
+});
+
+cron.schedule("0 0 1 * *", async () => {
+  console.log("Running a job at the start of the month at midnight");
+  await updateLocations();
 });
 
 // Start server

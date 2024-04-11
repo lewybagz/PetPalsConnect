@@ -55,7 +55,6 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     fetchLocationDetails();
   }, [placeId]);
 
-  // Assuming handleOpenDirections is a function you have defined
   {
     locationDetails && (
       <Button title="Get Directions" onPress={handleOpenDirections} />

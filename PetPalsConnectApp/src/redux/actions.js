@@ -1,7 +1,6 @@
 // actions.js
 import axios from "axios";
 import { getStoredToken } from "../../utils/tokenutil";
-// User Actions
 
 // TODO: USE IN FRONTEND
 export const startLoading = () => ({ type: "START_LOADING" });
@@ -80,12 +79,12 @@ export const fetchPlaydatesFail = (error) => ({
   payload: error,
 });
 
-export const fetchPlaydates = () => {
+export const fetchPlaydates = (userId) => {
   return async (dispatch) => {
     dispatch(fetchPlaydatesStart());
     try {
       const token = await getStoredToken();
-      const response = await axios.get("/api/playdates/${userId}", {
+      const response = await axios.get(`/api/playdates/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       dispatch(fetchPlaydatesSuccess(response.data));

@@ -13,12 +13,26 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to find nearby matches for your pet.",
+        "NSLocationAlwaysUsageDescription": "This app needs access to your location in the background to find nearby matches for your pet.",
+        "NSCameraUsageDescription": "This app uses your camera so you can take photos of you and your pet.",
+        "NSPhotoLibraryUsageDescription": "This app uses your Photos so you can upload images you and your pet and save images to your camera roll."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "permissions": {
+        "ACCESS_COARSE_LOCATION": "This app uses your location to find nearby matches for your pet.",
+        "ACCESS_FINE_LOCATION": "This app uses your location to find nearby matches for your pet.",
+        "ACCESS_BACKGROUND_LOCATION": "This app needs access to your location in the background to find nearby matches for your pet.",
+        "CAMERA": "This app uses your camera so you can take photos of you and your pet.",
+        "READ_EXTERNAL_STORAGE": "This app uses your Photos so you can upload images you and your pet.",
+        "WRITE_EXTERNAL_STORAGE": "This app uses your Photos so you can save images to your camera roll."
       }
     },
     "web": {
@@ -29,6 +43,10 @@
         "@stripe/stripe-react-native",
         {
           "merchantIdentifier": "your_merchant_identifier",
+          "publishableKey": "your_publishable_key",
+          "androidPayMode": "test",
+          "enableAndroidPay": true,
+          "googlePayMode": "test",
           "enableGooglePay": true
         }
       ]
