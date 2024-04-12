@@ -1,5 +1,4 @@
-const { getDefaultConfig } = require("metro-config");
-
+const { getDefaultConfig } = require("@react-native/metro-config");
 module.exports = (async () => {
   const {
     resolver: { sourceExts, assetExts },
@@ -8,12 +7,11 @@ module.exports = (async () => {
 
   return {
     transformer: {
-      babelTransformerPath: require.resolve("nativewind/dist/transformer"),
-      // Metro has its minifier integrated, no need for TerserPlugin here
+      babelTransformerPath: require.resolve("nativewind/babel"),
     },
     resolver: {
-      assetExts: assetExts.filter((ext) => ext !== "svg"), // Exclude 'svg' from the list of asset extensions...
-      sourceExts: [...sourceExts, "svg"], // ...and include it in the list of source extensions
+      assetExts: assetExts.filter((ext) => ext !== "svg"),
+      sourceExts: [...sourceExts, "svg"],
     },
     maxWorkers: maxWorkers || 6,
   };

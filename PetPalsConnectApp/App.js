@@ -7,11 +7,18 @@ import { GestureHandlerRootView, State } from "react-native-gesture-handler";
 import AuthStack from "./src/screens/navigation/AuthStack";
 import MainStackNavigator from "./src/screens/navigation/mainstacknavigator";
 import MoreStackNavigator from "./src/screens/navigation/mainstacknavigator";
+import ChatStackNavigator from "./src/screens/navigation/ChatStack";
+import PetsStackNavigator from "./src/screens/navigation/PetStack";
+import PlaydatestackNavigator from "./src/screens/navigation/PlaydateStack";
+import ProfileStackNavigator from "./src/screens/navigation/ProfileStack";
+import SettingsStackNavigator from "./src/screens/navigation/SettingsStack";
+import SubscriptionStackNavigator from "./src/screens/navigation/SubscriptionStack";
 import BottomTabNavigator from "./BottomTabNavigator";
 import { PanGestureHandler } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
-import { Animated } from "react-native";
+import { Animated, BackHandler, Alert } from "react-native";
 import { AppThemeProvider } from "./src/context/AppThemeContext";
+import { sendTokenToServer } from "./utils/tokenutil";
 
 const Stack = createStackNavigator();
 
@@ -19,6 +26,86 @@ function App() {
   const navigation = useNavigation();
   const translateX = new Animated.Value(0);
 
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      handleBackPress
+    );
+
+    requestUserPermission();
+
+    const unsubscribeOnMessage = messaging().onMessage(
+      async (remoteMessage) => {
+        Alert.alert(
+          "A new notification arrived!",
+          JSON.stringify(remoteMessage)
+        );
+      }
+    );
+
+    messaging()
+      .getInitialNotification()
+      .then((remoteMessage) => {
+        if (remoteMessage) {
+          const { type, id } = remoteMessage.data;
+          navigation.navigate("Notification", { type, id });
+        }
+      });
+
+    const onNotificationOpenedAppUnsub = messaging().onNotificationOpenedApp(
+      (remoteMessage) => {
+        const { type, userId, playdateId, notificationId, chatId } =
+          remoteMessage.data;
+        switch (type) {
+          case "friendRequest":
+            // TODO: CHECK FOR EXISTENCE
+            navigation.navigate("FriendRequests", { userId });
+            break;
+          case "message":
+            navigation.navigate("Chat", { chatId });
+            break;
+          case "playdate":
+            navigation.navigate("PlaydateDetails", { playdateId });
+            break;
+          case "reviewReminder":
+            navigation.navigate("PlaydateReview", { playdateId });
+            break;
+          case "general":
+            navigation.navigate("Notifications", { notificationId });
+            break;
+          default:
+            navigation.navigate("Home");
+        }
+      }
+    );
+
+    return () => {
+      backHandler.remove();
+      unsubscribeOnMessage();
+      onNotificationOpenedAppUnsub();
+    };
+  }, [navigation]);
+
+  const handleBackPress = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return true;
+    } else {
+      Alert.alert(
+        "Exit App",
+        "Do you want to exit the app?",
+        [
+          { text: "Cancel", onPress: () => null, style: "cancel" },
+          {
+            text: "Yes",
+            onPress: () => BackHandler.exitApp(),
+          },
+        ],
+        { cancelable: false }
+      );
+      return true;
+    }
+  };
   const onGestureEvent = Animated.event(
     [
       {
@@ -33,8 +120,9 @@ function App() {
   const onHandlerStateChange = (event) => {
     if (event.nativeEvent.oldState === State.ACTIVE) {
       if (event.nativeEvent.translationX < -100) {
-        // Threshold for swipe length
         navigation.navigate("Map");
+      } else if (event.nativeEvent.translationX > 100) {
+        navigation.goBack();
       }
 
       Animated.timing(translateX, {
@@ -46,59 +134,41 @@ function App() {
   };
 
   const requestUserPermission = async () => {
-    const authStatus = await messaging().requestPermission();
-
-    const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-    if (enabled) {
-      console.log("Authorization status:", authStatus);
-
-      // Get the device token
-      const token = await messaging().getToken();
-      console.log("Device token:", token);
-
-      // You can now send the device token to your server to register for push notifications
-      // or use it to subscribe to topics
-    } else {
-      console.log("Authorization status:", authStatus);
-    }
-  };
-  useEffect(() => {
-    requestUserPermission();
-
-    // Handle incoming messages
-    const unsubscribe = messaging().onMessage(async (remoteMessage) => {
-      // Display your notification
-      alert("A new notification arrived!", JSON.stringify(remoteMessage));
-    });
-
-    // Check whether an initial notification is available
-    messaging()
-      .getInitialNotification()
-      .then((remoteMessage) => {
-        if (remoteMessage) {
-          console.log(
-            "Notification caused app to open from quit state:",
-            remoteMessage
-          );
-          navigation.navigate("Notification", { remoteMessage });
-          // You might want to set some state here to use in your navigation
-        }
+    try {
+      const authStatus = await messaging().requestPermission({
+        alert: true,
+        announcement: false, // iOS only
+        badge: true,
+        carPlay: true, // iOS only
+        provisional: false, // iOS only, allows silent notifications
+        sound: true,
       });
 
-    // Handle notification tap when the app is in background
-    messaging().onNotificationOpenedApp((remoteMessage) => {
-      console.log(
-        "Notification caused app to open from background state:",
-        remoteMessage
-      );
-      // Navigate to the appropriate screen
-    });
+      const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-    return unsubscribe;
-  }, []);
+      if (enabled) {
+        console.log("Notification authorization status:", authStatus);
+
+        const token = await messaging().getToken();
+        if (token) {
+          sendTokenToServer(token);
+        }
+      } else {
+        console.warn("Notification permission not granted:", authStatus);
+        Alert.alert(
+          "Error requesting notification permission",
+          "Please try again later"
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Error requesting notification permission",
+        "Please try again later"
+      );
+    }
+  };
 
   return (
     <AppThemeProvider>
@@ -113,6 +183,12 @@ function App() {
                 <AuthStack />
                 <MainStackNavigator />
                 <MoreStackNavigator />
+                <ProfileStackNavigator />
+                <SettingsStackNavigator />
+                <SubscriptionStackNavigator />
+                <ChatStackNavigator />
+                <PetsStackNavigator />
+                <PlaydatestackNavigator />
                 <Stack.Screen
                   name="BottomTabs"
                   component={BottomTabNavigator}

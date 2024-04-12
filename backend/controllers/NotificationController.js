@@ -9,6 +9,9 @@ const User = require("../models/User");
 const serviceAccount = require("../config/serviceAccountKey.json");
 const Playdate = require("../models/Playdate");
 
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 export const findTokenByUserId = async (userId) => {
   try {
     const user = await User.findOne({ _id: userId });
@@ -131,10 +134,6 @@ const NotificationController = {
   },
 };
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
 export const sendPushNotification = async (userId, notificationData) => {
   try {
     const token = await findTokenByUserId(userId);
@@ -192,6 +191,27 @@ export const pushPlaydateReviewReminderNotification = async (
   } catch (error) {
     console.error("Error scheduling playdate review reminder:", error);
     throw error;
+  }
+};
+
+exports.saveDeviceToken = async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    const userId = req.user._id;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { fcmToken },
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "Device token saved successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error saving device token:", error);
+    res.status(500).json({ message: "Failed to save device token", error });
   }
 };
 module.exports = NotificationController;

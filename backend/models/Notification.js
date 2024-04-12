@@ -9,7 +9,7 @@ const NotificationSchema = new Schema({
   },
   readStatus: {
     type: Boolean,
-    default: false, // false for 'no', true for 'yes'
+    default: false,
   },
   recipient: {
     type: Schema.Types.ObjectId,

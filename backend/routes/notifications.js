@@ -20,6 +20,9 @@ router.post(
   NotificationController.sendFriendRequestNotification
 );
 
+// Endpoint to save device token
+router.post("/device-token", NotificationController.saveDeviceToken);
+
 // POST to send a push notification for a playdate
 router.post(
   "/playdate/send-notification",

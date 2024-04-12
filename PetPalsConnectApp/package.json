@@ -41,9 +41,10 @@
     "expo-status-bar": "~1.11.1",
     "firebase": "^10.8.1",
     "lottie-react-native": "^6.7.0",
+    "metro-config": "^0.80.8",
     "nativewind": "^2.0.11",
     "react": "18.2.0",
-    "react-native": "0.73.4",
+    "react-native": "0.73.6",
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-elements": "^3.4.3",
     "react-native-fbsdk-next": "^12.1.4",
@@ -65,6 +66,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@react-native/metro-config": "^0.75.0-main",
     "babel-plugin-lodash": "^3.3.4",
     "babel-plugin-transform-remove-console": "^6.9.4",
     "tailwindcss": "^3.3.2"
