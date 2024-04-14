@@ -4,59 +4,19 @@ import { View, Text, TextInput, Alert, TouchableOpacity } from "react-native";
 import axios from "axios";
 import { useTailwind } from "nativewind";
 import { getStoredToken } from "../../../utils/tokenutil";
-import { useSelector, useDispatch } from "react-redux";
-import {
-  sendPushNotification,
-  createNotificationInDB,
-} from "../../../services/NotificationService";
-import { addNotification } from "../../redux/actions";
 
 const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
   const [message, setMessage] = useState("");
   const { playdateId } = route.params;
-  const dispatch = useDispatch();
   const tailwind = useTailwind();
-  const userId = useSelector((state) => state.userReducer.userId);
 
   const handleCancellation = async () => {
     try {
       const token = await getStoredToken();
-      const playdateResponse = await axios.get(`/api/playdates/${playdateId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const participants = playdateResponse.data.participants;
-      const otherParticipants = participants.filter(
-        (participantId) => participantId !== userId
-      );
-
-      otherParticipants.forEach(async (participantId) => {
-        const notificationDetails = {
-          content: message,
-          recipientId: participantId,
-          type: "PlaydateCancel",
-          creatorId: userId,
-        };
-
-        await sendPushNotification({
-          recipientUserId: participantId,
-          title: "Playdate Cancelled",
-          message: "A scheduled playdate has been cancelled.",
-          data: { playdateId },
-        });
-
-        await createNotificationInDB(notificationDetails);
-
-        // Dispatch the new notification to Redux
-        dispatch(addNotification(notificationDetails));
-      });
-
       await axios.post(
         `/api/playdates/cancel/${playdateId}`,
         { message },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       Alert.alert(
         "Playdate Cancelled",
@@ -77,8 +37,10 @@ const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
         Cancel Playdate
       </Text>
       <Text style={tailwind("text-lg text-gray-600 mb-4")}>
-        Would you like to send a message with your cancellation?
+        Send a message with your cancellation?{" "}
+        <Text style={tailwind("text-sm text-gray-400")}>(optional)</Text>
       </Text>
+
       <TextInput
         style={tailwind("border border-gray-300 p-4 rounded-md bg-white mb-6")}
         placeholder="Enter your message here"

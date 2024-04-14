@@ -6,7 +6,7 @@ const User = require("../models/User"); // Adjust the path as necessary
 const PaymentController = {
   async fetchPaymentMethods(req, res) {
     try {
-      const userId = req.user._id;
+      const userId = req.userId;
       const user = await User.findById(userId);
 
       if (!user || !user.stripeCustomerId) {
@@ -42,7 +42,7 @@ const PaymentController = {
   async addPaymentMethod(req, res) {
     try {
       const { paymentMethodId } = req.body; // The ID received from Stripe Elements
-      const userId = req.user._id; // Assuming you get this from your auth middleware
+      const userId = req.userId;
 
       // Retrieve or create a Stripe customer
       const user = await User.findById(userId);

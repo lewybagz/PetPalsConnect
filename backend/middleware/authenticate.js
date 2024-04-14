@@ -11,7 +11,11 @@ const authenticate = async (req, res, next) => {
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
 
+    // Attach the entire decodedToken which includes user details
     req.user = decodedToken;
+
+    req.userId = decodedToken.uid; // Assuming uid is the user ID in Firebase tokens
+
     next();
   } catch (error) {
     console.error(error);

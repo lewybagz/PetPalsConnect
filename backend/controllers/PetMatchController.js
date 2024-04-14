@@ -808,7 +808,7 @@ const PetMatchController = {
 
   async getPetMatchesByUser(req, res) {
     try {
-      const userId = req.params.userId;
+      const userId = req.userId;
       const petMatches = await PetMatch.find({ RelevantToUser: userId })
         .populate("pet1")
         .populate("pet2")

@@ -3,14 +3,8 @@ import { View, Text, TextInput, Button, Alert, StyleSheet } from "react-native";
 import axios from "axios";
 import DateTimePickerComponent from "../components/DateTimePickerComponent";
 import { clearError } from "../../redux/actions";
-import {
-  sendPushNotification,
-  createNotificationInDB,
-} from "../../../services/NotificationService";
-import { getPetOwner } from "../../../services/PetService";
 import { useSelector, useDispatch } from "react-redux";
 import { getStoredToken } from "../../../utils/tokenutil";
-import { addNotification } from "../../redux/actions";
 
 const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
@@ -28,45 +22,50 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
     }
   }, [error, dispatch]);
 
-  const handleSubmit = async (selectedPet, pet, dispatch) => {
+  const handleSubmit = async (selectedPet) => {
     // Prepare playdate data
     const playdateData = {
       Date: date,
       Location: locationId,
       Notes: notes,
-      Participants: [userId],
-      PetsInvolved: [petId],
-      Creator: userId,
+      Participants: [userId], // Ensure this is the current user's ID
+      PetsInvolved: [petId], // Ensure this is the ID of the pet involved in the playdate
+      Creator: userId, // ID of the user creating the playdate
     };
 
     try {
       const token = await getStoredToken();
+      // Send the playdate data to the backend
       const response = await axios.post("/api/playdates", playdateData, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (response.data) {
-        const ownerId = await getPetOwner(pet._id);
-
-        sendPushNotification({
-          recipientUserId: ownerId,
-          title: "Playdate Request",
-          message: `${selectedPet.name} has requested a playdate with ${pet.name}`,
-          data: { playdateId: response.data._id },
-        });
-
-        const notificationData = {
-          content: "A playdate has been requested",
-          recipientId: ownerId,
-          type: "Playdate Request",
-          creatorId: userId,
-        };
-
-        createNotificationInDB(notificationData);
-
-        // Dispatch the notification to Redux
-        dispatch(addNotification(notificationData));
+        Alert.alert(
+          "Playdate Created",
+          `Your playdate with ${selectedPet.name} created successfully.`,
+          [
+            {
+              text: "OK",
+              onPress: () =>
+                navigation.navigate("PlaydateCreated", {
+                  playdate: response.data,
+                }),
+            },
+          ]
+        );
+      } else {
+        // Handle case where no data is returned
+        Alert.alert(
+          "Playdate Creation Failed",
+          "No playdate data returned from the server. Please try again.",
+          [
+            {
+              text: "OK",
+            },
+          ]
+        );
       }
-      navigation.navigate("PlaydateCreated", { playdate: response.data });
     } catch (error) {
       console.error("Error creating playdate:", error);
       Alert.alert(
@@ -81,7 +80,7 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Schedule a Playdate</Text>
+      <Text style={styles.title}>Lets Get Down To Details</Text>
       <DateTimePickerComponent date={date} onDateChange={setDate} mode="date" />
       <DateTimePickerComponent date={date} onDateChange={setDate} mode="time" />
       <TextInput

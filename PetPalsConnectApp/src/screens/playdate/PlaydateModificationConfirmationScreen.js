@@ -1,57 +1,36 @@
 import React from "react";
 import axios from "axios";
 import { getStoredToken } from "../../../utils/tokenutil";
-import { useSelector, useDispatch } from "react-redux";
-import { addNotification } from "../../redux/actions";
-import {
-  sendPushNotification,
-  createNotificationInDB,
-} from "../../../services/NotificationService";
+import { useSelector } from "react-redux";
 
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 
 const PlaydateModificationConfirmationScreen = ({ route, navigation }) => {
-  const dispatch = useDispatch();
   const userId = useSelector((state) => state.userReducer.userId);
   const { playdateId, date, time, location } = route.params;
 
   const confirmModifications = async () => {
     try {
       const token = await getStoredToken();
-
-      const playdateResponse = await axios.get(`/api/playdates/${playdateId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const participants = playdateResponse.data.participants;
-
-      const otherParticipants = participants.filter(
-        (participantId) => participantId !== userId
+      await axios.put(
+        `/api/playdates/${playdateId}/update`,
+        {
+          date,
+          time,
+          location,
+          userId,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
-
-      otherParticipants.forEach(async (participantId) => {
-        const notificationDetails = {
-          content: "Playdate details have been updated.",
-          recipientId: participantId,
-          type: "PlaydateUpdate",
-          creatorId: userId,
-        };
-
-        await sendPushNotification({
-          recipientUserId: participantId,
-          title: "Playdate Updated",
-          message: `Playdate on ${date} has been updated. Check the new details!`,
-          data: { playdateId },
-        });
-
-        await createNotificationInDB(notificationDetails);
-
-        // Dispatch the new notification to Redux
-        dispatch(addNotification(notificationDetails));
-      });
-
-      Alert.alert("Success", "Playdate updated successfully.");
+      Alert.alert(
+        "Success",
+        "Playdate updated successfully. Participants will be notified."
+      );
       navigation.popToTop();
     } catch (error) {
+      console.error("Error confirming modifications:", error);
       Alert.alert("Error", "Failed to confirm modifications.");
     }
   };

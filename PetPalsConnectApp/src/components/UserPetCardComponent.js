@@ -8,16 +8,15 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Make sure to install this package
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import axios from "axios";
-import { sendPushNotification } from "../../services/NotificationService";
 import { useSelector } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
 import { setError } from "../redux/actions";
 
 const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const currentUser = useSelector((state) => state.userReducer.currentUser);
+  const currentUser = useSelector((state) => state.userReducer.user);
   const getToken = async () => {
     try {
       const token = await getStoredToken();
@@ -84,28 +83,18 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
       return;
     }
     try {
-      getToken();
       const response = await axios.post(
         "/api/friends",
         {
-          senderId: currentUser,
+          senderId: currentUser._id,
           recipientId: userId,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      if (response.status === 201) {
-        // Friend request sent successfully, now send notification
-        await sendPushNotification({
-          recipientUserId: userId,
-          title: "New Friend Request",
-          message: "You have a new friend request!",
-          data: {
-            /* additional data if needed */
-          },
-        });
 
+      if (response.status === 201) {
         Alert.alert("Friend Request Sent", "A friend request has been sent.");
         setModalVisible(false);
       } else {
@@ -163,7 +152,6 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
         {reviews.map((review) => (
           <View key={review._id}>
             <Text>{review.comment}</Text>
-            {/* Link to the Playdate Location */}
             <TouchableOpacity
               onPress={() =>
                 navigateToLocation(review.RelatedPlaydate.location)

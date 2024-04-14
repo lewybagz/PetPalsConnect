@@ -70,7 +70,7 @@ const PetController = {
 
   async getUserFavorites(req, res) {
     try {
-      const userId = req.params.userId;
+      const userId = req.userId;
       const userFavorites = await Favorite.find({ user: userId }) // or relevant logic
         .populate("pet");
       res.json(userFavorites);

@@ -12,14 +12,14 @@ import axios from "axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const PetSelectionScreen = ({ navigation, route }) => {
-  const [pets, setPets] = useState([]); // All available pets for selection
+  const [pets, setPets] = useState([]);
   const [selectedPets, setSelectedPets] = useState([]);
   const { userPetId } = route.params;
 
   useEffect(() => {
     const fetchPetFriends = async () => {
       try {
-        const token = await getStoredToken(); // Retrieve the token
+        const token = await getStoredToken();
         const response = await axios.get(`/api/friends/${userPetId}/pets`, {
           headers: { Authorization: `Bearer ${token}` },
         });

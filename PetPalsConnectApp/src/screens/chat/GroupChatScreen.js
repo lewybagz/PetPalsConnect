@@ -20,10 +20,13 @@ import { FieldValue } from "firebase/firestore";
 import Icon from "react-native-vector-icons/FontAwesome";
 import Clipboard from "@react-native-community/clipboard";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useSocketNotification } from "../../hooks/useSocketNotification";
+import axios from "axios";
+import { useSelector } from "react-redux";
 
 const GroupChatScreen = ({ route, navigation }) => {
   const [pets, setPets] = useState([]);
-  const [searchType, setSearchType] = useState("messages"); // 'messages' or 'pets'
+  const [searchType, setSearchType] = useState("messages");
   const [isModalVisible, setModalVisible] = useState(false);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -34,7 +37,14 @@ const GroupChatScreen = ({ route, navigation }) => {
   const messageInputRef = useRef(null);
   const [groupInfo, setGroupInfo] = useState(route.params.group);
   const flatListRef = useRef(null);
+  const userId = useSelector((state) => state.user.id);
+  const currentUser = auth.currentUser;
   const tailwind = useTailwind();
+
+  // Setting up the socket to handle real-time group chat messages
+  useSocketNotification((newMessage) => {
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+  });
 
   useEffect(() => {
     if (flatListRef.current) {
@@ -46,7 +56,6 @@ const GroupChatScreen = ({ route, navigation }) => {
     if (groupInfo.id) {
       fetchGroupInfo();
       fetchPetsData(groupInfo.id);
-      // Listen for new messages in the group chat
       const unsubscribe = firestore
         .collection("groupChats")
         .doc(groupInfo.id)
@@ -72,7 +81,7 @@ const GroupChatScreen = ({ route, navigation }) => {
 
   const fetchPetsData = async (groupId) => {
     try {
-      const token = await getStoredToken(); // Retrieve the token
+      const token = await getStoredToken();
       const response = await fetch(`/api/groupchats/${groupId}/pets`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -80,7 +89,7 @@ const GroupChatScreen = ({ route, navigation }) => {
         throw new Error("Network response was not ok");
       }
       const petsData = await response.json();
-      setPets(petsData); // Update the state with the fetched pets data
+      setPets(petsData);
     } catch (error) {
       console.error("Error fetching pets data:", error);
       Alert.alert("Error", "Failed to load pets data");
@@ -102,7 +111,6 @@ const GroupChatScreen = ({ route, navigation }) => {
 
   const copyMessageToClipboard = async (messageText) => {
     Clipboard.setString(messageText);
-    // Optionally, you can display an alert or toast to inform the user that the text has been copied.
     Alert.alert("Copied to Clipboard", messageText);
   };
 
@@ -116,22 +124,20 @@ const GroupChatScreen = ({ route, navigation }) => {
     setSearchQuery("");
   };
   const handleReply = (message) => {
-    const replyString = `@${message.sender}: `; // Assuming message.sender is the name of the person to reply to
+    const replyString = `@${message.sender}: `;
     setReplyTo(replyString);
-    setNewMessage(replyString); // Pre-fill the reply string in the message input
-    messageInputRef.current.focus(); // Focus on the input field
+    setNewMessage(replyString);
+    messageInputRef.current.focus();
   };
   const handleDelete = async (message) => {
     try {
-      // Assuming 'message.id' is the document ID of the message in Firestore
       await firestore
         .collection("groupChats")
-        .doc(groupInfo.id) // Use the correct group chat ID
+        .doc(groupInfo.id)
         .collection("messages")
         .doc(message.id)
         .delete();
 
-      // Update local state to remove the message
       setMessages((prevMessages) =>
         prevMessages.filter((msg) => msg.id !== message.id)
       );
@@ -143,24 +149,39 @@ const GroupChatScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleReact = (message, reaction) => {
+  const handleReact = async (message, reaction) => {
     try {
-      // Update the message in Firestore with the reaction
-      // Assuming we're adding a 'reactions' field to the message document
-      // 'reaction' might be a string or object based on how you want to implement it
       const reactionUpdate = {
         ...message.reactions,
         [auth.currentUser.uid]: reaction,
       };
 
-      firestore
+      // Update the reactions in the Firestore
+      await firestore
         .collection("groupChats")
-        .doc(groupInfo.id) // Use the correct group chat ID
+        .doc(groupInfo.id)
         .collection("messages")
         .doc(message.id)
         .update({ reactions: reactionUpdate });
 
-      // Update local state to reflect the reaction
+      // Call the backend to handle sending notifications
+      const response = await axios.post(
+        "/api/groupchats/react",
+        {
+          groupId: groupInfo.id,
+          messageId: message.id,
+          reactorId: auth.currentUser.uid,
+          reaction: reaction,
+        },
+        {
+          headers: { Authorization: `Bearer ${await getStoredToken()}` },
+        }
+      );
+
+      if (response.status === 200) {
+        console.log("Reaction notification sent successfully");
+      }
+
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
           msg.id === message.id ? { ...msg, reactions: reactionUpdate } : msg
@@ -172,7 +193,22 @@ const GroupChatScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleSendMessage = async () => {
+  const saveMessageToDatabase = async (groupId, messageData) => {
+    try {
+      const messageRef = await firestore
+        .collection("groupChats")
+        .doc(groupId)
+        .collection("messages")
+        .add(messageData);
+      console.log("Message saved to database:", messageRef.id);
+      return messageRef;
+    } catch (error) {
+      console.error("Error saving message to database:", error);
+      throw error;
+    }
+  };
+
+  const handleSendMessage = async (groupId) => {
     if (!newMessage.trim()) return;
     setIsLoading(true);
     Keyboard.dismiss();
@@ -180,21 +216,32 @@ const GroupChatScreen = ({ route, navigation }) => {
     try {
       const messageData = {
         text: newMessage,
-        senderId: auth.currentUser.uid,
+        senderId: userId,
         groupId: groupInfo.id,
         timestamp: FieldValue.serverTimestamp(),
       };
 
-      await firestore
-        .collection("groupChats")
-        .doc(groupInfo.id)
-        .collection("messages")
-        .add(messageData);
+      const savedMessage = await saveMessageToDatabase(groupId, messageData);
+
+      const token = await getStoredToken();
+      await axios.post(
+        "/api/groupChats/notifyGroupMembers",
+        {
+          groupId: groupInfo.id,
+          senderId: userId,
+          senderName: currentUser.displayName,
+          messageId: savedMessage.id,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       setNewMessage("");
+      Alert.alert("Success", "Message sent and notifications dispatched.");
     } catch (error) {
-      Alert.alert("Error", "Failed to send message");
-      console.error("Error sending message:", error);
+      console.error("Error sending message or notifying members:", error);
+      Alert.alert("Error", "Failed to send message or notify members");
     } finally {
       setIsLoading(false);
     }
@@ -342,7 +389,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
-    justifyContent: "space-between", // Ensure items are spaced out
+    justifyContent: "space-between",
   },
   groupImage: {
     width: 40,

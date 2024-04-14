@@ -20,6 +20,11 @@ const NotificationSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  // TODO: SEND WITH ALL NOTIFICATIONS
+  petName: {
+    type: String,
+    required: true,
+  },
   type: {
     type: String,
     required: true,

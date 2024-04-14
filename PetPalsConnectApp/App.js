@@ -32,50 +32,33 @@ function App() {
       handleBackPress
     );
 
+    // Requesting user permissions for notifications
     requestUserPermission();
 
+    // Listener for messages received while the app is in the foreground
     const unsubscribeOnMessage = messaging().onMessage(
       async (remoteMessage) => {
         Alert.alert(
           "A new notification arrived!",
           JSON.stringify(remoteMessage)
         );
+        handleNotification(remoteMessage);
       }
     );
 
+    // Handling the initial notification when the app is opened from a killed state
     messaging()
       .getInitialNotification()
       .then((remoteMessage) => {
         if (remoteMessage) {
-          const { type, id } = remoteMessage.data;
-          navigation.navigate("Notification", { type, id });
+          handleNotification(remoteMessage);
         }
       });
 
+    // Listener for notifications when the app is in background but not closed
     const onNotificationOpenedAppUnsub = messaging().onNotificationOpenedApp(
       (remoteMessage) => {
-        const { type, userId, playdateId, notificationId, chatId } =
-          remoteMessage.data;
-        switch (type) {
-          case "friendRequest":
-            // TODO: CHECK FOR EXISTENCE
-            navigation.navigate("FriendRequests", { userId });
-            break;
-          case "message":
-            navigation.navigate("Chat", { chatId });
-            break;
-          case "playdate":
-            navigation.navigate("PlaydateDetails", { playdateId });
-            break;
-          case "reviewReminder":
-            navigation.navigate("PlaydateReview", { playdateId });
-            break;
-          case "general":
-            navigation.navigate("Notifications", { notificationId });
-            break;
-          default:
-            navigation.navigate("Home");
-        }
+        handleNotification(remoteMessage);
       }
     );
 
@@ -85,6 +68,35 @@ function App() {
       onNotificationOpenedAppUnsub();
     };
   }, [navigation]);
+
+  // Handles navigation based on the notification's type and data
+  function handleNotification(remoteMessage) {
+    const { type, ...data } = remoteMessage.data;
+    switch (type) {
+      case "friendRequest":
+        navigation.navigate("PlaydateRequests", {
+          requesterId: data.requesterId,
+          petName: data.petName,
+        });
+        break;
+      case "message":
+        navigation.navigate("Chat", { chatId: data.chatId });
+        break;
+      case "playdate":
+        navigation.navigate("PlaydateDetails", { playdateId: data.playdateId });
+        break;
+      case "reviewReminder":
+        navigation.navigate("PlaydateReview", { playdateId: data.playdateId });
+        break;
+      case "general":
+        navigation.navigate("Notifications", {
+          notificationId: data.notificationId,
+        });
+        break;
+      default:
+        navigation.navigate("Home");
+    }
+  }
 
   const handleBackPress = () => {
     if (navigation.canGoBack()) {

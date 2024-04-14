@@ -63,7 +63,7 @@ const ChatTabsScreen = () => {
           tabBarIcon: ({ color, size }) => (
             <Icon name="chat" color={color} size={size} />
           ),
-          tabBarBadge: 3, // Add badge for notifications
+          tabBarBadge: 3,
         }}
       />
       <Tab.Screen
@@ -73,7 +73,7 @@ const ChatTabsScreen = () => {
           tabBarIcon: ({ color, size }) => (
             <Icon name="group" color={color} size={size} /> // Assuming 'group' is the icon name
           ),
-          tabBarBadge: 3, // Add badge for notifications
+          tabBarBadge: 3,
         }}
       />
     </Tab.Navigator>

@@ -127,7 +127,7 @@ const SubscriptionController = {
 
   async cancelSubscription(req, res) {
     try {
-      const userId = req.user.id; // Make sure this is set correctly
+      const userId = req.userId;
       const subscription = await Subscription.findOne({ user: userId });
 
       if (!subscription) {

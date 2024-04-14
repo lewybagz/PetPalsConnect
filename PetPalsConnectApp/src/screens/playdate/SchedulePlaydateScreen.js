@@ -11,18 +11,12 @@ import {
 } from "react-native";
 import axios from "axios"; // Assuming axios is used for API calls
 import { useSelector, useDispatch } from "react-redux";
-import {
-  sendPushNotification,
-  createNotificationInDB,
-} from "../services/NotificationService";
-import { getPetOwner } from "../../../services/PetService";
 import { Image } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { fetchUserPreferences } from "../../../services/UserService";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
-import { addNotification } from "../../redux/actions";
 
 const SchedulePlaydateScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
@@ -111,32 +105,30 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
       });
 
       if (response.data) {
-        const ownerId = await getPetOwner(pet._id);
-
-        if (ownerId) {
-          sendPushNotification({
-            recipientUserId: ownerId,
-            title: "Playdate Request",
-            message: `${userName} has requested a playdate with ${pet.name}`,
-            data: { playdateId: response.data._id },
-          });
-
-          const notificationData = {
-            content: "A playdate has been requested",
-            recipientId: ownerId,
-            type: "Playdate Request",
-            creatorId: userId,
-          };
-
-          createNotificationInDB(notificationData);
-
-          // Dispatch the notification to Redux
-          dispatch(addNotification(notificationData));
-        } else {
-          console.log("Owner ID not found for pet");
-        }
+        Alert.alert(
+          "Playdate Created",
+          `Your playdate with ${pet.name} created successfully.`,
+          [
+            {
+              text: "OK",
+              onPress: () =>
+                navigation.navigate("PlaydateCreated", {
+                  playdate: response.data,
+                }),
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          "Playdate Creation Failed",
+          "No playdate data returned from the server. Please try again.",
+          [
+            {
+              text: "OK",
+            },
+          ]
+        );
       }
-      navigation.navigate("PlaydateCreated", { playdate: response.data });
     } catch (error) {
       console.error("Error creating playdate:", error);
       Alert.alert(
@@ -189,17 +181,11 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
 
       <TextInput
         style={styles.input}
-        placeholder="Enter location"
-        value={location}
-        onChangeText={setLocations}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Add notes (Optional)"
-        value={notes}
-        onChangeText={setNotes}
+        placeholder="Notes for the playdate"
         multiline
+        numberOfLines={4}
+        onChangeText={setNotes}
+        value={notes}
       />
 
       <Button title="Schedule Playdate" onPress={handleSubmitWrapper} />

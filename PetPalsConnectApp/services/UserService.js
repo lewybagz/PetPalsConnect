@@ -5,7 +5,7 @@ import { getStoredToken } from "../utils/tokenutil";
 
 const findUserById = async (userId) => {
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).populate("pets").exec();
     if (!user) {
       throw new Error("User not found");
     }

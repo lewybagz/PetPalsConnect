@@ -5,7 +5,7 @@ const Schema = mongoose.Schema;
 const FriendSchema = new Schema({
   status: {
     type: Boolean,
-    default: false, // false for 'no', true for 'yes'
+    default: false,
   },
   timestamp: {
     type: Date,

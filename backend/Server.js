@@ -1,19 +1,22 @@
 const express = require("express");
+const http = require("http");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const { ServerApiVersion } = require("mongoose");
-const authenticate = require("./middleware/authenticate");
-const cron = require("node-cron");
-// TODO: FINISH
-const { updateLocations } = require("./controllers/LocationController");
-
 const cors = require("cors");
+const socketIo = require("socket.io");
+const cron = require("node-cron");
+const authenticate = require("./middleware/authenticate");
+const { updateLocations } = require("./controllers/LocationController");
 
 require("dotenv").config();
 
-const uri = process.env.MONGODB_URI;
-
+const app = express();
+const server = http.createServer(app); // Create HTTP server by wrapping the Express app
+const io = socketIo(server);
 // Connect to MongoDB with Mongoose
+// Connect to MongoDB with Mongoose
+const uri = process.env.MONGODB_URI;
 mongoose
   .connect(uri, {
     useNewUrlParser: true,
@@ -27,14 +30,16 @@ mongoose
     console.error("Connection error", err.message);
   });
 
-// Initialize express app
-const app = express();
+io.on("connection", (socket) => {
+  console.log("A user connected");
 
-// Use bodyParser to parse application/json
-app.use(bodyParser.json());
-
-// Enable CORS
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
+});
+// Middleware
 app.use(cors());
+app.use(bodyParser.json());
 
 // Protected Routes
 app.use("/api/articles", authenticate, require("./routes/articles"));

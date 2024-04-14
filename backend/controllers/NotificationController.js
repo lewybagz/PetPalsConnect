@@ -45,16 +45,19 @@ const NotificationController = {
   },
 
   async getUserNotifications(req, res) {
+    const { userId } = req.params;
     try {
-      const userId = req.params.userId;
       const userNotifications = await Notification.find({ Recipient: userId })
-        .populate("recipient")
-        .populate("creator")
+        .populate("recipient", "name") // Assuming you only need the name
+        .populate("creator", "name") // Same here
         .sort({ Timestamp: -1 });
 
       res.json(userNotifications);
     } catch (err) {
-      res.status(500).json({ message: err.message });
+      console.error("Failed to fetch notifications for user:", userId, err);
+      res
+        .status(500)
+        .json({ message: "Failed to fetch notifications", error: err });
     }
   },
 
@@ -72,6 +75,38 @@ const NotificationController = {
     }
   },
 
+  async saveDeviceToken(req, res) {
+    try {
+      const { fcmToken } = req.body;
+      const userId = req.user._id;
+
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { fcmToken },
+        { new: true }
+      );
+
+      res.status(200).json({
+        message: "Device token saved successfully",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("Error saving device token:", error);
+      res.status(500).json({ message: "Failed to save device token", error });
+    }
+  },
+
+  async handleSendNotification(req, res) {
+    const { userId, notificationData } = req.body;
+    try {
+      await sendPushNotification(userId, notificationData);
+      res.status(200).json({ message: "Notification sent successfully" });
+    } catch (error) {
+      console.error("Error in sending notification:", error);
+      res.status(500).json({ error: error.message });
+    }
+  },
+
   async sendFriendRequestNotification(req, res) {
     try {
       const { userId, requesterId } = req.body;
@@ -81,12 +116,21 @@ const NotificationController = {
 
       const requester = await findUserById(requesterId);
       const requesterName = requester.name;
+      const firstPetName = requester.pets[0]?.name || "No pet name";
 
       const message = {
         token: token,
         notification: {
           title: "New Friend Request",
-          body: `${requesterName} has sent you a friend request!`,
+          body: `${requesterName} has sent you a friend request! Pet: ${firstPetName}`,
+        },
+        // Optionally, add data field if you want to send additional data along with the notification
+        data: {
+          type: "friendRequest",
+          requesterId: requester._id.toString(),
+          petName: firstPetName,
+
+          // Add other data as needed
         },
       };
 

@@ -20,6 +20,8 @@ router.post(
   NotificationController.sendFriendRequestNotification
 );
 
+router.post("/sendNotification", NotificationController.handleSendNotification);
+
 // Endpoint to save device token
 router.post("/device-token", NotificationController.saveDeviceToken);
 

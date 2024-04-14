@@ -35,6 +35,11 @@ const PlaydateSchema = new Schema({
     type: String,
     enum: ["pending", "accepted", "declined", "completed", "cancelled"],
     default: "pending",
+    required: true,
+  },
+  cancellationReason: {
+    type: String,
+    required: false,
   },
   reviews: [{ type: Schema.Types.ObjectId, ref: "Review" }],
   creator: {

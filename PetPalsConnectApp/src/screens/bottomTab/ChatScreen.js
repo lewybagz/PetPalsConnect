@@ -22,7 +22,9 @@ import Clipboard from "@react-native-community/clipboard";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { clearError } from "../../redux/actions";
 import { startLoading, endLoading, setError } from "../../redux/actions";
+import { useSocketNotification } from "../../hooks/useSocketNotification";
 
+// TODO: HANDLE NOTIFICATION
 const ChatScreen = ({ route, navigation }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -36,6 +38,11 @@ const ChatScreen = ({ route, navigation }) => {
   const userId = useSelector((state) => state.userReducer.userId);
   const isLoading = useSelector((state) => state.chatReducer.isLoading);
   const error = useSelector((state) => state.chatReducer.error);
+
+  // Setting up socket to handle real-time chat messages
+  useSocketNotification((newMessage) => {
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+  });
 
   if (isLoading) {
     return <LoadingScreen />;

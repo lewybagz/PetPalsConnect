@@ -40,7 +40,7 @@ const MessageItemComponent = ({
         setShowReactionsSelector(true);
         break;
       case "copy":
-        onCopy(); // Call the prop function here
+        onCopy();
         break;
       case "delete":
         onDelete(message);

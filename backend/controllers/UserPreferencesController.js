@@ -15,7 +15,7 @@ const UserPreferencesController = {
   async getUserPreferences(req, res) {
     try {
       const userPreferences = await UserPreferences.findOne({
-        user: req.params.userId,
+        user: req,
       });
       if (!userPreferences) {
         return res.status(404).json({ message: "User preferences not found" });
@@ -65,7 +65,7 @@ const UserPreferencesController = {
   async muteAllNotifications(req, res) {
     try {
       const userPreferences = await UserPreferences.findOne({
-        user: req.params.userId,
+        user: req.userId,
       });
 
       if (!userPreferences) {
@@ -79,12 +79,10 @@ const UserPreferencesController = {
       userPreferences.notificationPreferences.emailNotificationsEnabled = false;
 
       await userPreferences.save();
-      res
-        .status(200)
-        .json({
-          message: "All notifications have been muted",
-          userPreferences,
-        });
+      res.status(200).json({
+        message: "All notifications have been muted",
+        userPreferences,
+      });
     } catch (err) {
       res.status(500).json({ message: err.message });
     }

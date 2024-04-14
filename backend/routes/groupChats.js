@@ -22,7 +22,11 @@ router.get("/:chatId/details", GroupChatController.getGroupChatDetails);
 
 router.post("/leave", GroupChatController.leaveGroup);
 
+router.post("/notifyGroupMembers", GroupChatController.notifyGroupMembers);
+
 router.post("/sendmedia", GroupChatController.handleSendMedia);
+
+router.post("/react", GroupChatController.reactToMessage);
 
 router.post("/findOrCreate", GroupChatController.findOrCreateGroupChat);
 

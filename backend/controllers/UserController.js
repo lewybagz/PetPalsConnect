@@ -27,8 +27,7 @@ const UserController = {
   },
 
   async getUserpets(req, res) {
-    const userId = req.params.userId; // Get user ID from URL parameter
-
+    const userId = req.userId;
     try {
       const user = await User.findById(userId).populate("pets"); // Use the userId from URL parameter
 
@@ -102,8 +101,7 @@ const UserController = {
 
   async deleteUserPet(req, res) {
     const { petId } = req.params;
-    const userId = req.params.userId;
-
+    const userId = req.userId;
     try {
       // Find user and update their pets list
       const user = await User.findById(userId);
@@ -208,7 +206,7 @@ const UserController = {
 
       // Update or add security question
       const securityQuestion = { question, answer: hashedAnswer };
-      user.securityQuestions = [securityQuestion]; // Replace or add to existing questions
+      user.securityQuestions = [securityQuestion];
       await user.save();
 
       res.json({ message: "Security question updated successfully" });
@@ -219,7 +217,7 @@ const UserController = {
   },
 
   async updateUserSettings(req, res) {
-    const { userId } = req.user; // Obtain user ID from authentication middleware
+    const userId = req.userId;
     const { playdateRange, notificationsEnabled, locationSharingEnabled } =
       req.body;
 

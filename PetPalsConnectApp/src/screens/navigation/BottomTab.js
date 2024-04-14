@@ -2,7 +2,7 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import MainStackNavigator from "./MainStackNavigator";
 import ChatTabsScreen from "../chat/ChatTabsScreen";
-import ScheduledPlaydatesScreen from "../playdate/ScheduledPlaydatesScreen";
+import ScheduledPlaydatesScreen from "../bottomTab/ScheduledPlaydatesScreen";
 import NotificationsScreen from "../bottomTab/NotificationsScreen";
 import MoreScreen from "../bottomTab/MoreScreen";
 import { Ionicons } from "@expo/vector-icons";
