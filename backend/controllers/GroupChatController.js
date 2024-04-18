@@ -61,6 +61,7 @@ const GroupChatController = {
   async sendMessage(req, res) {
     const { groupId, senderId, messageId } = req.body;
     const senderPetName = req.user.pets[0].name;
+    const groupChat = await GroupChat.findById(groupId).populate("name");
 
     try {
       // Assuming fetchGroupParticipants is correctly implemented and returns an array of member details
@@ -69,7 +70,7 @@ const GroupChatController = {
       const notificationPromises = groupMembers.map((member) => {
         const notificationData = {
           recipientUserId: member.id,
-          title: "New Group Message",
+          title: `New Message in ${groupChat.name}`,
           message: `New message in your group chat from ${senderPetName}.`,
           data: {
             groupId,
@@ -84,6 +85,7 @@ const GroupChatController = {
             recipientId: member.id,
             type: "GroupMessage",
             creatorId: senderId,
+            petName: senderPetName,
           }),
           sendPushNotification(member.id, notificationData),
         ]);
@@ -103,9 +105,9 @@ const GroupChatController = {
     const senderPetName = req.user.pets[0].name;
 
     try {
-      const groupChat = await GroupChat.findById(groupId).populate(
-        "participants"
-      );
+      const groupChat = await GroupChat.findById(groupId)
+        .populate("participants")
+        .populate("name");
       const message = await Message.findById(messageId);
 
       if (!groupChat || !message) {
@@ -137,6 +139,7 @@ const GroupChatController = {
             recipientId: member._id,
             type: "MessageReaction",
             creatorId: reactorId,
+            petName: senderPetName,
           }),
           sendPushNotification(member._id, notificationData),
         ]);

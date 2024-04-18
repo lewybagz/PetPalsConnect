@@ -9,6 +9,7 @@ import ReportUserScreen from "../profile/ReportUserScreen";
 import UsersPetsScreen from "../profile/UsersPetsScreen";
 import MyPladatesScreen from "../playdate/MyPlaydatesScreen";
 import PetListScreen from "../pets/PetListScreen";
+import FriendsListScreen from "../profile/FriendsListScreen";
 
 const ProfileStack = createStackNavigator();
 
@@ -21,6 +22,7 @@ function ProfileStackNavigator() {
         gestureEnabled: true,
       }}
     >
+      <ProfileStack.Screen name="FriendsList" component={FriendsListScreen} />
       <ProfileStack.Screen name="PetList" component={PetListScreen} />
       <ProfileStack.Screen name="MyPlaydates" component={MyPladatesScreen} />
       <ProfileStack.Screen name="Profile" component={ProfileScreen} />

@@ -225,7 +225,7 @@ const GroupChatScreen = ({ route, navigation }) => {
 
       const token = await getStoredToken();
       await axios.post(
-        "/api/groupChats/notifyGroupMembers",
+        "/api/groupChats/send",
         {
           groupId: groupInfo.id,
           senderId: userId,

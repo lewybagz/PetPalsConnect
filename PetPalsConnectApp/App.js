@@ -32,10 +32,8 @@ function App() {
       handleBackPress
     );
 
-    // Requesting user permissions for notifications
     requestUserPermission();
 
-    // Listener for messages received while the app is in the foreground
     const unsubscribeOnMessage = messaging().onMessage(
       async (remoteMessage) => {
         Alert.alert(
@@ -46,7 +44,6 @@ function App() {
       }
     );
 
-    // Handling the initial notification when the app is opened from a killed state
     messaging()
       .getInitialNotification()
       .then((remoteMessage) => {
@@ -55,7 +52,6 @@ function App() {
         }
       });
 
-    // Listener for notifications when the app is in background but not closed
     const onNotificationOpenedAppUnsub = messaging().onNotificationOpenedApp(
       (remoteMessage) => {
         handleNotification(remoteMessage);
@@ -69,7 +65,6 @@ function App() {
     };
   }, [navigation]);
 
-  // Handles navigation based on the notification's type and data
   function handleNotification(remoteMessage) {
     const { type, ...data } = remoteMessage.data;
     switch (type) {

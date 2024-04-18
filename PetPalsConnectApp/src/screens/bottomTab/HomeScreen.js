@@ -8,8 +8,7 @@ import ArticleCard from "../../components/ArticleCardComponent";
 import AnimatedButton from "../../components/AnimatedButton";
 import { getStoredToken } from "../../../utils/tokenutil";
 import axios from "axios";
-// TODO: implement map screen tutorial feature
-// Replace this with your actual API call imports
+import Icon from "react-native-vector-icons/Ionicons";
 import MatchingAlgorithmPopup from "../../components/MatchingAlgorithmPopupComponent";
 
 const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -156,6 +155,26 @@ const HomeScreen = ({ navigation, route, start }) => {
             ))}
           </View>
         </View>
+      </CopilotStep>
+      <CopilotStep
+        text="Swipe right to go back or swipe left to navigate to the map."
+        order={1}
+        name="swipeGesture"
+      >
+        <WalkthroughableTouchableOpacity
+          onPress={() => {}} // This doesn't need to perform an action on press
+          style={tailwind("items-center justify-center")}
+        >
+          <Icon
+            name="md-swipe"
+            size={30}
+            color="#000"
+            style={tailwind("mb-2")}
+          />
+          <WalkthroughableText style={tailwind("text-base")}>
+            Swipe left to open the Map
+          </WalkthroughableText>
+        </WalkthroughableTouchableOpacity>
       </CopilotStep>
       {showMatchingAlgorithmPopup && (
         <MatchingAlgorithmPopup

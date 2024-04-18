@@ -8,6 +8,7 @@ import UsersPetsScreen from "../profile/UsersPetsScreen";
 import HomeScreen from "../bottomTab/HomeScreen";
 import ChatScreen from "../chat/ChatScreen";
 import SchedulePlaydateScreen from "../playdate/SchedulePlaydateDetailsScreen";
+import FriendsListScreen from "../profile/FriendsListScreen";
 
 const PetsStack = createStackNavigator();
 
@@ -24,6 +25,7 @@ function PetsStackNavigator() {
         name="SchedulePlaydate"
         component={SchedulePlaydateScreen}
       />
+      <PetsStack.Screen name="FriendsList" component={FriendsListScreen} />
       <PetsStack.Screen name="Chat" component={ChatScreen} />
       <PetsStack.Screen name="Home" component={HomeScreen} />
       <PetsStack.Screen name="PetList" component={PetListScreen} />

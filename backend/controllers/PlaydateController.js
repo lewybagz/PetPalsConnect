@@ -143,6 +143,7 @@ const PlaydateController = {
           recipientId: playdate.creator._id,
           type: "Playdate Request Accepted",
           creatorId: userId,
+          petName: acceptersFirstPetName,
         }),
         sendPlaydateNotification(notificationData),
       ]);
@@ -210,6 +211,7 @@ const PlaydateController = {
               recipientId: participant._id,
               type: "Playdate Cancelled",
               creatorId: userId,
+              petName: cancellingUserPetName,
             }),
           ]);
         });
@@ -238,6 +240,7 @@ const PlaydateController = {
               recipientId: playdate.creator._id,
               type: "Playdate Cancelled",
               creatorId: userId,
+              petName: cancellingUserPetName,
             }),
           ])
         );
@@ -304,7 +307,10 @@ const PlaydateController = {
             recipientUserId: pet.owner._id,
             title: "Playdate Request",
             message: `${creatorFirstPetName} wants to schedule a playdate with ${pet.name}.`,
-            data: { playdateId: newPlaydate._id },
+            data: {
+              playdateId: newPlaydate._id,
+              petName: creatorFirstPetName,
+            },
           };
           await Promise.all([
             sendPlaydateNotification(notificationData),
@@ -387,6 +393,7 @@ const PlaydateController = {
               recipientId: participant._id,
               type: "Playdate Updated",
               creatorId: userId,
+              petName: petNames,
             }),
           ]);
         });

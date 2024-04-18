@@ -129,7 +129,6 @@ const NotificationController = {
           type: "friendRequest",
           requesterId: requester._id.toString(),
           petName: firstPetName,
-
           // Add other data as needed
         },
       };
@@ -162,10 +161,11 @@ const NotificationController = {
   async createNotification(req, res) {
     const notification = new Notification({
       content: req.body.content,
-      readStatus: req.body.readStatus,
+      readStatus: req.body.readStatus || false,
       recipient: req.body.recipient,
       type: req.body.type,
       creator: req.body.creator,
+      petName: req.body.petName,
       slug: req.body.slug,
     });
 

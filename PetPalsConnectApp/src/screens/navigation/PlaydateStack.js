@@ -7,6 +7,7 @@ import PlaydateCreatedScreen from "../playdate/PlaydateCreatedScreen";
 import PlaydateDetailsScreen from "../playdate/PlaydateDetailsScreen";
 import PlaydateHistoryScreen from "../playdate/PlaydateHistoryScreen";
 import PlaydateModificationScreen from "../playdate/PlaydateModificationScreen";
+import PlaydateModificationConfirmationScreen from "../playdate/PlaydateModificationConfirmationScreen";
 import PlaydatePetSelectionScreen from "../playdate/PlaydatePetSelectionScreen";
 import PlaydateRequestScreen from "../playdate/PlaydateRequestScreen";
 import PostPlaydateReviewScreen from "../playdate/PostPlaydateReviewScreen";
@@ -16,6 +17,8 @@ import ScheduledPlaydatesScreen from "../playdate/ScheduledPlaydatesScreen";
 import SchedulePlaydateDetailsScreen from "../playdate/SchedulePlaydateDetailsScreen";
 import SchedulePlaydateScreen from "../playdate/SchedulePlaydateScreen";
 import UpcomingPlaydateScreen from "../playdate/UpcomingPlaydateScreen";
+import FriendsListScreen from "../profile/FriendsListScreen";
+import HomeScreen from "../bottomTab/HomeScreen";
 
 const PlaydateStack = createStackNavigator();
 
@@ -42,6 +45,10 @@ function PlaydateStackNavigator() {
       <PlaydateStack.Screen
         name="PlaydateModification"
         component={PlaydateModificationScreen}
+      />
+      <PlaydateStack.Screen
+        name="PlaydateModificationConfirmation"
+        component={PlaydateModificationConfirmationScreen}
       />
       <PlaydateStack.Screen
         name="PlaydatePetSelection"
@@ -79,6 +86,8 @@ function PlaydateStackNavigator() {
         name="UpcomingPlaydate"
         component={UpcomingPlaydateScreen}
       />
+      <PlaydateStack.Screen name="FriendsList" component={FriendsListScreen} />
+      <PlaydateStack.Screen name="Home" component={HomeScreen} />
     </PlaydateStack.Navigator>
   );
 }

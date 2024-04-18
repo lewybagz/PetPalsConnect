@@ -9,16 +9,18 @@ router.post("/findOrCreate", ChatController.findOrCreateChat);
 // Endpoint to add a message to a chat
 router.post("/addMessage", ChatController.addMessage);
 
-router.post("/chat/:chatId/archive", ChatController.archiveChat);
+router.post("/:chatId/archive", ChatController.archiveChat);
 
 router.post("/sendmedia", ChatController.handleSendMedia);
 
-router.get("/chat/:chatId/details", ChatController.getChatDetails);
+router.post("/send", ChatController.sendMessage);
+
+router.get("/:chatId/details", ChatController.getChatDetails);
 
 router.get("/:chatId/media", ChatController.fetchChatMedia);
 
-router.get("/chat/:chatId", ChatController.getChat);
+router.get("/:chatId", ChatController.getChat);
 
-router.delete("/chat/:chatId", ChatController.deleteChat);
+router.delete("/:chatId", ChatController.deleteChat);
 
 module.exports = router;

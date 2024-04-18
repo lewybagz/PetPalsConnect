@@ -96,7 +96,6 @@ const chatReducer = (state = initialChatState, action) => {
 
 // Add isLoading and error to petReducer
 const initialPetState = {
-  // TODO: USE IN FRONTEND
   pets: [],
   names: [],
   name: "",

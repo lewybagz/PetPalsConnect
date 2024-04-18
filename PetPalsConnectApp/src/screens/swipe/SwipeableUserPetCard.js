@@ -1,20 +1,22 @@
 import React, { useState } from "react";
 import {
-  Alert,
-  Modal,
-  TouchableOpacity,
+  Animated,
   View,
   Text,
+  TouchableOpacity,
+  Alert,
+  Modal,
   Image,
   StyleSheet,
 } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import axios from "axios";
-import { useSelector } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
+import { useSelector } from "react-redux";
 import { setError } from "../redux/actions";
+import axios from "axios";
 
-const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
+const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const currentUser = useSelector((state) => state.userReducer.user);
 
@@ -26,9 +28,10 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
       setError(err.message);
     }
   };
-  const handleBlockUser = async (userIdToBlock, token) => {
+
+  const handleBlockUser = async (userIdToBlock) => {
     try {
-      getToken();
+      const token = await getToken();
       const response = await axios.post(
         "/api/blocklist",
         {
@@ -110,16 +113,6 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
         "Error",
         "There was an error when attempting to send a friend request."
       );
-    }
-  };
-  const renderContent = () => {
-    switch (type) {
-      case "user":
-        return renderUserCard(data);
-      case "pet":
-        return renderPetCard(data);
-      default:
-        return <Text>No data</Text>;
     }
   };
 
@@ -217,9 +210,51 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
       </>
     );
   };
+  const renderContent = () => {
+    switch (type) {
+      case "user":
+        return renderUserCard(data);
+      case "pet":
+        return renderPetCard(data);
+      default:
+        return <Text>No data</Text>;
+    }
+  };
 
-  return <View>{renderContent()}</View>;
+  const renderRightActions = (progress, dragX) => {
+    const trans = dragX.interpolate({
+      inputRange: [-100, 0],
+      outputRange: [0, 100],
+      extrapolate: "clamp",
+    });
+
+    return (
+      <TouchableOpacity
+        style={{
+          width: 100,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "red",
+        }}
+        onPress={() => console.log("Remove friend action")}
+      >
+        <Animated.View style={{ transform: [{ translateX: trans }] }}>
+          <Icon name="account-minus" size={30} color="#fff" />
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <Swipeable renderRightActions={renderRightActions}>
+      <View>
+        {renderContent()}
+        {renderKebabMenu()}
+      </View>
+    </Swipeable>
+  );
 };
+
 const styles = StyleSheet.create({
   UserPetCard: {
     backgroundColor: "#fff",
@@ -298,4 +333,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default UserPetCard;
+export default SwipeableUserPetCard;

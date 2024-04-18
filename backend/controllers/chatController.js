@@ -1,10 +1,12 @@
 const Chat = require("../models/Chat");
-const Message = require("../models/Message");
 const Media = require("../models/Media");
-const SHA256 = require("crypto-js/sha256"); // Ensure you've installed crypto-js
+const SHA256 = require("crypto-js/sha256");
+const {
+  createNotification,
+  sendPushNotification,
+} = require("../services/NotificationService");
 
 const ChatController = {
-  // Method to create or find an existing chat
   async findOrCreateChat(req, res) {
     const { userId, petId } = req.body;
     const chatId = SHA256(`${userId}-${petId}`).toString();
@@ -26,22 +28,50 @@ const ChatController = {
       res.status(500).json({ message: error.message });
     }
   },
+  async sendMessage(req, res) {
+    const { chatId, senderId, messageId } = req.body;
+    const senderPetName = req.user.pets[0].name;
 
-  // Method to add a message to a chat
-  async addMessage(req, res) {
-    const { chatId, messageContent } = req.body;
     try {
-      const message = new Message({ content: messageContent });
-      await message.save();
+      const chat = await Chat.findById(chatId).populate({
+        path: "participants",
+        match: { _id: { $ne: senderId } },
+      });
 
-      const chat = await Chat.findById(chatId);
-      chat.messages.push(message);
-      chat.lastMessage = message;
-      chat.lastUpdated = new Date();
-      await chat.save();
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
 
-      res.status(200).json(message);
+      const participant = chat.participants[0];
+
+      const notificationData = {
+        recipientUserId: participant._id,
+        title: "New Message",
+        message: `You have a new message from ${senderPetName}.`,
+        data: {
+          chatId,
+          messageId,
+        },
+      };
+
+      const notificationPromise = createNotification({
+        content: notificationData.message,
+        recipientId: participant._id,
+        type: "DirectMessage",
+        creatorId: senderId,
+        petName: senderPetName,
+      });
+
+      const pushNotificationPromise = sendPushNotification(
+        participant._id,
+        notificationData
+      );
+
+      await Promise.all([notificationPromise, pushNotificationPromise]);
+
+      res.status(200).json({ message: "Notification sent successfully." });
     } catch (error) {
+      console.error("Error sending notification:", error);
       res.status(500).json({ message: error.message });
     }
   },
@@ -74,8 +104,8 @@ const ChatController = {
     const { chatId } = req.params;
     try {
       const chat = await Chat.findById(chatId)
-        .populate("messages") // Modify as per your schema
-        .populate("participants"); // Modify as per your schema
+        .populate("messages")
+        .populate("participants");
 
       if (!chat) {
         return res.status(404).json({ message: "Chat not found" });

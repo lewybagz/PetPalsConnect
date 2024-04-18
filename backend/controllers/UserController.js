@@ -12,24 +12,25 @@ const UserController = {
   },
 
   async getUserById(req, res, next) {
-    let user;
     try {
-      user = await User.findById(req.params.id);
-      if (user == null) {
+      const user = await User.findById(req.params.id)
+        .populate("friends") // Assuming 'friends' is a field in User schema that references other User documents
+        .populate("pets", "name age breed"); // You can specify just the fields you need from the pets collection
+
+      if (!user) {
         return res.status(404).json({ message: "Cannot find user" });
       }
+      res.user = user;
+      next();
     } catch (err) {
       return res.status(500).json({ message: err.message });
     }
-
-    res.user = user;
-    next();
   },
 
   async getUserpets(req, res) {
     const userId = req.userId;
     try {
-      const user = await User.findById(userId).populate("pets"); // Use the userId from URL parameter
+      const user = await User.findById(userId).populate("pets");
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });

@@ -138,7 +138,7 @@ const FriendRequestController = {
         data: {
           requestId: savedFriendRequest._id,
           senderId: sender,
-          senderPetName: senderPetName,
+          PetName: senderPetName,
         },
       };
 

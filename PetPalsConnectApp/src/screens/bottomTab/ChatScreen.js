@@ -23,8 +23,8 @@ import { getStoredToken } from "../../../utils/tokenutil";
 import { clearError } from "../../redux/actions";
 import { startLoading, endLoading, setError } from "../../redux/actions";
 import { useSocketNotification } from "../../hooks/useSocketNotification";
+import axios from "axios";
 
-// TODO: HANDLE NOTIFICATION
 const ChatScreen = ({ route, navigation }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -39,7 +39,6 @@ const ChatScreen = ({ route, navigation }) => {
   const isLoading = useSelector((state) => state.chatReducer.isLoading);
   const error = useSelector((state) => state.chatReducer.error);
 
-  // Setting up socket to handle real-time chat messages
   useSocketNotification((newMessage) => {
     setMessages((prevMessages) => [...prevMessages, newMessage]);
   });
@@ -107,6 +106,7 @@ const ChatScreen = ({ route, navigation }) => {
   };
 
   const handleSendMessage = async () => {
+    const currentUser = useSelector((state) => state.userReducer.user);
     if (!newMessage.trim()) return;
     dispatch(startLoading());
     Keyboard.dismiss();
@@ -119,16 +119,36 @@ const ChatScreen = ({ route, navigation }) => {
         timestamp: FieldValue.serverTimestamp(),
       };
 
-      await firestore
+      // Save the message to Firestore
+      const messageRef = await firestore
         .collection("chats")
         .doc(petInfo.id)
         .collection("messages")
         .add(messageData);
+
+      const senderName = currentUser.displayName;
+
+      const token = await getStoredToken();
+      // Call your API to handle any additional logic such as notifications
+      await axios.post(
+        "/api/chats/send", // Assuming you have a similar endpoint for individual chats
+        {
+          chatId: petInfo.id,
+          senderId: userId,
+          messageId: messageRef.id,
+          senderName: senderName, // Include this if you need to send the sender's name
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
       setNewMessage("");
+      Alert.alert("Success", "Message sent successfully.");
     } catch (error) {
+      console.error("Error sending message:", error);
       Alert.alert("Error", "Failed to send message");
       dispatch(setError("Error sending message"));
-      console.error("Error sending message:", error);
     } finally {
       dispatch(endLoading());
     }

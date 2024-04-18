@@ -2,7 +2,6 @@
 import axios from "axios";
 import { getStoredToken } from "../../utils/tokenutil";
 
-// TODO: USE IN FRONTEND
 export const startLoading = () => ({ type: "START_LOADING" });
 export const endLoading = () => ({ type: "END_LOADING" });
 export const setError = (error) => ({ type: "SET_ERROR", payload: error });

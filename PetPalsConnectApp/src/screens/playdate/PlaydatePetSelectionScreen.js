@@ -11,7 +11,7 @@ import UserPetCard from "../../components/UserPetCard";
 import { useSelector } from "react-redux";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { CheckBox } from "react-native-elements";
-import { getRealm } from "../../../../backend/models/Pet";
+import { getRealm } from "../../../realmModels/RealmPetModel";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const PlaydatePetSelectionScreen = ({ route, navigation }) => {

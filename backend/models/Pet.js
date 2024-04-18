@@ -24,7 +24,7 @@ const PetSchema = new Schema(
     },
     photos: [
       {
-        type: String, // URLs to the images
+        type: String,
       },
     ],
     location: {
