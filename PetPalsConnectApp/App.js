@@ -1,4 +1,5 @@
 // App.js
+require("dotenv").config();
 import React, { useEffect } from "react";
 import messaging from "@react-native-firebase/messaging";
 import { NavigationContainer } from "@react-navigation/native";

@@ -65,6 +65,11 @@ app.use("/api/locations", authenticate, require("./routes/locations"));
 app.use("/api/activitylogs", authenticate, require("./routes/activityLogs"));
 app.use("/api/blocklists", authenticate, require("./routes/blockLists"));
 app.use(
+  "/api/supportmessages",
+  authenticate,
+  require("./routes/supportMessages")
+);
+app.use(
   "/api/friendrequests",
   authenticate,
   require("./routes/friendRequests")

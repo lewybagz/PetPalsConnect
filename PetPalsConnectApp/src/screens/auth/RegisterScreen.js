@@ -17,7 +17,7 @@ import { useTailwind } from "nativewind";
 
 // Configure Google Sign-in (you should have this configuration outside of your component)
 GoogleSignin.configure({
-  webClientId: "your-web-client-id.apps.googleusercontent.com",
+  webClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID,
 });
 
 function RegisterScreen({ navigation }) {

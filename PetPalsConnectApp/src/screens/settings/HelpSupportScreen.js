@@ -8,6 +8,8 @@ import {
   Alert,
 } from "react-native";
 import { useTailwind } from "nativewind";
+import { getStoredToken } from "../../../utils/tokenutil";
+import axios from "axios";
 
 const HelpSupportScreen = () => {
   const [name, setName] = useState("");
@@ -15,14 +17,34 @@ const HelpSupportScreen = () => {
   const [message, setMessage] = useState("");
   const tailwind = useTailwind();
 
-  const submitForm = () => {
-    // TODO:
-    // Logic to submit the form data
-    // You might want to send this data to your backend or an email service
-    Alert.alert(
-      "Message Sent",
-      "Thank you for reaching out. We will get back to you shortly."
-    );
+  const submitForm = async (formData) => {
+    try {
+      const token = await getStoredToken();
+      if (!token) {
+        throw new Error("Authorization token not found");
+      }
+
+      const response = await axios.post("/api/supportmessages", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 200) {
+        Alert.alert(
+          "Message Sent",
+          "Thank you for reaching out. We will get back to you shortly."
+        );
+      } else {
+        throw new Error("Failed to send message");
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        "Submission Error",
+        "There was an issue sending your message. Please try again later."
+      );
+    }
   };
 
   return (
@@ -52,7 +74,7 @@ const HelpSupportScreen = () => {
           multiline
         />
         <TouchableOpacity
-          onPress={submitForm}
+          onPress={() => submitForm(FormData)}
           style={tailwind("bg-blue-500 py-2 px-4 rounded")}
         >
           <Text style={tailwind("text-white text-center")}>Submit</Text>

@@ -168,9 +168,6 @@ const AddPetScreen = (navigation) => {
     { label: "Balanced", value: "balanced" },
     { label: "Extrovert", value: "extrovert" },
   ];
-
-  //TODO: ASK ABOUT HOW TO DISPLAY BENIFITS OF SUBSCRIPTION FEATURES
-
   const onActivitySelect = (item) => {
     if (!currentPet.favoriteActivities.includes(item.value)) {
       setCurrentPet({

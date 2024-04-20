@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "580748091504",
+    "firebase_url": "https://petpalsconnectmf-default-rtdb.firebaseio.com",
+    "project_id": "petpalsconnectmf",
+    "storage_bucket": "petpalsconnectmf.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:580748091504:android:6b480b50607b3e4d3554b5",
+        "android_client_info": {
+          "package_name": "com.anonymous.PetPalsConnectApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "580748091504-074n956e81sk7m1j9rbcpfh8lb276tmc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.anonymous.PetPalsConnectApp",
+            "certificate_hash": "1b1606c86efb8bfe6beb8ceec3e05af2324e9e26"
+          }
+        },
+        {
+          "client_id": "580748091504-5a2rrvh2pm0la2klfe7nvsh2pbhl5kc0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFkuXvdCHQ0sNqn3VJZKTf-eymnr56TKA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "580748091504-5a2rrvh2pm0la2klfe7nvsh2pbhl5kc0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
