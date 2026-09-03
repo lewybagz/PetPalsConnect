@@ -7,8 +7,8 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
-import axios from "axios";
-import { useTailwind } from "nativewind";
+import api from "../../api/axios";
+import { useTailwind } from "../../styles/tailwind";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const ScheduledPlaydatesScreen = (navigation) => {
@@ -19,7 +19,7 @@ const ScheduledPlaydatesScreen = (navigation) => {
   const fetchPlaydates = async () => {
     try {
       const token = await getStoredToken(); // Retrieve the token
-      const response = await axios.get("/api/playdates/upcoming", {
+      const response = await api.get("/api/playdates/upcoming", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPlaydates(response.data);

@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
-import axios from "axios";
+import api from "../../api/axios";
 import { useDispatch, useSelector } from "react-redux";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { fetchPlaydateDetails } from "../../redux/actions";
@@ -39,7 +39,7 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
   const handleAccept = async (token) => {
     setAccepting(true);
     try {
-      await axios.post(
+      await api.post(
         `/api/playdates/accept/${playdateId}`,
         {},
         {
@@ -60,7 +60,7 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
     setDeclining(true);
     try {
       getToken();
-      await axios.post(
+      await api.post(
         `/api/playdates/decline/${playdateId}`,
         {},
         {

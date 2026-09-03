@@ -1,23 +1,21 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { View, Button, TextInput, Alert } from "react-native";
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import { getAuth, PhoneAuthProvider } from "@react-native-firebase/auth";
 
 const PhoneAuth = (navigation) => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [code, setCode] = useState("");
   const [verificationId, setVerificationId] = useState(null);
-  const recaptchaVerifier = useRef(null);
   const auth = getAuth();
 
   const sendVerification = async () => {
     try {
-      const phoneProvider = new PhoneAuthProvider(auth);
-      const id = await phoneProvider.verifyPhoneNumber(
-        phoneNumber,
-        recaptchaVerifier.current
-      );
-      setVerificationId(id);
+      // React Native Firebase verifies phone numbers natively (SafetyNet /
+      // Play Integrity on Android, silent APNs push on iOS). The old
+      // expo-firebase-recaptcha modal was for the web SDK and has been removed
+      // from Expo, so no verifier needs to be passed here.
+      const confirmation = await auth.verifyPhoneNumber(phoneNumber);
+      setVerificationId(confirmation.verificationId);
       Alert.alert("Verification code has been sent to your phone.");
     } catch (err) {
       Alert.alert("Error", err.message);
@@ -40,11 +38,6 @@ const PhoneAuth = (navigation) => {
 
   return (
     <View>
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifier}
-        firebaseConfig={auth.app.options}
-        attemptInvisibleVerification={true}
-      />
       <TextInput
         value={phoneNumber}
         onChangeText={setPhoneNumber}

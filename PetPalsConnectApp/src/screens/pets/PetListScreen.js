@@ -7,9 +7,9 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import axios from "axios";
+import api from "../../api/axios";
 import { useSelector, useDispatch } from "react-redux";
-import UserPetCard from "./UserPetCard";
+import UserPetCard from "../../components/UserPetCardComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import { clearError } from "../../redux/actions";
@@ -39,7 +39,7 @@ const PetListScreen = ({ route, navigation }) => {
     const fetchMatchedPets = async (userId) => {
       try {
         const token = await getStoredToken();
-        const matchedResponse = await axios.get(`/api/petmatches/${userId}`, {
+        const matchedResponse = await api.get(`/api/petmatches/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setMatchedPets(matchedResponse.data);
@@ -56,7 +56,7 @@ const PetListScreen = ({ route, navigation }) => {
       const fetchPets = async () => {
         try {
           const token = await getStoredToken();
-          const response = await axios.get("/api/pets", {
+          const response = await api.get("/api/pets", {
             headers: { Authorization: `Bearer ${token}` },
           });
           setPets(response.data);
@@ -84,7 +84,7 @@ const PetListScreen = ({ route, navigation }) => {
   const handleDelete = async (petId) => {
     try {
       const token = await getStoredToken(); // Retrieve the token
-      await axios.delete(`/api/pets/${petId}`, {
+      await api.delete(`/api/pets/${petId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPets(pets.filter((pet) => pet._id !== petId));

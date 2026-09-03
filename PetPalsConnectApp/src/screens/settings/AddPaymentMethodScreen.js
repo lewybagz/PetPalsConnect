@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
-import { useTailwind } from "nativewind";
-import axios from "axios";
+import { useTailwind } from "../../styles/tailwind";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const AddPaymentMethodScreen = ({ navigation }) => {
@@ -20,7 +20,7 @@ const AddPaymentMethodScreen = ({ navigation }) => {
     try {
       const token = await getStoredToken();
       // API call to backend to add payment method
-      await axios.post(
+      await api.post(
         "/api/payments/payment-methods",
         {
           cardNumber,

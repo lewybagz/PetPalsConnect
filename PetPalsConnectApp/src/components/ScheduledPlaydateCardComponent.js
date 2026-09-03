@@ -1,7 +1,7 @@
 // ScheduledPlaydateCardComponent.js
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome";
+import { FontAwesome as Icon } from "@expo/vector-icons";
 
 const ScheduledPlaydateCardComponent = ({
   playdate,

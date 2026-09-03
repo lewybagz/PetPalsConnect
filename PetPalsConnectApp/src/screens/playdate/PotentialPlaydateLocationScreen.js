@@ -12,7 +12,7 @@ import {
   ActionSheetIOS,
 } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
-import axios from "axios";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const PotentialPlaydateLocationScreen = ({ route }) => {
@@ -24,7 +24,7 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     const fetchReviews = async () => {
       try {
         const token = await getStoredToken(); // Retrieve the token
-        const response = await axios.get(`/api/reviews/location/${placeId}`, {
+        const response = await api.get(`/api/reviews/location/${placeId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setReviews(response.data);
@@ -40,7 +40,7 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     const fetchLocationDetails = async () => {
       try {
         const token = await getStoredToken(); // Retrieve the token
-        const response = await axios.get(
+        const response = await api.get(
           `/api/playdates/locations/${placeId}`,
           {
             headers: { Authorization: `Bearer ${token}` },

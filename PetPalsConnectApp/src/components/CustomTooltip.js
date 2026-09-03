@@ -2,7 +2,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import AnimatedButton from "./AnimatedButton";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 
 const CustomTooltip = ({ handleNext, handlePrev, handleStop, currentStep }) => {
   return (

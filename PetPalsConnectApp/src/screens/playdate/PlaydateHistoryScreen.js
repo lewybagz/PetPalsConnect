@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
-import axios from "axios";
-import Icon from "react-native-vector-icons/FontAwesome5";
+import api from "../../api/axios";
+import { FontAwesome5 as Icon } from "@expo/vector-icons";
 import { getStoredToken } from "../../../utils/tokenutil";
 import PlaydateCardComponent from "../../components/PlaydateCardComponent";
 
@@ -22,7 +22,7 @@ const PlaydateHistoryScreen = ({ navigation }) => {
       try {
         setLoading(true);
         const token = await getStoredToken();
-        const response = await axios.get("/api/playdates/past", {
+        const response = await api.get("/api/playdates/past", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setPastPlaydates(response.data);

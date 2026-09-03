@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import LottieView from "lottie-react-native"; // Ensure Lottie library is installed and imported
+import { ActivityIndicator, View, Text, StyleSheet } from "react-native";
 import * as Progress from "react-native-progress";
 
 const petCareTips = [
@@ -37,12 +36,11 @@ const LoadingScreen = () => {
 
   return (
     <View style={styles.container}>
-      <LottieView
-        source={require("./path-to-lottie-animation.json")}
-        autoPlay
-        loop
-        style={styles.lottie}
-      />
+      {/* A Lottie animation used to render here, but the referenced JSON file
+          ("./path-to-lottie-animation.json") was a placeholder that was never
+          added, so this screen crashed on import. Drop an animation into
+          assets/ and swap this spinner for <LottieView /> when you have one. */}
+      <ActivityIndicator size="large" style={styles.lottie} />
       <Text style={styles.tip}>{petCareTips[currentTipIndex]}</Text>
       <Progress.Bar
         progress={progress}

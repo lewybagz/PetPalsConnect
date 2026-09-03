@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, Switch, ScrollView } from "react-native";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 
 const PrivacySettingsScreen = () => {
   const [locationSharingEnabled, setLocationSharingEnabled] = useState(false);

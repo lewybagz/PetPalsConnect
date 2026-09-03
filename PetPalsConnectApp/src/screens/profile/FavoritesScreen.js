@@ -7,10 +7,10 @@ import {
   Alert,
   TouchableOpacity,
 } from "react-native";
-import { copilot, walkthroughable, CopilotStep } from "react-native-copilot";
-import axios from "axios";
-import UserPetCard from "../components/UserPetCard";
-import PlayDateLocationCard from "../components/PlayDateLocationCardComponent";
+import { copilot, walkthroughable, CopilotStep } from "../../components/walkthrough";
+import api from "../../api/axios";
+import UserPetCard from "../../components/UserPetCardComponent";
+import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import CustomTooltip from "../../components/CustomTooltip";
 import { getStoredToken } from "../../../utils/tokenutil";
 
@@ -26,7 +26,7 @@ const FavoritesScreen = ({ route, start, navigation }) => {
     const fetchFavorites = async () => {
       try {
         const token = await getStoredToken();
-        const response = await axios.get("/api/favorites", {
+        const response = await api.get("/api/favorites", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setFavorites(response.data);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
-import { useTailwind } from "nativewind";
-import axios from "axios";
+import { useTailwind } from "../../styles/tailwind";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const PaymentMethodsScreen = (navigation) => {
@@ -13,7 +13,7 @@ const PaymentMethodsScreen = (navigation) => {
     const fetchPaymentMethods = async () => {
       try {
         const token = await getStoredToken(); // Retrieve the token
-        const response = await axios.get("/api/payments/payment-methods", {
+        const response = await api.get("/api/payments/payment-methods", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setPaymentMethods(response.data);
@@ -45,7 +45,7 @@ const PaymentMethodsScreen = (navigation) => {
             try {
               const token = await getStoredToken(); // Retrieve the token
               // API call to backend to delete payment method
-              await axios.delete(`/api/payments/payment-methods/${id}`, {
+              await api.delete(`/api/payments/payment-methods/${id}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
               // Refresh payment methods list upon successful deletion

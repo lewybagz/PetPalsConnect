@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Text, ScrollView, StyleSheet } from "react-native";
-import axios from "axios";
+import api from "../../api/axios";
 import LoadingScreen from "../../components/LoadingScreenComponent";
-import UserPetCard from "../components/UserPetCard";
+import UserPetCard from "../../components/UserPetCardComponent";
 import ReviewComponent from "../../components/ReviewComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
 
@@ -13,7 +13,7 @@ const PlaydateDetailsScreen = ({ route, navigation }) => {
     const fetchPlaydateDetails = async () => {
       try {
         const token = await getStoredToken();
-        const response = await axios.get(
+        const response = await api.get(
           `/api/playdates/${route.params.playdateId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );

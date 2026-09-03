@@ -1,11 +1,13 @@
 {
   "expo": {
-    "name": "PetPalsConnectApp",
-    "slug": "PetPalsConnectApp",
+    "name": "PetPals Connect",
+    "slug": "petpalsconnect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "scheme": "petpalsconnect",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -14,42 +16,66 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.petpalsconnect.app",
+      "buildNumber": "1",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app uses your location to find nearby matches for your pet.",
-        "NSLocationAlwaysUsageDescription": "This app needs access to your location in the background to find nearby matches for your pet.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location in the background to find nearby matches for your pet.",
         "NSCameraUsageDescription": "This app uses your camera so you can take photos of you and your pet.",
-        "NSPhotoLibraryUsageDescription": "This app uses your Photos so you can upload images you and your pet and save images to your camera roll."
+        "NSPhotoLibraryUsageDescription": "This app uses your Photos so you can upload images of you and your pet.",
+        "NSPhotoLibraryAddUsageDescription": "This app saves images to your camera roll.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "package": "com.petpalsconnect.app",
+      "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
+      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": {
-        "ACCESS_COARSE_LOCATION": "This app uses your location to find nearby matches for your pet.",
-        "ACCESS_FINE_LOCATION": "This app uses your location to find nearby matches for your pet.",
-        "ACCESS_BACKGROUND_LOCATION": "This app needs access to your location in the background to find nearby matches for your pet.",
-        "CAMERA": "This app uses your camera so you can take photos of you and your pet.",
-        "READ_EXTERNAL_STORAGE": "This app uses your Photos so you can upload images you and your pet.",
-        "WRITE_EXTERNAL_STORAGE": "This app uses your Photos so you can save images to your camera roll."
-      }
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "expo-secure-store",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
       [
-        "@stripe/stripe-react-native",
+        "expo-build-properties",
         {
-          "merchantIdentifier": "your_merchant_identifier",
-          "publishableKey": "your_publishable_key",
-          "androidPayMode": "test",
-          "enableAndroidPay": true,
-          "googlePayMode": "test",
-          "enableGooglePay": true
+          "ios": { "useFrameworks": "static" }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "This app uses your location to find nearby matches for your pet."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "This app uses your Photos so you can upload images of you and your pet.",
+          "cameraPermission": "This app uses your camera so you can take photos of you and your pet."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
   }
 }

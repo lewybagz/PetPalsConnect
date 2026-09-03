@@ -6,9 +6,9 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { getAuth } from "firebase/auth";
+import { getAuth } from "@react-native-firebase/auth";
 import { getFirestore, doc, updateDoc, getDoc } from "firebase/firestore";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 import { useSelector, useDispatch } from "react-redux";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 

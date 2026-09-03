@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 
 const LegalPoliciesScreen = () => {
   const [selectedDocument, setSelectedDocument] = useState("terms");

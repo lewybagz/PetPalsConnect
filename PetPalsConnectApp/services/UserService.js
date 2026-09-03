@@ -1,32 +1,55 @@
-// userService.js
-const User = require("../models/User");
-import axios from "axios";
-import { getStoredToken } from "../utils/tokenutil";
+import api from "../src/api/axios";
 
-const findUserById = async (userId) => {
-  try {
-    const user = await User.findById(userId).populate("pets").exec();
-    if (!user) {
-      throw new Error("User not found");
-    }
-    return user;
-  } catch (error) {
-    console.error(`Error finding user by ID: ${userId}`, error);
-    throw error;
-  }
+/**
+ * User data access.
+ *
+ * This file used to require the backend's Mongoose User model, which cannot run
+ * on a device, while the backend in turn imported this file. Both directions of
+ * that cycle are gone: the app talks to the API, and the API talks to Mongo.
+ */
+
+/** The signed-in user's own profile, resolved from their Firebase token. */
+export const fetchCurrentUser = async () => {
+  const { data } = await api.get("/api/users/me");
+  return data;
 };
 
-const fetchUserPreferences = async (userId) => {
+/** Creates the Mongo profile for a newly registered Firebase account. */
+export const createUserProfile = async (profile) => {
+  const { data } = await api.post("/api/users", profile);
+  return data;
+};
+
+export const findUserById = async (userId) => {
+  const { data } = await api.get(`/api/users/${userId}`);
+  return data;
+};
+
+export const fetchUserPets = async (userId) => {
+  const { data } = await api.get(`/api/users/pets/${userId}`);
+  return data;
+};
+
+export const fetchUserPreferences = async (userId) => {
   try {
-    const token = await getStoredToken();
-    const response = await axios.get(`/api/userpreferences/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
+    const { data } = await api.get(`/api/userpreferences/${userId}`);
+    return data;
   } catch (error) {
-    console.error("Error fetching user preferences:", error);
+    console.warn("[user] Could not fetch preferences:", error.message);
     return null;
   }
 };
 
-module.exports = { findUserById, fetchUserPreferences };
+export const updateUser = async (userId, updates) => {
+  const { data } = await api.put(`/api/users/${userId}`, updates);
+  return data;
+};
+
+export default {
+  fetchCurrentUser,
+  createUserProfile,
+  findUserById,
+  fetchUserPets,
+  fetchUserPreferences,
+  updateUser,
+};

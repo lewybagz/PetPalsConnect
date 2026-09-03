@@ -7,17 +7,16 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithCredential,
-  FacebookAuthProvider,
-} from "firebase/auth";
+} from "@react-native-firebase/auth";
 import { isEmail } from "validator"; // You need to install 'validator' package for this
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { LoginManager, AccessToken } from "react-native-fbsdk-next";
 import AnimatedButton from "../../components/AnimatedButton";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
+import { GOOGLE_WEB_CLIENT_ID } from "../../config/env";
 
 // Configure Google Sign-in (you should have this configuration outside of your component)
 GoogleSignin.configure({
-  webClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+  webClientId: GOOGLE_WEB_CLIENT_ID,
 });
 
 function RegisterScreen({ navigation }) {
@@ -81,28 +80,6 @@ function RegisterScreen({ navigation }) {
     }
   };
 
-  const onFacebookButtonPress = async () => {
-    try {
-      const result = await LoginManager.logInWithPermissions([
-        "public_profile",
-        "email",
-      ]);
-      if (result.isCancelled) {
-        throw "User cancelled the login process";
-      }
-      const data = await AccessToken.getCurrentAccessToken();
-      if (!data) {
-        throw "Something went wrong obtaining access token";
-      }
-      const facebookCredential = FacebookAuthProvider.credential(
-        data.accessToken
-      );
-      await signInWithCredential(auth, facebookCredential);
-      navigation.navigate("Home"); // Assuming 'Home' is the name of your home screen in the navigator
-    } catch (error) {
-      Alert.alert("Error", error);
-    }
-  };
 
   return (
     <View style={tailwind("flex-1 justify-center items-center bg-gray-100")}>
@@ -169,15 +146,6 @@ function RegisterScreen({ navigation }) {
           onGoogleButtonPress().then(() => navigation.navigate("Home"))
         }
         buttonStyle={[tailwind("bg-red-500 rounded-md"), { marginTop: 16 }]}
-        textStyle={tailwind("text-white font-semibold")}
-      />
-
-      <AnimatedButton
-        text="Sign In with Facebook"
-        onPress={() =>
-          onFacebookButtonPress().then(() => navigation.navigate("Home"))
-        }
-        buttonStyle={[tailwind("bg-blue-500 rounded-md"), { marginTop: 16 }]}
         textStyle={tailwind("text-white font-semibold")}
       />
     </View>

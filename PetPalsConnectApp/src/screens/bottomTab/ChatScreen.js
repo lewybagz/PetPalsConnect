@@ -10,20 +10,18 @@ import {
   Alert,
   Keyboard,
 } from "react-native";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 import MessageItemComponent from "../../components/MessageItemComponent";
-import { firestore } from "../../firebase/firebaseConfig";
 import { useSelector, useDispatch } from "react-redux";
-import { FieldValue } from "firebase/firestore";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import ChatOptionsModal from "../../components/ChatOptionsModal";
-import Icon from "react-native-vector-icons/FontAwesome";
-import Clipboard from "@react-native-community/clipboard";
+import { FontAwesome as Icon } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { clearError } from "../../redux/actions";
 import { startLoading, endLoading, setError } from "../../redux/actions";
 import { useSocketNotification } from "../../hooks/useSocketNotification";
-import axios from "axios";
+import api from "../../api/axios";
 
 const ChatScreen = ({ route, navigation }) => {
   const [messages, setMessages] = useState([]);
@@ -36,6 +34,7 @@ const ChatScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
 
   const userId = useSelector((state) => state.userReducer.userId);
+  const currentUser = useSelector((state) => state.userReducer.user);
   const isLoading = useSelector((state) => state.chatReducer.isLoading);
   const error = useSelector((state) => state.chatReducer.error);
 
@@ -106,42 +105,21 @@ const ChatScreen = ({ route, navigation }) => {
   };
 
   const handleSendMessage = async () => {
-    const currentUser = useSelector((state) => state.userReducer.user);
     if (!newMessage.trim()) return;
     dispatch(startLoading());
     Keyboard.dismiss();
 
     try {
-      const messageData = {
-        text: newMessage,
+      // Messages are stored in MongoDB via the API. They were previously
+      // written to Firestore and then announced to the API, which meant two
+      // sources of truth for the same conversation.
+      await api.post("/api/chats/addMessage", {
+        chatId: petInfo.id,
         senderId: userId,
         petId: petInfo.id,
-        timestamp: FieldValue.serverTimestamp(),
-      };
-
-      // Save the message to Firestore
-      const messageRef = await firestore
-        .collection("chats")
-        .doc(petInfo.id)
-        .collection("messages")
-        .add(messageData);
-
-      const senderName = currentUser.displayName;
-
-      const token = await getStoredToken();
-      // Call your API to handle any additional logic such as notifications
-      await axios.post(
-        "/api/chats/send", // Assuming you have a similar endpoint for individual chats
-        {
-          chatId: petInfo.id,
-          senderId: userId,
-          messageId: messageRef.id,
-          senderName: senderName, // Include this if you need to send the sender's name
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+        text: newMessage,
+        senderName: currentUser?.displayName,
+      });
 
       setNewMessage("");
       Alert.alert("Success", "Message sent successfully.");

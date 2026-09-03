@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import moment from "moment";
-import Hyperlink from "react-native-hyperlink";
-import Icon from "react-native-vector-icons/FontAwesome";
+import { FontAwesome as Icon } from "@expo/vector-icons";
 import { Swipeable } from "react-native-gesture-handler";
 import CustomActionSheet from "./CustomActionSheet";
 import ReactionSelectorComponent from "./ReactionSelectorComponent";
@@ -61,9 +60,15 @@ const MessageItemComponent = ({
     // Here's where we handle text messages with potential links
     if (typeof message.ContentText === "string") {
       return (
-        <Hyperlink linkDefault={true}>
-          <Text style={styles.messageText}>{message.ContentText}</Text>
-        </Hyperlink>
+        // react-native-hyperlink (last published 2019) only auto-linked URLs.
+        // React Native's own dataDetectorType does the same natively.
+        <Text
+          style={styles.messageText}
+          dataDetectorType="all"
+          selectable
+        >
+          {message.ContentText}
+        </Text>
       );
     }
     // Placeholder for voice message

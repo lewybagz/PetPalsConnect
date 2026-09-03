@@ -6,7 +6,7 @@ import {
   StyleSheet,
   Animated,
 } from "react-native";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 
 const VerificationSelectionScreen = ({ navigation, route }) => {
   const tailwind = useTailwind();

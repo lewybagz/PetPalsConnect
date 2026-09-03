@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
-import { getAuth, updatePassword } from "firebase/auth";
-import { useTailwind } from "nativewind";
+import { getAuth, updatePassword } from "@react-native-firebase/auth";
+import { useTailwind } from "../../styles/tailwind";
 
 const ChangePasswordScreen = () => {
   const [currentPassword, setCurrentPassword] = useState("");

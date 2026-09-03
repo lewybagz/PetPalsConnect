@@ -9,15 +9,14 @@ import {
   Platform,
   Button,
 } from "react-native";
-import { launchImageLibrary } from "react-native-image-picker";
+import * as ImagePicker from "expo-image-picker";
 import storage from "@react-native-firebase/storage";
 import { Picker } from "@react-native-picker/picker";
-import { matchPets } from "../../../../backend/controllers/";
 import DropDownPicker from "react-native-dropdown-picker";
 import { useSelector, useDispatch } from "react-redux";
-import Realm from "realm";
-import axios from "axios";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { removeCache, CacheKeys } from "../../services/localCache";
 import { clearError } from "../../redux/actions";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 const AddPetScreen = (navigation) => {
@@ -40,9 +39,6 @@ const AddPetScreen = (navigation) => {
     }
   }, [error, dispatch]);
 
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
   const [currentPet, setCurrentPet] = useState({
     name: "",
     breed: "",
@@ -168,6 +164,12 @@ const AddPetScreen = (navigation) => {
     { label: "Balanced", value: "balanced" },
     { label: "Extrovert", value: "extrovert" },
   ];
+  // Hooks must run in the same order on every render, so this early return has
+  // to come after every useState/useEffect above - not in the middle of them.
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
   const onActivitySelect = (item) => {
     if (!currentPet.favoriteActivities.includes(item.value)) {
       setCurrentPet({
@@ -209,7 +211,7 @@ const AddPetScreen = (navigation) => {
       weight: { ...currentPet.weight, value: parseFloat(text) || 0 },
     });
   };
-  const handleChoosePhoto = () => {
+  const handleChoosePhoto = async () => {
     if (currentPet.photos.length >= MAX_PHOTOS) {
       Alert.alert(
         "Limit Reached",
@@ -218,21 +220,35 @@ const AddPetScreen = (navigation) => {
       return;
     }
 
-    launchImageLibrary({ noData: true }, async (response) => {
-      if (response.didCancel) {
-        console.log("User cancelled image picker");
-      } else if (response.error) {
-        console.log("ImagePicker Error: ", response.error);
-      } else {
-        const uploadedUrl = await uploadImageToFirebase(response.uri);
-        if (uploadedUrl) {
-          setCurrentPet({
-            ...currentPet,
-            photos: [...currentPet.photos, uploadedUrl],
-          });
-        }
-      }
+    // expo-image-picker replaces react-native-image-picker. It is
+    // promise-based and requests permission itself, rather than taking a
+    // callback and assuming permission was already granted.
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission needed",
+        "Allow photo library access to add pictures of your pet."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
     });
+
+    if (result.canceled) return;
+
+    const asset = result.assets?.[0];
+    if (!asset) return;
+
+    const uploadedUrl = await uploadImageToFirebase(asset.uri);
+    if (uploadedUrl) {
+      setCurrentPet((previous) => ({
+        ...previous,
+        photos: [...previous.photos, uploadedUrl],
+      }));
+    }
   };
 
   const uploadImageToFirebase = async (uri) => {
@@ -255,31 +271,20 @@ const AddPetScreen = (navigation) => {
       let petIds = [];
       const token = await getStoredToken(); // Retrieve the token
       for (const pet of petDetails) {
-        const response = await axios.post("/api/pets", pet, {
+        const response = await api.post("/api/pets", pet, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const newPetId = response.data._id;
         petIds.push(newPetId);
 
-        Realm.write(() => {
-          Realm.create("Pet", {
-            _id: newPetId,
-            age: pet.age,
-            breed: pet.breed,
-            name: pet.name,
-            owner: pet.owner, // Assuming owner's ID is available in pet object
-            photos: pet.photos,
-            location: pet.location ? pet.location.toString() : null,
-            playdates: pet.playdates.map((pd) => pd.toString()),
-            specialNeeds: pet.specialNeeds,
-            temperament: pet.temperament,
-            weight: pet.weight,
-          });
-        });
-
-        // Run the matching algorithm
-        await matchPets(newPetId, false);
+        // Matching runs server-side. This screen used to import the backend's
+        // matchPets controller directly, which cannot execute on a device.
+        await api.post(`/api/petmatches/run/${newPetId}`).catch((error) =>
+          console.warn("[pets] Match run failed:", error.message)
+        );
       }
+
+      await removeCache(CacheKeys.pets);
 
       if (isNewUser) {
         // Create a complete user profile in MongoDB for new users
@@ -288,7 +293,7 @@ const AddPetScreen = (navigation) => {
         setIsNewUser(false);
       } else {
         // Update existing user document with new pet IDs
-        await axios.patch(
+        await api.patch(
           `/api/users/${userId}`,
           { pets: petIds },
           {
@@ -317,7 +322,7 @@ const AddPetScreen = (navigation) => {
 
     try {
       const token = await getStoredToken(); // Retrieve the token
-      await axios.post("/api/users", userProfile, {
+      await api.post("/api/users", userProfile, {
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch (error) {

@@ -10,14 +10,14 @@ import {
   TouchableOpacity,
   styles,
 } from "react-native";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword } from "@react-native-firebase/auth";
 import { getAuth, getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import AnimatedButton from "../../components/AnimatedButton";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 import { useDispatch } from "react-redux";
 import { setUserId, setUser } from "../../redux/actions";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
+import api from "../../api/axios";
 import { useSelector } from "react-redux";
 import * as SecureStore from "expo-secure-store";
 import { clearError } from "../../redux/actions";
@@ -133,7 +133,7 @@ function LoginScreen({ navigation }) {
     try {
       const enable2FA = method === "phone" || method === "email"; // Assuming 'phone' or 'email' method enables 2FA
 
-      await axios.post("/api/user/settings/2fa", {
+      await api.post("/api/user/settings/2fa", {
         userId: userId, // Replace with actual logged-in user's ID
         enable2FA: enable2FA,
       });

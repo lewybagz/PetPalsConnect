@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   Modal,
 } from "react-native";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../styles/tailwind";
 import { getStoredToken } from "../../utils/tokenutil";
-import axios from "axios";
+import api from "../api/axios";
 
 const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
   const tailwind = useTailwind();
@@ -25,7 +25,7 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
         ? `/api/groupchats/${chat.id}/archive`
         : `/api/chats/${chat.id}/archive`;
 
-      const response = await axios.post(
+      const response = await api.post(
         endpoint,
         {},
         {
@@ -52,7 +52,7 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
         ? `/api/groupchats/${chat.id}`
         : `/api/chats/${chat.id}`;
 
-      const response = await axios.delete(endpoint, {
+      const response = await api.delete(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const updatedChat = response.data;
@@ -79,7 +79,7 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
   const handlePinChat = async () => {
     try {
       const token = await getStoredToken();
-      await axios.post(
+      await api.post(
         `/api/chats/${chat.id}/pin`,
         {},
         {

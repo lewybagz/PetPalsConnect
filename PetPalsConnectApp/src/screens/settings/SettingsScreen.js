@@ -1,174 +1,92 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, Switch, TouchableOpacity, Alert } from "react-native";
-import { getAuth, signOut } from "firebase/auth";
+import { getAuth, signOut } from "@react-native-firebase/auth";
 import Slider from "@react-native-community/slider";
-import { useTailwind } from "nativewind";
-import { useAppTheme } from "../../context/ThemeContext";
-import axios from "axios";
-import { getRealm } from "../../../../backend/models/Settings";
-import { getStoredToken } from "../../../utils/tokenutil";
-import { setError } from "../../redux/actions";
+import { useTailwind } from "../../styles/tailwind";
+import { useAppTheme } from "../../context/AppThemeContext";
+import api from "../../api/axios";
+import { readCache, writeCache, CacheKeys } from "../../services/localCache";
 
 const SettingsScreen = ({ navigation }) => {
-  const [locationSharingEnabled, setLocationSharingEnabled] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
   const tailwind = useTailwind();
   const auth = getAuth();
-  const { toggleAppTheme } = useAppTheme();
-  const [playdateRange, setPlaydateRange] = useState(5);
-  const getToken = async () => {
-    try {
-      const token = await getStoredToken();
-      return token;
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-  useEffect(() => {
-    const realm = getRealm();
-    let settings = realm.objectForPrimaryKey("Settings", "unique_settings_id");
-    if (settings) {
-      setLocationSharingEnabled(settings.locationSharingEnabled);
-      setPlaydateRange(settings.playdateRange);
-      setDarkMode(settings.darkMode);
-      setNotificationPreferences(JSON.parse(settings.notificationPreferences));
-    }
-  }, []);
+  const { toggleAppTheme, isDark } = useAppTheme();
 
+  const [locationSharingEnabled, setLocationSharingEnabled] = useState(true);
+  const [playdateRange, setPlaydateRange] = useState(5);
   const [notificationPreferences, setNotificationPreferences] = useState({
     petPalsMapUpdates: false,
     playdateReminders: false,
     appUpdates: false,
   });
 
-  const handlePlaydateRangeChange = async (value, token) => {
-    const realm = await getRealm();
+  const darkMode = isDark;
+
+  // Settings were stored in Realm (end-of-life September 2025) using a schema
+  // imported from the backend package. They now live in AsyncStorage, and the
+  // shared axios instance attaches the auth token, so the manual token plumbing
+  // that used to wrap each of these handlers is gone.
+  useEffect(() => {
+    let cancelled = false;
+    readCache(CacheKeys.settings).then((settings) => {
+      if (cancelled || !settings) return;
+      setLocationSharingEnabled(settings.locationSharingEnabled ?? true);
+      setPlaydateRange(settings.playdateRange ?? 5);
+      if (settings.notificationPreferences) {
+        setNotificationPreferences(settings.notificationPreferences);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const persist = (overrides) =>
+    writeCache(CacheKeys.settings, {
+      locationSharingEnabled,
+      playdateRange,
+      notificationPreferences,
+      ...overrides,
+    });
+
+  const handlePlaydateRangeChange = async (value) => {
     setPlaydateRange(value);
     try {
-      realm.write(() => {
-        let settings = realm.objectForPrimaryKey(
-          "Settings",
-          "unique_settings_id"
-        );
-        if (!settings) {
-          settings = realm.create("Settings", {
-            _id: "unique_settings_id",
-            playdateRange: value,
-            locationSharingEnabled: locationSharingEnabled,
-            darkMode: darkMode,
-            notificationPreferences: JSON.stringify(notificationPreferences),
-          });
-        } else {
-          settings.playdateRange = value;
-        }
-      });
-
-      getToken();
-      await axios.post(
-        "/api/user/settings",
-        { playdateRange: value },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await persist({ playdateRange: value });
+      await api.post("/api/users/settings", { playdateRange: value });
     } catch (error) {
       Alert.alert("Error", "Failed to save playdate range preference.");
     }
   };
 
-  const toggleNotificationSetting = async (key, token) => {
-    const newPreferences = {
-      ...notificationPreferences,
-      [key]: !notificationPreferences[key],
-    };
-
+  const toggleNotificationSetting = async (key) => {
+    const next = { ...notificationPreferences, [key]: !notificationPreferences[key] };
+    setNotificationPreferences(next);
     try {
-      // Update state
-      setNotificationPreferences(newPreferences);
-
-      const realm = await getRealm();
-
-      realm.write(() => {
-        let settings = realm.objectForPrimaryKey(
-          "Settings",
-          "unique_settings_id"
-        );
-        if (settings) {
-          settings.notificationPreferences = JSON.stringify(newPreferences);
-        } else {
-          realm.create("Settings", {
-            _id: "unique_settings_id",
-            playdateRange: playdateRange,
-            locationSharingEnabled: locationSharingEnabled,
-            darkMode: darkMode,
-            notificationPreferences: JSON.stringify(notificationPreferences),
-          });
-        }
-      });
-
-      getToken();
-      await axios.post(
-        "/api/user/notification-preferences",
-        {
-          [key]: newPreferences[key],
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await persist({ notificationPreferences: next });
+      await api.post("/api/users/notification-preferences", { [key]: next[key] });
     } catch (error) {
+      setNotificationPreferences(notificationPreferences); // roll back
       Alert.alert("Error", `Failed to save the setting for ${key}.`);
     }
   };
 
-  const toggleLocationSharing = async (token) => {
-    const newLocationSharingState = !locationSharingEnabled;
-    setLocationSharingEnabled(newLocationSharingState);
+  const toggleLocationSharing = async () => {
+    const next = !locationSharingEnabled;
+    setLocationSharingEnabled(next);
     try {
-      const realm = await getRealm();
-
-      realm.write(() => {
-        let settings = realm.objectForPrimaryKey(
-          "Settings",
-          "unique_settings_id"
-        );
-        if (settings) {
-          settings.locationSharingEnabled = newLocationSharingState;
-        } else {
-          realm.create("Settings", {
-            _id: "unique_settings_id",
-            playdateRange: playdateRange,
-            locationSharingEnabled: locationSharingEnabled,
-            darkMode: darkMode,
-            notificationPreferences: JSON.stringify(notificationPreferences),
-          });
-        }
-      });
-
-      getToken();
-      await axios.post(
-        "/api/user/settings",
-        {
-          locationSharingEnabled: newLocationSharingState,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await persist({ locationSharingEnabled: next });
+      await api.post("/api/users/settings", { locationSharingEnabled: next });
     } catch (error) {
+      setLocationSharingEnabled(!next); // roll back
       Alert.alert("Error", "Failed to save location sharing preference.");
     }
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode((previousState) => !previousState);
-    toggleAppTheme();
-  };
-
+  // RootNavigator swaps to the auth stack as soon as Firebase reports a signed
+  // out user, so there is no navigation call to make here.
   const handleSignOut = () => {
-    signOut(auth)
-      .then(() => navigation.replace("Login"))
-      .catch((error) => Alert.alert("Error", error.message));
+    signOut(auth).catch((error) => Alert.alert("Error", error.message));
   };
 
   return (
@@ -176,7 +94,7 @@ const SettingsScreen = ({ navigation }) => {
       <Text style={tailwind("text-xl font-bold")}>Settings</Text>
 
       <TouchableOpacity
-        onPress={() => navigation.navigate("ManageSubscription")}
+        onPress={() => navigation.navigate("SubscriptionManagement")}
         style={tailwind("my-2 p-2 border rounded border-gray-300")}
       >
         <Text>Manage Subscription</Text>
@@ -294,7 +212,7 @@ const SettingsScreen = ({ navigation }) => {
         <Switch
           trackColor={{ false: "#767577", true: "#81b0ff" }}
           thumbColor={darkMode ? "#f5dd4b" : "#f4f3f4"}
-          onValueChange={toggleDarkMode}
+          onValueChange={toggleAppTheme}
           value={darkMode}
         />
       </View>

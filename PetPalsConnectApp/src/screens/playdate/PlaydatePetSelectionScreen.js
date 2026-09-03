@@ -6,26 +6,26 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import axios from "axios";
-import UserPetCard from "../../components/UserPetCard";
+import api from "../../api/axios";
+import UserPetCard from "../../components/UserPetCardComponent";
 import { useSelector } from "react-redux";
 import BottomSheet from "@gorhom/bottom-sheet";
-import { CheckBox } from "react-native-elements";
-import { getRealm } from "../../../realmModels/RealmPetModel";
-import { getStoredToken } from "../../../utils/tokenutil";
+import CheckBox from "../../components/CheckBox";
+import { readCache, writeCache, CacheKeys } from "../../services/localCache";
 
 const PlaydatePetSelectionScreen = ({ route, navigation }) => {
   const [matchedPets, setMatchedPets] = useState([]);
   const [userPets, setUserPets] = useState([]);
   const { locationId } = route.params;
   const [selectedPets, setSelectedPets] = useState([]);
+  const userId = useSelector((state) => state.userReducer.userId);
 
   useEffect(() => {
     const checkCachedPets = async () => {
-      const realm = await getRealm();
-      const cachedPets = realm.objects("Pet");
-
-      if (cachedPets.length > 0) {
+      // Realm reached end-of-life in September 2025; this is a plain
+      // AsyncStorage read-through cache with the same behaviour.
+      const cachedPets = await readCache(CacheKeys.pets);
+      if (cachedPets?.length > 0) {
         setUserPets(cachedPets);
       } else {
         await fetchUserPets();
@@ -34,40 +34,20 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
 
     const fetchMatchedPets = async () => {
       try {
-        const token = await getStoredToken();
-        const matchedPetsResponse = await axios.get(
-          "/api/petmatches/matched-pets",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const matchedPetsResponse = await api.get("/api/petmatches/matched-pets");
         setMatchedPets(matchedPetsResponse.data);
       } catch (error) {
         console.error("Error fetching matched pets:", error);
       }
     };
 
+    // `userId` comes from the component-level useSelector below. Reading it via
+    // useSelector inside this callback (as before) breaks the rules of hooks.
     const fetchUserPets = async () => {
-      const userId = useSelector((state) => state.userReducer.userId);
       try {
-        const token = await getStoredToken();
-        const userPetsResponse = await axios.get(`/api/users/pets/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const userPetsResponse = await api.get(`/api/users/pets/${userId}`);
         setUserPets(userPetsResponse.data);
-
-        const realm = await getRealm();
-
-        realm.write(() => {
-          userPetsResponse.data.forEach((pet) => {
-            realm.create(
-              "Pet",
-              {
-                ...pet,
-                _id: pet._id.toString(),
-              },
-              true
-            );
-          });
-        });
+        await writeCache(CacheKeys.pets, userPetsResponse.data);
       } catch (error) {
         console.error("Error fetching user's pets:", error);
       }

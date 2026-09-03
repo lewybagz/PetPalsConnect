@@ -8,9 +8,9 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { auth } from "../../firebase/firebaseConfig";
+import { auth } from "../../../firebase/firebaseConfig";
 import { useDispatch } from "react-redux";
-import axios from "axios";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const GroupChatCreationScreen = ({ route, navigation }) => {
@@ -38,7 +38,7 @@ const GroupChatCreationScreen = ({ route, navigation }) => {
         Creator: auth.currentUser.uid,
       };
 
-      const response = await axios.post(
+      const response = await api.post(
         "/api/groupchats/findOrCreate",
         groupChatData,
         { headers: { Authorization: `Bearer ${token}` } }

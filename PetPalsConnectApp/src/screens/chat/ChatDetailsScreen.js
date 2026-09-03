@@ -8,10 +8,10 @@ import {
 } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import UserPetCard from "../../components/UserPetCardComponent";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-import axios from "axios";
+import api from "../../api/axios";
 
 const ChatDetailsScreen = ({ route, navigation }) => {
   const { chatId, isGroupChat } = route.params;
@@ -26,7 +26,7 @@ const ChatDetailsScreen = ({ route, navigation }) => {
         const endpoint = isGroupChat
           ? `/api/groupchats/${chatId}/details`
           : `/api/chats/${chatId}/details`;
-        const response = await axios.get(endpoint, {
+        const response = await api.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setChatDetails(response.data);

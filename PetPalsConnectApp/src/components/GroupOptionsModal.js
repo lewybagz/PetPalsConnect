@@ -7,8 +7,8 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { useTailwind } from "nativewind";
-import axios from "axios";
+import { useTailwind } from "../styles/tailwind";
+import api from "../api/axios";
 import { getStoredToken } from "../../utils/tokenutil";
 import { useSelector, useDispatch } from "react-redux";
 import { clearError, setError } from "../redux/actions";
@@ -46,7 +46,7 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
     console.log("Mute Tapped");
     try {
       getToken();
-      const response = await axios.post(
+      const response = await api.post(
         "/api/groupchats/toggle-mute",
         {
           userId: userId,
@@ -68,7 +68,7 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
     console.log("View Media Tapped");
     try {
       getToken();
-      const response = await axios.get(`/api/groupchats/${chatId}/media`, {
+      const response = await api.get(`/api/groupchats/${chatId}/media`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const mediaArray = response.data.media;
@@ -87,7 +87,7 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
     console.log("Leave Group Tapped");
     try {
       getToken();
-      await axios.post(
+      await api.post(
         "/api/groupchats/leave",
         {
           userId: userId,

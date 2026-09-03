@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, FlatList, StyleSheet, Alert } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
-import axios from "axios";
-import Icon from "react-native-vector-icons/FontAwesome";
+import api from "../../api/axios";
+import { FontAwesome as Icon } from "@expo/vector-icons";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 import ScheduledPlaydateCardComponent from "../../components/ScheduledPlaydateCardComponent";
@@ -17,7 +17,7 @@ const UpcomingPlaydateScreen = (navigation) => {
       try {
         const token = await getStoredToken(); // Retrieve the token
         // Replace with your actual API endpoint
-        const response = await axios.get("/api/playdates/upcoming", {
+        const response = await api.get("/api/playdates/upcoming", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setPlaydates(response.data);

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FlatList, Text, StyleSheet, RefreshControl } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import ChatCard from "../../components/ChatCardComponent";
-import axios from "axios";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const ChatsScreen = ({ navigation }) => {
@@ -15,7 +15,7 @@ const ChatsScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const token = await getStoredToken(); // Retrieve the token
-      const response = await axios.get("/api/chats", {
+      const response = await api.get("/api/chats", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setChats(response.data); // Assuming the response data is the array of chats

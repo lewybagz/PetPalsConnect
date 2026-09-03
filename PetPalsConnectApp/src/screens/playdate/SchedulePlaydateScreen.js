@@ -9,10 +9,10 @@ import {
   Alert,
   FlatList,
 } from "react-native";
-import axios from "axios"; // Assuming axios is used for API calls
+import api from "../../api/axios"; // Assuming axios is used for API calls
 import { useSelector, useDispatch } from "react-redux";
 import { Image } from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome";
+import { FontAwesome as Icon } from "@expo/vector-icons";
 import { fetchUserPreferences } from "../../../services/UserService";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
@@ -72,7 +72,7 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
   const fetchLocations = async (latitude, longitude, playdateRange, token) => {
     try {
       getToken();
-      const response = await axios.get("/api/locations/playdate-locations", {
+      const response = await api.get("/api/locations/playdate-locations", {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           userLat: latitude,
@@ -100,7 +100,7 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
 
     try {
       getToken();
-      const response = await axios.post("/api/playdates", playdateData, {
+      const response = await api.post("/api/playdates", playdateData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

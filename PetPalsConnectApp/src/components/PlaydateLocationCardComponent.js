@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import ReviewComponent from "./ReviewComponent";
 import { getStoredToken } from "../../utils/tokenutil";
-import axios from "axios";
+import api from "../api/axios";
 
 const PlayDateLocationCard = ({ locationData, navigation }) => {
   const [reviews, setReviews] = useState([]);
@@ -19,7 +19,7 @@ const PlayDateLocationCard = ({ locationData, navigation }) => {
       const fetchReviews = async () => {
         try {
           const token = await getStoredToken();
-          const response = await axios.get(
+          const response = await api.get(
             `/api/reviews/location/${locationData._id}`,
             {
               headers: { Authorization: `Bearer ${token}` },

@@ -1,9 +1,10 @@
 // ReactionSelectorComponent.js
 import React from "react";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
-import Emoji from "react-native-emoji";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 
-const reactions = ["😀", "😍", "😢", "😡", "👍", "👎"]; // Define the set of emojis you want to use
+// These are already Unicode emoji, so react-native-emoji (which maps :shortcodes:
+// to characters) was never doing anything here and is no longer a dependency.
+const reactions = ["😀", "😍", "😢", "😡", "👍", "👎"];
 
 const ReactionSelectorComponent = ({ onReact }) => {
   return (
@@ -14,7 +15,7 @@ const ReactionSelectorComponent = ({ onReact }) => {
           onPress={() => onReact(reaction)}
           style={styles.emojiButton}
         >
-          <Emoji name={reaction} style={styles.emoji} />
+          <Text style={styles.emoji}>{reaction}</Text>
         </TouchableOpacity>
       ))}
     </View>

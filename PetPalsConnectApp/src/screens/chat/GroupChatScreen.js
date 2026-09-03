@@ -10,18 +10,17 @@ import {
   Alert,
   Keyboard,
 } from "react-native";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 import UserPetCard from "../../components/UserPetCardComponent";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import GroupOptionsModal from "../../components/GroupOptionsModal";
 import MessageItemComponent from "../../components/MessageItemComponent";
-import { auth, firestore } from "../../firebase/firebaseConfig";
-import { FieldValue } from "firebase/firestore";
-import Icon from "react-native-vector-icons/FontAwesome";
-import Clipboard from "@react-native-community/clipboard";
+import { auth } from "../../../firebase/firebaseConfig";
+import { FontAwesome as Icon } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { useSocketNotification } from "../../hooks/useSocketNotification";
-import axios from "axios";
+import api from "../../api/axios";
 import { useSelector } from "react-redux";
 
 const GroupChatScreen = ({ route, navigation }) => {
@@ -165,7 +164,7 @@ const GroupChatScreen = ({ route, navigation }) => {
         .update({ reactions: reactionUpdate });
 
       // Call the backend to handle sending notifications
-      const response = await axios.post(
+      const response = await api.post(
         "/api/groupchats/react",
         {
           groupId: groupInfo.id,
@@ -218,13 +217,13 @@ const GroupChatScreen = ({ route, navigation }) => {
         text: newMessage,
         senderId: userId,
         groupId: groupInfo.id,
-        timestamp: FieldValue.serverTimestamp(),
+        timestamp: new Date().toISOString(),
       };
 
       const savedMessage = await saveMessageToDatabase(groupId, messageData);
 
       const token = await getStoredToken();
-      await axios.post(
+      await api.post(
         "/api/groupChats/send",
         {
           groupId: groupInfo.id,

@@ -1,64 +1,98 @@
-import React, { useState, useEffect } from "react";
-import { View, FlatList, StyleSheet } from "react-native";
-import { useRealm } from "../../../realmModels/RealmFriendModel";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+
 import { useSocketFriendRequest } from "../../hooks/useSocketFriendRequest";
 import SwipeableUserPetCard from "../swipe/SwipeableUserPetCard";
+import api from "../../api/axios";
+import { staleWhileRevalidate, CacheKeys } from "../../services/localCache";
+
+/**
+ * Friends list.
+ *
+ * Rewritten off Realm (end-of-life September 2025) onto the API, with an
+ * AsyncStorage cache so the list still renders offline. The previous version
+ * also called the `useSocketFriendRequest` hook from inside a `useEffect`
+ * callback, which breaks the rules of hooks - it is now called at the top level.
+ */
 const FriendsListScreen = ({ navigation }) => {
   const [friends, setFriends] = useState([]);
-  const [friendIds, setFriendIds] = useState(new Set());
-  const realm = useRealm();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const loadFriends = useCallback(async () => {
+    try {
+      setError(null);
+      await staleWhileRevalidate(
+        CacheKeys.friends,
+        async () => {
+          const { data } = await api.get("/api/friends");
+          return data;
+        },
+        (data) => setFriends(Array.isArray(data) ? data : [])
+      );
+    } catch (err) {
+      setError("Could not load your friends list.");
+      console.warn("[friends] load failed:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadFriends = () => {
-      const friendsList = realm.objects("Friend").filtered("status == true");
-      setFriends(friendsList);
-      const ids = new Set(friendsList.map((friend) => friend.user2)); // Assuming 'user2' is the friend's ID
-      setFriendIds(ids);
-    };
-
     loadFriends();
+  }, [loadFriends]);
 
-    // Use the socket hook here
-    useSocketFriendRequest(loadFriends);
-  }, [realm]);
+  // Refresh when a friend request is accepted elsewhere.
+  useSocketFriendRequest(loadFriends);
 
-  const navigateToPetDetails = (petId) => {
-    navigation.navigate("PetDetails", { petId });
-  };
+  const friendIds = useMemo(
+    () => new Set(friends.map((friend) => friend._id ?? friend.user2)),
+    [friends]
+  );
 
   const renderItem = ({ item }) => {
-    const friendUserId = item.user1; // logic based on your data structure
-    const friendData = realm.objectForPrimaryKey("User", friendUserId);
-
-    // Assuming we are navigating to the details of the first pet in the array
-    const petId = friendData.pets.length > 0 ? friendData.pets[0] : null;
-
+    const petId = item.pets?.length > 0 ? item.pets[0] : null;
     return (
       <SwipeableUserPetCard
-        data={friendData}
-        onPress={() => petId && navigateToPetDetails(petId)}
-        isFriend={friendIds.has(friendUserId)}
+        data={item}
+        onPress={() => petId && navigation.navigate("PetDetails", { petId })}
+        isFriend={friendIds.has(item._id)}
       />
     );
   };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <FlatList
         data={friends}
-        keyExtractor={(item) => item._id.toString()}
         renderItem={renderItem}
+        keyExtractor={(item, index) => String(item._id ?? index)}
+        onRefresh={loadFriends}
+        refreshing={loading}
+        ListEmptyComponent={
+          <View style={styles.centered}>
+            <Text style={styles.empty}>
+              {error ?? "No friends yet. Start matching to add some!"}
+            </Text>
+          </View>
+        }
       />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f8f8",
-  },
-  // ...other styles
+  container: { flex: 1 },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  empty: { color: "#666", textAlign: "center" },
 });
 
 export default FriendsListScreen;

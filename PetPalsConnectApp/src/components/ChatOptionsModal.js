@@ -7,8 +7,8 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { useTailwind } from "nativewind";
-import axios from "axios";
+import { useTailwind } from "../styles/tailwind";
+import api from "../api/axios";
 import { useSelector, useDispatch } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
 import LoadingScreen from "./LoadingScreenComponent";
@@ -34,7 +34,7 @@ const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
     console.log("Mute Tapped");
     try {
       getToken();
-      const response = await axios.post(
+      const response = await api.post(
         "/api/groupchats/toggle-mute",
         {
           userId: userId,
@@ -56,7 +56,7 @@ const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
     console.log("View Media Tapped");
     try {
       getToken();
-      const response = await axios.get(`/api/chats/${chatId}/media`, {
+      const response = await api.get(`/api/chats/${chatId}/media`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const mediaArray = response.data.media;

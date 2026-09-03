@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import axios from "axios";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const PetSelectionScreen = ({ navigation, route }) => {
@@ -20,7 +20,7 @@ const PetSelectionScreen = ({ navigation, route }) => {
     const fetchPetFriends = async () => {
       try {
         const token = await getStoredToken();
-        const response = await axios.get(`/api/friends/${userPetId}/pets`, {
+        const response = await api.get(`/api/friends/${userPetId}/pets`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setPets(response.data);

@@ -1,12 +1,18 @@
 // actions.js
-import axios from "axios";
+import api from "../api/axios";
 import { getStoredToken } from "../../utils/tokenutil";
 
-export const startLoading = () => ({ type: "START_LOADING" });
-export const endLoading = () => ({ type: "END_LOADING" });
-export const setError = (error) => ({ type: "SET_ERROR", payload: error });
-
+// Action type constants. reducers.js imports START_LOADING, END_LOADING and
+// SET_ERROR by name; they were never exported, so every `case START_LOADING:`
+// compiled to `case undefined:` and the loading/error branches never ran.
+export const START_LOADING = "START_LOADING";
+export const END_LOADING = "END_LOADING";
+export const SET_ERROR = "SET_ERROR";
 export const CLEAR_ERROR = "CLEAR_ERROR";
+
+export const startLoading = () => ({ type: START_LOADING });
+export const endLoading = () => ({ type: END_LOADING });
+export const setError = (error) => ({ type: SET_ERROR, payload: error });
 
 export const clearError = () => ({
   type: CLEAR_ERROR,
@@ -83,7 +89,7 @@ export const fetchPlaydates = (userId) => {
     dispatch(fetchPlaydatesStart());
     try {
       const token = await getStoredToken();
-      const response = await axios.get(`/api/playdates/${userId}`, {
+      const response = await api.get(`/api/playdates/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       dispatch(fetchPlaydatesSuccess(response.data));
@@ -98,7 +104,7 @@ export const fetchPlaydateDetails = (playdateId) => async (dispatch) => {
     dispatch({ type: "FETCH_PLAYDATE_DETAILS_START" });
 
     const token = await getStoredToken();
-    const response = await axios.get(`/api/playdates/${playdateId}`, {
+    const response = await api.get(`/api/playdates/${playdateId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 

@@ -2,46 +2,36 @@ import React, { useState, useEffect } from "react";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import ChatsScreen from "./ChatsScreen";
 import GroupChatsScreen from "./GroupChatsScreen";
-import Realm from "realm";
-import Icon from "react-native-vector-icons/MaterialIcons";
-import NavigationStateSchema from "../../../../backend/models/NavigationState";
+import { MaterialIcons as Icon } from "@expo/vector-icons";
+import { readCache, writeCache, CacheKeys } from "../../services/localCache";
 
 const Tab = createMaterialTopTabNavigator();
 
 const ChatTabsScreen = () => {
   const [initialState, setInitialState] = useState(null);
+  const [restored, setRestored] = useState(false);
+
+  // Remembers which chat tab was last open. This used Realm, which reached
+  // end-of-life in September 2025; AsyncStorage covers the same need.
   useEffect(() => {
-    let realm;
-
-    const restoreState = async () => {
-      realm = await Realm.open({ schema: [NavigationStateSchema] });
-
-      const savedState = realm.objects("NavigationState")[0];
-      if (savedState) {
-        setInitialState(JSON.parse(savedState.state));
-      }
-    };
-
-    restoreState();
-
+    let cancelled = false;
+    readCache(CacheKeys.navigationState).then((saved) => {
+      if (cancelled) return;
+      if (saved) setInitialState(saved);
+      setRestored(true);
+    });
     return () => {
-      if (realm && !realm.isClosed) {
-        realm.close();
-      }
+      cancelled = true;
     };
   }, []);
 
   const handleStateChange = (state) => {
-    Realm.open({ schema: [NavigationStateSchema] }).then((realm) => {
-      realm.write(() => {
-        realm.create(
-          "NavigationState",
-          { id: 1, state: JSON.stringify(state) },
-          Realm.UpdateMode.Modified
-        );
-      });
-    });
+    if (state) writeCache(CacheKeys.navigationState, state);
   };
+
+  // Mounting the navigator before the saved state loads would make it ignore
+  // `initialState`, so hold off for the one tick it takes to read.
+  if (!restored) return null;
 
   return (
     <Tab.Navigator

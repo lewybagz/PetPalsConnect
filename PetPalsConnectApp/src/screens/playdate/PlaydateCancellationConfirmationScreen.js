@@ -1,8 +1,8 @@
 // PlaydateCancellationConfirmationScreen.js
 import React, { useState } from "react";
 import { View, Text, TextInput, Alert, TouchableOpacity } from "react-native";
-import axios from "axios";
-import { useTailwind } from "nativewind";
+import api from "../../api/axios";
+import { useTailwind } from "../../styles/tailwind";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
@@ -13,7 +13,7 @@ const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
   const handleCancellation = async () => {
     try {
       const token = await getStoredToken();
-      await axios.post(
+      await api.post(
         `/api/playdates/cancel/${playdateId}`,
         { message },
         { headers: { Authorization: `Bearer ${token}` } }

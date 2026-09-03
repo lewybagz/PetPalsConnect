@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, FlatList, StyleSheet, RefreshControl } from "react-native";
 import NotificationItem from "../../components/NotificationItemComponent";
-import axios from "axios";
+import api from "../../api/axios";
 import { useSelector } from "react-redux";
 import { useSocketNotification } from "../../hooks/useSocketNotification";
 import { getStoredToken } from "../../../utils/tokenutil";
@@ -17,7 +17,7 @@ const NotificationsScreen = ({ navigation }) => {
     const fetchNotifications = async () => {
       try {
         const token = await getStoredToken();
-        const response = await axios.get(`/api/notifications/user/${userId}`, {
+        const response = await api.get(`/api/notifications/user/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setNotifications(response.data);
@@ -33,7 +33,7 @@ const NotificationsScreen = ({ navigation }) => {
     setRefreshing(true);
     try {
       const token = await getStoredToken();
-      const response = await axios.get(`/api/notifications/user/${userId}`, {
+      const response = await api.get(`/api/notifications/user/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotifications(response.data);

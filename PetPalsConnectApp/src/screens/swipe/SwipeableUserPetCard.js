@@ -10,11 +10,11 @@ import {
   StyleSheet,
 } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { getStoredToken } from "../../utils/tokenutil";
+import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
+import { getStoredToken } from "../../../utils/tokenutil";
 import { useSelector } from "react-redux";
-import { setError } from "../redux/actions";
-import axios from "axios";
+import { setError } from "../../redux/actions";
+import api from "../../api/axios";
 
 const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -32,7 +32,7 @@ const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const handleBlockUser = async (userIdToBlock) => {
     try {
       const token = await getToken();
-      const response = await axios.post(
+      const response = await api.post(
         "/api/blocklist",
         {
           BlockedUser: userIdToBlock,
@@ -60,7 +60,7 @@ const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const handleAddToFavorites = async (petId, token) => {
     try {
       getToken();
-      const response = await axios.post(
+      const response = await api.post(
         "/api/favorites",
         {
           content: petId,
@@ -87,7 +87,7 @@ const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
       return;
     }
     try {
-      const response = await axios.post(
+      const response = await api.post(
         "/api/friends",
         {
           senderId: currentUser._id,

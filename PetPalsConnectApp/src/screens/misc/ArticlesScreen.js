@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { View, FlatList, TextInput, StyleSheet } from "react-native";
 import ArticleCard from "../../components/ArticleCardComponent";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import { MaterialIcons as Icon } from "@expo/vector-icons";
 import { getStoredToken } from "../../../utils/tokenutil";
 
-import axios from "axios";
+import api from "../../api/axios";
 
 const ArticlesScreen = ({ navigation }) => {
   const [articles, setArticles] = useState([]);
@@ -17,7 +17,7 @@ const ArticlesScreen = ({ navigation }) => {
   const fetchLatestArticles = async () => {
     try {
       const token = await getStoredToken(); // Retrieve the token
-      const response = await axios.get("/api/articles/latest", {
+      const response = await api.get("/api/articles/latest", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setArticles(response.data);
@@ -30,7 +30,7 @@ const ArticlesScreen = ({ navigation }) => {
     if (searchQuery) {
       try {
         const token = await getStoredToken(); // Retrieve the token
-        const response = await axios.get(
+        const response = await api.get(
           `/api/articles/search?q=${encodeURIComponent(searchQuery)}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );

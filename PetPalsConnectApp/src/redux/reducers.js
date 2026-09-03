@@ -1,5 +1,5 @@
 // rootReducer.js
-import { combineReducers } from "redux";
+import { combineReducers } from "@reduxjs/toolkit";
 import {
   SET_NOTIFICATIONS,
   ADD_NOTIFICATION,

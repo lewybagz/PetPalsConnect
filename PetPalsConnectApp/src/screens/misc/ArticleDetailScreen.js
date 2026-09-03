@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ScrollView, Text, StyleSheet } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
-import axios from "axios";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const ArticleDetailScreen = ({ route }) => {
@@ -14,7 +14,7 @@ const ArticleDetailScreen = ({ route }) => {
       try {
         setIsLoading(true);
         const token = await getStoredToken(); // Retrieve the token
-        const response = await axios.get(`/api/articles/${articleId}`, {
+        const response = await api.get(`/api/articles/${articleId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setArticle(response.data);

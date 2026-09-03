@@ -7,9 +7,9 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 import { getStoredToken } from "../../../utils/tokenutil";
-import axios from "axios";
+import api from "../../api/axios";
 
 const HelpSupportScreen = () => {
   const [name, setName] = useState("");
@@ -24,7 +24,7 @@ const HelpSupportScreen = () => {
         throw new Error("Authorization token not found");
       }
 
-      const response = await axios.post("/api/supportmessages", formData, {
+      const response = await api.post("/api/supportmessages", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

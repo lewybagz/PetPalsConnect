@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, Button, Alert, StyleSheet } from "react-native";
-import axios from "axios";
-import DateTimePickerComponent from "../components/DateTimePickerComponent";
+import api from "../../api/axios";
+import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 import { clearError } from "../../redux/actions";
 import { useSelector, useDispatch } from "react-redux";
 import { getStoredToken } from "../../../utils/tokenutil";
@@ -36,7 +36,7 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
     try {
       const token = await getStoredToken();
       // Send the playdate data to the backend
-      const response = await axios.post("/api/playdates", playdateData, {
+      const response = await api.post("/api/playdates", playdateData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

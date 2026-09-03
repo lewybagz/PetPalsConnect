@@ -1,6 +1,6 @@
 import React from "react";
 import { Text, ScrollView, Image } from "react-native";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 
 import * as Application from "expo-application";
 

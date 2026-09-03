@@ -7,11 +7,11 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { useTailwind } from "nativewind";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { useTailwind } from "../styles/tailwind";
+import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
-import axios from "axios";
+import api from "../api/axios";
 const NotificationItem = ({ content, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const tailwind = useTailwind();
@@ -31,7 +31,7 @@ const NotificationItem = ({ content, navigation }) => {
         },
       };
 
-      await axios.patch(`/api/userpreferences/${userId}`, updatedPreferences, {
+      await api.patch(`/api/userpreferences/${userId}`, updatedPreferences, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

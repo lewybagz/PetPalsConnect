@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { View, Text, Button, Alert } from "react-native";
-import { useTailwind } from "nativewind";
+import { useTailwind } from "../../styles/tailwind";
 import {
   getAuth,
   onAuthStateChanged,
   sendEmailVerification,
-} from "firebase/auth";
+} from "@react-native-firebase/auth";
 
 const EmailVerificationScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();

@@ -9,9 +9,9 @@ import {
   Button,
   TextInput,
 } from "react-native";
-import { useTailwind } from "nativewind";
-import { auth } from "../../../firebase/firbaseConfig";
-import axios from "axios";
+import { useTailwind } from "../../styles/tailwind";
+import { auth } from "../../../firebase/firebaseConfig";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { setError } from "../../redux/actions";
 
@@ -36,7 +36,7 @@ const SecuritySettingsScreen = () => {
   const handleTwoFactorAuthChange = async (isEnabled, token) => {
     try {
       getToken();
-      await axios.post(
+      await api.post(
         "/api/user/settings/2fa",
         {
           userId: userId,
@@ -70,7 +70,7 @@ const SecuritySettingsScreen = () => {
     }
     try {
       getToken();
-      await axios.post(
+      await api.post(
         "/api/user/settings/change-password",
         {
           userId: userId,
@@ -91,7 +91,7 @@ const SecuritySettingsScreen = () => {
   const handleSecurityQuestionChange = async (token) => {
     try {
       getToken();
-      await axios.post(
+      await api.post(
         "/api/user/settings/security-question",
         {
           userId: userId,

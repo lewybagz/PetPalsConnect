@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, FlatList, StyleSheet } from "react-native";
-import axios from "axios";
+import api from "../../../api/axios";
 import { getStoredToken } from "../../../../utils/tokenutil";
 
 const SubscriptionHistoryScreen = () => {
@@ -10,7 +10,7 @@ const SubscriptionHistoryScreen = () => {
     const fetchSubscriptionHistory = async () => {
       try {
         const token = await getStoredToken();
-        const response = await axios.get("/api/subscription-history", {
+        const response = await api.get("/api/subscription-history", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setHistory(response.data);

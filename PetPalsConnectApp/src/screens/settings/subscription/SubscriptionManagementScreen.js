@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, Button, StyleSheet, Alert } from "react-native";
 import LoadingScreen from "../../../components/LoadingScreenComponent";
-import axios from "axios";
+import api from "../../../api/axios";
 import { useSelector } from "react-redux";
 import { getStoredToken } from "../../../../utils/tokenutil";
 import { setError } from "../../../redux/actions";
@@ -22,7 +22,7 @@ const SubscriptionManagementScreen = () => {
       if (userId) {
         try {
           getToken();
-          const res = await axios.get(`/api/subscriptions/${userId}`, {
+          const res = await api.get(`/api/subscriptions/${userId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           setSubscription(res.data);
@@ -38,7 +38,7 @@ const SubscriptionManagementScreen = () => {
   const handleRenew = async (token) => {
     try {
       getToken();
-      const res = await axios.post(
+      const res = await api.post(
         `/api/subscriptions/renew`,
         {
           userId: userId,
@@ -58,7 +58,7 @@ const SubscriptionManagementScreen = () => {
   const handleChangePlan = async (planType, token) => {
     try {
       getToken();
-      const res = await axios.post(
+      const res = await api.post(
         `/api/subscriptions/change-plan`,
         {
           userId: userId,
@@ -79,7 +79,7 @@ const SubscriptionManagementScreen = () => {
   const handleCancel = async (token) => {
     try {
       getToken();
-      const res = await axios.post(
+      const res = await api.post(
         `/api/subscriptions/cancel`,
         {
           userId: userId,

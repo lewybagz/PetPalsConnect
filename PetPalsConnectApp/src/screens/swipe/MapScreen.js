@@ -14,11 +14,11 @@ import {
   Text,
 } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import axios from "axios";
+import api from "../../api/axios";
 import * as Location from "expo-location";
-import { copilot, walkthroughable, CopilotStep } from "react-native-copilot";
-import { useTailwind } from "nativewind";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { copilot, walkthroughable, CopilotStep } from "../../components/walkthrough";
+import { useTailwind } from "../../styles/tailwind";
+import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 import BottomSheet from "@gorhom/bottom-sheet";
 import CustomTooltip from "../../components/CustomTooltip";
 import { getStoredToken } from "../../../utils/tokenutil";
@@ -78,7 +78,7 @@ const MapScreen = ({ start, route, navigation }) => {
   const fetchMatchedPets = async () => {
     try {
       const token = await getStoredToken();
-      const response = await axios.get("/api/matched-pets", {
+      const response = await api.get("/api/matched-pets", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMatchedPets(response.data);
@@ -90,7 +90,7 @@ const MapScreen = ({ start, route, navigation }) => {
   const fetchPlaydateLocations = async (latitude, longitude, range) => {
     try {
       const token = await getStoredToken();
-      const response = await axios.get("/api/playdates/playdate-locations", {
+      const response = await api.get("/api/playdates/playdate-locations", {
         params: {
           userLat: latitude,
           userLng: longitude,

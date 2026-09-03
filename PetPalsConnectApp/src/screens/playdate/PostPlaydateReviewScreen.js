@@ -10,8 +10,8 @@ import {
   Image,
   Switch,
 } from "react-native";
-import axios from "axios";
-import StarRating from "react-native-star-rating";
+import api from "../../api/axios";
+import StarRating from "../../components/StarRating";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { setError } from "../../redux/actions";
@@ -42,7 +42,7 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
   const getLocationData = async (locationId, token) => {
     try {
       getToken();
-      const response = await axios.get(`/api/locations/${locationId}`, {
+      const response = await api.get(`/api/locations/${locationId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
@@ -61,7 +61,7 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
 
     try {
       getToken();
-      await axios.patch(
+      await api.patch(
         `/api/reviews/${reviewId}/visibility`,
         {
           Visibility: newValue,
@@ -84,7 +84,7 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
   const getOwnerIdFromPetId = async (petId, token) => {
     try {
       getToken();
-      const response = await axios.get(`/api/pets/owner/${petId}`, {
+      const response = await api.get(`/api/pets/owner/${petId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response && response.data) {
@@ -120,7 +120,7 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
 
     try {
       getToken();
-      const response = await axios.post("/api/reviews", reviewData, {
+      const response = await api.post("/api/reviews", reviewData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       Alert.alert(

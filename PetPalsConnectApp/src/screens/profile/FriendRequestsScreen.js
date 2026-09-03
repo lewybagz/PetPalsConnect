@@ -1,8 +1,8 @@
 // FriendRequestsScreen.js
 import React, { useState, useEffect } from "react";
 import { View, FlatList, StyleSheet, Alert } from "react-native";
-import axios from "axios";
-import FriendRequestsCard from "./FriendRequestsCard";
+import api from "../../api/axios";
+import FriendRequestsCard from "../../components/FriendRequestsCard";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { setError } from "../../redux/actions";
 
@@ -22,7 +22,7 @@ const FriendRequestsScreen = () => {
       getToken();
       try {
         // Replace with your actual endpoint
-        const response = await axios.get("/api/friendrequests", {
+        const response = await api.get("/api/friendrequests", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setFriendRequests(response.data);
@@ -38,7 +38,7 @@ const FriendRequestsScreen = () => {
     getToken();
     try {
       // Send an update to the server to accept the friend request
-      const response = await axios.put(
+      const response = await api.put(
         `/api/friendrequests/${friendRequest._id}/accept`,
         {}, // Since the token is sent in the headers, no need for body if no additional data is sent
         {
@@ -55,7 +55,7 @@ const FriendRequestsScreen = () => {
   const handleDecline = async (friendRequest, token) => {
     getToken();
     try {
-      const response = await axios.put(
+      const response = await api.put(
         `/api/friendrequests/${friendRequest._id}/decline`,
         {
           headers: { Authorization: `Bearer ${token}` },

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Text, TouchableOpacity, ScrollView, FlatList } from "react-native";
-import { getAuth } from "firebase/auth";
-import { useTailwind } from "nativewind";
+import { getAuth } from "@react-native-firebase/auth";
+import { useTailwind } from "../../styles/tailwind";
 import { getStoredToken } from "../../../utils/tokenutil";
 import PlaydateCardComponent from "../../components/PlaydateCardComponent";
 import LoadingScreen from "../../components/LoadingScreenComponent";
-import axios from "axios";
+import api from "../../api/axios";
 
 const ProfileScreen = ({ navigation }) => {
   const [recentPlaydates, setRecentPlaydates] = useState([]);
@@ -29,7 +29,7 @@ const ProfileScreen = ({ navigation }) => {
       setLoading(true);
       try {
         const token = await getStoredToken(); // Retrieve the token
-        const response = await axios.get("/api/playdates/user", {
+        const response = await api.get("/api/playdates/user", {
           headers: { Authorization: `Bearer ${token}` },
         });
 

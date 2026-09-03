@@ -7,8 +7,8 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import axios from "axios";
-import { getAuth } from "firebase/auth";
+import api from "../../api/axios";
+import { getAuth } from "@react-native-firebase/auth";
 import UserPetCard from "../../components/UserPetCardComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
 
@@ -22,7 +22,7 @@ const UsersPetsScreen = (navigation) => {
       if (currentUser) {
         try {
           const token = await getStoredToken();
-          const response = await axios.get(
+          const response = await api.get(
             `/api/users/pets/${currentUser.uid}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -43,7 +43,7 @@ const UsersPetsScreen = (navigation) => {
   const handleDelete = async (petId) => {
     try {
       const token = await getStoredToken();
-      await axios.delete(`/api/users/pets/${petId}`, {
+      await api.delete(`/api/users/pets/${petId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUserPets(userPets.filter((pet) => pet._id !== petId));

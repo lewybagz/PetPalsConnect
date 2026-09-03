@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
-import PlayDateLocationCard from "../components/PlayDateLocationCard";
+import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import LoadingScreen from "../../components/LoadingScreenComponent";
-import axios from "axios";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { fetchUserPreferences } from "../../../services/UserService";
 import { useSelector, useDispatch } from "react-redux";
@@ -55,7 +55,7 @@ const PotentialPlaydateLocationsScreen = (navigation) => {
   const fetchLocations = async (latitude, longitude, playdateRange) => {
     try {
       const token = await getStoredToken();
-      const response = await axios.get(`/api/locations`, {
+      const response = await api.get(`/api/locations`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           range: playdateRange,

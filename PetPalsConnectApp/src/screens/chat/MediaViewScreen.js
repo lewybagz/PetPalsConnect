@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, Image } from "react-native";
-import axios from "axios";
+import api from "../../api/axios";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
 
@@ -18,7 +18,7 @@ const useFetchMediaDetails = (media) => {
         const token = await getStoredToken(); // Retrieve the token
         const mediaResponses = await Promise.all(
           media.map((mediaItem) =>
-            axios.get(`/api/media/${mediaItem}`, {
+            api.get(`/api/media/${mediaItem}`, {
               headers: { Authorization: `Bearer ${token}` },
             })
           )

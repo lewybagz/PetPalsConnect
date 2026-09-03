@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import axios from "axios";
+import api from "../../api/axios";
 import { useSelector } from "react-redux";
 import { getStoredToken } from "../../../utils/tokenutil";
 
@@ -20,7 +20,7 @@ const ReportUserScreen = ({ route }) => {
   const submitReport = async () => {
     try {
       const token = await getStoredToken();
-      const response = await axios.post(
+      const response = await api.post(
         "/api/reports",
         {
           Content: content,
@@ -54,7 +54,7 @@ const ReportUserScreen = ({ route }) => {
   const blockUser = async () => {
     try {
       const token = await getStoredToken(); // Retrieve the token
-      const blockResponse = await axios.post(
+      const blockResponse = await api.post(
         "/api/blocklists",
         {
           BlockedUser: reportedUser,

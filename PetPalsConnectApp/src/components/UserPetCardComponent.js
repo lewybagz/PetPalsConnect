@@ -8,8 +8,8 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import axios from "axios";
+import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
+import api from "../api/axios";
 import { useSelector } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
 import { setError } from "../redux/actions";
@@ -29,7 +29,7 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const handleBlockUser = async (userIdToBlock, token) => {
     try {
       getToken();
-      const response = await axios.post(
+      const response = await api.post(
         "/api/blocklist",
         {
           BlockedUser: userIdToBlock,
@@ -57,7 +57,7 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const handleAddToFavorites = async (petId, token) => {
     try {
       getToken();
-      const response = await axios.post(
+      const response = await api.post(
         "/api/favorites",
         {
           content: petId,
@@ -84,7 +84,7 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
       return;
     }
     try {
-      const response = await axios.post(
+      const response = await api.post(
         "/api/friends",
         {
           senderId: currentUser._id,

@@ -1,35 +1,57 @@
 import axios from "axios";
+import { getAuth } from "@react-native-firebase/auth";
 
-// Use environment variable for the base URL
-const baseURL = process.env.REACT_APP_API_URL || "http://localhost:4000";
+import { API_URL } from "../config/env";
 
+/**
+ * Shared API client.
+ *
+ * The previous version read `localStorage`, which does not exist in React
+ * Native, so no request ever carried an Authorization header and every
+ * protected endpoint returned 401.
+ *
+ * Tokens now come straight from the Firebase SDK, which caches them and
+ * refreshes automatically when they near expiry. That removes the need to
+ * mirror the token into storage ourselves and keeps a single source of truth.
+ */
 const instance = axios.create({
-  baseURL: baseURL,
-  timeout: 10000, // Set default timeout
+  baseURL: API_URL,
+  timeout: 15000,
+  headers: { "Content-Type": "application/json" },
 });
 
-// Add a request interceptor
-instance.interceptors.request.use(
-  function (config) {
-    // Do something before request is sent, like adding an auth token
-    const token = localStorage.getItem("token");
-    config.headers.Authorization = token ? `Bearer ${token}` : "";
-    return config;
-  },
-  function (error) {
-    // Do something with request error
-    return Promise.reject(error);
+instance.interceptors.request.use(async (config) => {
+  const user = getAuth().currentUser;
+  if (user) {
+    const token = await user.getIdToken();
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+});
 
-// Add a response interceptor
 instance.interceptors.response.use(
-  function (response) {
-    // Any status code that lies within the range of 2xx cause this function to trigger
-    return response;
-  },
-  function (error) {
-    // Any status codes that falls outside the range of 2xx cause this function to trigger
+  (response) => response,
+  async (error) => {
+    const { config, response } = error;
+
+    // A 401 usually means the cached ID token went stale. Force-refresh once
+    // and replay the request before surfacing the failure.
+    if (response?.status === 401 && config && !config.__isRetry) {
+      const user = getAuth().currentUser;
+      if (user) {
+        config.__isRetry = true;
+        config.headers.Authorization = `Bearer ${await user.getIdToken(true)}`;
+        return instance(config);
+      }
+    }
+
+    if (__DEV__ && response) {
+      console.warn(
+        `[api] ${config?.method?.toUpperCase()} ${config?.url} -> ${response.status}`,
+        response.data
+      );
+    }
+
     return Promise.reject(error);
   }
 );

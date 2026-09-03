@@ -8,7 +8,7 @@ import {
   Alert,
   Linking,
 } from "react-native";
-import axios from "axios";
+import api from "../../../api/axios";
 import { getStoredToken } from "../../../../utils/tokenutil";
 
 const subscriptionTiers = [
@@ -57,7 +57,7 @@ const SubscriptionOptionsScreen = () => {
 
     try {
       const token = await getStoredToken(); // Retrieve the token
-      const response = await axios.post(
+      const response = await api.post(
         "/api/subscriptions/create-checkout-session",
         { planId: tierId },
         { headers: { Authorization: `Bearer ${token}` } }

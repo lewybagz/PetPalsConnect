@@ -1,5 +1,5 @@
 import React from "react";
-import axios from "axios";
+import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { useSelector } from "react-redux";
 
@@ -12,7 +12,7 @@ const PlaydateModificationConfirmationScreen = ({ route, navigation }) => {
   const confirmModifications = async () => {
     try {
       const token = await getStoredToken();
-      await axios.put(
+      await api.put(
         `/api/playdates/${playdateId}/update`,
         {
           date,

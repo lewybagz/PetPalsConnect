@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
-import { getAuth } from "firebase/auth";
-import { useTailwind } from "nativewind";
-import { copilot, walkthroughable, CopilotStep } from "react-native-copilot";
+import { getAuth } from "@react-native-firebase/auth";
+import { useTailwind } from "../../styles/tailwind";
+import { copilot, walkthroughable, CopilotStep } from "../../components/walkthrough";
 import CustomTooltip from "../../components/CustomTooltip";
 import ArticleCard from "../../components/ArticleCardComponent";
 import AnimatedButton from "../../components/AnimatedButton";
 import { getStoredToken } from "../../../utils/tokenutil";
-import axios from "axios";
-import Icon from "react-native-vector-icons/Ionicons";
+import api from "../../api/axios";
+import Icon from "@expo/vector-icons";
 import MatchingAlgorithmPopup from "../../components/MatchingAlgorithmPopupComponent";
 
 const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -18,7 +18,7 @@ const WalkthroughableImage = walkthroughable(Image);
 // Fetch the latest pets
 export const fetchLatestPets = async () => {
   const token = await getStoredToken();
-  return axios.get("/api/pets/latest", {
+  return api.get("/api/pets/latest", {
     headers: { Authorization: `Bearer ${token}` },
   });
 };
@@ -26,7 +26,7 @@ export const fetchLatestPets = async () => {
 // Fetch user favorites
 export const fetchUserFavorites = async (userId) => {
   const token = await getStoredToken();
-  return axios.get(`/api/users/favorites/${userId}`, {
+  return api.get(`/api/users/favorites/${userId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 };
@@ -57,7 +57,7 @@ const HomeScreen = ({ navigation, route, start }) => {
     const fetchLatestArticle = async () => {
       try {
         const token = await getStoredToken();
-        const response = await axios.get("/api/articles/latest", {
+        const response = await api.get("/api/articles/latest", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setLatestArticle(response.data);
