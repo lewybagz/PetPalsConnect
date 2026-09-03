@@ -34,9 +34,9 @@ const signUp = async (uid, username) => {
   return [auth(uid), user];
 };
 
-const MINIMAL_PET = { name: "Rex", breed: "Labrador", age: 3 };
+const MINIMAL_PET = { name: "Rex", breed: "Labrador", age: 3, weight: 25 };
 
-test("a pet can be created with only the fields onboarding asks for", async () => {
+test("a pet can be created with exactly the fields onboarding asks for", async () => {
   const [header] = await signUp("pet-owner", "petowner");
 
   const res = await request(app)
@@ -214,9 +214,33 @@ test("adding a second pet keeps the first", async () => {
   await request(app)
     .post("/api/pets")
     .set(...header)
-    .send({ name: "Bella", breed: "Beagle", age: 2 })
+    .send({ name: "Bella", breed: "Beagle", age: 2, weight: 18 })
     .expect(201);
 
   const updated = await User.findById(user._id).lean();
   assert.equal(updated.pets.length, 2);
+});
+
+test("weight is required - matching depends on it", async () => {
+  const [header] = await signUp("no-weight", "noweight");
+
+  const res = await request(app)
+    .post("/api/pets")
+    .set(...header)
+    .send({ name: "Rex", breed: "Labrador", age: 3 });
+
+  assert.equal(res.status, 400);
+  assert.match(res.body.message, /weight/i);
+  assert.equal(await Pet.countDocuments(), 0);
+});
+
+test("a negative weight is refused", async () => {
+  const [header] = await signUp("bad-weight", "badweight");
+
+  const res = await request(app)
+    .post("/api/pets")
+    .set(...header)
+    .send({ ...MINIMAL_PET, weight: -5 });
+
+  assert.equal(res.status, 400);
 });

@@ -167,7 +167,9 @@ const GroupChatController = {
 
   async reactToMessage(req, res) {
     const { groupId, messageId, reactorId, reaction } = req.body;
-    const senderPetName = req.user.pets[0].name;
+    // Adding a pet is optional, so a user may legitimately have none. This read
+    // was unguarded and threw for those accounts.
+    const senderPetName = req.user?.pets?.[0]?.name ?? req.user?.username ?? "Someone";
 
     try {
       const groupChat = await GroupChat.findById(groupId)

@@ -37,11 +37,14 @@ an interruption between any two resumes at the next launch rather than
 stranding the user. Never assume "signed in" implies "has a profile", and keep
 `POST /api/users` idempotent.
 
-**Screens below the gate may assume the user has a profile and at least one
-pet.** That is what `needsPet` buys: matching, playdates and chat all start
-from a pet, so the check happens once at the boundary instead of as a "no pets
-yet" branch in a dozen screens. Don't add empty-state handling for that case;
-if a screen needs it, the gate is wrong.
+**Screens below the gate may assume a profile, but NOT a pet.** The add-a-pet
+step is a prompt, not a wall - it can be skipped, and the choice is remembered
+per user. So `ready` does not imply a pet exists. Screens that cannot function
+without one are wrapped in `withRequiredPet` where they are registered in
+`AppStack`, which gives one consistent empty state instead of a `pets.length`
+branch per screen. Screens that merely display pets need nothing special; an
+empty list is fine. Use `hasPet` from `useAuthSession`, never `profile.pets`
+directly.
 
 **Auth screens never navigate on success.** Signing in, signing up and signing
 out all change Firebase auth state, and `RootNavigator` swaps the whole tree in
@@ -82,6 +85,9 @@ clients call Firebase's `updatePassword()`.
   onboarding gate reads that array to decide whether someone has a pet.
 - `Pet` is a discriminator of `Content`, which requires a `title`. A hook
   derives it from the pet's name; without it every insert fails validation.
+- `weight` is required on a pet: matching compares size, so a pet without it
+  cannot be matched properly. Onboarding stores it in pounds regardless of the
+  unit the owner typed.
 - CommonJS throughout. Four controllers previously mixed `export` with
   `require`, which crashes at load; do not reintroduce ESM syntax here.
 - Every route is mounted behind `authenticate`, which resolves the Firebase

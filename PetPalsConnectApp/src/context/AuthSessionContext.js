@@ -29,14 +29,17 @@ import { readCache, writeCache, removeCache, CacheKeys } from "../services/local
  *   loading      - still resolving Firebase and/or the profile
  *   signedOut    - no Firebase user
  *   needsProfile - Firebase user, but no Mongo profile yet
- *   needsPet     - profile exists, but no pets yet
- *   ready        - everything the app assumes is present
+ *   needsPet     - profile exists, but no pets yet and the prompt wasn't skipped
+ *   ready        - the app can be entered
  *   error        - profile lookup failed for a reason that isn't "absent"
  *
  * Onboarding is a sequence of these states rather than a screen that runs once,
- * so it resumes correctly wherever it was interrupted. `needsPet` also removes
- * a whole class of empty state: screens below the gate can assume the user has
- * at least one pet instead of each handling "no pets yet" separately.
+ * so it resumes correctly wherever it was interrupted.
+ *
+ * `needsPet` is a prompt, not a wall: it can be skipped, and the choice is
+ * remembered per user so it is not asked again on every launch. That means
+ * `ready` does NOT imply the user has a pet - screens that need one must handle
+ * its absence. `hasPet` on the context is the check to use.
  */
 
 const AuthSessionContext = createContext(null);
@@ -51,21 +54,30 @@ const STATUS = {
 };
 
 /**
- * The onboarding step a profile still needs, if any.
- *
  * `pets` arrives populated from /api/users/me, but tolerate an id-only array
  * (or a cached profile from an older shape) - all we need is "is it empty?".
  */
-const statusForProfile = (profile) =>
-  Array.isArray(profile?.pets) && profile.pets.length > 0
-    ? STATUS.ready
-    : STATUS.needsPet;
+const profileHasPet = (profile) =>
+  Array.isArray(profile?.pets) && profile.pets.length > 0;
+
+/** Per-user, so skipping on one account does not silence the prompt on another. */
+const skipKey = (profile) => `pet-setup-skipped:${profile?._id ?? "unknown"}`;
+
+/**
+ * The onboarding step a profile still needs, if any.
+ *
+ * Having a pet always wins over a stored skip, so adding one later clears the
+ * prompt without needing the flag tidied up first.
+ */
+const statusForProfile = (profile, skipped) =>
+  profileHasPet(profile) || skipped ? STATUS.ready : STATUS.needsPet;
 
 export const AuthSessionProvider = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState(STATUS.loading);
   const [error, setError] = useState(null);
+  const [skippedPetSetup, setSkippedPetSetup] = useState(false);
 
   // Guards against a slow response for a previous user overwriting a newer one.
   const requestId = useRef(0);
@@ -82,9 +94,14 @@ export const AuthSessionProvider = ({ children }) => {
       const { data } = await api.get("/api/users/me");
       if (id !== requestId.current) return null;
 
+      const skipped = profileHasPet(data)
+        ? false
+        : Boolean(await readCache(skipKey(data), false));
+
       setProfile(data);
+      setSkippedPetSetup(skipped);
       setError(null);
-      setStatus(statusForProfile(data));
+      setStatus(statusForProfile(data, skipped));
       writeCache(CacheKeys.userData, data);
       return data;
     } catch (err) {
@@ -102,8 +119,12 @@ export const AuthSessionProvider = ({ children }) => {
       // the app still opens, rather than trapping the user on a spinner.
       const cached = await readCache(CacheKeys.userData);
       if (cached) {
+        const skipped = profileHasPet(cached)
+          ? false
+          : Boolean(await readCache(skipKey(cached), false));
         setProfile(cached);
-        setStatus(statusForProfile(cached));
+        setSkippedPetSetup(skipped);
+        setStatus(statusForProfile(cached, skipped));
         return cached;
       }
 
@@ -126,9 +147,13 @@ export const AuthSessionProvider = ({ children }) => {
   const createProfile = useCallback(
     async (details) => {
       const { data } = await api.post("/api/users", details);
+
       setProfile(data);
       setError(null);
-      setStatus(statusForProfile(data));
+      // A profile created just now has no pets and cannot have a stored skip,
+      // so this always moves to the add-a-pet prompt.
+      setSkippedPetSetup(false);
+      setStatus(statusForProfile(data, false));
       writeCache(CacheKeys.userData, data);
       return data;
     },
@@ -143,11 +168,26 @@ export const AuthSessionProvider = ({ children }) => {
   const createPet = useCallback(
     async (pet) => {
       const { data } = await api.post("/api/pets", pet);
+      // Adding a pet answers the prompt, so drop any stored skip.
+      if (profile) await removeCache(skipKey(profile));
       await loadProfile(getAuth().currentUser);
       return data.pet;
     },
-    [loadProfile]
+    [loadProfile, profile]
   );
+
+  /**
+   * Dismisses the add-a-pet prompt and lets the user into the app.
+   *
+   * Persisted so it is not asked again on every launch - a skip that forgets
+   * itself is just a slower wall. Screens that need a pet check `hasPet` and
+   * offer to add one instead.
+   */
+  const skipPetSetup = useCallback(async () => {
+    if (profile) await writeCache(skipKey(profile), true);
+    setSkippedPetSetup(true);
+    setStatus(STATUS.ready);
+  }, [profile]);
 
   const refresh = useCallback(
     () => loadProfile(getAuth().currentUser),
@@ -178,8 +218,12 @@ export const AuthSessionProvider = ({ children }) => {
       profile,
       userId: profile?._id ?? null,
       isSignedIn: !!firebaseUser,
+      // `ready` does not imply a pet exists - the prompt is skippable.
+      hasPet: profileHasPet(profile),
+      skippedPetSetup,
       createProfile,
       createPet,
+      skipPetSetup,
       refresh,
       signOut,
       deleteAccount,
@@ -189,8 +233,10 @@ export const AuthSessionProvider = ({ children }) => {
       error,
       firebaseUser,
       profile,
+      skippedPetSetup,
       createProfile,
       createPet,
+      skipPetSetup,
       refresh,
       signOut,
       deleteAccount,

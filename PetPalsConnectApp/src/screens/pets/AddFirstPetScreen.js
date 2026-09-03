@@ -25,23 +25,26 @@ import { BREEDS } from "../../data/breeds";
 /**
  * The last step of onboarding: the user's first pet.
  *
- * Deliberately short. The full AddPetScreen asks for ten fields including
- * weight, temperament and favourite activities, which is a lot to demand before
- * someone has seen anything. This asks for the three the schema needs plus an
- * optional photo, and the pet's own screen prompts for the rest later - the
- * extra fields sharpen matching but should not stand between a new user and the
- * app.
+ * Deliberately short: name, breed, age and weight - what the schema requires
+ * and what matching needs - plus an optional photo. The full AddPetScreen also
+ * asks for temperament and favourite activities, which sharpen matching but do
+ * not need to stand between a new user and the app; the pet's own screen
+ * prompts for those later.
  *
  * RootNavigator shows this whenever a profile exists with no pets, so it also
- * covers resuming after an interrupted first attempt.
+ * covers resuming after an interrupted first attempt. It is a prompt rather
+ * than a wall: skipping is remembered, and screens that need a pet offer to
+ * add one instead.
  */
 export default function AddFirstPetScreen() {
   const tailwind = useTailwind();
-  const { createPet, profile, signOut } = useAuthSession();
+  const { createPet, skipPetSetup, profile, signOut } = useAuthSession();
 
   const [name, setName] = useState("");
   const [breed, setBreed] = useState("");
   const [age, setAge] = useState("");
+  const [weight, setWeight] = useState("");
+  const [weightUnit, setWeightUnit] = useState("lbs");
   const [photo, setPhoto] = useState(null);
   const [breedPickerOpen, setBreedPickerOpen] = useState(false);
   const [breedQuery, setBreedQuery] = useState("");
@@ -57,8 +60,22 @@ export default function AddFirstPetScreen() {
 
   const parsedAge = Number(age);
   const ageIsValid = age !== "" && Number.isFinite(parsedAge) && parsedAge >= 0 && parsedAge < 40;
+
+  const parsedWeight = Number(weight);
+  const weightIsValid =
+    weight !== "" && Number.isFinite(parsedWeight) && parsedWeight > 0 && parsedWeight < 400;
+
+  // Stored in pounds so matching compares like with like, whichever unit the
+  // owner prefers to type.
+  const weightInPounds = weightUnit === "kg" ? parsedWeight * 2.20462 : parsedWeight;
+
   const canSubmit =
-    !submitting && !uploading && name.trim().length > 0 && breed !== "" && ageIsValid;
+    !submitting &&
+    !uploading &&
+    name.trim().length > 0 &&
+    breed !== "" &&
+    ageIsValid &&
+    weightIsValid;
 
   const onChoosePhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -109,6 +126,7 @@ export default function AddFirstPetScreen() {
         name: name.trim(),
         breed,
         age: parsedAge,
+        weight: Math.round(weightInPounds * 10) / 10,
         photos: photo ? [photo] : [],
       });
       // No navigation: the session re-reads the profile, sees a pet, and
@@ -118,6 +136,17 @@ export default function AddFirstPetScreen() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const onSkip = () => {
+    Alert.alert(
+      "Look around first?",
+      "You can add a pet any time from the More tab. Matching and playdates stay locked until you do.",
+      [
+        { text: "Add my pet", style: "cancel" },
+        { text: "Skip for now", onPress: skipPetSetup },
+      ]
+    );
   };
 
   const onSignOut = () => {
@@ -146,8 +175,8 @@ export default function AddFirstPetScreen() {
             Add your first pet
           </Text>
           <Text style={tailwind("text-center text-gray-600 mt-2")}>
-            PetPals is built around your pet, so we need one to get started. You
-            can add more later.
+            PetPals is built around your pet. Matching, playdates and chat all
+            start here - but you can look around first if you&apos;d rather.
           </Text>
         </View>
 
@@ -223,6 +252,53 @@ export default function AddFirstPetScreen() {
           </Text>
         )}
 
+        <Text style={tailwind("text-sm font-medium text-gray-700 mb-1 mt-2")}>Weight</Text>
+        <View style={tailwind("flex-row items-center mb-2")}>
+          <TextInput
+            style={tailwind(
+              `flex-1 border rounded-lg px-3 py-3 text-base ${
+                weight !== "" && !weightIsValid ? "border-red-400" : "border-gray-300"
+              }`
+            )}
+            placeholder={weightUnit === "kg" ? "12" : "25"}
+            placeholderTextColor="#a1a1a1"
+            value={weight}
+            onChangeText={(value) => setWeight(value.replace(/[^0-9.]/g, ""))}
+            keyboardType="decimal-pad"
+            maxLength={5}
+            editable={!submitting}
+          />
+          <View style={tailwind("flex-row ml-3 border border-gray-300 rounded-lg overflow-hidden")}>
+            {["lbs", "kg"].map((unit) => (
+              <Pressable
+                key={unit}
+                onPress={() => setWeightUnit(unit)}
+                disabled={submitting}
+                style={tailwind(
+                  `px-4 py-3 ${weightUnit === unit ? "bg-red-500" : "bg-white"}`
+                )}
+              >
+                <Text
+                  style={tailwind(
+                    `font-medium ${weightUnit === unit ? "text-white" : "text-gray-600"}`
+                  )}
+                >
+                  {unit}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+        {weight !== "" && !weightIsValid ? (
+          <Text style={tailwind("text-xs text-red-500 mb-4")}>
+            Enter a weight between 0 and 400 {weightUnit}.
+          </Text>
+        ) : (
+          <Text style={tailwind("text-xs text-gray-500 mb-4")}>
+            We use this to match your pet with others of a similar size.
+          </Text>
+        )}
+
         <Pressable
           onPress={onSubmit}
           disabled={!canSubmit}
@@ -240,12 +316,20 @@ export default function AddFirstPetScreen() {
         </Pressable>
 
         <Text style={tailwind("text-xs text-center text-gray-400 mt-4")}>
-          You can add weight, temperament and favourite activities from your
-          pet&apos;s profile - they help us find better matches.
+          You can add temperament and favourite activities from your pet&apos;s
+          profile later - they help us find even better matches.
         </Text>
 
-        <Pressable onPress={onSignOut} style={tailwind("mt-6 items-center")}>
-          <Text style={tailwind("text-gray-500")}>Sign out</Text>
+        <Pressable
+          onPress={onSkip}
+          disabled={submitting}
+          style={tailwind("mt-5 items-center py-2")}
+        >
+          <Text style={tailwind("text-gray-600 font-medium")}>Skip for now</Text>
+        </Pressable>
+
+        <Pressable onPress={onSignOut} style={tailwind("mt-3 items-center")}>
+          <Text style={tailwind("text-gray-400 text-sm")}>Sign out</Text>
         </Pressable>
       </ScrollView>
 

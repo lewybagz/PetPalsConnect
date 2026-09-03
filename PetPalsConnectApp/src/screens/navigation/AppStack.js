@@ -2,6 +2,7 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import BottomTabNavigator from "./BottomTab";
+import { withRequiredPet } from "../../components/RequiresPet";
 
 // Chat
 import ChatDetailsScreen from "../chat/ChatDetailsScreen";
@@ -76,7 +77,30 @@ const Stack = createNativeStackNavigator();
  * resolve a route living in a stack that was never mounted. A flat stack means
  * any screen can reach any other by name, which is also what the push
  * notification handler relies on.
+ *
+ * Adding a pet during onboarding is skippable, so a few screens cannot function
+ * until one exists. Those are wrapped in `withRequiredPet` here rather than
+ * each growing its own "no pets yet" branch.
  */
+
+// Screens that are meaningless without a pet, with copy that says why.
+const MapWithPet = withRequiredPet(MapScreen, {
+  title: "Add a pet to start matching",
+  message: "The map shows pets near you that could be a good match for yours.",
+});
+const PetSelectionWithPet = withRequiredPet(PetSelectionScreen, {
+  title: "Add a pet to start chatting",
+  message: "Chats in PetPals happen between pets, so you'll need one first.",
+});
+const PlaydatePetSelectionWithPet = withRequiredPet(PlaydatePetSelectionScreen, {
+  title: "Add a pet to join a playdate",
+  message: "Pick which of your pets is coming - so you'll need at least one.",
+});
+const SchedulePlaydateWithPet = withRequiredPet(SchedulePlaydateScreen, {
+  title: "Add a pet to plan a playdate",
+  message: "Playdates are arranged between pets, so add yours to get started.",
+});
+
 export default function AppStack() {
   return (
     <Stack.Navigator
@@ -93,7 +117,7 @@ export default function AppStack() {
       <Stack.Screen name="GroupChats" component={GroupChatsScreen} options={{ title: "Group Chats" }} />
       <Stack.Screen name="GroupChatCreation" component={GroupChatCreationScreen} options={{ title: "New Group" }} />
       <Stack.Screen name="MediaView" component={MediaViewScreen} options={{ title: "Media" }} />
-      <Stack.Screen name="PetSelection" component={PetSelectionScreen} options={{ title: "Select a Pet" }} />
+      <Stack.Screen name="PetSelection" component={PetSelectionWithPet} options={{ title: "Select a Pet" }} />
 
       {/* Pets */}
       <Stack.Screen name="AddPet" component={AddPetScreen} options={{ title: "Add Pet" }} />
@@ -110,11 +134,11 @@ export default function AppStack() {
       <Stack.Screen name="PlaydateModification" component={PlaydateModificationScreen} options={{ title: "Modify" }} />
       <Stack.Screen name="PlaydateModificationConfirmation" component={PlaydateModificationConfirmationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlaydateCancellationConfirmation" component={PlaydateCancellationConfirmationScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="PlaydatePetSelection" component={PlaydatePetSelectionScreen} options={{ title: "Choose Pets" }} />
+      <Stack.Screen name="PlaydatePetSelection" component={PlaydatePetSelectionWithPet} options={{ title: "Choose Pets" }} />
       <Stack.Screen name="PostPlaydateReview" component={PostPlaydateReviewScreen} options={{ title: "Leave a Review" }} />
       <Stack.Screen name="PotentialPlaydateLocation" component={PotentialPlaydateLocationScreen} options={{ title: "Location" }} />
       <Stack.Screen name="PotentialPlaydateLocations" component={PotentialPlaydateLocationsScreen} options={{ title: "Locations" }} />
-      <Stack.Screen name="SchedulePlaydate" component={SchedulePlaydateScreen} options={{ title: "Schedule" }} />
+      <Stack.Screen name="SchedulePlaydate" component={SchedulePlaydateWithPet} options={{ title: "Schedule" }} />
       <Stack.Screen name="SchedulePlaydateDetails" component={SchedulePlaydateDetailsScreen} options={{ title: "Details" }} />
       <Stack.Screen name="UpcomingPlaydate" component={UpcomingPlaydateScreen} options={{ title: "Upcoming" }} />
 
@@ -145,7 +169,7 @@ export default function AppStack() {
       {/* Misc */}
       <Stack.Screen name="Articles" component={ArticlesScreen} options={{ title: "Articles" }} />
       <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} options={{ title: "Article" }} />
-      <Stack.Screen name="Map" component={MapScreen} options={{ title: "Nearby" }} />
+      <Stack.Screen name="Map" component={MapWithPet} options={{ title: "Nearby" }} />
     </Stack.Navigator>
   );
 }

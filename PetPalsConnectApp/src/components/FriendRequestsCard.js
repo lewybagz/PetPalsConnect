@@ -8,9 +8,10 @@ const FriendRequestsCard = ({ friendRequest, onAccept, onDecline }) => {
     (pet) => pet._id === friendRequest.sender._id
   );
 
+  // `pets` can be absent as well as empty now that adding one is optional.
   const firstPet = isSender
-    ? friendRequest.receiver.pets[0]
-    : friendRequest.sender.pets[0];
+    ? friendRequest.receiver?.pets?.[0]
+    : friendRequest.sender?.pets?.[0];
 
   const firstPetName = firstPet ? firstPet.name : "No pet name available";
 

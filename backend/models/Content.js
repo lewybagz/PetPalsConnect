@@ -39,9 +39,10 @@ const PetSchema = new Schema({
   playdates: [{ type: Schema.Types.ObjectId, ref: "Playdate" }],
   specialNeeds: String,
   temperament: String,
-  // Optional so onboarding can ask for the minimum. It sharpens matching, so
-  // the pet's detail screen prompts for it later.
-  weight: { type: Number },
+  // Required: matching weighs size compatibility, so a pet without it cannot be
+  // matched properly. Onboarding asks for it up front rather than leaving pets
+  // in a state the matcher has to guess around.
+  weight: { type: Number, required: true, min: 0 },
   activityLevel: { type: String, enum: ["low", "moderate", "high"] },
   socialisation: { type: String, enum: ["introvert", "balanced", "extrovert"] },
   favoriteActivities: [{ type: String }],

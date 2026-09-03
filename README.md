@@ -150,7 +150,9 @@ signedOut  ->  needsProfile  ->  needsPet  ->  ready
    username (availability checked as you type) and calls `POST /api/users`,
    which derives identity from the verified token.
 4. Profile but no pets -> `needsPet`. `AddFirstPetScreen` asks for a name,
-   breed and age, and `POST /api/pets` links the pet to the profile.
+   breed, age and weight, and `POST /api/pets` links the pet to the profile.
+   This step can be **skipped** — the choice is remembered per user, so it is
+   not re-asked on every launch, and adding a pet later clears it.
 5. `ready` — the app tree mounts.
 
 Those three writes cannot be made atomic, which is the point of modelling them
@@ -159,9 +161,11 @@ resumes at whichever step is still outstanding rather than dropping the user
 into an app where every request 404s. `POST /api/users` is idempotent for the
 same reason.
 
-The pet gate also means **screens below it can assume a pet exists**. Matching,
-playdates and chat all start from one, so it is a single check at the boundary
-instead of a "no pets yet" branch in every screen.
+Because the pet step is skippable, reaching the app does **not** guarantee a
+pet. Screens that cannot work without one (matching, playdate scheduling,
+starting a chat) are wrapped in `withRequiredPet` where they are registered,
+which shows one consistent "add a pet" prompt rather than each screen growing
+its own empty state.
 
 Accounts can be deleted from Settings, which removes the Mongo profile and the
 Firebase credential. Apple requires this of any app offering account creation.
