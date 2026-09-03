@@ -244,3 +244,108 @@ test("a negative weight is refused", async () => {
 
   assert.equal(res.status, 400);
 });
+
+// --- Matching integration -------------------------------------------------
+
+test("creating a pet produces stored matches against compatible pets", async () => {
+  const [aHeader] = await signUp("matcher-a", "matchera");
+  const [bHeader] = await signUp("matcher-b", "matcherb");
+
+  await request(app).post("/api/pets").set(...aHeader).send(MINIMAL_PET).expect(201);
+
+  const second = await request(app)
+    .post("/api/pets")
+    .set(...bHeader)
+    .send({ name: "Bella", breed: "Labrador", age: 3, weight: 26 })
+    .expect(201);
+
+  assert.ok(Array.isArray(second.body.matches));
+  assert.ok(second.body.matches.length > 0, "two similar Labradors should match");
+  assert.ok(second.body.matches[0].breakdown, "a match should explain itself");
+});
+
+test("re-running matching does not duplicate stored matches", async () => {
+  const PetMatch = require("../models/PetMatch");
+  const [aHeader] = await signUp("dedupe-a", "dedupea");
+  const [bHeader] = await signUp("dedupe-b", "dedupeb");
+
+  await request(app).post("/api/pets").set(...aHeader).send(MINIMAL_PET).expect(201);
+  const mine = await request(app)
+    .post("/api/pets")
+    .set(...bHeader)
+    .send({ name: "Bella", breed: "Labrador", age: 3, weight: 26 })
+    .expect(201);
+
+  const afterFirst = await PetMatch.countDocuments();
+
+  // The old implementation inserted a fresh document on every run.
+  await request(app)
+    .post("/api/petmatches/match")
+    .set(...bHeader)
+    .send({ petId: mine.body.pet._id })
+    .expect(200);
+
+  assert.equal(await PetMatch.countDocuments(), afterFirst);
+});
+
+test("you cannot run matching for someone else's pet", async () => {
+  const [ownerHeader] = await signUp("match-owner", "matchowner");
+  const [otherHeader] = await signUp("match-other", "matchother");
+
+  const created = await request(app)
+    .post("/api/pets")
+    .set(...ownerHeader)
+    .send(MINIMAL_PET)
+    .expect(201);
+
+  const res = await request(app)
+    .post("/api/petmatches/match")
+    .set(...otherHeader)
+    .send({ petId: created.body.pet._id });
+
+  assert.equal(res.status, 403);
+});
+
+test("matching runs without a petId are refused", async () => {
+  const [header] = await signUp("no-petid", "nopetid");
+  const res = await request(app).post("/api/petmatches/match").set(...header).send({});
+  assert.equal(res.status, 400);
+});
+
+test("two pets can be compared with an explanation", async () => {
+  const [aHeader] = await signUp("explain-a", "explaina");
+  const [bHeader] = await signUp("explain-b", "explainb");
+
+  const first = await request(app).post("/api/pets").set(...aHeader).send(MINIMAL_PET).expect(201);
+  const second = await request(app)
+    .post("/api/pets")
+    .set(...bHeader)
+    .send({ name: "Tiny", breed: "Chihuahua", age: 12, weight: 5 })
+    .expect(201);
+
+  const res = await request(app)
+    .get(`/api/petmatches/explain/${first.body.pet._id}/${second.body.pet._id}`)
+    .set(...aHeader);
+
+  assert.equal(res.status, 200);
+  assert.ok(typeof res.body.score === "number");
+  // A 25lb Labrador and a 5lb Chihuahua should not score on size.
+  assert.equal(res.body.breakdown.size, 0);
+});
+
+test("a pet's owner sees their matches", async () => {
+  const [aHeader] = await signUp("sees-a", "seesa");
+  const [bHeader] = await signUp("sees-b", "seesb");
+
+  await request(app).post("/api/pets").set(...aHeader).send(MINIMAL_PET).expect(201);
+  await request(app)
+    .post("/api/pets")
+    .set(...bHeader)
+    .send({ name: "Bella", breed: "Labrador", age: 3, weight: 26 })
+    .expect(201);
+
+  const res = await request(app).get("/api/petmatches/matched-pets").set(...bHeader);
+
+  assert.equal(res.status, 200);
+  assert.ok(res.body.length > 0);
+});

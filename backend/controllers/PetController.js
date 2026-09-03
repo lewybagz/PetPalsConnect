@@ -173,7 +173,7 @@ const PetController = {
         const isSubscribed = await SubscriptionController.checkSubscriptionStatus(
           req.userId
         );
-        matches = (await PetMatchController.matchPets(pet._id, isSubscribed)) ?? [];
+        matches = await PetMatchController.runMatching(pet._id, { isSubscribed });
       } catch (error) {
         console.warn("[pets] Matching failed for new pet:", error.message);
       }

@@ -1,696 +1,82 @@
 const PetMatch = require("../models/PetMatch");
+const Pet = require("../models/Pet");
+const User = require("../models/User");
+const { rankMatches, scorePair, MATCH_THRESHOLD } = require("../services/matching/score");
 
-function calculateBreedCompatibility(
-  currentPetBreed,
-  potentialMatchBreed,
-  breedCompatibilityMap
-) {
-  if (currentPetBreed === potentialMatchBreed) return 20;
-  if (breedCompatibilityMap[currentPetBreed].includes(potentialMatchBreed))
-    return 10;
-  return 0;
-}
+/**
+ * Pet matching.
+ *
+ * The scoring lives in services/matching/score.js as pure functions; this file
+ * is only responsible for loading candidates, persisting results and serving
+ * them.
+ *
+ * The previous version could not execute: `matchPets` opened with
+ * `const pet = await pet.findById(...)` - referencing `pet` inside its own
+ * initialiser - and no model was ever imported. It also called `createPetMatch`
+ * (an Express handler expecting req/res) with a plain object, using capitalised
+ * field names the schema does not have, and was mounted directly as a route
+ * handler despite taking (petId, isSubscribed).
+ */
 
-function calculateTemperamentCompatibility(
-  currentPetTemperament,
-  potentialMatchTemperament,
-  temperamentCompatibilityMap,
-  activityCompatibilityMap
-) {
-  let score = 0;
-  if (currentPetTemperament === potentialMatchTemperament) {
-    score += 20;
-  } else if (
-    temperamentCompatibilityMap[currentPetTemperament].includes(
-      potentialMatchTemperament
+/** How many candidate pets to consider in one run. */
+const CANDIDATE_LIMIT = 500;
+
+/**
+ * Scores one pet against the field and stores the results.
+ *
+ * Plain async function, not an Express handler - `createPet` calls it directly.
+ */
+const runMatching = async (petId, { isSubscribed = false } = {}) => {
+  const currentPet = await Pet.findById(petId);
+  if (!currentPet) return [];
+
+  // A subscriber gets a wider net and keeps more results; everyone gets the
+  // same scoring, so the ranking is never quietly different.
+  const candidates = await Pet.find({ _id: { $ne: currentPet._id } })
+    .limit(isSubscribed ? CANDIDATE_LIMIT : Math.floor(CANDIDATE_LIMIT / 2))
+    .lean();
+
+  const ranked = rankMatches(currentPet, candidates, {
+    limit: isSubscribed ? 50 : 20,
+  });
+
+  // Upsert rather than insert: matching re-runs whenever a pet changes, and the
+  // old code appended a fresh document every time, growing without bound.
+  await Promise.all(
+    ranked.map((match) =>
+      PetMatch.findOneAndUpdate(
+        { pet1: currentPet._id, pet2: match.petId },
+        {
+          $set: {
+            matchScore: match.score,
+            relevantToUser: currentPet.owner,
+            creator: currentPet.owner,
+            modifiedDate: new Date(),
+          },
+          $setOnInsert: { createdDate: new Date() },
+        },
+        { upsert: true, new: true }
+      )
     )
-  ) {
-    score += 10;
-  }
-
-  // Calculate additional score based on activity-temperament compatibility
-  temperamentCompatibilityMap[currentPetTemperament].forEach((activity) => {
-    if (
-      activityCompatibilityMap[activity].includes(potentialMatchTemperament)
-    ) {
-      score += 5; // Increment score for each activity that is also compatible with the potential match's temperament
-    }
-  });
-
-  return score;
-}
-
-function calculateActivityCompatibility(
-  currentPetActivities,
-  potentialMatchActivities,
-  activityCompatibilityMap
-) {
-  const currentPetActivityValues = currentPetActivities.map(
-    (activity) => activity.value
-  );
-  const potentialMatchActivityValues = potentialMatchActivities.map(
-    (activity) => activity.value
   );
 
-  const sharedActivities = currentPetActivityValues.filter((activityValue) =>
-    potentialMatchActivityValues.includes(activityValue)
-  );
-
-  let activityScore = 0;
-  sharedActivities.forEach((activityValue) => {
-    if (activityCompatibilityMap[activityValue]) {
-      activityScore += activityCompatibilityMap[activityValue].length * 5; // Weight by the number of compatible temperaments for the activity
-    }
-  });
-
-  return activityScore;
-}
-
-const breedCompatibility = {
-  Labrador: [
-    "Poodle",
-    "Golden Retriever",
-    "Boxer",
-    "Bernese Mountain Dog",
-    "Newfoundland",
-    "Rottweiler",
-    "Australian Shepherd",
-    "Border Collie",
-    "Vizsla",
-  ],
-  Poodle: [
-    "Labrador",
-    "Golden Retriever",
-    "Bichon Frise",
-    "Cavalier King Charles Spaniel",
-    "Maltese",
-    "Havanese",
-    "Soft Coated Wheaten Terrier",
-  ],
-  Beagle: [
-    "Bulldog",
-    "Basset Hound",
-    "Dachshund",
-    "Cocker Spaniel",
-    "Cavalier King Charles Spaniel",
-    "Brittany Spaniel",
-    "Springer Spaniel",
-  ],
-  Bulldog: [
-    "Beagle",
-    "Pug",
-    "French Bulldog",
-    "Boston Terrier",
-    "Shih Tzu",
-    "Cavalier King Charles Spaniel",
-  ],
-  "Yorkshire Terrier": [
-    "Maltese",
-    "Shih Tzu",
-    "Pomeranian",
-    "Papillon",
-    "Chihuahua",
-  ],
-  Chihuahua: [
-    "Yorkshire Terrier",
-    "Maltese",
-    "Shih Tzu",
-    "Pomeranian",
-    "Papillon",
-    "Toy Poodle",
-    "Boston Terrier",
-  ],
-  "German Shepherd": [
-    "Labrador",
-    "Golden Retriever",
-    "Rottweiler",
-    "Belgian Malinois",
-    "Australian Shepherd",
-    "Border Collie",
-    "Doberman Pinscher",
-  ],
-  "Golden Retriever": [
-    "Labrador",
-    "Poodle",
-    "Bernese Mountain Dog",
-    "Newfoundland",
-    "Rottweiler",
-    "Australian Shepherd",
-    "Border Collie",
-  ],
-  "French Bulldog": [
-    "Bulldog",
-    "Pug",
-    "Boston Terrier",
-    "Cavalier King Charles Spaniel",
-  ],
-  "Shih Tzu": [
-    "Bulldog",
-    "Yorkshire Terrier",
-    "Maltese",
-    "Pomeranian",
-    "Pug",
-    "French Bulldog",
-    "Cavalier King Charles Spaniel",
-  ],
-  Boxer: [
-    "Labrador",
-    "Bulldog",
-    "Doberman Pinscher",
-    "Rottweiler",
-    "German Shepherd",
-  ],
-  Pug: [
-    "Bulldog",
-    "French Bulldog",
-    "Boston Terrier",
-    "Shih Tzu",
-    "Cavalier King Charles Spaniel",
-  ],
-  Dachshund: [
-    "Beagle",
-    "Basset Hound",
-    "Cocker Spaniel",
-    "Cavalier King Charles Spaniel",
-  ],
-  "Great Dane": [
-    "Rottweiler",
-    "Doberman Pinscher",
-    "Mastiff",
-    "Newfoundland",
-    "Saint Bernard",
-  ],
-  "Siberian Husky": [
-    "Alaskan Malamute",
-    "German Shepherd",
-    "Belgian Malinois",
-    "Australian Shepherd",
-    "Border Collie",
-  ],
-  Maltese: [
-    "Yorkshire Terrier",
-    "Shih Tzu",
-    "Pomeranian",
-    "Papillon",
-    "Chihuahua",
-    "Havanese",
-    "Bichon Frise",
-  ],
-  "Cavalier King Charles Spaniel": [
-    "Beagle",
-    "Bulldog",
-    "Pug",
-    "French Bulldog",
-    "Shih Tzu",
-    "Cocker Spaniel",
-    "Dachshund",
-    "Bichon Frise",
-  ],
-  "Pit Bull Terrier": [
-    "Bulldog",
-    "Boxer",
-    "Staffordshire Bull Terrier",
-    "American Bulldog",
-    "American Staffordshire Terrier",
-  ],
-  Rottweiler: [
-    "Labrador",
-    "German Shepherd",
-    "Doberman Pinscher",
-    "Boxer",
-    "Mastiff",
-    "Great Dane",
-  ],
-  "Australian Shepherd": [
-    "Labrador",
-    "Golden Retriever",
-    "German Shepherd",
-    "Border Collie",
-    "Vizsla",
-  ],
-  "Basset Hound": [
-    "Beagle",
-    "Dachshund",
-    "Cocker Spaniel",
-    "Cavalier King Charles Spaniel",
-  ],
-  "Border Collie": [
-    "Labrador",
-    "Golden Retriever",
-    "German Shepherd",
-    "Australian Shepherd",
-    "Shetland Sheepdog",
-  ],
-  "Cocker Spaniel": [
-    "Beagle",
-    "Cavalier King Charles Spaniel",
-    "Dachshund",
-    "Basset Hound",
-    "Springer Spaniel",
-  ],
-  "Doberman Pinscher": [
-    "Boxer",
-    "Rottweiler",
-    "German Shepherd",
-    "Belgian Malinois",
-    "Great Dane",
-  ],
-  "Bernese Mountain Dog": [
-    "Labrador",
-    "Golden Retriever",
-    "Newfoundland",
-    "Saint Bernard",
-    "Rottweiler",
-  ],
-  Bloodhound: ["Basset Hound", "Coonhound", "Treeing Walker Coonhound"],
-  Bulmastiff: ["Mastiff", "Saint Bernard", "Rottweiler", "Doberman Pinscher"],
-  Collie: [
-    "Shetland Sheepdog",
-    "Australian Shepherd",
-    "Border Collie",
-    "German Shepherd",
-  ],
-  Dalmatian: ["Boxer", "Pointer", "Weimaraner", "Doberman Pinscher"],
-  "English Setter": [
-    "Irish Setter",
-    "Gordon Setter",
-    "Pointer",
-    "Brittany Spaniel",
-  ],
-  Greyhound: ["Whippet", "Saluki", "Afghan Hound", "Italian Greyhound"],
-  Havanese: [
-    "Maltese",
-    "Shih Tzu",
-    "Poodle",
-    "Bichon Frise",
-    "Cavalier King Charles Spaniel",
-  ],
-  "Irish Setter": [
-    "English Setter",
-    "Gordon Setter",
-    "Brittany Spaniel",
-    "Welsh Springer Spaniel",
-  ],
-  "Jack Russell Terrier": [
-    "Parson Russell Terrier",
-    "Rat Terrier",
-    "Yorkshire Terrier",
-    "Cairn Terrier",
-  ],
-  "Lhasa Apso": ["Shih Tzu", "Maltese", "Pomeranian", "Havanese"],
-  Mastiff: [
-    "Rottweiler",
-    "Great Dane",
-    "Saint Bernard",
-    "Bullmastiff",
-    "Cane Corso",
-  ],
-  Newfoundland: [
-    "Labrador",
-    "Golden Retriever",
-    "Bernese Mountain Dog",
-    "Saint Bernard",
-    "Great Pyrenees",
-  ],
-  "Old English Sheepdog": ["Bearded Collie", "Briard", "Bobtail", "Puli"],
-  Papillon: [
-    "Yorkshire Terrier",
-    "Maltese",
-    "Chihuahua",
-    "Pomeranian",
-    "Cavalier King Charles Spaniel",
-  ],
-  Pointer: [
-    "Weimaraner",
-    "Vizsla",
-    "German Shorthaired Pointer",
-    "Brittany Spaniel",
-    "English Setter",
-  ],
-  "Rhodesian Ridgeback": [
-    "Boxer",
-    "Doberman Pinscher",
-    "Rottweiler",
-    "German Shepherd",
-  ],
-  Samoyed: ["Siberian Husky", "Alaskan Malamute", "Great Pyrenees", "Keeshond"],
-  "Scottish Terrier": [
-    "Cairn Terrier",
-    "West Highland White Terrier",
-    "Skye Terrier",
-    "Dandie Dinmont Terrier",
-  ],
-  Weimaraner: ["Pointer", "Vizsla", "Doberman Pinscher", "Rhodesian Ridgeback"],
-  Whippet: ["Greyhound", "Italian Greyhound", "Saluki", "Afghan Hound"],
-  Akita: ["Siberian Husky", "Alaskan Malamute", "Shiba Inu", "Chow Chow"],
-  "Alaskan Malamute": ["Siberian Husky", "Akita", "Samoyed", "Great Pyrenees"],
-  "Bichon Frise": [
-    "Maltese",
-    "Havanese",
-    "Poodle",
-    "Shih Tzu",
-    "Cavalier King Charles Spaniel",
-  ],
-  "Boston Terrier": [
-    "French Bulldog",
-    "Pug",
-    "Bulldog",
-    "Chihuahua",
-    "Shih Tzu",
-  ],
-  "Brussels Griffon": [
-    "Affenpinscher",
-    "Pug",
-    "French Bulldog",
-    "Boston Terrier",
-  ],
-  "Cairn Terrier": [
-    "Scottish Terrier",
-    "West Highland White Terrier",
-    "Skye Terrier",
-    "Jack Russell Terrier",
-  ],
-  "Chinese Shar-Pei": ["Chow Chow", "Shar Pei", "Akita", "Bullmastiff"],
-  "Cane Corso": ["Mastiff", "Bullmastiff", "Rottweiler", "Doberman Pinscher"],
-  "Shiba Inu": ["Akita", "Chow Chow", "Shar Pei", "Shikoku"],
-  "American Bulldog": [
-    "Pit Bull Terrier",
-    "Staffordshire Bull Terrier",
-    "Bulldog",
-    "Boxer",
-  ],
-  "English Springer Spaniel": [
-    "Cocker Spaniel",
-    "Brittany Spaniel",
-    "Welsh Springer Spaniel",
-    "Cavalier King Charles Spaniel",
-  ],
-  "Staffordshire Bull Terrier": [
-    "Pit Bull Terrier",
-    "American Bulldog",
-    "American Staffordshire Terrier",
-    "Bulldog",
-    "Boxer",
-  ],
-  "Miniature Schnauzer": [
-    "Standard Schnauzer",
-    "Giant Schnauzer",
-    "Affenpinscher",
-    "Scottish Terrier",
-  ],
-  "Shetland Sheepdog": [
-    "Collie",
-    "Border Collie",
-    "Australian Shepherd",
-    "Pembroke Welsh Corgi",
-  ],
-  Vizsla: [
-    "Weimaraner",
-    "Pointer",
-    "German Shorthaired Pointer",
-    "Golden Retriever",
-    "Labrador",
-  ],
-  "Chow Chow": ["Akita", "Shar Pei", "Shiba Inu", "Chinese Shar-Pei"],
-  "Belgian Malinois": [
-    "German Shepherd",
-    "Doberman Pinscher",
-    "Rottweiler",
-    "Dutch Shepherd",
-  ],
-  Pomeranian: [
-    "Maltese",
-    "Yorkshire Terrier",
-    "Chihuahua",
-    "Papillon",
-    "Shih Tzu",
-  ],
-  "Cardigan Welsh Corgi": [
-    "Pembroke Welsh Corgi",
-    "Shetland Sheepdog",
-    "Dachshund",
-    "Basset Hound",
-  ],
-  "Australian Cattle Dog": [
-    "Australian Shepherd",
-    "Border Collie",
-    "Collie",
-    "Heeler",
-  ],
-  "American Eskimo Dog": ["Samoyed", "Keeshond", "Pomeranian", "Maltese"],
-  "Shar Pei": ["Chinese Shar-Pei", "Chow Chow", "Bullmastiff", "Cane Corso"],
-  "Wire Fox Terrier": [
-    "Jack Russell Terrier",
-    "Cairn Terrier",
-    "Scottish Terrier",
-    "Welsh Terrier",
-  ],
-  "Portuguese Water Dog": [
-    "Standard Poodle",
-    "Irish Water Spaniel",
-    "Flat-Coated Retriever",
-    "Golden Retriever",
-  ],
-  "West Highland White Terrier": [
-    "Scottish Terrier",
-    "Cairn Terrier",
-    "Skye Terrier",
-    "Jack Russell Terrier",
-  ],
-  "Saint Bernard": [
-    "Bernese Mountain Dog",
-    "Newfoundland",
-    "Great Pyrenees",
-    "Mastiff",
-  ],
-  "Soft Coated Wheaten Terrier": [
-    "Poodle",
-    "Bichon Frise",
-    "Havanese",
-    "Cavalier King Charles Spaniel",
-  ],
-};
-
-const temperamentCompatibility = {
-  Calm: ["walking", "bubbles", "sniffari", "chew_toys", "puzzles"],
-  Energetic: [
-    "walking",
-    "fetch",
-    "swimming",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "frisbee",
-    "dog_park",
-    "playdates",
-    "digging",
-    "chew_toys",
-    "obstacle_course",
-  ],
-  Friendly: [
-    "walking",
-    "fetch",
-    "swimming",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "bubbles",
-    "frisbee",
-    "dog_park",
-    "playdates",
-    "chew_toys",
-  ],
-  Neuroticism: ["chew_toys", "puzzles"],
-  "Motive Driven": [
-    "fetch",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "frisbee",
-    "sniffari",
-    "digging",
-    "puzzles",
-    "obstacle_course",
-  ],
-  Extravert: ["dog_park", "playdates"],
-};
-
-const activityCompatibility = {
-  walking: ["Calm", "Energetic", "Friendly"],
-  fetch: ["Energetic", "Friendly", "Motive Driven"],
-  swimming: ["Energetic", "Friendly"],
-  hiking: ["Energetic", "Friendly", "Motive Driven"],
-  tug_of_war: ["Energetic", "Friendly", "Motive Driven"],
-  agility_training: ["Energetic", "Friendly", "Motive Driven"],
-  hide_and_seek: ["Energetic", "Friendly", "Motive Driven"],
-  bubbles: ["Calm", "Friendly"],
-  frisbee: ["Energetic", "Friendly", "Motive Driven"],
-  dog_park: ["Energetic", "Friendly", "Extravert"],
-  playdates: ["Energetic", "Friendly", "Extravert"],
-  sniffari: ["Calm", "Motive Driven"],
-  digging: ["Energetic", "Motive Driven"],
-  chew_toys: ["Calm", "Energetic", "Friendly"],
-  puzzles: ["Calm", "Motive Driven"],
-  obstacle_course: ["Energetic", "Friendly", "Motive Driven"],
-};
-
-const directTemperamentCompatibility = {
-  Calm: ["Friendly", "Neuroticism", "Motive Driven"],
-  Energetic: ["Friendly", "Motive Driven", "Extravert"],
-  Friendly: ["Calm", "Energetic", "Extravert"],
-  Neuroticism: ["Calm"],
-  "Motive Driven": ["Calm", "Energetic"],
-  Extravert: ["Energetic", "Friendly"],
-};
-const directActivityCompatibility = {
-  walking: [
-    "fetch",
-    "swimming",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "bubbles",
-    "frisbee",
-    "dog_park",
-    "playdates",
-    "chew_toys",
-    "obstacle_course",
-  ],
-  fetch: [
-    "walking",
-    "swimming",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "frisbee",
-    "dog_park",
-    "playdates",
-    "obstacle_course",
-  ],
-  swimming: [
-    "walking",
-    "fetch",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "frisbee",
-    "dog_park",
-    "playdates",
-    "obstacle_course",
-  ],
-  hiking: [
-    "walking",
-    "fetch",
-    "swimming",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "frisbee",
-    "dog_park",
-    "playdates",
-    "obstacle_course",
-  ],
-  tug_of_war: [
-    "walking",
-    "fetch",
-    "swimming",
-    "hiking",
-    "agility_training",
-    "hide_and_seek",
-    "frisbee",
-    "dog_park",
-    "playdates",
-    "obstacle_course",
-  ],
-  agility_training: [
-    "walking",
-    "fetch",
-    "swimming",
-    "hiking",
-    "tug_of_war",
-    "hide_and_seek",
-    "frisbee",
-    "dog_park",
-    "playdates",
-    "obstacle_course",
-  ],
-  hide_and_seek: [
-    "walking",
-    "fetch",
-    "swimming",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "frisbee",
-    "dog_park",
-    "playdates",
-    "obstacle_course",
-  ],
-  bubbles: ["walking", "chew_toys"],
-  frisbee: [
-    "walking",
-    "fetch",
-    "swimming",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "dog_park",
-    "playdates",
-    "obstacle_course",
-  ],
-  dog_park: [
-    "walking",
-    "fetch",
-    "swimming",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "frisbee",
-    "playdates",
-  ],
-  playdates: [
-    "walking",
-    "fetch",
-    "swimming",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "frisbee",
-    "dog_park",
-  ],
-  sniffari: ["walking", "chew_toys", "puzzles"],
-  digging: ["walking", "chew_toys"],
-  chew_toys: ["walking", "bubbles", "sniffari", "digging"],
-  puzzles: ["walking", "sniffari"],
-  obstacle_course: [
-    "walking",
-    "fetch",
-    "swimming",
-    "hiking",
-    "tug_of_war",
-    "agility_training",
-    "hide_and_seek",
-    "frisbee",
-  ],
+  return ranked.map((match) => ({
+    petId: match.petId,
+    score: match.score,
+    breakdown: match.breakdown,
+  }));
 };
 
 const PetMatchController = {
+  /** Exposed for PetController and tests. */
+  runMatching,
+
   async getAllPetMatches(req, res) {
     try {
-      const petMatches = await PetMatch.find()
+      const petMatches = await PetMatch.find({ relevantToUser: req.userId })
         .populate("pet1")
         .populate("pet2")
-        .populate("relevantToUser")
-        .populate("creator");
+        .sort({ matchScore: -1 });
       res.json(petMatches);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -698,109 +84,87 @@ const PetMatchController = {
   },
 
   async getPetMatchById(req, res, next) {
-    let petMatch;
     try {
-      petMatch = await PetMatch.findById(req.params.id)
+      const petMatch = await PetMatch.findById(req.params.id)
         .populate("pet1")
-        .populate("pet2")
-        .populate("relevantToUser")
-        .populate("creator");
-      if (petMatch == null) {
+        .populate("pet2");
+
+      if (!petMatch) {
         return res.status(404).json({ message: "Cannot find pet match" });
       }
+      res.petMatch = petMatch;
+      return next();
     } catch (err) {
       return res.status(500).json({ message: err.message });
     }
-
-    res.petMatch = petMatch;
-    next();
   },
 
-  async getPetById(req, res) {
+  /**
+   * The caller's current matches, best first.
+   *
+   * Was mounted for both GET and POST and called `this.matchPets`, which is
+   * undefined once Express takes the handler by reference.
+   */
+  async matchPetsHandler(req, res) {
     try {
-      const pet = await pet.findById(req.params.id).populate("location");
-      if (pet == null) {
+      const matches = await PetMatch.find({ relevantToUser: req.userId })
+        .populate("pet2")
+        .sort({ matchScore: -1 })
+        .limit(50);
+
+      res.json(matches);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  /**
+   * Re-runs matching for one of the caller's pets.
+   *
+   * Was `router.post("/match", PetMatchController.matchPets)` - mounting a
+   * function that expected (petId, isSubscribed), so it received Express's
+   * (req, res, next) instead.
+   */
+  async runMatchingHandler(req, res) {
+    const petId = req.body.petId ?? req.params.petId;
+    if (!petId) {
+      return res.status(400).json({ message: "petId is required" });
+    }
+
+    try {
+      const pet = await Pet.findById(petId);
+      if (!pet) {
         return res.status(404).json({ message: "Cannot find pet" });
       }
-      // Now you have the pet's location populated
-      res.json(pet);
-    } catch (err) {
-      res.status(500).json({ message: err.message });
-    }
-  },
-
-  async matchPets(petId, isSubscribed, req) {
-    const pet = await pet.findById(req.params.id).populate("location");
-    const currentPet = await pet.findById(petId);
-
-    if (!currentPet) return;
-
-    const potentialMatches = await pet.find({ _id: { $ne: petId } });
-
-    let matches = potentialMatches.map((potentialMatch) => {
-      let score = 0;
-
-      // Existing breed compatibility calculations
-      score += calculateBreedCompatibility(
-        currentPet.breed,
-        potentialMatch.breed,
-        breedCompatibility
-      );
-
-      // Existing temperament compatibility calculations
-      score += calculateTemperamentCompatibility(
-        currentPet.temperament,
-        potentialMatch.temperament,
-        directTemperamentCompatibility,
-        directActivityCompatibility
-      );
-
-      // Enhanced temperament compatibility for subscribed users
-      if (isSubscribed && temperamentCompatibility[currentPet.temperament]) {
-        score += temperamentCompatibility[currentPet.temperament]
-          .map((activity) =>
-            potentialMatch.activities.includes(activity) ? 5 : 0
-          )
-          .reduce((sum, current) => sum + current, 0);
+      if (String(pet.owner) !== String(req.userId)) {
+        return res.status(403).json({ message: "That isn't your pet" });
       }
 
-      // Enhanced activity compatibility for subscribed users
-      if (isSubscribed && currentPet.activities) {
-        score += calculateActivityCompatibility(
-          currentPet.activities,
-          potentialMatch.activities,
-          activityCompatibility
-        );
-      }
-
-      // Return the match along with the calculated score
-      return { matchId: potentialMatch._id, score };
-    });
-
-    // Sort and filter matches
-    matches = matches
-      .filter((match) => match.score > 20)
-      .sort((a, b) => b.score - a.score);
-
-    // Create PetMatch documents for each match
-    for (const match of matches) {
-      await this.createPetMatch({
-        MatchScore: match.score,
-        pet1: petId,
-        pet2: match.matchId,
-        RelevantToUser: currentPet.owner,
-        Creator: currentPet.owner,
+      const user = await User.findById(req.userId).select("subscribed");
+      const matches = await runMatching(petId, {
+        isSubscribed: Boolean(user?.subscribed),
       });
+
+      res.json({ matches, threshold: MATCH_THRESHOLD });
+    } catch (error) {
+      console.error("[matching] Run failed:", error.message);
+      res.status(500).json({ message: error.message });
     }
-
-    return matches;
   },
-  async matchPetsHandler(req, res) {
-    const { petId, isSubscribed } = req.body; // Get petId and isSubscribed from request body
 
+  /** Explains why two specific pets scored the way they did. */
+  async explainMatch(req, res) {
     try {
-      const matches = await this.matchPets(petId, isSubscribed); // Call the existing matchPets method
-      res.status(200).json(matches); // Return the matches
+      const [petA, petB] = await Promise.all([
+        Pet.findById(req.params.petId).lean(),
+        Pet.findById(req.params.otherPetId).lean(),
+      ]);
+
+      if (!petA || !petB) {
+        return res.status(404).json({ message: "Cannot find both pets" });
+      }
+
+      res.json({ ...scorePair(petA, petB), threshold: MATCH_THRESHOLD });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -808,12 +172,10 @@ const PetMatchController = {
 
   async getPetMatchesByUser(req, res) {
     try {
-      const userId = req.userId;
-      const petMatches = await PetMatch.find({ RelevantToUser: userId })
+      const petMatches = await PetMatch.find({ relevantToUser: req.params.userId })
         .populate("pet1")
         .populate("pet2")
-        .populate("relevantToUser")
-        .populate("creator");
+        .sort({ matchScore: -1 });
 
       res.json(petMatches);
     } catch (err) {
@@ -822,18 +184,16 @@ const PetMatchController = {
   },
 
   async createPetMatch(req, res) {
-    const petMatch = new PetMatch({
-      matchScore: req.body.matchScore,
-      pet1: req.body.pet1,
-      pet2: req.body.pet2,
-      relevantToUser: req.body.relevantToUser,
-      creator: req.body.creator,
-      slug: req.body.slug,
-    });
-
     try {
-      const newPetMatch = await petMatch.save();
-      res.status(201).json(newPetMatch);
+      const petMatch = await PetMatch.create({
+        matchScore: req.body.matchScore,
+        pet1: req.body.pet1,
+        pet2: req.body.pet2,
+        relevantToUser: req.userId,
+        creator: req.userId,
+        slug: req.body.slug,
+      });
+      res.status(201).json(petMatch);
     } catch (err) {
       res.status(400).json({ message: err.message });
     }
