@@ -74,4 +74,20 @@ module.exports = [
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
     },
   },
+  {
+    // `no-undef` is on, but eslint-config-expo loads the browser globals so the
+    // app can target web - and the DOM happens to define `Text`, `Image` and
+    // `StyleSheet`. Those are three of the most-used React Native names, so
+    // forgetting to import one passed lint, bundled cleanly, and threw a
+    // ReferenceError the moment the screen was imported on a device. It had
+    // taken out HomeScreen (the first screen after sign-in) and
+    // ChatDetailsScreen. Undeclaring them here turns that back into a lint
+    // error. `document`/`window` stay declared - .web.js files legitimately
+    // use them.
+    files: ["src/**/*.{js,jsx}", "services/**/*.js", "utils/**/*.js"],
+    ignores: ["**/*.web.js", "**/*.web.jsx"],
+    languageOptions: {
+      globals: { Text: "off", Image: "off", StyleSheet: "off" },
+    },
+  },
 ];

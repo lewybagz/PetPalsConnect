@@ -50,11 +50,15 @@ const ArticleController = {
 
   async getLatestArticle(req, res) {
     try {
-      // Find the latest article by sorting by 'PublishedDate' in descending order and limiting to 1
-      const latestArticle = await Article.findOne().sort({ PublishedDate: -1 });
+      // The schema field is `publishedDate`. Sorting by `PublishedDate` sorts
+      // on a path that does not exist, which Mongo accepts and ignores - so
+      // "latest" returned whichever article happened to come first.
+      const latestArticle = await Article.findOne().sort({ publishedDate: -1 });
 
       if (!latestArticle) {
-        return res.status(404).json({ message: "No articles found" });
+        // No articles is an empty shelf on the home screen, not an error, and
+        // a 404 here made the whole section fail rather than render empty.
+        return res.json(null);
       }
 
       res.json(latestArticle);

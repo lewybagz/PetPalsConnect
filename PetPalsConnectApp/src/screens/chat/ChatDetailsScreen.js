@@ -3,6 +3,7 @@ import {
   Text,
   ScrollView,
   FlatList,
+  StyleSheet,
   TouchableOpacity,
   Image,
 } from "react-native";
