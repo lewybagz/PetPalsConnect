@@ -43,6 +43,7 @@ const ProfileScreen = ({ navigation }) => {
 
         setRecentPlaydates(recentPlaydates);
       } catch (error) {
+        console.warn("[profile]", error.message);
         setError("Failed to load playdates.");
       } finally {
         setLoading(false);

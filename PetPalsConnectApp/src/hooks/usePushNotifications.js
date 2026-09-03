@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { Alert, Platform } from "react-native";
-import messaging, {
+import { Alert } from "react-native";
+import {
   getMessaging,
   getToken,
   onMessage,

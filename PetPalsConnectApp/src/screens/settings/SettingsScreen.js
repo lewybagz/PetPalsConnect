@@ -57,6 +57,7 @@ const SettingsScreen = ({ navigation }) => {
       await persist({ playdateRange: value });
       await api.post("/api/users/settings", { playdateRange: value });
     } catch (error) {
+      console.warn("[settings]", error.message);
       Alert.alert("Error", "Failed to save playdate range preference.");
     }
   };
@@ -68,6 +69,7 @@ const SettingsScreen = ({ navigation }) => {
       await persist({ notificationPreferences: next });
       await api.post("/api/users/notification-preferences", { [key]: next[key] });
     } catch (error) {
+      console.warn("[settings]", error.message);
       setNotificationPreferences(notificationPreferences); // roll back
       Alert.alert("Error", `Failed to save the setting for ${key}.`);
     }
@@ -80,6 +82,7 @@ const SettingsScreen = ({ navigation }) => {
       await persist({ locationSharingEnabled: next });
       await api.post("/api/users/settings", { locationSharingEnabled: next });
     } catch (error) {
+      console.warn("[settings]", error.message);
       setLocationSharingEnabled(!next); // roll back
       Alert.alert("Error", "Failed to save location sharing preference.");
     }

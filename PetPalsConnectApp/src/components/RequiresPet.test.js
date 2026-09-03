@@ -2,7 +2,7 @@ import React from "react";
 import { Text } from "react-native";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react-native";
 
-import RequiresPet, { withRequiredPet } from "./RequiresPet";
+import { RequiresPet, withRequiredPet } from "./RequiresPet";
 import { useAuthSession } from "../context/AuthSessionContext";
 
 jest.mock("../context/AuthSessionContext", () => ({

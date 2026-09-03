@@ -14,7 +14,6 @@ const MoreScreen = ({ route, start, navigation }) => {
       start(); // Start copilot tutorial
     }
   }, [route.params?.showTutorial]);
-  1;
 
   return (
     <View style={styles.container}>

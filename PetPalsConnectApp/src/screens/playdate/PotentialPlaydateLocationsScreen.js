@@ -16,10 +16,27 @@ import {
 const PotentialPlaydateLocationsScreen = (navigation) => {
   const [locations, setLocations] = useState([]);
   const dispatch = useDispatch();
-  const userId = useSelector((state) => state.userReducer.userId);
-  const isLoading = useSelector((state) => state.playdateReducer.isLoading);
-  const error = useSelector((state) => state.playdateReducer.error);
+  const userId = useSelector((state) => state.user.userId);
+  const isLoading = useSelector((state) => state.playdate.isLoading);
+  const error = useSelector((state) => state.playdate.error);
 
+  const fetchLocations = async (latitude, longitude, playdateRange) => {
+    try {
+      const token = await getStoredToken();
+      const response = await api.get(`/api/locations`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          range: playdateRange,
+          userLat: latitude,
+          userLng: longitude,
+        },
+      });
+      setLocations(response.data);
+    } catch (err) {
+      console.error("Error fetching locations:", err);
+      dispatch(setError(err.message));
+    }
+  };
   useEffect(() => {
     const initialize = async () => {
       dispatch(startLoading());
@@ -52,23 +69,6 @@ const PotentialPlaydateLocationsScreen = (navigation) => {
     initialize();
   }, [dispatch, userId]);
 
-  const fetchLocations = async (latitude, longitude, playdateRange) => {
-    try {
-      const token = await getStoredToken();
-      const response = await api.get(`/api/locations`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          range: playdateRange,
-          userLat: latitude,
-          userLng: longitude,
-        },
-      });
-      setLocations(response.data);
-    } catch (err) {
-      console.error("Error fetching locations:", err);
-      dispatch(setError(err.message));
-    }
-  };
 
   // The effect was nested inside `if (error)`, so it only registered on renders
   // where an error existed - changing hook order between renders. The condition

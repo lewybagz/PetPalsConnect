@@ -17,10 +17,10 @@ import { clearError, setError } from "../redux/actions";
 const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
   const tailwind = useTailwind();
   const dispatch = useDispatch();
-  const userId = useSelector((state) => state.userReducer.userId);
-  const chatId = useSelector((state) => state.chatReducer.chatId);
-  const isLoading = useSelector((state) => state.chatReducer.isLoading);
-  const error = useSelector((state) => state.chatReducer.error);
+  const userId = useSelector((state) => state.user.userId);
+  const chatId = useSelector((state) => state.chat.singleChatId);
+  const isLoading = useSelector((state) => state.chat.isLoading);
+  const error = useSelector((state) => state.chat.error);
   const getToken = async () => {
     try {
       const token = await getStoredToken();

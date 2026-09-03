@@ -42,17 +42,23 @@ module.exports = [
       // than failing on a backlog. Fix a file's warnings when you touch it, and
       // promote each rule back to "error" once its count reaches zero:
       //
-      //   set-state-in-effect  - setState called synchronously in an effect
-      //                          (cascading renders; usually wants an event
-      //                          handler or a derived value instead)
-      //   immutability         - reading a value before its declaration
-      //   refs                 - touching a ref during render
-      //   static-components    - a component defined inside another component's
-      //                          render (remounts its whole subtree every render)
+      //   set-state-in-effect  - setState called synchronously in an effect.
+      //                          The 11 remaining sites are all "fetch on mount,
+      //                          then setState". Clearing them properly means
+      //                          moving data fetching to a library or Suspense,
+      //                          which is a refactor rather than a lint fix.
       "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/immutability": "warn",
-      "react-hooks/refs": "warn",
-      "react-hooks/static-components": "warn",
+
+      // These two reached zero and are errors again:
+      //   immutability - using a value before its declaration
+      //   refs         - touching a ref during render
+      "react-hooks/immutability": "error",
+      "react-hooks/refs": "error",
+      "react-hooks/static-components": "error",
+
+      // Advisory, and wrong here: `axios.create` and `tw.style` are the
+      // documented call shapes for both libraries.
+      "import/no-named-as-default-member": "off",
 
       // Hook-order violations stay errors: they crash at runtime.
       "react-hooks/rules-of-hooks": "error",

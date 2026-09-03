@@ -7,7 +7,7 @@ import { getStoredToken } from "../../../../utils/tokenutil";
 import { setError } from "../../../redux/actions";
 
 const SubscriptionManagementScreen = () => {
-  const userId = useSelector((state) => state.userReducer.userId);
+  const userId = useSelector((state) => state.user.userId);
   const [subscription, setSubscription] = useState(null);
   const getToken = async () => {
     try {
@@ -27,6 +27,7 @@ const SubscriptionManagementScreen = () => {
           });
           setSubscription(res.data);
         } catch (error) {
+          console.warn("[subscriptionmanagement]", error.message);
           Alert.alert("Error", "Could not load subscription information.");
         }
       }

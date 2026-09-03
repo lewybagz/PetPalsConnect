@@ -8,10 +8,9 @@ import {
   TouchableOpacity,
   Alert,
   FlatList,
-} from "react-native";
+ Image } from "react-native";
 import api from "../../api/axios"; // Assuming axios is used for API calls
 import { useSelector, useDispatch } from "react-redux";
-import { Image } from "react-native";
 import { FontAwesome as Icon } from "@expo/vector-icons";
 import { fetchUserPreferences } from "../../../services/UserService";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
@@ -20,8 +19,8 @@ import { getStoredToken } from "../../../utils/tokenutil";
 
 const SchedulePlaydateScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
-  const userId = useSelector((state) => state.userReducer.userId);
-  const userName = useSelector((state) => state.userReducer.name);
+  const userId = useSelector((state) => state.user.userId);
+  const userName = useSelector((state) => state.user.name);
   const { pet } = route.params;
   const [time, setTime] = useState(new Date());
   const [date, setDate] = useState(new Date());
@@ -38,6 +37,23 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
     }
   };
 
+  const fetchLocations = async (latitude, longitude, playdateRange, token) => {
+    try {
+      getToken();
+      const response = await api.get("/api/locations/playdate-locations", {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          userLat: latitude,
+          userLng: longitude,
+          range: playdateRange,
+        },
+      });
+      setLocations(response.data);
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      setError(error.message);
+    }
+  };
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -67,23 +83,6 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
     initialize();
   }, []);
 
-  const fetchLocations = async (latitude, longitude, playdateRange, token) => {
-    try {
-      getToken();
-      const response = await api.get("/api/locations/playdate-locations", {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          userLat: latitude,
-          userLng: longitude,
-          range: playdateRange,
-        },
-      });
-      setLocations(response.data);
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-      setError(error.message);
-    }
-  };
 
   const handleSubmit = async (token) => {
     // Prepare playdate data

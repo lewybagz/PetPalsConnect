@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useMemo } from "react";
 import {
   TouchableOpacity,
   Text,
@@ -18,8 +18,10 @@ const AnimatedButton = ({
   animationType = "spring",
   shape = "rectangle",
 }) => {
-  const scale = useRef(new Animated.Value(1)).current;
-  const rotate = useRef(new Animated.Value(0)).current; // For rotate animation
+  // useRef(new Animated.Value(...)).current reads a ref during render, and
+  // builds a fresh Animated.Value on every render just to throw it away.
+  const scale = useMemo(() => new Animated.Value(1), []);
+  const rotate = useMemo(() => new Animated.Value(0), []);
 
   const animateButton = (isPressIn) => {
     const animationConfig = {

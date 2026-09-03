@@ -18,10 +18,10 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
   const tailwind = useTailwind();
   const dispatch = useDispatch();
   // Access user ID and chat ID from Redux store
-  const userId = useSelector((state) => state.userReducer.userId);
-  const chatId = useSelector((state) => state.chatReducer.chatId);
-  const error = useSelector((state) => state.chatReducer.error);
-  const isLoading = useSelector((state) => state.chatReducer.isLoading);
+  const userId = useSelector((state) => state.user.userId);
+  const chatId = useSelector((state) => state.chat.singleChatId);
+  const error = useSelector((state) => state.chat.error);
+  const isLoading = useSelector((state) => state.chat.isLoading);
   const getToken = async () => {
     try {
       const token = await getStoredToken();

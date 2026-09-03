@@ -17,7 +17,7 @@ const NotificationItem = ({ content, navigation }) => {
   const tailwind = useTailwind();
   // Hooks must be called at the top level of the component, never inside a
   // handler - React tracks them positionally.
-  const userId = useSelector((state) => state.userReducer.userId);
+  const userId = useSelector((state) => state.user.userId);
 
   const handleMuteNotifications = async () => {
     try {

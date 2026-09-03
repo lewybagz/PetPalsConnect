@@ -16,7 +16,7 @@ import { setError } from "../redux/actions";
 
 const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const currentUser = useSelector((state) => state.userReducer.user);
+  const currentUser = useSelector((state) => state.user.user);
 
   const getToken = async () => {
     try {

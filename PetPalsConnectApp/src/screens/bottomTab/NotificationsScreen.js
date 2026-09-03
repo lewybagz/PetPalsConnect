@@ -9,7 +9,7 @@ import { getStoredToken } from "../../../utils/tokenutil";
 const NotificationsScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const userId = useSelector((state) => state.userReducer.userId);
+  const userId = useSelector((state) => state.user.userId);
 
   useSocketNotification(setNotifications);
 

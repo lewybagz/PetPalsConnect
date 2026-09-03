@@ -8,16 +8,16 @@ import {
 import { StyleSheet, FlatList, TouchableOpacity, Alert } from "react-native";
 import PlaydateCardComponent from "../../components/PlaydateCardComponent";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchPlaydates } from "../../redux/actions";
-import { clearError } from "../../redux/actions";
+import { fetchPlaydates , clearError } from "../../redux/actions";
+
 import LoadingScreen from "../../components/LoadingScreenComponent";
 const Tab = createMaterialTopTabNavigator();
 
 const PlaydateList = ({ type, navigation }) => {
   const dispatch = useDispatch();
-  const playdates = useSelector((state) => state.playdateReducer.playdates);
-  const isLoading = useSelector((state) => state.playdateReducer.isLoading);
-  const error = useSelector((state) => state.playdateReducer.error);
+  const playdates = useSelector((state) => state.playdate.playdates);
+  const isLoading = useSelector((state) => state.playdate.isLoading);
+  const error = useSelector((state) => state.playdate.error);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {

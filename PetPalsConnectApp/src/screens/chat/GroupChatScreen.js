@@ -36,8 +36,7 @@ const GroupChatScreen = ({ route, navigation }) => {
   const messageInputRef = useRef(null);
   const [groupInfo, setGroupInfo] = useState(route.params.group);
   const flatListRef = useRef(null);
-  const userId = useSelector((state) => state.user.id);
-  const currentUser = auth.currentUser;
+  const userId = useSelector((state) => state.user.userId);
   const tailwind = useTailwind();
 
   // Setting up the socket to handle real-time group chat messages
@@ -63,14 +62,6 @@ const GroupChatScreen = ({ route, navigation }) => {
     }
   };
 
-  useEffect(() => {
-    if (groupInfo.id) {
-      fetchGroupInfo();
-      fetchPetsData(groupInfo.id);
-      loadMessages();
-    }
-  }, [groupInfo.id]);
-
   const fetchPetsData = async (groupId) => {
     try {
       const token = await getStoredToken();
@@ -87,7 +78,6 @@ const GroupChatScreen = ({ route, navigation }) => {
       Alert.alert("Error", "Failed to load pets data");
     }
   };
-
   const fetchGroupInfo = async () => {
     try {
       const token = await getStoredToken();
@@ -100,6 +90,16 @@ const GroupChatScreen = ({ route, navigation }) => {
       console.error("Error fetching group info:", error);
     }
   };
+
+  useEffect(() => {
+    if (groupInfo.id) {
+      fetchGroupInfo();
+      fetchPetsData(groupInfo.id);
+      loadMessages();
+    }
+  }, [groupInfo.id]);
+
+
 
   const copyMessageToClipboard = async (messageText) => {
     await Clipboard.setStringAsync(messageText);

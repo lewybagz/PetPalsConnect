@@ -55,12 +55,6 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     fetchLocationDetails();
   }, [placeId]);
 
-  {
-    locationDetails && (
-      <Button title="Get Directions" onPress={handleOpenDirections} />
-    );
-  }
-
   const handleOpenDirections = () => {
     const destination = `${locationDetails.Latitude},${locationDetails.Longitude}`;
     const googleMapsURL = `http://maps.google.com/maps?daddr=${destination}`;
@@ -99,6 +93,9 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
           <Image source={{ uri: locationDetails.Photo }} style={styles.image} />
           <Text style={styles.address}>{locationDetails.Address}</Text>
           <Text style={styles.description}>{locationDetails.Description}</Text>
+          {/* Was a bare block statement in the function body, so it never
+              reached the output - the button simply did not exist. */}
+          <Button title="Get Directions" onPress={handleOpenDirections} />
           {reviews.length > 0 && (
             <FlatList
               data={reviews}

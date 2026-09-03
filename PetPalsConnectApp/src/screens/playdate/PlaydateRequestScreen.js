@@ -12,8 +12,7 @@ import LoadingScreen from "../../components/LoadingScreenComponent";
 import api from "../../api/axios";
 import { useDispatch, useSelector } from "react-redux";
 import { getStoredToken } from "../../../utils/tokenutil";
-import { fetchPlaydateDetails } from "../../redux/actions";
-import { setError } from "../../redux/actions";
+import { fetchPlaydateDetails , setError } from "../../redux/actions";
 
 const PlaydateRequestScreen = ({ route, navigation }) => {
   const { playdateId } = route.params;
@@ -50,6 +49,7 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
       Alert.alert("Accepted", "You have accepted the playdate request.");
       navigation.navigate("UpcomingPlaydates");
     } catch (error) {
+      console.warn("[playdaterequest]", error.message);
       Alert.alert("Error", "Failed to accept the playdate request.");
     } finally {
       setAccepting(false);
@@ -70,6 +70,7 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
       Alert.alert("Declined", "You have declined the playdate request.");
       navigation.goBack();
     } catch (error) {
+      console.warn("[playdaterequest]", error.message);
       Alert.alert("Error", "Failed to decline the playdate request.");
     } finally {
       setDeclining(false);

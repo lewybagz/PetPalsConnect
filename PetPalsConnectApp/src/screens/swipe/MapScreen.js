@@ -39,6 +39,34 @@ const MapScreen = ({ start, route, navigation }) => {
   const tailwind = useTailwind();
   const bottomSheetRef = useRef(null);
 
+  const fetchMatchedPets = async () => {
+    try {
+      const token = await getStoredToken();
+      const response = await api.get("/api/petmatches/matched-pets", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMatchedPets(response.data);
+    } catch (error) {
+      console.error("Error fetching matched pets:", error);
+    }
+  };
+  const fetchPlaydateLocations = async (latitude, longitude, range) => {
+    try {
+      const token = await getStoredToken();
+      const response = await api.get("/api/playdates/playdate-locations", {
+        params: {
+          userLat: latitude,
+          userLng: longitude,
+          range: range,
+        },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPlaydateLocations(response.data);
+    } catch (error) {
+      console.error("Error fetching playdate locations:", error);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -55,6 +83,7 @@ const MapScreen = ({ start, route, navigation }) => {
         let location = await Location.getCurrentPositionAsync({});
         setLocation(location);
       } catch (error) {
+        console.warn("[map]", error.message);
         setErrorMsg("Error getting current location");
         Alert.alert(
           "Location Error",
@@ -75,34 +104,7 @@ const MapScreen = ({ start, route, navigation }) => {
   const togglePlaydateLocations = () =>
     setShowPlaydateLocations(!showPlaydateLocations);
 
-  const fetchMatchedPets = async () => {
-    try {
-      const token = await getStoredToken();
-      const response = await api.get("/api/petmatches/matched-pets", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMatchedPets(response.data);
-    } catch (error) {
-      console.error("Error fetching matched pets:", error);
-    }
-  };
 
-  const fetchPlaydateLocations = async (latitude, longitude, range) => {
-    try {
-      const token = await getStoredToken();
-      const response = await api.get("/api/playdates/playdate-locations", {
-        params: {
-          userLat: latitude,
-          userLng: longitude,
-          range: range,
-        },
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPlaydateLocations(response.data);
-    } catch (error) {
-      console.error("Error fetching playdate locations:", error);
-    }
-  };
 
   const handleMarkerPress = (marker, type) => {
     setSelectedMarker({ ...marker, type });

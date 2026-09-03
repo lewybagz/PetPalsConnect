@@ -8,8 +8,8 @@ import { getStoredToken } from "../../../utils/tokenutil";
 
 const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
-  const userId = useSelector((state) => state.userReducer.userId);
-  const error = useSelector((state) => state.userReducer.error);
+  const userId = useSelector((state) => state.user.userId);
+  const error = useSelector((state) => state.user.error);
   const { petId, locationId } = route.params;
   const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState("");

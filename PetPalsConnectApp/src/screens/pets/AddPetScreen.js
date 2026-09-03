@@ -28,8 +28,8 @@ const AddPetScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { refresh } = useAuthSession();
 
-  const isLoading = useSelector((state) => state.userReducer.isLoading);
-  const error = useSelector((state) => state.userReducer.error);
+  const isLoading = useSelector((state) => state.user.isLoading);
+  const error = useSelector((state) => state.user.error);
 
   useEffect(() => {
     if (error) {

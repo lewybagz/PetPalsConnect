@@ -33,12 +33,6 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
       setError(err.message);
     }
   };
-  useEffect(() => {
-    if (playdate && playdate.locationId) {
-      getLocationData(playdate.locationId).then(setLocationData);
-    }
-  }, [playdate]);
-
   const getLocationData = async (locationId, token) => {
     try {
       getToken();
@@ -51,6 +45,13 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
       return null;
     }
   };
+
+  useEffect(() => {
+    if (playdate && playdate.locationId) {
+      getLocationData(playdate.locationId).then(setLocationData);
+    }
+  }, [playdate]);
+
 
   const handleVisibilityToggle = async (newValue, token) => {
     setIsReviewVisible(newValue);

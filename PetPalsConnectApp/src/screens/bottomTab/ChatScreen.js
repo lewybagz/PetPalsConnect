@@ -18,8 +18,7 @@ import ChatOptionsModal from "../../components/ChatOptionsModal";
 import { FontAwesome as Icon } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { getStoredToken } from "../../../utils/tokenutil";
-import { clearError } from "../../redux/actions";
-import { startLoading, endLoading, setError } from "../../redux/actions";
+import { clearError , startLoading, endLoading, setError } from "../../redux/actions";
 import { useSocketNotification } from "../../hooks/useSocketNotification";
 import api from "../../api/axios";
 
@@ -33,10 +32,10 @@ const ChatScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const tailwind = useTailwind();
 
-  const userId = useSelector((state) => state.userReducer.userId);
-  const currentUser = useSelector((state) => state.userReducer.user);
-  const isLoading = useSelector((state) => state.chatReducer.isLoading);
-  const error = useSelector((state) => state.chatReducer.error);
+  const userId = useSelector((state) => state.user.userId);
+  const currentUser = useSelector((state) => state.user.user);
+  const isLoading = useSelector((state) => state.chat.isLoading);
+  const error = useSelector((state) => state.chat.error);
 
   useSocketNotification((newMessage) => {
     setMessages((prevMessages) => [...prevMessages, newMessage]);

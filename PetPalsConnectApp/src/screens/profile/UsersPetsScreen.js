@@ -28,6 +28,7 @@ const UsersPetsScreen = (navigation) => {
           );
           setUserPets(response.data);
         } catch (error) {
+          console.warn("[userspets]", error.message);
           Alert.alert("Error", "Failed to load your pets");
         }
       }
@@ -48,6 +49,7 @@ const UsersPetsScreen = (navigation) => {
       });
       setUserPets(userPets.filter((pet) => pet._id !== petId));
     } catch (error) {
+      console.warn("[userspets]", error.message);
       Alert.alert("Error", "Failed to delete pet");
     }
   };

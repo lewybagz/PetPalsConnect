@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback} from "react";
 import { View, FlatList, TextInput, StyleSheet } from "react-native";
 import ArticleCard from "../../components/ArticleCardComponent";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
@@ -10,11 +10,7 @@ const ArticlesScreen = ({ navigation }) => {
   const [articles, setArticles] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    fetchLatestArticles();
-  }, []);
-
-  const fetchLatestArticles = async () => {
+  const fetchLatestArticles = useCallback(async () => {
     try {
       const token = await getStoredToken(); // Retrieve the token
       const response = await api.get("/api/articles/latest", {
@@ -24,7 +20,11 @@ const ArticlesScreen = ({ navigation }) => {
     } catch (error) {
       console.error("Error fetching latest articles:", error);
     }
-  };
+   }, []);
+
+  useEffect(() => {
+    fetchLatestArticles();
+  }, [fetchLatestArticles]);
 
   const handleSearch = async () => {
     if (searchQuery) {

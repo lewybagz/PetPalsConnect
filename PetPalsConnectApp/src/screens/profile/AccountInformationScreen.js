@@ -14,9 +14,9 @@ import LoadingScreen from "../../components/LoadingScreenComponent";
 
 const AccountInformationScreen = () => {
   const dispatch = useDispatch();
-  const user = useSelector((state) => state.userReducer.user);
-  const isLoading = useSelector((state) => state.userReducer.isLoading); // Access isLoading
-  const error = useSelector((state) => state.userReducer.error); // Access error
+  const user = useSelector((state) => state.user.user);
+  const isLoading = useSelector((state) => state.user.isLoading); // Access isLoading
+  const error = useSelector((state) => state.user.error); // Access error
   const tailwind = useTailwind();
   const auth = getAuth();
   const db = getFirestore();
@@ -35,6 +35,7 @@ const AccountInformationScreen = () => {
             Alert.alert("Profile Error", "No such document!");
           }
         } catch (error) {
+          console.warn("[accountinformation]", error.message);
           Alert.alert("Error", "An error occurred while fetching user data.");
         }
       } else {

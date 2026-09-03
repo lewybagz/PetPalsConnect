@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Image, Button } from "react-native";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent"; // Assuming this component displays location details
-import { Image, Button } from "react-native";
 import messaging from "@react-native-firebase/messaging";
 
 const PlaydateCreatedScreen = ({ route, navigation }) => {

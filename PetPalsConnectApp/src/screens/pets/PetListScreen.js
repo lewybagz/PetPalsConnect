@@ -18,10 +18,10 @@ const PetListScreen = ({ route, navigation }) => {
   const { participants } = route.params || {};
   const dispatch = useDispatch();
 
-  const currentUser = useSelector((state) => state.userReducer.currentUser);
-  const userId = useSelector((state) => state.userReducer.userId);
-  const isLoading = useSelector((state) => state.userReducer.isLoading);
-  const error = useSelector((state) => state.userReducer.error);
+  const currentUser = useSelector((state) => state.user.user);
+  const userId = useSelector((state) => state.user.userId);
+  const isLoading = useSelector((state) => state.user.isLoading);
+  const error = useSelector((state) => state.user.error);
 
   const [pets, setPets] = useState(participants || []);
   const [matchedPets, setMatchedPets] = useState([]);
@@ -44,6 +44,7 @@ const PetListScreen = ({ route, navigation }) => {
         });
         setMatchedPets(matchedResponse.data);
       } catch (error) {
+        console.warn("[petlist]", error.message);
         Alert.alert("Error", "Failed to load matched pets");
       }
     };
@@ -64,6 +65,7 @@ const PetListScreen = ({ route, navigation }) => {
             fetchMatchedPets(userId);
           }
         } catch (error) {
+          console.warn("[petlist]", error.message);
           Alert.alert("Error", "Failed to load pets");
         }
       };
@@ -89,6 +91,7 @@ const PetListScreen = ({ route, navigation }) => {
       });
       setPets(pets.filter((pet) => pet._id !== petId));
     } catch (error) {
+      console.warn("[petlist]", error.message);
       Alert.alert("Error", "Failed to delete pet");
     }
   };

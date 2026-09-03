@@ -3,7 +3,7 @@ import { View, Text, Button, StyleSheet } from "react-native";
 import { useSelector } from "react-redux";
 
 const FriendRequestsCard = ({ friendRequest, onAccept, onDecline }) => {
-  const currentUser = useSelector((state) => state.userReducer.user);
+  const currentUser = useSelector((state) => state.user.user);
   const isSender = currentUser.pets.some(
     (pet) => pet._id === friendRequest.sender._id
   );

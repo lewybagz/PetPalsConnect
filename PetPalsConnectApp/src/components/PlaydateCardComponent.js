@@ -8,7 +8,7 @@ import { clearError } from "../redux/actions";
 
 const PlaydateCardComponent = ({ playdate, navigation }) => {
   const dispatch = useDispatch();
-  const currentUser = useSelector((state) => state.userReducer.currentUser);
+  const currentUser = useSelector((state) => state.user.user);
   const isLoading = useSelector((state) => state.playdate.isLoading);
   const error = useSelector((state) => state.playdate.error);
 

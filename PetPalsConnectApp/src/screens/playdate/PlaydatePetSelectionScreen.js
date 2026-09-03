@@ -10,7 +10,7 @@ import api from "../../api/axios";
 import UserPetCard from "../../components/UserPetCardComponent";
 import { useSelector } from "react-redux";
 import BottomSheet from "@gorhom/bottom-sheet";
-import CheckBox from "../../components/CheckBox";
+import { CheckBox } from "../../components/CheckBox";
 import { readCache, writeCache, CacheKeys } from "../../services/localCache";
 
 const PlaydatePetSelectionScreen = ({ route, navigation }) => {
@@ -18,7 +18,7 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
   const [userPets, setUserPets] = useState([]);
   const { locationId } = route.params;
   const [selectedPets, setSelectedPets] = useState([]);
-  const userId = useSelector((state) => state.userReducer.userId);
+  const userId = useSelector((state) => state.user.userId);
 
   useEffect(() => {
     const checkCachedPets = async () => {
