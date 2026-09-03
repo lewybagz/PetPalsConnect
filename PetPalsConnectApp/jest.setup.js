@@ -1,0 +1,113 @@
+/* eslint-env jest */
+
+/**
+ * Mocks for the native modules the app imports at load time.
+ *
+ * These are the boundaries the tests deliberately do not exercise: Firebase,
+ * device storage and the image picker. Everything inside them - the session
+ * state machine, the API client's behaviour, the screens - is real code.
+ */
+
+jest.mock("@react-native-async-storage/async-storage", () =>
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock")
+);
+
+// A controllable stand-in for Firebase Auth. Tests drive it through
+// `__setCurrentUser` and `__emitAuthState`.
+jest.mock("@react-native-firebase/auth", () => {
+  let currentUser = null;
+  let listener = null;
+
+  const auth = () => ({ currentUser });
+
+  return {
+    __esModule: true,
+    default: auth,
+    getAuth: () => ({
+      get currentUser() {
+        return currentUser;
+      },
+      signOut: jest.fn(async () => {
+        currentUser = null;
+        listener?.(null);
+      }),
+    }),
+    onAuthStateChanged: (_auth, callback) => {
+      listener = callback;
+      callback(currentUser);
+      return () => {
+        listener = null;
+      };
+    },
+    signInWithEmailAndPassword: jest.fn(),
+    createUserWithEmailAndPassword: jest.fn(),
+    sendEmailVerification: jest.fn(),
+    sendPasswordResetEmail: jest.fn(),
+    signInWithCredential: jest.fn(),
+    GoogleAuthProvider: { credential: jest.fn(() => ({})) },
+    PhoneAuthProvider: jest.fn(),
+    __setCurrentUser: (user) => {
+      currentUser = user;
+    },
+    __emitAuthState: (user) => {
+      currentUser = user;
+      listener?.(user);
+    },
+  };
+});
+
+jest.mock("@react-native-firebase/storage", () => ({
+  __esModule: true,
+  default: () => ({
+    ref: () => ({
+      putFile: jest.fn(async () => {}),
+      getDownloadURL: jest.fn(async () => "https://example.test/photo.jpg"),
+    }),
+  }),
+}));
+
+jest.mock("@react-native-firebase/messaging", () => ({
+  __esModule: true,
+  default: () => ({}),
+  getMessaging: () => ({}),
+  getToken: jest.fn(async () => "fcm-token"),
+  onMessage: jest.fn(() => jest.fn()),
+  onNotificationOpenedApp: jest.fn(() => jest.fn()),
+  getInitialNotification: jest.fn(async () => null),
+  requestPermission: jest.fn(async () => 1),
+  AuthorizationStatus: { AUTHORIZED: 1, PROVISIONAL: 2 },
+}));
+
+jest.mock("@react-native-firebase/app", () => ({
+  getApp: () => ({}),
+}));
+
+jest.mock("@react-native-google-signin/google-signin", () => ({
+  GoogleSignin: {
+    configure: jest.fn(),
+    hasPlayServices: jest.fn(async () => true),
+    signIn: jest.fn(),
+  },
+}));
+
+jest.mock("expo-image-picker", () => ({
+  requestMediaLibraryPermissionsAsync: jest.fn(async () => ({ granted: true })),
+  launchImageLibraryAsync: jest.fn(async () => ({ canceled: true })),
+}));
+
+jest.mock("expo-secure-store", () => ({
+  getItemAsync: jest.fn(async () => null),
+  setItemAsync: jest.fn(async () => {}),
+  deleteItemAsync: jest.fn(async () => {}),
+}));
+
+// Quieten the expected console noise from error-path tests.
+global.__DEV__ = true;
+
+// Explicit unmount between tests. RTL's automatic cleanup is not reliably wired
+// in this version, which left `screen` pointing at a previous test's render and
+// made later tests assert against a stale tree.
+const { cleanup } = require("@testing-library/react-native");
+afterEach(() => {
+  cleanup();
+});

@@ -14,7 +14,9 @@
     "prebuild": "expo prebuild --clean",
     "lint": "eslint .",
     "doctor": "npx expo-doctor@latest",
-    "reset": "expo start -c"
+    "reset": "expo start -c",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -68,7 +70,11 @@
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
+    "@testing-library/react-native": "^14.0.1",
     "eslint": "^9.39.5",
-    "eslint-config-expo": "^57.0.2"
+    "eslint-config-expo": "^57.0.2",
+    "jest": "~29.7.0",
+    "jest-expo": "~57.0.5",
+    "test-renderer": "^1.2.0"
   }
 }

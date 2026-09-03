@@ -6,6 +6,31 @@ module.exports = [
     ignores: ["node_modules/", ".expo/", "dist/", "ios/", "android/", "functions/"],
   },
   {
+    // Test files and the jest setup run under jest, not the app runtime.
+    files: ["**/*.test.{js,jsx}", "jest.setup.js", "jest.config.js"],
+    languageOptions: {
+      globals: {
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        jest: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+        global: "writable",
+        require: "readonly",
+        module: "writable",
+      },
+    },
+    rules: {
+      // Capturing the session into an outer variable is how these tests reach
+      // the context's actions. That is a test-harness pattern, not app code.
+      "react-hooks/globals": "off",
+    },
+  },
+  {
     rules: {
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
 

@@ -30,14 +30,23 @@ export function RequiresPet({
   if (hasPet) return children;
 
   return (
-    <View style={tailwind("flex-1 items-center justify-center px-8 bg-white")}>
+    <View
+      testID="requires-pet-empty-state"
+      style={tailwind("flex-1 items-center justify-center px-8 bg-white")}
+    >
       <Ionicons name="paw-outline" size={56} color="#d0d0d0" />
-      <Text style={tailwind("text-xl font-bold text-gray-900 mt-5 text-center")}>
+      <Text
+        testID="requires-pet-title"
+        style={tailwind("text-xl font-bold text-gray-900 mt-5 text-center")}
+      >
         {title}
       </Text>
-      <Text style={tailwind("text-center text-gray-600 mt-2 mb-6")}>{message}</Text>
+      <Text testID="requires-pet-message" style={tailwind("text-center text-gray-600 mt-2 mb-6")}>
+        {message}
+      </Text>
 
       <Pressable
+        testID="requires-pet-add-button"
         onPress={() => navigation.navigate("AddPet")}
         style={tailwind("bg-red-500 rounded-lg py-3 px-8")}
       >

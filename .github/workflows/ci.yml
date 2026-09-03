@@ -57,6 +57,10 @@ jobs:
         working-directory: PetPalsConnectApp
         run: npx eslint .
 
+      - name: Test
+        working-directory: PetPalsConnectApp
+        run: npm test
+
       # `expo export` resolves every import and runs the full Babel/Metro
       # transform, which is the closest thing to a build gate the app has.
       - name: Bundle for Android
