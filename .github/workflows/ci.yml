@@ -57,6 +57,12 @@ jobs:
         working-directory: PetPalsConnectApp
         run: npx eslint .
 
+      # The app is part TypeScript. `tsc --noEmit` covers the converted files
+      # (checkJs is off, so the .js ones are compiled but not checked).
+      - name: Typecheck
+        working-directory: PetPalsConnectApp
+        run: npm run typecheck
+
       - name: Test
         working-directory: PetPalsConnectApp
         run: npm test

@@ -7,7 +7,7 @@ module.exports = [
   },
   {
     // Test files and the jest setup run under jest, not the app runtime.
-    files: ["**/*.test.{js,jsx}", "jest.setup.js", "jest.config.js"],
+    files: ["**/*.test.{js,jsx,ts,tsx}", "jest.setup.js", "jest.config.js"],
     languageOptions: {
       globals: {
         describe: "readonly",
@@ -62,6 +62,16 @@ module.exports = [
 
       // Hook-order violations stay errors: they crash at runtime.
       "react-hooks/rules-of-hooks": "error",
+    },
+  },
+  {
+    // The base rule cannot see TypeScript: it reports every parameter in an
+    // interface's method signature as an unused variable. Hand those files to
+    // the typescript-eslint version, which understands declarations.
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
     },
   },
 ];

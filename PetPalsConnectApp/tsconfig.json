@@ -1,0 +1,32 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+
+    // The codebase is JavaScript and is being converted a module at a time.
+    // `allowJs` lets a .ts file import a .js one; `checkJs` stays off so the
+    // ~180 unconverted files do not produce thousands of errors that nobody
+    // can act on. Turn `checkJs` on once the conversion is far enough along.
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+
+    // Metro-injected globals (`process.env.EXPO_PUBLIC_*`, `__DEV__`). Referenced
+    // here rather than through the generated, gitignored `expo-env.d.ts`, so a
+    // clean checkout typechecks without running Expo first.
+    "types": ["expo/types"],
+
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": ["node_modules", "dist", "ios", "android", "functions"]
+}

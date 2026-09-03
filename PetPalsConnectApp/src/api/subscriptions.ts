@@ -1,6 +1,12 @@
 import api from "./axios";
 
 import { STRIPE_PUBLISHABLE_KEY } from "../config/env";
+import type {
+  PaymentSheetSession,
+  Plan,
+  Subscription,
+  SubscriptionStatus,
+} from "../types/api";
 
 /**
  * The subscription half of the API surface.
@@ -14,7 +20,7 @@ import { STRIPE_PUBLISHABLE_KEY } from "../config/env";
  */
 
 /** True when this build was given a publishable key to talk to Stripe with. */
-export const paymentsConfigured = () =>
+export const paymentsConfigured = (): boolean =>
   typeof STRIPE_PUBLISHABLE_KEY === "string" &&
   STRIPE_PUBLISHABLE_KEY.startsWith("pk_");
 
@@ -23,7 +29,7 @@ export const paymentsConfigured = () =>
  * Prices live in Stripe, so the app never hardcodes an amount - the old
  * screen's "$4.99/month" was decoration with nothing behind it.
  */
-export const fetchPlans = async () => {
+export const fetchPlans = async (): Promise<{ plans: Plan[]; paymentsEnabled: boolean }> => {
   const { data } = await api.get("/api/subscriptions/plans");
   return {
     plans: data?.plans ?? [],
@@ -32,49 +38,49 @@ export const fetchPlans = async () => {
 };
 
 /** The caller's current subscription, or null. */
-export const fetchCurrentSubscription = async () => {
+export const fetchCurrentSubscription = async (): Promise<Subscription | null> => {
   const { data } = await api.get("/api/subscriptions/me");
   return data ?? null;
 };
 
 /** Starts a subscription. Returns the parameters PaymentSheet needs. */
-export const createSubscription = async (planId) => {
+export const createSubscription = async (planId: string): Promise<PaymentSheetSession> => {
   const { data } = await api.post("/api/subscriptions", { planId });
   return data;
 };
 
 /** Cancels at period end - the user keeps the time they already paid for. */
-export const cancelSubscription = async () => {
+export const cancelSubscription = async (): Promise<Subscription> => {
   const { data } = await api.post("/api/subscriptions/cancel");
   return data;
 };
 
 /** Undoes a pending cancellation. */
-export const resumeSubscription = async () => {
+export const resumeSubscription = async (): Promise<Subscription> => {
   const { data } = await api.post("/api/subscriptions/resume");
   return data;
 };
 
 /** Every subscription this account has had, newest first. */
-export const fetchSubscriptionHistory = async () => {
+export const fetchSubscriptionHistory = async (): Promise<Subscription[]> => {
   const { data } = await api.get("/api/subscription-history");
   return Array.isArray(data) ? data : [];
 };
 
 /** Statuses that mean "this person is entitled to paid features right now". */
-export const LIVE_STATUSES = ["active", "trialing"];
+export const LIVE_STATUSES: SubscriptionStatus[] = ["active", "trialing"];
 
-export const isLive = (subscription) =>
-  Boolean(subscription) && LIVE_STATUSES.includes(subscription.status);
+export const isLive = (subscription?: Subscription | null): boolean =>
+  Boolean(subscription) && LIVE_STATUSES.includes(subscription!.status);
 
 /** Human wording for a Stripe status, so screens do not each invent their own. */
-export const describeStatus = (subscription) => {
+export const describeStatus = (subscription?: Subscription | null): string => {
   if (!subscription) return "No subscription";
   if (subscription.status === "active" && subscription.cancelAtPeriodEnd) {
     return "Active - ends at the end of this period";
   }
   return (
-    {
+    ({
       incomplete: "Waiting for payment",
       incomplete_expired: "Payment was not completed",
       trialing: "Free trial",
@@ -82,12 +88,12 @@ export const describeStatus = (subscription) => {
       past_due: "Payment failed - please update your card",
       canceled: "Cancelled",
       unpaid: "Unpaid",
-    }[subscription.status] ?? subscription.status
+    } as Record<SubscriptionStatus, string>)[subscription.status] ?? subscription.status
   );
 };
 
 /** Formats a stored amount (major units) for display. */
-export const formatPrice = (amount, currency = "usd") => {
+export const formatPrice = (amount?: number | null, currency: string = "usd"): string => {
   if (amount == null) return "";
   try {
     return new Intl.NumberFormat(undefined, {

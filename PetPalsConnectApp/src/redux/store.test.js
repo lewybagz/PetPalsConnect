@@ -23,7 +23,8 @@ const sourceFiles = () => {
       if (entry.name === "node_modules") continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
-      else if (/\.jsx?$/.test(entry.name) && !entry.name.endsWith(".test.js")) out.push(full);
+      else if (/\.[jt]sx?$/.test(entry.name) && !/\.test\.[jt]sx?$/.test(entry.name))
+        out.push(full);
     }
   };
   SOURCE_ROOTS.forEach(walk);

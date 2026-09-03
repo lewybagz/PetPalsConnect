@@ -180,4 +180,6 @@ Firebase credential. Apple requires this of any app offering account creation.
 - Apple Pay and Google Pay are off; subscriptions take a card through Stripe's
   PaymentSheet. Turning Apple Pay on needs a registered merchant ID (see
   `PetPalsConnectApp/.env.example`)
-- The codebase is plain JavaScript; there is no TypeScript yet
+- The app is part TypeScript and part JavaScript, converting a module at a
+  time; `checkJs` is off, so unconverted files are not typechecked. The backend
+  is plain CommonJS JavaScript

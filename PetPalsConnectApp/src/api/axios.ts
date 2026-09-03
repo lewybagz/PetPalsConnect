@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { type InternalAxiosRequestConfig } from "axios";
 import { getAuth } from "@react-native-firebase/auth";
 
 import { API_URL } from "../config/env";
@@ -20,7 +20,10 @@ const instance = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-instance.interceptors.request.use(async (config) => {
+/** Marks a config we have already replayed, so a 401 loop cannot form. */
+type RetriableConfig = InternalAxiosRequestConfig & { __isRetry?: boolean };
+
+instance.interceptors.request.use(async (config: RetriableConfig) => {
   const user = getAuth().currentUser;
   if (user) {
     const token = await user.getIdToken();
@@ -32,7 +35,8 @@ instance.interceptors.request.use(async (config) => {
 instance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const { config, response } = error;
+    const config = error.config as RetriableConfig | undefined;
+    const response = error.response;
 
     // A 401 usually means the cached ID token went stale. Force-refresh once
     // and replay the request before surfacing the failure.

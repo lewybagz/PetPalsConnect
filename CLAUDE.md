@@ -69,6 +69,32 @@ clients call Firebase's `updatePassword()`.
 - Offline caching goes through `src/services/localCache` (AsyncStorage), not a
   native database. Realm was removed — MongoDB ended support in September 2025.
 
+#### TypeScript
+
+The app is mixed JS and TS, converting a module at a time. `allowJs` is on and
+`checkJs` is off, so an unconverted `.js` file is compiled but not typechecked —
+that keeps `npm run typecheck` at zero errors instead of thousands nobody can
+act on. `strict` and `noUncheckedIndexedAccess` are on for what is converted.
+
+Converted so far: `src/types/api.ts`, `src/config/env.ts`, `src/api/axios.ts`,
+`src/api/subscriptions.ts`, `src/utils/authErrors.ts`,
+`src/utils/passwordStrength.ts`, `src/services/localCache.ts`.
+
+Convert leaves before branches — a pure module with no React and no native
+dependency costs nothing to convert and immediately types every caller.
+Roughly: utils and services, then API modules, then contexts and hooks, then
+screens. Do not convert a screen before the hooks it uses, or its props end up
+as `any` and the conversion buys nothing.
+
+`src/types/api.ts` is the one description of what the API returns, and it is
+hand-written — there is no OpenAPI document. `backend/test/types.test.js`
+checks every field in it against the real Mongoose schema, so it cannot drift.
+Add a field there rather than inlining a shape in a screen.
+
+Anything that walks the app's source from a test (`store.test.js`, the backend's
+`contract.test.js`) must match `.ts`/`.tsx` as well as `.js` — otherwise a
+converted file silently drops out of the check.
+
 ### Backend
 
 - Identity always comes from the verified Firebase token, never the request
@@ -141,8 +167,8 @@ missing key must never stop the app from opening.
 # no database, no service-account key and no network.
 cd backend && npm run lint && npm test
 
-# App compiles for both platforms — the real build gate
-cd PetPalsConnectApp && npm run lint
+# App: lint, types, tests, then both bundles — the real build gate
+cd PetPalsConnectApp && npm run lint && npm run typecheck && npm test
 npx expo export --platform android
 npx expo export --platform ios
 npx expo-doctor@latest
@@ -150,21 +176,35 @@ npx expo-doctor@latest
 
 CI (`.github/workflows/ci.yml`) runs all of the above on every PR.
 
-`expo export` is the app's build gate: it resolves every import and runs the
-full Babel/Metro transform. There are no app-side unit tests yet.
+`expo export` is still the app's widest gate: it resolves every import and runs
+the full Babel/Metro transform. It does not execute anything, though, which is
+why the app has a jest suite as well — four sessions of crash-class bugs
+(a styling shim that threw on every screen, selectors reading slices that do not
+exist) survived lint and both bundles untouched.
 
 ### The contract tests earn their keep
 
-`backend/test/contract.test.js` reads both sides of the app/API boundary from
-source and compares them. It catches the failure mode this codebase kept hitting:
-the app compiles, the backend boots, and every request 404s. It enforces that
+Three suites read both sides of the app/API boundary from source and compare
+them. They catch the failure mode this codebase kept hitting: the app compiles,
+the backend boots, and nothing works.
+
+`backend/test/contract.test.js` — paths:
 
 - every `api.*()` call in the app matches a declared backend route,
 - no router repeats its own mount prefix (`/api/users/users/...`),
 - no `/:id` is registered before a static sibling like `/latest` or `/me`,
 - neither half imports the other.
 
-Add a route, and this test tells you if nothing calls it or the path is wrong.
+`backend/test/types.test.js` — payloads: every field in the app's
+`src/types/api.ts` exists on the matching Mongoose schema, nothing is typed as
+required that the schema does not guarantee, and the subscription-status and
+session-state unions match their sources exactly.
+
+`PetPalsConnectApp/src/redux/store.test.js` — state: every `state.<slice>.<field>`
+the app reads resolves against the real store.
+
+Add a route, a field or a selector, and one of these tells you if the other side
+disagrees.
 
 ## Things deliberately left out
 
@@ -172,10 +212,6 @@ Add a route, and this test tells you if nothing calls it or the path is wrong.
   Architecture. `src/components/walkthrough.js` provides inert shims so the tour
   markup survives; swap in a maintained library to re-enable it.
 - **Facebook login** — removed. Google and email/phone remain.
-- **TypeScript** — the codebase is plain JS. Converting is worthwhile but was
-  out of scope for getting the app building again.
-- **App-side tests** — the backend has a suite; the app has none. `expo export`
-  is the only app gate today.
 - **Four React Compiler lint rules are warnings, not errors**
   (`set-state-in-effect`, `immutability`, `refs`, `static-components`). There is
   a backlog of ~23 pre-existing violations; see the note in

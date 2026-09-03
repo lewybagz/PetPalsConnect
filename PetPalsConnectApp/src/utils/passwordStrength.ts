@@ -19,21 +19,36 @@ const COMMON = new Set([
   "princess", "dragon123", "monkey12", "abc12345", "passw0rd", "trustno1",
 ]);
 
-export const passwordRules = [
+export interface PasswordRule {
+  id: "length" | "variety" | "notCommon";
+  label: string;
+  test: (value: string) => boolean;
+}
+
+export interface PasswordScore {
+  /** 0-3. 3 means every rule met, or a long passphrase. */
+  score: number;
+  met: Set<PasswordRule["id"]>;
+  /** Only length and not-common block signup; variety informs. */
+  isAcceptable: boolean;
+  label: string;
+}
+
+export const passwordRules: PasswordRule[] = [
   {
     id: "length",
     label: `At least ${MIN_LENGTH} characters`,
-    test: (value) => value.length >= MIN_LENGTH,
+    test: (value: string) => value.length >= MIN_LENGTH,
   },
   {
     id: "variety",
     label: "Mixes letters with numbers or symbols",
-    test: (value) => /[a-zA-Z]/.test(value) && /[^a-zA-Z]/.test(value),
+    test: (value: string) => /[a-zA-Z]/.test(value) && /[^a-zA-Z]/.test(value),
   },
   {
     id: "notCommon",
     label: "Isn't a commonly used password",
-    test: (value) => value.length > 0 && !COMMON.has(value.toLowerCase()),
+    test: (value: string) => value.length > 0 && !COMMON.has(value.toLowerCase()),
   },
 ];
 
@@ -41,7 +56,7 @@ export const passwordRules = [
  * Returns { score 0-3, met: Set of rule ids, label, isAcceptable }.
  * Only the length rule is enforced; the rest inform without blocking.
  */
-export const scorePassword = (password = "") => {
+export const scorePassword = (password: string = ""): PasswordScore => {
   const met = new Set(
     passwordRules.filter((rule) => rule.test(password)).map((rule) => rule.id)
   );
@@ -54,7 +69,7 @@ export const scorePassword = (password = "") => {
     score,
     met,
     isAcceptable: met.has("length") && met.has("notCommon"),
-    label: ["Too short", "Weak", "Good", "Strong"][score] ?? "Weak",
+    label: (["Too short", "Weak", "Good", "Strong"] as const)[score] ?? "Weak",
   };
 };
 

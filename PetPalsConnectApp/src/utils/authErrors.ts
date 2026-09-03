@@ -8,7 +8,7 @@
  * possible, say what to do next.
  */
 
-const FIREBASE_MESSAGES = {
+const FIREBASE_MESSAGES: Record<string, string> = {
   "auth/email-already-in-use":
     "There's already an account with that email. Try signing in instead.",
   "auth/invalid-email": "That doesn't look like a valid email address.",
@@ -37,11 +37,17 @@ const FIREBASE_MESSAGES = {
 
 const GENERIC = "Something went wrong. Please try again.";
 
+/** Shape of the errors Firebase Auth throws. */
+export interface FirebaseAuthError {
+  code?: string;
+  message?: string;
+}
+
 /** A readable message for a Firebase Auth error. */
-export const describeAuthError = (error) => {
+export const describeAuthError = (error?: FirebaseAuthError | null): string => {
   if (!error) return GENERIC;
 
-  const mapped = FIREBASE_MESSAGES[error.code];
+  const mapped = error.code ? FIREBASE_MESSAGES[error.code] : undefined;
   if (mapped) return mapped;
 
   // Strip a leading "[auth/...]" so an unmapped code at least reads cleanly.
@@ -49,15 +55,25 @@ export const describeAuthError = (error) => {
   return stripped || GENERIC;
 };
 
+/**
+ * Shape of an axios error. Typed structurally rather than with axios's own
+ * `AxiosError`, so a caller can pass anything that failed - including a plain
+ * `Error` with no response at all, which is what a network failure gives you.
+ */
+export interface ApiLikeError {
+  code?: string;
+  response?: { status?: number; data?: { message?: string } };
+}
+
 /** A readable message for an axios error from our own API. */
-export const describeApiError = (error) => {
+export const describeApiError = (error?: ApiLikeError | null): string => {
   const status = error?.response?.status;
   const body = error?.response?.data;
 
   // The API returns a user-facing `message` on 400/404/409 by design.
   if (body?.message && status && status < 500) return body.message;
 
-  if (status >= 500) return "Our server had a problem. Please try again in a moment.";
+  if (status && status >= 500) return "Our server had a problem. Please try again in a moment.";
   if (error?.code === "ECONNABORTED") return "That took too long. Please try again.";
   if (!error?.response) return "Couldn't reach PetPals Connect. Check your connection.";
 

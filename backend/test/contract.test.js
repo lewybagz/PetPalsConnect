@@ -56,7 +56,9 @@ const appSourceFiles = () => {
       if (["node_modules", ".expo", "dist", "ios", "android"].includes(entry.name)) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
-      else if (/\.jsx?$/.test(entry.name)) out.push(full);
+      // .ts/.tsx too: the app is being converted a module at a time, and a
+      // converted file must not fall out of this check.
+      else if (/\.[jt]sx?$/.test(entry.name)) out.push(full);
     }
   };
   walk(APP);
