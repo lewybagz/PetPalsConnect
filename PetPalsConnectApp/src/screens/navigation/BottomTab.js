@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
 import HomeScreen from "../bottomTab/HomeScreen";
+import DiscoverScreen from "../swipe/DiscoverScreen";
 import ChatTabsScreen from "../chat/ChatTabsScreen";
 import ScheduledPlaydatesScreen from "../bottomTab/ScheduledPlaydatesScreen";
 import NotificationsScreen from "../bottomTab/NotificationsScreen";
@@ -15,6 +16,7 @@ const Tab = createBottomTabNavigator();
 // so every tab icon silently rendered blank.
 const ICONS = {
   Home: ["home", "home-outline"],
+  Discover: ["heart", "heart-outline"],
   Chats: ["chatbubbles", "chatbubbles-outline"],
   Playdates: ["paw", "paw-outline"],
   More: ["menu", "menu-outline"],
@@ -35,6 +37,7 @@ export default function BottomTabNavigator() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Discover" component={DiscoverScreen} />
       <Tab.Screen name="Chats" component={ChatTabsScreen} />
       <Tab.Screen name="Playdates" component={ScheduledPlaydatesScreen} />
       <Tab.Screen

@@ -1,0 +1,263 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const request = require("supertest");
+
+const harness = require("./helpers/harness");
+
+let app;
+let User;
+let Pet;
+let PetDecision;
+let PetMatch;
+let Notification;
+let realtime;
+
+/**
+ * Discovery: the loop the app was missing.
+ *
+ * The matching engine ranked pets and wrote PetMatch rows, but nothing ever
+ * showed them to anyone - there was no browse screen and no way to say yes or
+ * no. These cover the two halves that make it a product: candidates a person
+ * has not judged yet, and a decision that sticks and can become a match.
+ */
+test.before(async () => {
+  app = await harness.start();
+  User = require("../models/User");
+  Pet = require("../models/Pet");
+  PetDecision = require("../models/PetDecision");
+  PetMatch = require("../models/PetMatch");
+  Notification = require("../models/Notification");
+  realtime = require("../services/realtime");
+});
+
+test.after(async () => {
+  await harness.stop();
+});
+
+test.beforeEach(async () => {
+  await harness.clear();
+  realtime.setIO(null);
+});
+
+const auth = (uid) => ["Authorization", `Bearer ${harness.issueToken(uid)}`];
+
+const makeOwnerWithPet = async (uid, overrides = {}) => {
+  const user = await User.create({
+    firebaseUid: uid,
+    username: uid,
+    email: `${uid}@example.test`,
+  });
+  const pet = await Pet.create({
+    name: `${uid}-pet`,
+    weight: 30,
+    breed: "Labrador",
+    age: 3,
+    temperament: "Playful",
+    favoriteActivities: ["Fetch"],
+    owner: user._id,
+    creator: user._id,
+    ...overrides,
+  });
+  await User.updateOne({ _id: user._id }, { $push: { pets: pet._id } });
+  return { user, pet };
+};
+
+// --- Discover ---------------------------------------------------------------
+
+test("candidates are other people's pets, ranked", async () => {
+  await makeOwnerWithPet("disc-me");
+  await makeOwnerWithPet("disc-them");
+
+  const res = await request(app).get("/api/petmatches/discover").set(...auth("disc-me"));
+
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.candidates.length, 1);
+  assert.equal(res.body.candidates[0].pet.name, "disc-them-pet");
+  assert.equal(typeof res.body.candidates[0].score, "number");
+});
+
+test("your own pets are never candidates", async () => {
+  const me = await makeOwnerWithPet("own-me");
+  await Pet.create({
+    name: "second dog",
+    weight: 20,
+    breed: "Beagle",
+    age: 2,
+    owner: me.user._id,
+    creator: me.user._id,
+  });
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("own-me"))
+    .expect(200);
+
+  assert.deepEqual(res.body.candidates, []);
+});
+
+test("a pet you already passed on does not come back", async () => {
+  const me = await makeOwnerWithPet("pass-me");
+  const them = await makeOwnerWithPet("pass-them");
+
+  await request(app)
+    .post("/api/petmatches/decide")
+    .set(...auth("pass-me"))
+    .send({ fromPetId: me.pet._id, toPetId: them.pet._id, decision: "pass" })
+    .expect(200);
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("pass-me"))
+    .expect(200);
+
+  assert.deepEqual(res.body.candidates, []);
+});
+
+test("having no pet is an empty deck, not an error", async () => {
+  await User.create({
+    firebaseUid: "petless",
+    username: "petless",
+    email: "petless@example.test",
+  });
+
+  const res = await request(app).get("/api/petmatches/discover").set(...auth("petless"));
+
+  // The add-a-pet step is skippable, so this is a normal state.
+  assert.equal(res.status, 200);
+  assert.equal(res.body.pet, null);
+  assert.deepEqual(res.body.candidates, []);
+});
+
+test("you cannot browse as somebody else's pet", async () => {
+  await makeOwnerWithPet("browse-me");
+  const them = await makeOwnerWithPet("browse-them");
+
+  const res = await request(app)
+    .get(`/api/petmatches/discover?petId=${them.pet._id}`)
+    .set(...auth("browse-me"));
+
+  assert.equal(res.status, 403);
+});
+
+// --- Deciding ---------------------------------------------------------------
+
+test("a like is recorded once, however many times it is sent", async () => {
+  const me = await makeOwnerWithPet("dup-me");
+  const them = await makeOwnerWithPet("dup-them");
+
+  const body = { fromPetId: me.pet._id, toPetId: them.pet._id, decision: "like" };
+  await request(app).post("/api/petmatches/decide").set(...auth("dup-me")).send(body).expect(200);
+  await request(app).post("/api/petmatches/decide").set(...auth("dup-me")).send(body).expect(200);
+
+  assert.equal(await PetDecision.countDocuments({ fromPet: me.pet._id }), 1);
+});
+
+test("one-sided interest is not a match", async () => {
+  const me = await makeOwnerWithPet("one-me");
+  const them = await makeOwnerWithPet("one-them");
+
+  const res = await request(app)
+    .post("/api/petmatches/decide")
+    .set(...auth("one-me"))
+    .send({ fromPetId: me.pet._id, toPetId: them.pet._id, decision: "like" })
+    .expect(200);
+
+  assert.equal(res.body.mutual, false);
+  assert.equal(await PetMatch.countDocuments({}), 0);
+});
+
+test("liking back makes a match, and tells both owners", async () => {
+  const alice = await makeOwnerWithPet("match-alice");
+  const bob = await makeOwnerWithPet("match-bob");
+  const emitted = [];
+  realtime.setIO({
+    to: (room) => ({ emit: (event, payload) => emitted.push({ room, event, payload }) }),
+  });
+
+  await request(app)
+    .post("/api/petmatches/decide")
+    .set(...auth("match-alice"))
+    .send({ fromPetId: alice.pet._id, toPetId: bob.pet._id, decision: "like" })
+    .expect(200);
+
+  const res = await request(app)
+    .post("/api/petmatches/decide")
+    .set(...auth("match-bob"))
+    .send({ fromPetId: bob.pet._id, toPetId: alice.pet._id, decision: "like" })
+    .expect(200);
+
+  assert.equal(res.body.mutual, true);
+  assert.equal(res.body.matchedPet.name, "match-alice-pet");
+
+  // Recorded from both sides so either owner's match list shows it.
+  assert.equal(await PetMatch.countDocuments({ relevantToUser: alice.user._id }), 1);
+  assert.equal(await PetMatch.countDocuments({ relevantToUser: bob.user._id }), 1);
+
+  // Neither owner has to be looking at the screen when it happens.
+  const matchEvents = emitted.filter((event) => event.event === "petMatch");
+  assert.equal(matchEvents.length, 2);
+  assert.equal(await Notification.countDocuments({ recipient: alice.user._id }), 1);
+  assert.equal(await Notification.countDocuments({ recipient: bob.user._id }), 1);
+});
+
+test("a pass after a like does not resurrect the match", async () => {
+  const alice = await makeOwnerWithPet("flip-alice");
+  const bob = await makeOwnerWithPet("flip-bob");
+
+  await request(app)
+    .post("/api/petmatches/decide")
+    .set(...auth("flip-alice"))
+    .send({ fromPetId: alice.pet._id, toPetId: bob.pet._id, decision: "like" })
+    .expect(200);
+
+  await request(app)
+    .post("/api/petmatches/decide")
+    .set(...auth("flip-alice"))
+    .send({ fromPetId: alice.pet._id, toPetId: bob.pet._id, decision: "pass" })
+    .expect(200);
+
+  const res = await request(app)
+    .post("/api/petmatches/decide")
+    .set(...auth("flip-bob"))
+    .send({ fromPetId: bob.pet._id, toPetId: alice.pet._id, decision: "like" })
+    .expect(200);
+
+  assert.equal(res.body.mutual, false);
+});
+
+test("you cannot decide with a pet that is not yours", async () => {
+  await makeOwnerWithPet("spoof-me");
+  const them = await makeOwnerWithPet("spoof-them");
+  const other = await makeOwnerWithPet("spoof-other");
+
+  const res = await request(app)
+    .post("/api/petmatches/decide")
+    .set(...auth("spoof-me"))
+    .send({ fromPetId: them.pet._id, toPetId: other.pet._id, decision: "like" });
+
+  assert.equal(res.status, 403);
+  assert.equal(await PetDecision.countDocuments({}), 0);
+});
+
+test("an invalid decision is refused", async () => {
+  const me = await makeOwnerWithPet("bad-me");
+  const them = await makeOwnerWithPet("bad-them");
+
+  const res = await request(app)
+    .post("/api/petmatches/decide")
+    .set(...auth("bad-me"))
+    .send({ fromPetId: me.pet._id, toPetId: them.pet._id, decision: "maybe" });
+
+  assert.equal(res.status, 400);
+});
+
+test("a pet cannot decide on itself", async () => {
+  const me = await makeOwnerWithPet("self-me");
+
+  const res = await request(app)
+    .post("/api/petmatches/decide")
+    .set(...auth("self-me"))
+    .send({ fromPetId: me.pet._id, toPetId: me.pet._id, decision: "like" });
+
+  assert.equal(res.status, 400);
+});

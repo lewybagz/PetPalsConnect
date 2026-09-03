@@ -127,6 +127,41 @@ converted file silently drops out of the check.
 - Never repeat the mount prefix inside a router: mounted at `/api/users`, the
   path is `/pets/:id`, not `/users/pets/:id`.
 
+### Realtime
+
+**One socket, joined to the user's room.** `src/services/socket.js` owns the
+single connection; `RootNavigator` calls `useSocketSession()` so every screen
+below inherits it. The server addresses rooms named after the Mongo user id
+(`socket.on("join")` in Server.js) — a connection that never emits `join`
+receives nothing, which is how this failed before.
+
+**Push from a service through `services/realtime`, not `req.app.get("io")`.**
+The code that knows something happened is usually a service with no request in
+scope. `emitToUser(userId, event, payload)` is a no-op without a server, so a
+failed push can never take down the write that caused it.
+
+**Event names are a contract.** The server emits `message`, `notification`,
+`friendRequest` and `petMatch`; the hooks in `src/hooks/useSocketEvents.js` are
+the only place the app subscribes. Unsubscribe with the function
+`onSocketEvent` returns — `socket.off("message")` removes *every* listener for
+that event, so two mounted screens unsubscribe each other.
+
+### Matching and discovery
+
+**`PetMatch` is what the algorithm thinks; `PetDecision` is what a person
+decided.** They are separate models on purpose: re-running matching rewrites
+PetMatch, and must never resurrect a candidate an owner has already passed on.
+
+**A match is mutual or it is nothing.** `POST /api/petmatches/decide` records
+one direction; only a like in both directions creates the PetMatch rows, the
+notifications and the `petMatch` event. One-sided interest is invisible to the
+other person.
+
+**Scoring stays in `services/matching/score.js`** as pure functions. The
+breakdown it returns is in *weighted points*, not ratios — divide by the
+dimension's weight before comparing dimensions. The app mirrors those weights
+in `src/api/discovery.js`, and `types.test.js` checks the two agree.
+
 ### Subscriptions
 
 **Stripe is the source of truth for billing; Mongo mirrors it.** The only
@@ -199,6 +234,11 @@ the backend boots, and nothing works.
 `src/types/api.ts` exists on the matching Mongoose schema, nothing is typed as
 required that the schema does not guarantee, and the subscription-status and
 session-state unions match their sources exactly.
+
+`backend/test/types.test.js` also fails on any app read of a PascalCase version
+of a real schema field (`item.ContentText`, `playdate.Date`, `article.Title`).
+The schemas are lowercase; those reads are `undefined`, and a blank line on a
+device is the only symptom.
 
 `PetPalsConnectApp/src/redux/store.test.js` — state: every `state.<slice>.<field>`
 the app reads resolves against the real store.

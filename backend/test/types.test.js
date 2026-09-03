@@ -208,3 +208,28 @@ test("no screen reads a PascalCase version of a real schema field", () => {
     `screens reading PascalCase field names:\n  ${offenders.join("\n  ")}`
   );
 });
+
+/**
+ * The app duplicates the matching weights so it can turn the server's
+ * breakdown (in weighted points) back into per-dimension ratios for the
+ * "why you matched" lines on a discovery card. A copy drifts; this is the
+ * same guard the rest of this file applies to field names.
+ */
+test("the app's copy of the matching weights matches the algorithm", () => {
+  const { WEIGHTS } = require("../services/matching/score");
+
+  const source = fs.readFileSync(
+    path.resolve(__dirname, "../../PetPalsConnectApp/src/api/discovery.js"),
+    "utf8"
+  );
+  const block = source.slice(
+    source.indexOf("export const MATCH_WEIGHTS"),
+    source.indexOf("}", source.indexOf("export const MATCH_WEIGHTS"))
+  );
+
+  const appWeights = Object.fromEntries(
+    [...block.matchAll(/(\w+):\s*(\d+)/g)].map((m) => [m[1], Number(m[2])])
+  );
+
+  assert.deepEqual(appWeights, WEIGHTS);
+});

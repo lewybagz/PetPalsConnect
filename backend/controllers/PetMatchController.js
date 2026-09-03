@@ -1,7 +1,10 @@
 const PetMatch = require("../models/PetMatch");
+const PetDecision = require("../models/PetDecision");
 const Pet = require("../models/Pet");
 const User = require("../models/User");
 const { rankMatches, scorePair, MATCH_THRESHOLD } = require("../services/matching/score");
+const { createNotification } = require("../services/NotificationService");
+const { emitToUser } = require("../services/realtime");
 
 /**
  * Pet matching.
@@ -180,6 +183,191 @@ const PetMatchController = {
       res.json(petMatches);
     } catch (err) {
       res.status(500).json({ message: err.message });
+    }
+  },
+
+  /**
+   * Candidate pets for one of the caller's pets to consider.
+   *
+   * This is the screen the app never had: the matching engine ranked pets and
+   * wrote PetMatch rows, but nothing showed them to anyone, so the app's whole
+   * reason to exist had no entry point.
+   *
+   * Candidates exclude the caller's own pets and anything this pet has already
+   * decided on - a pass has to stick, or the same dog comes back forever.
+   */
+  async discover(req, res) {
+    try {
+      const owner = await User.findById(req.userId).select("pets subscribed").lean();
+      if (!owner) {
+        return res.status(404).json({ message: "No profile for this account yet" });
+      }
+
+      const actingPetId = req.query.petId ?? owner.pets?.[0];
+      if (!actingPetId) {
+        // Not an error: the add-a-pet step is skippable, so this is a normal
+        // state the screen renders an empty state for.
+        return res.json({ pet: null, candidates: [], threshold: MATCH_THRESHOLD });
+      }
+
+      const actingPet = await Pet.findById(actingPetId).lean();
+      if (!actingPet) {
+        return res.status(404).json({ message: "Cannot find that pet" });
+      }
+      if (String(actingPet.owner) !== String(req.userId)) {
+        return res.status(403).json({ message: "That isn't your pet" });
+      }
+
+      const decided = await PetDecision.find({ fromPet: actingPet._id })
+        .select("toPet")
+        .lean();
+
+      const candidates = await Pet.find({
+        _id: {
+          $ne: actingPet._id,
+          $nin: decided.map((decision) => decision.toPet),
+        },
+        owner: { $ne: req.userId, $exists: true },
+      })
+        .limit(CANDIDATE_LIMIT)
+        .lean();
+
+      const ranked = rankMatches(actingPet, candidates, {
+        limit: Number(req.query.limit) || 20,
+      });
+
+      const byId = new Map(candidates.map((pet) => [String(pet._id), pet]));
+
+      res.json({
+        pet: actingPet,
+        threshold: MATCH_THRESHOLD,
+        candidates: ranked
+          .map((match) => ({
+            pet: byId.get(String(match.petId)),
+            score: match.score,
+            breakdown: match.breakdown,
+          }))
+          .filter((candidate) => candidate.pet),
+      });
+    } catch (error) {
+      console.error("[matching] Discover failed:", error.message);
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  /**
+   * Records a like or a pass, and reports a mutual match.
+   *
+   * A match is mutual when both pets have liked each other. Both sides get a
+   * notification and a live event, so neither has to be looking at the screen
+   * when it happens.
+   */
+  async decide(req, res) {
+    const { fromPetId, toPetId, decision } = req.body;
+
+    if (!["like", "pass"].includes(decision)) {
+      return res.status(400).json({ message: 'decision must be "like" or "pass"' });
+    }
+    if (!fromPetId || !toPetId) {
+      return res.status(400).json({ message: "fromPetId and toPetId are required" });
+    }
+    if (String(fromPetId) === String(toPetId)) {
+      return res.status(400).json({ message: "A pet cannot decide on itself" });
+    }
+
+    try {
+      const [fromPet, toPet] = await Promise.all([
+        Pet.findById(fromPetId).lean(),
+        Pet.findById(toPetId).lean(),
+      ]);
+
+      if (!fromPet || !toPet) {
+        return res.status(404).json({ message: "Cannot find both pets" });
+      }
+      if (String(fromPet.owner) !== String(req.userId)) {
+        return res.status(403).json({ message: "That isn't your pet" });
+      }
+      if (!toPet.owner) {
+        return res.status(409).json({ message: "That pet has no owner" });
+      }
+      if (String(toPet.owner) === String(req.userId)) {
+        return res.status(400).json({ message: "That is your own pet" });
+      }
+
+      await PetDecision.findOneAndUpdate(
+        { fromPet: fromPet._id, toPet: toPet._id },
+        {
+          $set: {
+            decision,
+            fromUser: req.userId,
+            toUser: toPet.owner,
+            modifiedDate: new Date(),
+          },
+          $setOnInsert: { createdDate: new Date() },
+        },
+        { upsert: true, new: true }
+      );
+
+      if (decision !== "like") {
+        return res.json({ decision, mutual: false });
+      }
+
+      const reciprocal = await PetDecision.findOne({
+        fromPet: toPet._id,
+        toPet: fromPet._id,
+        decision: "like",
+      }).lean();
+
+      if (!reciprocal) {
+        return res.json({ decision, mutual: false });
+      }
+
+      // Both liked: record the pair from each side so either owner's match
+      // list shows it, and score it so the list can still sort by fit.
+      const { score } = scorePair(fromPet, toPet);
+      await Promise.all(
+        [
+          [fromPet, toPet],
+          [toPet, fromPet],
+        ].map(([a, b]) =>
+          PetMatch.findOneAndUpdate(
+            { pet1: a._id, pet2: b._id },
+            {
+              $set: {
+                matchScore: score,
+                relevantToUser: a.owner,
+                creator: a.owner,
+                modifiedDate: new Date(),
+              },
+              $setOnInsert: { createdDate: new Date() },
+            },
+            { upsert: true, new: true }
+          )
+        )
+      );
+
+      await Promise.all([
+        createNotification({
+          content: `${toPet.name} liked ${fromPet.name} back - you matched!`,
+          recipientId: fromPet.owner,
+          type: "PetMatch",
+          petName: toPet.name,
+        }),
+        createNotification({
+          content: `${fromPet.name} liked ${toPet.name} back - you matched!`,
+          recipientId: toPet.owner,
+          type: "PetMatch",
+          petName: fromPet.name,
+        }),
+      ]);
+
+      emitToUser(fromPet.owner, "petMatch", { pet: toPet, score });
+      emitToUser(toPet.owner, "petMatch", { pet: fromPet, score });
+
+      res.json({ decision, mutual: true, matchedPet: toPet, score });
+    } catch (error) {
+      console.error("[matching] Decide failed:", error.message);
+      res.status(500).json({ message: error.message });
     }
   },
 

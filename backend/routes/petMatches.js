@@ -4,6 +4,8 @@ const PetMatchController = require("../controllers/PetMatchController");
 
 // Mounted at /api/petmatches. Static paths before parameterised ones.
 router.get("/", PetMatchController.getAllPetMatches);
+router.get("/discover", PetMatchController.discover);
+router.post("/decide", PetMatchController.decide);
 router.get("/matched-pets", PetMatchController.matchPetsHandler);
 router.post("/matched-pets", PetMatchController.matchPetsHandler);
 router.post("/match", PetMatchController.runMatchingHandler);
