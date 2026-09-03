@@ -61,24 +61,97 @@ const UserController = {
     }
   },
 
+  /** The signed-in caller's own profile. Resolved from the verified token. */
+  async getCurrentUser(req, res) {
+    if (!req.user) {
+      return res.status(404).json({
+        message: "No profile exists for this account yet",
+        code: "PROFILE_NOT_FOUND",
+      });
+    }
+
+    const user = await User.findById(req.user._id)
+      .populate("friendsList", "username userPhoto")
+      .populate("pets", "name age breed photos");
+
+    res.json(user);
+  },
+
+  /**
+   * Creates the Mongo profile for a freshly registered Firebase account.
+   *
+   * Identity comes from the verified token, never from the request body - a
+   * client must not be able to claim another account's uid or email. The old
+   * implementation called `new user(...)` (lowercase, the local variable rather
+   * than the model), which threw on every call, and never set firebaseUid,
+   * which the schema requires.
+   */
   async createUser(req, res) {
-    const user = new user({
-      friendsList: req.body.friendsList,
-      location: req.body.location,
-      pets: req.body.pets,
-      subscribed: req.body.subscribed,
-      username: req.body.username,
-      userPhoto: req.body.userPhoto,
-      verified: req.body.verified,
-      email: req.body.email,
-      slug: req.body.slug,
-    });
+    const { uid, email } = req.firebaseUser;
 
     try {
+      const existing = await User.findOne({ firebaseUid: uid });
+      if (existing) {
+        // Signup is safe to retry - return the profile instead of failing on
+        // the unique index.
+        return res.status(200).json(existing);
+      }
+
+      const user = new User({
+        firebaseUid: uid,
+        email: email ?? req.body.email,
+        username: req.body.username,
+        userPhoto: req.body.userPhoto,
+        location: req.body.location,
+        pets: req.body.pets ?? [],
+        friendsList: [],
+        subscribed: false,
+        verified: req.firebaseUser.email_verified ?? false,
+        slug: req.body.slug,
+      });
+
       const newUser = await user.save();
       res.status(201).json(newUser);
     } catch (err) {
+      if (err.code === 11000) {
+        return res
+          .status(409)
+          .json({ message: "That username or email is already taken" });
+      }
       res.status(400).json({ message: err.message });
+    }
+  },
+
+  /** Merges the app's notification toggles onto the caller's profile. */
+  async updateNotificationPreferences(req, res) {
+    try {
+      const updated = await User.findByIdAndUpdate(
+        req.userId,
+        { $set: { notificationPreferences: req.body } },
+        { new: true }
+      );
+      if (!updated) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({ message: "Notification preferences updated", user: updated });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  /** The caller's favourited pets. */
+  async getUserFavorites(req, res) {
+    try {
+      const user = await User.findById(req.params.userId ?? req.userId).populate({
+        path: "favorites",
+        populate: { path: "pet" },
+      });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user.favorites ?? []);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
   },
 
@@ -261,3 +334,5 @@ const UserController = {
 };
 
 module.exports = UserController;
+// Exported for the security-question check, which has no route yet.
+module.exports.verifySecret = verifySecret;

@@ -16,6 +16,7 @@ import { getStoredToken } from "../../../utils/tokenutil";
 
 const PetDetailsScreen = ({ route, navigation }) => {
   const userId = useSelector((state) => state.userReducer.userId);
+  const dispatch = useDispatch();
   const { pet } = route.params;
 
   // Define the getOrCreateChatId function
@@ -40,7 +41,6 @@ const PetDetailsScreen = ({ route, navigation }) => {
   };
 
   const handleChat = async () => {
-    const dispatch = useDispatch();
     // Assuming the function to get or create chatId
     const chatId = await getOrCreateChatId(userId, pet._id);
     dispatch(setChatId(chatId)); // Dispatch the chatId to Redux

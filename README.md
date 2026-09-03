@@ -119,9 +119,24 @@ rotated**:
 Server-side secrets belong in `backend/.env`. Anything named `EXPO_PUBLIC_*` is
 compiled into the app bundle and is public by definition — never put a secret there.
 
+## Tests
+
+```bash
+cd backend && npm test     # 30 tests, ~4s, no database or credentials needed
+```
+
+The suite boots the real Express app against an in-memory MongoDB with a stubbed
+Firebase Admin, so everything except those two boundaries is the production code
+path. `backend/test/contract.test.js` additionally compares the app's API calls
+against the backend's declared routes, which catches the "compiles fine, 404s at
+runtime" class of bug.
+
+CI runs lint, the backend suite, and an `expo export` for both platforms on
+every pull request.
+
 ## Known gaps
 
-- No automated tests yet
+- No app-side tests (the backend is covered)
 - Onboarding walkthrough is disabled (`src/components/walkthrough.js` explains why)
 - Facebook login was removed; Google and email/phone remain
 - Stripe subscription screens exist but the payment SDK is not currently wired up

@@ -279,7 +279,7 @@ const AddPetScreen = (navigation) => {
 
         // Matching runs server-side. This screen used to import the backend's
         // matchPets controller directly, which cannot execute on a device.
-        await api.post(`/api/petmatches/run/${newPetId}`).catch((error) =>
+        await api.post("/api/petmatches/match", { petId: newPetId }).catch((error) =>
           console.warn("[pets] Match run failed:", error.message)
         );
       }

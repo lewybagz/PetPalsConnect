@@ -49,6 +49,9 @@ clients call Firebase's `updatePassword()`.
 
 ### Backend
 
+- Identity always comes from the verified Firebase token, never the request
+  body. `createUser` derives uid and email from `req.firebaseUser` so a client
+  cannot claim another account.
 - CommonJS throughout. Four controllers previously mixed `export` with
   `require`, which crashes at load; do not reintroduce ESM syntax here.
 - Every route is mounted behind `authenticate`, which resolves the Firebase
@@ -57,23 +60,42 @@ clients call Firebase's `updatePassword()`.
   service. Register a handler, then `scheduler.schedule(type, payload, runAt)`.
 - Express error handlers need all four arguments (`err, req, res, next`) or
   Express silently treats them as ordinary middleware.
+- Declare static route paths before parameterised ones. Express matches in
+  registration order, so a leading `/:id` swallows `/latest`, `/me` and friends.
+- Never repeat the mount prefix inside a router: mounted at `/api/users`, the
+  path is `/pets/:id`, not `/users/pets/:id`.
 
 ## Verifying a change
 
 ```bash
-# Backend boots and serves
-cd backend && npm start
-curl http://localhost:4000/health
+# Backend: lint + tests. Tests run against an in-memory MongoDB, so they need
+# no database, no service-account key and no network.
+cd backend && npm run lint && npm test
 
-# App compiles for both platforms — the real check
-cd PetPalsConnectApp
+# App compiles for both platforms — the real build gate
+cd PetPalsConnectApp && npm run lint
 npx expo export --platform android
 npx expo export --platform ios
 npx expo-doctor@latest
 ```
 
-There is no test suite yet. `expo export` is the closest thing to a build gate:
-it resolves every import and runs the full Babel/Metro transform.
+CI (`.github/workflows/ci.yml`) runs all of the above on every PR.
+
+`expo export` is the app's build gate: it resolves every import and runs the
+full Babel/Metro transform. There are no app-side unit tests yet.
+
+### The contract tests earn their keep
+
+`backend/test/contract.test.js` reads both sides of the app/API boundary from
+source and compares them. It catches the failure mode this codebase kept hitting:
+the app compiles, the backend boots, and every request 404s. It enforces that
+
+- every `api.*()` call in the app matches a declared backend route,
+- no router repeats its own mount prefix (`/api/users/users/...`),
+- no `/:id` is registered before a static sibling like `/latest` or `/me`,
+- neither half imports the other.
+
+Add a route, and this test tells you if nothing calls it or the path is wrong.
 
 ## Things deliberately left out
 
@@ -84,3 +106,10 @@ it resolves every import and runs the full Babel/Metro transform.
 - **Stripe** — subscription screens exist, the payment SDK is not wired up.
 - **TypeScript** — the codebase is plain JS. Converting is worthwhile but was
   out of scope for getting the app building again.
+- **App-side tests** — the backend has a suite; the app has none. `expo export`
+  is the only app gate today.
+- **Four React Compiler lint rules are warnings, not errors**
+  (`set-state-in-effect`, `immutability`, `refs`, `static-components`). There is
+  a backlog of ~23 pre-existing violations; see the note in
+  `PetPalsConnectApp/eslint.config.js`. Fix a file's warnings when you touch it
+  and promote each rule back to `error` once its count hits zero.

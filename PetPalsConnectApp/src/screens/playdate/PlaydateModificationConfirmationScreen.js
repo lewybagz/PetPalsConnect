@@ -12,7 +12,7 @@ const PlaydateModificationConfirmationScreen = ({ route, navigation }) => {
   const confirmModifications = async () => {
     try {
       const token = await getStoredToken();
-      await api.put(
+      await api.patch(
         `/api/playdates/${playdateId}/update`,
         {
           date,

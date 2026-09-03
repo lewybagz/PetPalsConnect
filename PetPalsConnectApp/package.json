@@ -67,6 +67,8 @@
     "validator": "^13.15.35"
   },
   "devDependencies": {
-    "@babel/core": "^7.28.4"
+    "@babel/core": "^7.28.4",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^57.0.2"
   }
 }

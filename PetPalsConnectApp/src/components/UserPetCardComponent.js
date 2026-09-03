@@ -30,7 +30,7 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
     try {
       getToken();
       const response = await api.post(
-        "/api/blocklist",
+        "/api/blocklists",
         {
           BlockedUser: userIdToBlock,
           Owner: data.user._id,

@@ -41,8 +41,6 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
   useEffect(() => {
     const initialize = async () => {
       try {
-        // Assuming you have a way to get the current user's ID
-        const userId = useSelector((state) => state.userReducer.userId);
         const userPrefs = await fetchUserPreferences(userId);
         const playdateRange = userPrefs.playdateRange;
 

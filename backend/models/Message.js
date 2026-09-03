@@ -17,7 +17,23 @@ const MessageSchema = new Schema({
   receiver: {
     type: Schema.Types.ObjectId,
     ref: "User",
-    required: true,
+  },
+  // Which conversation this message belongs to. Messages used to live in
+  // Firestore and were only referenced by id from here, so there was no link.
+  chat: {
+    type: Schema.Types.ObjectId,
+    ref: "Chat",
+    index: true,
+  },
+  // userId -> emoji
+  reactions: {
+    type: Map,
+    of: String,
+    default: () => new Map(),
+  },
+  deleted: {
+    type: Boolean,
+    default: false,
   },
   sender: {
     type: Schema.Types.ObjectId,
@@ -31,7 +47,6 @@ const MessageSchema = new Schema({
   creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
-    required: true,
   },
   modifiedDate: {
     type: Date,

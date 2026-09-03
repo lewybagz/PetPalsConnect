@@ -15,11 +15,13 @@ import api from "../api/axios";
 const NotificationItem = ({ content, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const tailwind = useTailwind();
+  // Hooks must be called at the top level of the component, never inside a
+  // handler - React tracks them positionally.
+  const userId = useSelector((state) => state.userReducer.userId);
 
   const handleMuteNotifications = async () => {
     try {
       const token = await getStoredToken();
-      const userId = useSelector((state) => state.userReducer.userId); // Assuming you're using Redux to store user ID
 
       const updatedPreferences = {
         notificationPreferences: {

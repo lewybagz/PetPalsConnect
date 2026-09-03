@@ -133,7 +133,7 @@ function LoginScreen({ navigation }) {
     try {
       const enable2FA = method === "phone" || method === "email"; // Assuming 'phone' or 'email' method enables 2FA
 
-      await api.post("/api/user/settings/2fa", {
+      await api.post("/api/users/settings/2fa", {
         userId: userId, // Replace with actual logged-in user's ID
         enable2FA: enable2FA,
       });

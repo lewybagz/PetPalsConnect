@@ -2,36 +2,21 @@ const express = require("express");
 const router = express.Router();
 const NotificationController = require("../controllers/NotificationController");
 
-// GET all Notifications
-router.get("/", NotificationController.getAllNotifications);
+// Static paths are declared before parameterised ones: Express matches in
+// registration order, so a leading "/:id" swallows literal segments like
+// "/latest" and "/recent".
 
-// GET a single Notification by ID
+router.get("/", NotificationController.getAllNotifications);
+router.get("/recent", NotificationController.fetchRecentNotifications);
+router.get("/user/:userId", NotificationController.getUserNotifications);
+
+router.post("/", NotificationController.createNotification);
+router.post("/device-token", NotificationController.saveDeviceToken);
+router.post("/sendNotification", NotificationController.handleSendNotification);
+router.post("/send-playdate", NotificationController.sendPlaydateNotification);
+
 router.get("/:id", NotificationController.getNotificationById, (req, res) => {
   res.json(res.notification);
 });
-
-router.get("/user/:userId", NotificationController.getUserNotifications);
-
-// Route to fetch recent notifications
-router.get("/recent", NotificationController.fetchRecentNotifications);
-
-router.post(
-  "/sendFriendRequestNotification",
-  NotificationController.sendFriendRequestNotification
-);
-
-router.post("/sendNotification", NotificationController.handleSendNotification);
-
-// Endpoint to save device token
-router.post("/device-token", NotificationController.saveDeviceToken);
-
-// POST to send a push notification for a playdate
-router.post(
-  "/playdate/send-notification",
-  NotificationController.sendPlaydateNotification
-);
-
-// POST a new Notification
-router.post("/", NotificationController.createNotification);
 
 module.exports = router;

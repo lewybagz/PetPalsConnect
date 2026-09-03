@@ -34,6 +34,19 @@ const UserSchema = new Schema({
     type: Boolean,
     default: true,
   },
+  // Per-category toggles shown on the app's Settings screen. `notificationsEnabled`
+  // above remains the master switch.
+  notificationPreferences: {
+    petPalsMapUpdates: { type: Boolean, default: false },
+    playdateReminders: { type: Boolean, default: false },
+    appUpdates: { type: Boolean, default: false },
+  },
+  favorites: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Favorite",
+    },
+  ],
   locationSharingEnabled: {
     type: Boolean,
     default: true,

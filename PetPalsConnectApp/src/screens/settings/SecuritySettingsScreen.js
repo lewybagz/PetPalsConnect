@@ -37,7 +37,7 @@ const SecuritySettingsScreen = () => {
     try {
       getToken();
       await api.post(
-        "/api/user/settings/2fa",
+        "/api/users/settings/2fa",
         {
           userId: userId,
           enable2FA: isEnabled,
@@ -71,7 +71,7 @@ const SecuritySettingsScreen = () => {
     try {
       getToken();
       await api.post(
-        "/api/user/settings/change-password",
+        "/api/users/settings/change-password",
         {
           userId: userId,
           currentPassword,
@@ -92,7 +92,7 @@ const SecuritySettingsScreen = () => {
     try {
       getToken();
       await api.post(
-        "/api/user/settings/security-question",
+        "/api/users/settings/security-question",
         {
           userId: userId,
           question: selectedQuestion,

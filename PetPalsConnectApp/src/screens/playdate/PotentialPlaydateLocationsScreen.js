@@ -70,16 +70,19 @@ const PotentialPlaydateLocationsScreen = (navigation) => {
     }
   };
 
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-
-  if (error) {
-    useEffect(() => {
+  // The effect was nested inside `if (error)`, so it only registered on renders
+  // where an error existed - changing hook order between renders. The condition
+  // belongs inside the effect, and the loading guard after every hook.
+  useEffect(() => {
+    if (error) {
       Alert.alert("Error", error, [
         { text: "OK", onPress: () => dispatch(clearError()) },
       ]);
-    }, [error, dispatch]);
+    }
+  }, [error, dispatch]);
+
+  if (isLoading) {
+    return <LoadingScreen />;
   }
 
   return (

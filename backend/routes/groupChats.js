@@ -14,8 +14,8 @@ router.get("/:id", GroupChatController.getGroupChatById, (req, res) => {
 
 router.get("/:groupId/pets", GroupChatController.getGroupChatPets);
 
-router.get("/:id", GroupChatController.getGroupChatById);
-
+router.get("/:chatId/messages", GroupChatController.getMessages);
+router.delete("/:chatId/messages/:messageId", GroupChatController.deleteMessage);
 router.get("/:chatId/media", GroupChatController.fetchChatMedia);
 
 router.get("/:chatId/details", GroupChatController.getGroupChatDetails);
@@ -30,16 +30,13 @@ router.post("/react", GroupChatController.reactToMessage);
 
 router.post("/findOrCreate", GroupChatController.findOrCreateGroupChat);
 
-router.post(
-  "/groupchats/:chatId/archive",
-  GroupChatController.archiveGroupChat
-);
+router.post("/:chatId/archive", GroupChatController.archiveGroupChat);
 
 // POST a new GroupChat
 router.post("/", GroupChatController.createGroupChat);
 
 router.put("/toggle-mute", GroupChatController.toggleMute);
 
-router.delete("/groupchats/:chatId", GroupChatController.deleteGroupChat);
+router.delete("/:chatId", GroupChatController.deleteGroupChat);
 
 module.exports = router;

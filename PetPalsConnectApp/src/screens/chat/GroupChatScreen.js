@@ -51,30 +51,23 @@ const GroupChatScreen = ({ route, navigation }) => {
     }
   }, [messages]);
 
+  // Messages come from the API. This was a Firestore onSnapshot subscription;
+  // Mongo is the store now and the socket hook delivers live updates.
+  const loadMessages = async () => {
+    try {
+      const { data } = await api.get(`/api/groupchats/${groupInfo.id}/messages`);
+      setMessages(data);
+    } catch (error) {
+      console.warn("[groupchat] Could not load messages:", error.message);
+      Alert.alert("Error", "Failed to load messages");
+    }
+  };
+
   useEffect(() => {
     if (groupInfo.id) {
       fetchGroupInfo();
       fetchPetsData(groupInfo.id);
-      const unsubscribe = firestore
-        .collection("groupChats")
-        .doc(groupInfo.id)
-        .collection("messages")
-        .orderBy("timestamp", "asc")
-        .onSnapshot(
-          (snapshot) => {
-            const messagesData = snapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
-            setMessages(messagesData);
-          },
-          (error) => {
-            Alert.alert("Error", "Failed to load messages");
-            console.error("Firestore subscription error:", error);
-          }
-        );
-
-      return unsubscribe;
+      loadMessages();
     }
   }, [groupInfo.id]);
 
@@ -109,7 +102,7 @@ const GroupChatScreen = ({ route, navigation }) => {
   };
 
   const copyMessageToClipboard = async (messageText) => {
-    Clipboard.setString(messageText);
+    await Clipboard.setStringAsync(messageText);
     Alert.alert("Copied to Clipboard", messageText);
   };
 
@@ -130,17 +123,10 @@ const GroupChatScreen = ({ route, navigation }) => {
   };
   const handleDelete = async (message) => {
     try {
-      await firestore
-        .collection("groupChats")
-        .doc(groupInfo.id)
-        .collection("messages")
-        .doc(message.id)
-        .delete();
-
-      setMessages((prevMessages) =>
-        prevMessages.filter((msg) => msg.id !== message.id)
+      await api.delete(
+        `/api/groupchats/${groupInfo.id}/messages/${message._id}`
       );
-
+      setMessages((prev) => prev.filter((m) => m._id !== message._id));
       Alert.alert("Message Deleted");
     } catch (error) {
       console.error("Error deleting message:", error);
@@ -150,40 +136,17 @@ const GroupChatScreen = ({ route, navigation }) => {
 
   const handleReact = async (message, reaction) => {
     try {
-      const reactionUpdate = {
-        ...message.reactions,
-        [auth.currentUser.uid]: reaction,
-      };
+      await api.post("/api/groupchats/react", {
+        groupId: groupInfo.id,
+        messageId: message._id,
+        reaction,
+      });
 
-      // Update the reactions in the Firestore
-      await firestore
-        .collection("groupChats")
-        .doc(groupInfo.id)
-        .collection("messages")
-        .doc(message.id)
-        .update({ reactions: reactionUpdate });
-
-      // Call the backend to handle sending notifications
-      const response = await api.post(
-        "/api/groupchats/react",
-        {
-          groupId: groupInfo.id,
-          messageId: message.id,
-          reactorId: auth.currentUser.uid,
-          reaction: reaction,
-        },
-        {
-          headers: { Authorization: `Bearer ${await getStoredToken()}` },
-        }
-      );
-
-      if (response.status === 200) {
-        console.log("Reaction notification sent successfully");
-      }
-
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.id === message.id ? { ...msg, reactions: reactionUpdate } : msg
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id === message._id
+            ? { ...m, reactions: { ...m.reactions, [userId]: reaction } }
+            : m
         )
       );
     } catch (error) {
@@ -192,55 +155,24 @@ const GroupChatScreen = ({ route, navigation }) => {
     }
   };
 
-  const saveMessageToDatabase = async (groupId, messageData) => {
-    try {
-      const messageRef = await firestore
-        .collection("groupChats")
-        .doc(groupId)
-        .collection("messages")
-        .add(messageData);
-      console.log("Message saved to database:", messageRef.id);
-      return messageRef;
-    } catch (error) {
-      console.error("Error saving message to database:", error);
-      throw error;
-    }
-  };
-
-  const handleSendMessage = async (groupId) => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     setIsLoading(true);
     Keyboard.dismiss();
 
     try {
-      const messageData = {
-        text: newMessage,
-        senderId: userId,
+      // One call now persists the message and notifies the other members. It
+      // previously wrote to Firestore first, then told the API about the id.
+      const { data } = await api.post("/api/groupchats/send", {
         groupId: groupInfo.id,
-        timestamp: new Date().toISOString(),
-      };
+        text: newMessage,
+      });
 
-      const savedMessage = await saveMessageToDatabase(groupId, messageData);
-
-      const token = await getStoredToken();
-      await api.post(
-        "/api/groupChats/send",
-        {
-          groupId: groupInfo.id,
-          senderId: userId,
-          senderName: currentUser.displayName,
-          messageId: savedMessage.id,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
+      setMessages((prev) => [...prev, data]);
       setNewMessage("");
-      Alert.alert("Success", "Message sent and notifications dispatched.");
     } catch (error) {
-      console.error("Error sending message or notifying members:", error);
-      Alert.alert("Error", "Failed to send message or notify members");
+      console.error("Error sending message:", error);
+      Alert.alert("Error", "Failed to send message");
     } finally {
       setIsLoading(false);
     }
@@ -251,7 +183,7 @@ const GroupChatScreen = ({ route, navigation }) => {
   };
 
   const renderMessageItem = ({ item }) => {
-    const isSender = item.senderId === auth.currentUser.uid;
+    const isSender = String(item.sender?._id ?? item.sender) === String(userId);
     return (
       <MessageItemComponent
         message={item}

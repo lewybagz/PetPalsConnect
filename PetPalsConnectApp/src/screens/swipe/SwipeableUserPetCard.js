@@ -33,7 +33,7 @@ const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
     try {
       const token = await getToken();
       const response = await api.post(
-        "/api/blocklist",
+        "/api/blocklists",
         {
           BlockedUser: userIdToBlock,
           Owner: data.user._id,

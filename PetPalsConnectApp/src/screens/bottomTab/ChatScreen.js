@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -42,10 +42,6 @@ const ChatScreen = ({ route, navigation }) => {
     setMessages((prevMessages) => [...prevMessages, newMessage]);
   });
 
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-
   useEffect(() => {
     if (error) {
       Alert.alert("Chat Error", error, [
@@ -76,29 +72,26 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
+  // Messages come from the API. This was a Firestore onSnapshot subscription;
+  // the socket hook above delivers live updates now that Mongo is the store.
+  const loadMessages = useCallback(async () => {
+    if (!chatId) return;
+    try {
+      const { data } = await api.get(`/api/chats/${chatId}/messages`);
+      setMessages(data);
+    } catch (err) {
+      console.warn("[chat] Could not load messages:", err.message);
+      Alert.alert("Error", "Failed to load messages");
+    }
+  }, [chatId]);
+
   useEffect(() => {
     initiateChat();
-    const unsubscribe = firestore
-      .collection("chats")
-      .doc(petInfo.id)
-      .collection("messages")
-      .orderBy("timestamp", "asc")
-      .onSnapshot(
-        (snapshot) => {
-          const messagesData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setMessages(messagesData);
-        },
-        (error) => {
-          Alert.alert("Error", "Failed to load messages");
-          console.error("Firestore subscription error:", error);
-        }
-      );
-
-    return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
 
   const toggleModal = () => {
     setModalVisible(!isModalVisible);
@@ -132,27 +125,13 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleReact = (message, reaction) => {
+  const handleReact = async (message, reaction) => {
     try {
-      // Update the message in Firestore with the reaction
-      const reactionUpdate = {
-        ...message.reactions,
-        [userId]: reaction,
-      };
-
-      firestore
-        .collection("chats") // Use the correct collection for 1-on-1 chats
-        .doc(chatId) // Replace with the correct chat ID
-        .collection("messages")
-        .doc(message.id)
-        .update({ reactions: reactionUpdate });
-
-      // Update local state to reflect the reaction
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.id === message.id ? { ...msg, reactions: reactionUpdate } : msg
-        )
+      const { data } = await api.post(
+        `/api/chats/${chatId}/messages/${message._id}/react`,
+        { reaction }
       );
+      setMessages((prev) => prev.map((m) => (m._id === data._id ? data : m)));
     } catch (error) {
       console.error("Error reacting to message:", error);
       Alert.alert("Error", "Failed to react to message");
@@ -161,19 +140,8 @@ const ChatScreen = ({ route, navigation }) => {
 
   const handleDelete = async (message) => {
     try {
-      // Assuming 'message.id' is the document ID of the message in Firestore
-      await firestore
-        .collection("chats") // Use the correct collection for 1-on-1 chats
-        .doc(chatId) // Replace with the correct chat ID
-        .collection("messages")
-        .doc(message.id)
-        .delete();
-
-      // Update local state to remove the message
-      setMessages((prevMessages) =>
-        prevMessages.filter((msg) => msg.id !== message.id)
-      );
-
+      await api.delete(`/api/chats/${chatId}/messages/${message._id}`);
+      setMessages((prev) => prev.filter((m) => m._id !== message._id));
       Alert.alert("Message Deleted");
     } catch (error) {
       console.error("Error deleting message:", error);
@@ -182,7 +150,7 @@ const ChatScreen = ({ route, navigation }) => {
   };
 
   const copyMessageToClipboard = async (messageText) => {
-    Clipboard.setString(messageText);
+    await Clipboard.setStringAsync(messageText);
     // Optionally, you can display an alert or toast to inform the user that the text has been copied.
     Alert.alert("Copied to Clipboard", messageText);
   };
@@ -206,6 +174,11 @@ const ChatScreen = ({ route, navigation }) => {
       flatListRef.current.scrollToEnd({ animated: true });
     }
   }, [messages]);
+
+  // Declared after every hook so hook order stays stable across renders.
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <View style={tailwind("flex-1")}>

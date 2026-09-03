@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        working-directory: backend
+        run: npm ci
+
+      - name: Lint
+        working-directory: backend
+        run: npm run lint
+
+      # The suite runs against an in-memory MongoDB, so no service container,
+      # database or credentials are required.
+      - name: Test
+        working-directory: backend
+        run: npm test
+
+  app:
+    name: App bundles for both platforms
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: PetPalsConnectApp/package-lock.json
+
+      - name: Install
+        working-directory: PetPalsConnectApp
+        run: npm ci
+
+      - name: Lint
+        working-directory: PetPalsConnectApp
+        run: npx eslint .
+
+      # `expo export` resolves every import and runs the full Babel/Metro
+      # transform, which is the closest thing to a build gate the app has.
+      - name: Bundle for Android
+        working-directory: PetPalsConnectApp
+        run: npx expo export --platform android --output-dir /tmp/export-android
+
+      - name: Bundle for iOS
+        working-directory: PetPalsConnectApp
+        run: npx expo export --platform ios --output-dir /tmp/export-ios
+
+      - name: Expo Doctor
+        working-directory: PetPalsConnectApp
+        run: npx expo-doctor@latest

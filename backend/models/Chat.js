@@ -44,6 +44,7 @@ const chatSchema = new Schema({
     default: Date.now,
   },
   isArchived: { type: Boolean, default: false },
+  isPinned: { type: Boolean, default: false },
 });
 
 const Chat = mongoose.model("Chat", chatSchema);

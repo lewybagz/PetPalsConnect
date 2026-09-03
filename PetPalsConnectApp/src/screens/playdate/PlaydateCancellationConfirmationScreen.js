@@ -13,8 +13,8 @@ const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
   const handleCancellation = async () => {
     try {
       const token = await getStoredToken();
-      await api.post(
-        `/api/playdates/cancel/${playdateId}`,
+      await api.patch(
+        `/api/playdates/${playdateId}/cancel`,
         { message },
         { headers: { Authorization: `Bearer ${token}` } }
       );

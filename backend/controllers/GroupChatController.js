@@ -61,44 +61,106 @@ const GroupChatController = {
     }
   },
 
+  /**
+   * Persists a group message and notifies the other members.
+   *
+   * As with 1:1 chats, this used to only send notifications about a message the
+   * client had written to Firestore. The message is stored here now.
+   */
   async sendMessage(req, res) {
-    const { groupId, senderId, messageId } = req.body;
-    const senderPetName = req.user.pets[0].name;
-    const groupChat = await GroupChat.findById(groupId).populate("name");
+    const { groupId, text, contentText, contentImage } = req.body;
+    const body = text ?? contentText;
+
+    if (!body && !contentImage) {
+      return res.status(400).json({ message: "A message needs text or an image" });
+    }
 
     try {
-      // Assuming fetchGroupParticipants is correctly implemented and returns an array of member details
-      const groupMembers = await fetchGroupParticipants(groupId, senderId);
+      const groupChat = await GroupChat.findOne({
+        _id: groupId,
+        participants: req.userId,
+      });
+      if (!groupChat) {
+        return res.status(404).json({ message: "Group chat not found" });
+      }
 
-      const notificationPromises = groupMembers.map((member) => {
-        const notificationData = {
-          recipientUserId: member.id,
-          title: `New Message in ${groupChat.name}`,
-          message: `New message in your group chat from ${senderPetName}.`,
-          data: {
-            groupId,
-            messageId,
-          },
-        };
-
-        // Create two promises for each member: one for sending a push notification, another for creating a database record
-        return Promise.all([
-          createNotification({
-            content: notificationData.message,
-            recipientId: member.id,
-            type: "GroupMessage",
-            creatorId: senderId,
-            petName: senderPetName,
-          }),
-          sendPushNotification(member.id, notificationData),
-        ]);
+      const message = await Message.create({
+        chat: groupChat._id,
+        sender: req.userId,
+        creator: req.userId,
+        contentText: body,
+        contentImage,
       });
 
-      await Promise.all(notificationPromises.flat());
+      groupChat.messages.push(message._id);
+      await groupChat.save();
 
-      res.status(200).json({ message: "Notifications sent successfully." });
+      const senderName = req.user?.username ?? "Someone";
+      const members = await fetchGroupParticipants(groupId, req.userId);
+
+      const io = req.app.get("io");
+      await Promise.all(
+        members.map((member) => {
+          io?.to(String(member.id)).emit("message", message);
+          return Promise.all([
+            createNotification({
+              content: `New message in your group chat from ${senderName}.`,
+              recipientId: member.id,
+              type: "GroupMessage",
+              creatorId: req.userId,
+            }),
+            sendPushNotification(member.id, {
+              title: `New Message in ${groupChat.name}`,
+              body: `${senderName} posted in the group.`,
+              data: { type: "message", chatId: String(groupChat._id) },
+            }),
+          ]);
+        })
+      ).catch((error) => console.warn("[groupchat] notify failed:", error.message));
+
+      res.status(201).json(message);
     } catch (error) {
-      console.error("Error sending notifications:", error);
+      console.error("Error sending group message:", error);
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  /** Messages in a group conversation, oldest first. */
+  async getMessages(req, res) {
+    try {
+      const groupChat = await GroupChat.findOne({
+        _id: req.params.chatId,
+        participants: req.userId,
+      });
+      if (!groupChat) {
+        return res.status(404).json({ message: "Group chat not found" });
+      }
+
+      const messages = await Message.find({ chat: groupChat._id, deleted: false })
+        .populate("sender", "username userPhoto")
+        .sort({ timestamp: 1 });
+
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  /** Soft-deletes a group message. Only the sender may delete their own. */
+  async deleteMessage(req, res) {
+    try {
+      const message = await Message.findById(req.params.messageId);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      if (String(message.sender) !== String(req.userId)) {
+        return res.status(403).json({ message: "You can only delete your own messages" });
+      }
+
+      message.deleted = true;
+      await message.save();
+      res.json({ messageId: message._id, deleted: true });
+    } catch (error) {
       res.status(500).json({ message: error.message });
     }
   },

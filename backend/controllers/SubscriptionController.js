@@ -35,7 +35,7 @@ const SubscriptionController = {
       const planDetails = await Subscription.findById(planId).exec();
       return planDetails; // This should return the plan details object
     } catch (error) {
-      throw new Error("Error fetching plan details: " + error.message);
+      throw new Error("Error fetching plan details: " + error.message, { cause: error });
     }
   },
 

@@ -34,7 +34,7 @@ const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
     console.log("Mute Tapped");
     try {
       getToken();
-      const response = await api.post(
+      const response = await api.put(
         "/api/groupchats/toggle-mute",
         {
           userId: userId,
@@ -71,11 +71,6 @@ const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
     onClose();
   };
 
-  // Show loading indicator if loading
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-
   useEffect(() => {
     if (error) {
       Alert.alert("Error", error, [
@@ -83,6 +78,11 @@ const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
       ]);
     }
   }, [error, dispatch]);
+
+  // Declared after every hook so hook order stays stable across renders.
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <Modal visible={isVisible} animationType="slide" transparent>

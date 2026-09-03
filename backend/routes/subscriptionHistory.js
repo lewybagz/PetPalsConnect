@@ -7,13 +7,14 @@ const Subscription = require("../models/Subscription"); // Make sure the path is
 // Endpoint to get subscription history
 router.get("/", async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.userId;
     const history = await Subscription.find({ User: userId }).sort({
       StartDate: -1,
     });
     res.json(history);
   } catch (error) {
-    res.status(500).send("Server error");
+    console.error("[subscription-history]", error.message);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

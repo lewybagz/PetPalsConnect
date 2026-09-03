@@ -46,7 +46,7 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
     console.log("Mute Tapped");
     try {
       getToken();
-      const response = await api.post(
+      const response = await api.put(
         "/api/groupchats/toggle-mute",
         {
           userId: userId,

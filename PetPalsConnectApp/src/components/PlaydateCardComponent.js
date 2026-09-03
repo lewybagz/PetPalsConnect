@@ -13,9 +13,6 @@ const PlaydateCardComponent = ({ playdate, navigation }) => {
   const error = useSelector((state) => state.playdate.error);
 
   // Display a loading indicator when data is loading
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
 
   // Handle the display and clearing of errors
   useEffect(() => {
@@ -39,6 +36,11 @@ const PlaydateCardComponent = ({ playdate, navigation }) => {
   };
 
   const isUpcoming = new Date(playdate.date) > new Date();
+
+  // Declared after every hook so hook order stays stable across renders.
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <View style={styles.card}>

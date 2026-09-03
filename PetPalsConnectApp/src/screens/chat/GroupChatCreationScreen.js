@@ -18,9 +18,9 @@ const GroupChatCreationScreen = ({ route, navigation }) => {
   const [setChatId] = useState(null);
   const [groupName, setGroupName] = useState("");
   const [initialMessage, setInitialMessage] = useState("");
+  const dispatch = useDispatch();
 
   const createGroupChat = async () => {
-    const dispatch = useDispatch();
 
     if (!groupName.trim()) {
       Alert.alert(

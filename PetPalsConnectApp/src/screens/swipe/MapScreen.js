@@ -78,7 +78,7 @@ const MapScreen = ({ start, route, navigation }) => {
   const fetchMatchedPets = async () => {
     try {
       const token = await getStoredToken();
-      const response = await api.get("/api/matched-pets", {
+      const response = await api.get("/api/petmatches/matched-pets", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMatchedPets(response.data);
