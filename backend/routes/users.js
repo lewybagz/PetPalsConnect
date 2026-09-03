@@ -20,7 +20,12 @@ const router = express.Router();
 
 // --- The signed-in caller -------------------------------------------------
 router.get("/me", UserController.getCurrentUser);
+router.delete("/me", UserController.deleteCurrentUser);
 router.post("/", UserController.createUser); // Firebase account -> Mongo profile
+
+// Checked live while someone types a username during signup, so they find out
+// before submitting rather than after the account already exists.
+router.get("/username-available", UserController.checkUsernameAvailability);
 
 // --- Settings (all act on the caller) -------------------------------------
 router.post("/settings", requireProfile, UserController.updateUserSettings);

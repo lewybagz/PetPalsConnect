@@ -29,6 +29,19 @@ are public by definition.
 `npx expo prebuild` and are not committed. Configure through `app.json` and
 config plugins.
 
+**Signup is two non-atomic steps, so treat it as resumable.** Creating the
+Firebase account and creating the Mongo profile cannot be made atomic. Anything
+in between leaves an authenticated user with no profile. `AuthSessionContext`
+models that as a first-class state (`needsProfile`) and `RootNavigator` routes
+it to `CreateProfileScreen`, so an interrupted signup finishes on the next
+launch. Never assume "signed in" implies "has a profile", and keep
+`POST /api/users` idempotent.
+
+**Auth screens never navigate on success.** Signing in, signing up and signing
+out all change Firebase auth state, and `RootNavigator` swaps the whole tree in
+response. A manual `navigation.navigate()` after those calls targets a route
+that no longer exists.
+
 **No passwords in the database.** Firebase Auth owns credentials. The `User`
 model has no password field, and `changeUserPassword` returns 410 by design —
 clients call Firebase's `updatePassword()`.
@@ -52,6 +65,12 @@ clients call Firebase's `updatePassword()`.
 - Identity always comes from the verified Firebase token, never the request
   body. `createUser` derives uid and email from `req.firebaseUser` so a client
   cannot claim another account.
+- Username rules live in `services/usernames.js` and nowhere else, so the
+  availability check and signup cannot disagree. Uniqueness is enforced on
+  `usernameLower`, not `username`, so casing cannot be used to duplicate a name.
+- `DELETE /api/users/me` removes the profile then the Firebase account. Apple
+  requires in-app account deletion for any app offering signup, so this is a
+  shipping requirement rather than a nicety.
 - CommonJS throughout. Four controllers previously mixed `export` with
   `require`, which crashes at load; do not reintroduce ESM syntax here.
 - Every route is mounted behind `authenticate`, which resolves the Firebase

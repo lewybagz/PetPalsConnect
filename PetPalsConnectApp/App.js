@@ -7,6 +7,7 @@ import { Provider as ReduxProvider } from "react-redux";
 
 import store from "./src/redux/store";
 import { AppThemeProvider } from "./src/context/AppThemeContext";
+import { AuthSessionProvider } from "./src/context/AuthSessionContext";
 import RootNavigator from "./src/screens/navigation/RootNavigator";
 import { navigationRef } from "./src/navigation/navigationRef";
 
@@ -24,12 +25,14 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ReduxProvider store={store}>
         <AppThemeProvider>
-          <SafeAreaProvider>
-            <NavigationContainer ref={navigationRef}>
-              <StatusBar style="auto" />
-              <RootNavigator />
-            </NavigationContainer>
-          </SafeAreaProvider>
+          <AuthSessionProvider>
+            <SafeAreaProvider>
+              <NavigationContainer ref={navigationRef}>
+                <StatusBar style="auto" />
+                <RootNavigator />
+              </NavigationContainer>
+            </SafeAreaProvider>
+          </AuthSessionProvider>
         </AppThemeProvider>
       </ReduxProvider>
     </GestureHandlerRootView>

@@ -157,3 +157,176 @@ test('"me" is not treated as a user id by the /:id route', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.body.username, "ordering");
 });
+
+// --- Username rules -------------------------------------------------------
+
+test("usernames are unique case-insensitively", async () => {
+  await request(app)
+    .post("/api/users")
+    .set(...auth("first-casing"))
+    .send({ username: "PetLover" })
+    .expect(201);
+
+  const res = await request(app)
+    .post("/api/users")
+    .set(...auth("second-casing"))
+    .send({ username: "petlover" });
+
+  assert.equal(res.status, 409);
+  assert.equal(res.body.field, "username");
+});
+
+test("the display casing a user chose is preserved", async () => {
+  const res = await request(app)
+    .post("/api/users")
+    .set(...auth("casing-kept"))
+    .send({ username: "PetLover" });
+
+  assert.equal(res.body.username, "PetLover");
+  assert.equal(res.body.usernameLower, "petlover");
+});
+
+test("reserved usernames are refused", async () => {
+  for (const reserved of ["admin", "support", "settings", "PetPals"]) {
+    const res = await request(app)
+      .post("/api/users")
+      .set(...auth(`reserved-${reserved}`))
+      .send({ username: reserved });
+
+    assert.equal(res.status, 400, `expected ${reserved} to be refused`);
+    assert.equal(res.body.field, "username");
+  }
+});
+
+test("malformed usernames are refused with a readable reason", async () => {
+  const cases = [
+    ["ab", /at least 3/],
+    ["a".repeat(21), /at most 20/],
+    ["has spaces", /letters, numbers and underscores/],
+    ["emoji", null],
+  ];
+
+  for (const [candidate, pattern] of cases) {
+    if (!pattern) continue;
+    const res = await request(app)
+      .post("/api/users")
+      .set(...auth(`bad-${candidate.length}-${candidate[0]}`))
+      .send({ username: candidate });
+
+    assert.equal(res.status, 400);
+    assert.match(res.body.message, pattern);
+  }
+});
+
+test("signup with no username is refused rather than saving a broken profile", async () => {
+  const res = await request(app)
+    .post("/api/users")
+    .set(...auth("no-username"))
+    .send({});
+
+  assert.equal(res.status, 400);
+  assert.equal(await User.countDocuments({ firebaseUid: "no-username" }), 0);
+});
+
+// --- Availability ---------------------------------------------------------
+
+test("an unused, well-formed username reads as available", async () => {
+  const res = await request(app)
+    .get("/api/users/username-available?username=freshname")
+    .set(...auth("checker"));
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.available, true);
+});
+
+test("a taken username reads as unavailable, ignoring case", async () => {
+  await User.create({
+    firebaseUid: "holder",
+    username: "TakenName",
+    email: "holder@example.test",
+  });
+
+  const res = await request(app)
+    .get("/api/users/username-available?username=takenname")
+    .set(...auth("checker2"));
+
+  assert.equal(res.body.available, false);
+  assert.match(res.body.reason, /already taken/);
+});
+
+test("availability explains why an invalid username is unavailable", async () => {
+  const res = await request(app)
+    .get("/api/users/username-available?username=me")
+    .set(...auth("checker3"));
+
+  assert.equal(res.body.available, false);
+  assert.ok(res.body.reason, "expected a reason the user can act on");
+});
+
+test("availability agrees with what signup will accept", async () => {
+  // These two must never disagree, or a name reads free and then fails.
+  const candidates = ["goodname", "me", "admin", "ab", "has spaces", "ok_name_1"];
+
+  for (const candidate of candidates) {
+    const check = await request(app)
+      .get(`/api/users/username-available?username=${encodeURIComponent(candidate)}`)
+      .set(...auth(`agree-${candidate.length}`));
+
+    const created = await request(app)
+      .post("/api/users")
+      .set(...auth(`create-${candidate}`))
+      .send({ username: candidate });
+
+    const signupAccepted = created.status === 201;
+    assert.equal(
+      check.body.available,
+      signupAccepted,
+      `availability and signup disagreed on "${candidate}"`
+    );
+  }
+});
+
+// --- Account deletion (App Store guideline 5.1.1(v)) ----------------------
+
+test("a user can delete their own account", async () => {
+  await User.create({
+    firebaseUid: "deleting-user",
+    username: "goodbye",
+    email: "goodbye@example.test",
+  });
+
+  const res = await request(app)
+    .delete("/api/users/me")
+    .set(...auth("deleting-user"));
+
+  assert.equal(res.status, 200);
+  assert.equal(await User.countDocuments({ firebaseUid: "deleting-user" }), 0);
+});
+
+test("deleting with no profile reports 404 rather than failing", async () => {
+  const res = await request(app)
+    .delete("/api/users/me")
+    .set(...auth("nothing-to-delete"));
+
+  assert.equal(res.status, 404);
+});
+
+test("deletion frees the username for someone else", async () => {
+  await request(app)
+    .post("/api/users")
+    .set(...auth("original-owner"))
+    .send({ username: "recycled" })
+    .expect(201);
+
+  await request(app)
+    .delete("/api/users/me")
+    .set(...auth("original-owner"))
+    .expect(200);
+
+  const res = await request(app)
+    .post("/api/users")
+    .set(...auth("new-owner"))
+    .send({ username: "recycled" });
+
+  assert.equal(res.status, 201);
+});

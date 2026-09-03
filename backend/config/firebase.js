@@ -35,4 +35,17 @@ const sendMessage = async (message) => {
   return admin.messaging().send(message);
 };
 
-module.exports = { admin, isEnabled, verifyIdToken, sendMessage };
+/**
+ * Permanently deletes a Firebase Auth account.
+ *
+ * Needed for in-app account deletion: Apple's App Store guideline 5.1.1(v)
+ * requires any app that lets people create an account to let them delete it.
+ * Removing only the Mongo profile would leave the login working with nothing
+ * behind it.
+ */
+const deleteUser = async (uid) => {
+  if (!app) throw new Error("Firebase Admin is not configured");
+  return admin.auth().deleteUser(uid);
+};
+
+module.exports = { admin, isEnabled, verifyIdToken, sendMessage, deleteUser };

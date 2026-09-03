@@ -1,4 +1,6 @@
 const User = require("../models/User");
+const firebase = require("../config/firebase");
+const usernames = require("../services/usernames");
 const { scrypt, randomBytes, timingSafeEqual } = require("node:crypto");
 const { promisify } = require("node:util");
 
@@ -86,24 +88,57 @@ const UserController = {
    * than the model), which threw on every call, and never set firebaseUid,
    * which the schema requires.
    */
+  /** Reports whether a username is free, and why not when it isn't. */
+  async checkUsernameAvailability(req, res) {
+    const candidate = req.query.username;
+
+    const problem = usernames.validate(candidate);
+    if (problem) {
+      return res.json({ available: false, reason: problem });
+    }
+
+    const taken = await User.exists({ usernameLower: usernames.normalise(candidate) });
+    res.json({
+      available: !taken,
+      reason: taken ? "That username is already taken." : null,
+    });
+  },
+
+  /**
+   * Creates the Mongo profile for a freshly registered Firebase account.
+   *
+   * Identity comes from the verified token, never from the request body - a
+   * client must not be able to claim another account's uid or email. The old
+   * implementation called `new user(...)` (lowercase, the local variable rather
+   * than the model), which threw on every call, and never set firebaseUid,
+   * which the schema requires.
+   *
+   * Safe to call repeatedly: signup is two non-atomic steps (Firebase account,
+   * then this), so the app retries this one whenever it finds an authenticated
+   * user with no profile. Retrying returns the existing profile rather than
+   * failing on the unique index.
+   */
   async createUser(req, res) {
     const { uid, email } = req.firebaseUser;
 
     try {
       const existing = await User.findOne({ firebaseUid: uid });
       if (existing) {
-        // Signup is safe to retry - return the profile instead of failing on
-        // the unique index.
         return res.status(200).json(existing);
+      }
+
+      const problem = usernames.validate(req.body.username);
+      if (problem) {
+        return res.status(400).json({ message: problem, field: "username" });
       }
 
       const user = new User({
         firebaseUid: uid,
         email: email ?? req.body.email,
-        username: req.body.username,
+        username: String(req.body.username).trim(),
         userPhoto: req.body.userPhoto,
         location: req.body.location,
-        pets: req.body.pets ?? [],
+        pets: [],
         friendsList: [],
         subscribed: false,
         verified: req.firebaseUser.email_verified ?? false,
@@ -113,12 +148,56 @@ const UserController = {
       const newUser = await user.save();
       res.status(201).json(newUser);
     } catch (err) {
+      // Two clients can pass the availability check at the same moment; the
+      // unique index is what actually decides, so translate its error.
       if (err.code === 11000) {
-        return res
-          .status(409)
-          .json({ message: "That username or email is already taken" });
+        const field = Object.keys(err.keyPattern ?? {})[0];
+        if (field === "firebaseUid") {
+          const existing = await User.findOne({ firebaseUid: uid });
+          if (existing) return res.status(200).json(existing);
+        }
+        return res.status(409).json({
+          message:
+            field === "email"
+              ? "An account already exists for that email address."
+              : "That username was just taken. Please pick another.",
+          field: field === "email" ? "email" : "username",
+        });
       }
       res.status(400).json({ message: err.message });
+    }
+  },
+
+  /**
+   * Permanently deletes the caller's account: Mongo profile first, then the
+   * Firebase credential.
+   *
+   * Apple's App Store guideline 5.1.1(v) requires apps that offer account
+   * creation to offer in-app deletion, so this is a shipping requirement rather
+   * than a nicety. Deleting the profile first means a failure part-way leaves a
+   * recoverable state - the app treats "authenticated, no profile" as resumable
+   * onboarding - rather than a login with no way back in.
+   */
+  async deleteCurrentUser(req, res) {
+    if (!req.user) {
+      return res.status(404).json({ message: "No profile to delete" });
+    }
+
+    try {
+      await User.deleteOne({ _id: req.user._id });
+
+      try {
+        await firebase.deleteUser(req.firebaseUser.uid);
+      } catch (error) {
+        // The profile is already gone, so the account is unusable either way.
+        // Report success and log for follow-up rather than stranding the user.
+        console.error("[users] Firebase deletion failed:", error.message);
+      }
+
+      res.json({ message: "Account deleted" });
+    } catch (error) {
+      console.error("[users] Account deletion failed:", error.message);
+      res.status(500).json({ message: "Could not delete the account" });
     }
   },
 
@@ -325,7 +404,7 @@ const UserController = {
 
   async deleteUser(req, res) {
     try {
-      await res.user.remove();
+      await res.user.deleteOne();
       res.json({ message: "Deleted User" });
     } catch (err) {
       res.status(500).json({ message: err.message });

@@ -67,6 +67,14 @@ const start = async () => {
   await db.connect();
 
   const { app } = require("../../Server");
+
+  // Mongoose builds indexes in the background, so without this a unique-index
+  // test can pass simply because the index does not exist yet.
+  const mongoose = require("mongoose");
+  await Promise.all(
+    Object.values(mongoose.models).map((model) => model.init())
+  );
+
   return app;
 };
 

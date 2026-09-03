@@ -9,7 +9,9 @@ import {
 
 const EmailVerificationScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
-  const { email } = route.params;
+  // route.params is undefined when this screen is opened directly (deep link,
+  // or restored navigation state), which used to throw on destructuring.
+  const email = route.params?.email ?? getAuth().currentUser?.email ?? "";
   const [isChecking, setIsChecking] = useState(false);
   const auth = getAuth();
 

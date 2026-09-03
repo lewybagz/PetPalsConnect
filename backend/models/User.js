@@ -78,7 +78,16 @@ const UserSchema = new Schema({
   username: {
     type: String,
     required: true,
+    trim: true,
+  },
+  // Uniqueness is enforced here, not on `username`, so "PetLover" and
+  // "petlover" cannot both exist. `username` keeps the casing the user chose.
+  usernameLower: {
+    type: String,
+    required: true,
     unique: true,
+    index: true,
+    lowercase: true,
   },
   userPhoto: {
     type: String,
@@ -103,6 +112,14 @@ const UserSchema = new Schema({
     default: Date.now,
   },
   slug: String,
+});
+
+// Keeps usernameLower in step with username on every save, so no call site can
+// set one without the other.
+UserSchema.pre("validate", function setUsernameLower() {
+  if (this.username) {
+    this.usernameLower = this.username.trim().toLowerCase();
+  }
 });
 
 // Create a model

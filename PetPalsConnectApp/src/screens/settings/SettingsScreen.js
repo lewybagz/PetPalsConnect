@@ -4,6 +4,7 @@ import { getAuth, signOut } from "@react-native-firebase/auth";
 import Slider from "@react-native-community/slider";
 import { useTailwind } from "../../styles/tailwind";
 import { useAppTheme } from "../../context/AppThemeContext";
+import { useAuthSession } from "../../context/AuthSessionContext";
 import api from "../../api/axios";
 import { readCache, writeCache, CacheKeys } from "../../services/localCache";
 
@@ -11,6 +12,7 @@ const SettingsScreen = ({ navigation }) => {
   const tailwind = useTailwind();
   const auth = getAuth();
   const { toggleAppTheme, isDark } = useAppTheme();
+  const { deleteAccount } = useAuthSession();
 
   const [locationSharingEnabled, setLocationSharingEnabled] = useState(true);
   const [playdateRange, setPlaydateRange] = useState(5);
@@ -87,6 +89,50 @@ const SettingsScreen = ({ navigation }) => {
   // out user, so there is no navigation call to make here.
   const handleSignOut = () => {
     signOut(auth).catch((error) => Alert.alert("Error", error.message));
+  };
+
+  /**
+   * In-app account deletion.
+   *
+   * Apple's App Store guideline 5.1.1(v) requires any app offering account
+   * creation to offer account deletion from inside the app, so this is a
+   * shipping requirement. Two taps to confirm, because it cannot be undone.
+   */
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete your account?",
+      "This permanently removes your profile, pets, playdates and messages. It cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert(
+              "Are you sure?",
+              "This is permanent. Your username will be released for someone else to use.",
+              [
+                { text: "Keep my account", style: "cancel" },
+                {
+                  text: "Delete forever",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      await deleteAccount();
+                    } catch (error) {
+                      Alert.alert(
+                        "Could not delete account",
+                        error.response?.data?.message ??
+                          "Something went wrong. Please try again."
+                      );
+                    }
+                  },
+                },
+              ]
+            ),
+        },
+      ]
+    );
   };
 
   return (
@@ -223,6 +269,14 @@ const SettingsScreen = ({ navigation }) => {
         style={tailwind("mt-4 bg-red-500 py-2 px-4 rounded")}
       >
         <Text style={tailwind("text-white text-center")}>Sign Out</Text>
+      </TouchableOpacity>
+
+      {/* Account deletion - required by App Store guideline 5.1.1(v) */}
+      <TouchableOpacity
+        onPress={handleDeleteAccount}
+        style={tailwind("mt-3 mb-8 py-2 px-4 rounded border border-red-300")}
+      >
+        <Text style={tailwind("text-red-600 text-center")}>Delete My Account</Text>
       </TouchableOpacity>
     </View>
   );

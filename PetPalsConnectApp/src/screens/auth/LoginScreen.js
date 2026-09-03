@@ -1,210 +1,233 @@
-// LoginScreen.js
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
   Text,
   TextInput,
-  Modal,
-  Button,
-  Alert,
-  TouchableOpacity,
-  styles,
+  View,
 } from "react-native";
-import { signInWithEmailAndPassword } from "@react-native-firebase/auth";
-import { getAuth, getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
-import AnimatedButton from "../../components/AnimatedButton";
-import { useTailwind } from "../../styles/tailwind";
-import { useDispatch } from "react-redux";
-import { setUserId, setUser } from "../../redux/actions";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../../api/axios";
-import { useSelector } from "react-redux";
-import * as SecureStore from "expo-secure-store";
-import { clearError } from "../../redux/actions";
-import LoadingScreen from "../../components/LoadingScreenComponent";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithCredential,
+} from "@react-native-firebase/auth";
+import { isEmail } from "validator";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
-function LoginScreen({ navigation }) {
-  const [showTwoFAModal, setShowTwoFAModal] = useState(false);
+import { useTailwind } from "../../styles/tailwind";
+import { GOOGLE_WEB_CLIENT_ID } from "../../config/env";
+import { describeAuthError } from "../../utils/authErrors";
+
+GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+
+/**
+ * Signs the user in. Nothing else.
+ *
+ * The previous version read the user document out of Firestore, wrote a token
+ * into SecureStore by hand, dispatched it into Redux and then navigated to
+ * "Home". All four are now handled elsewhere: Firestore is gone, the API client
+ * takes tokens straight from the Firebase SDK, AuthSessionContext owns the
+ * profile, and RootNavigator swaps trees on auth state. It also rendered
+ * `styles.modalView` from a `styles` import that react-native does not export,
+ * so the 2FA modal threw as soon as it opened.
+ */
+export default function LoginScreen({ navigation }) {
+  const tailwind = useTailwind();
+  const auth = getAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const tailwind = useTailwind();
-  const db = getFirestore();
-  const userId = useSelector((state) => state.userReducer.userId);
-  const isLoading = useSelector((state) => state.userReducer.isLoading);
-  const error = useSelector((state) => state.userReducer.error);
-  const dispatch = useDispatch();
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Handle the display and clearing of errors
-  useEffect(() => {
-    if (error) {
-      Alert.alert("Login Error", error, [
-        { text: "OK", onPress: () => dispatch(clearError()) }, // Clear error when user presses "OK"
-      ]);
-    }
-  }, [error, dispatch]);
+  const canSubmit = !submitting && email.trim().length > 0 && password.length > 0;
 
-  const onLoginPress = () => {
-    const auth = getAuth();
-    signInWithEmailAndPassword(auth, email, password)
-      .then(async (response) => {
-        console.log("Logged in with:", response.user);
-
-        // Securely store the token
-        response.user.getIdToken().then((token) => {
-          SecureStore.setItemAsync("userToken", token);
-        });
-
-        const userDocRef = doc(db, "users", response.user.email);
-        const docSnapshot = await getDoc(userDocRef);
-        dispatch(setUserId(response.user.uid));
-        dispatch(setUser(docSnapshot.data()));
-
-        if (!docSnapshot.exists()) {
-          await setDoc(userDocRef, {
-            email: response.user.email,
-            createdAt: new Date(),
-            // Add any additional initialization fields here
-          });
-          cacheUserData({
-            email: response.user.email,
-            // include other user details as needed
-          });
-          navigation.navigate("AddPet", { isNewUser: true });
-        } else {
-          const userData = docSnapshot.data();
-          cacheUserData(userData);
-          navigation.navigate("Home");
-
-          // Check if 2FA is not enabled and show the modal
-          if (!userData.twoFactorAuthenticationEnabled) {
-            setShowTwoFAModal(true);
-          }
-        }
-      })
-      .catch((error) => {
-        setErrorMessage(error.message);
-      });
-  };
-
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-
-  const TwoFAModal = ({ visible, onClose, onEnable }) => {
-    const [method, setMethod] = useState("phone"); // Default to phone
-
-    return (
-      <Modal visible={visible} animationType="slide" transparent={true}>
-        <View style={styles.modalView}>
-          <Text style={styles.modalText}>Enable Two-Factor Authentication</Text>
-
-          <TouchableOpacity
-            onPress={() => setMethod("phone")}
-            style={[styles.optionButton, method === "phone" && styles.selected]}
-          >
-            <Text>Use Phone Number</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setMethod("email")}
-            style={[styles.optionButton, method === "email" && styles.selected]}
-          >
-            <Text>Use Email</Text>
-          </TouchableOpacity>
-
-          <Button title="Enable" onPress={() => onEnable(method)} />
-          <Button title="Later" onPress={onClose} />
-        </View>
-      </Modal>
-    );
-  };
-
-  const cacheUserData = async (userData) => {
+  const onLoginPress = async () => {
+    setErrorMessage(null);
+    setNotice(null);
+    setSubmitting(true);
     try {
-      const jsonValue = JSON.stringify(userData);
-      await AsyncStorage.setItem("@userData", jsonValue);
-    } catch (e) {
-      console.error("Error caching user data:", e);
-    }
-  };
-
-  const handleEnableTwoFA = async (method) => {
-    try {
-      const enable2FA = method === "phone" || method === "email"; // Assuming 'phone' or 'email' method enables 2FA
-
-      await api.post("/api/users/settings/2fa", {
-        userId: userId, // Replace with actual logged-in user's ID
-        enable2FA: enable2FA,
-      });
-
-      Alert.alert(
-        "Success",
-        `Two-Factor Authentication has been ${
-          enable2FA ? "enabled" : "disabled"
-        }.`
-      );
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      // No navigation: the session flips to "ready" (or "needsProfile" if this
+      // account never finished signing up) and the navigator follows.
     } catch (error) {
-      console.error("Error updating 2FA setting:", error);
-      Alert.alert(
-        "Error",
-        "Failed to update Two-Factor Authentication setting"
-      );
+      setErrorMessage(describeAuthError(error));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onGooglePress = async () => {
+    setErrorMessage(null);
+    setSubmitting(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      const idToken = response?.data?.idToken ?? response?.idToken;
+      if (!idToken) throw new Error("Google sign-in returned no credential.");
+
+      await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+    } catch (error) {
+      if (error?.code !== "SIGN_IN_CANCELLED") {
+        setErrorMessage(describeAuthError(error));
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onForgotPassword = async () => {
+    setErrorMessage(null);
+    setNotice(null);
+
+    if (!isEmail(email.trim())) {
+      setErrorMessage("Enter your email address first, then tap Forgot password.");
+      return;
     }
 
-    setShowTwoFAModal(false);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      // Deliberately the same message whether or not the account exists, so
+      // this cannot be used to discover which emails are registered.
+      setNotice("If there's an account for that email, a reset link is on its way.");
+    } catch (error) {
+      setErrorMessage(describeAuthError(error));
+    }
   };
 
   return (
-    <View style={tailwind("flex-1 justify-center items-center bg-gray-100")}>
-      <View style={tailwind("w-full px-10")}>
-        <Text
-          style={tailwind("text-2xl font-bold mb-2 text-center text-gray-800")}
-        >
-          Login
-        </Text>
-        {errorMessage ? (
-          <Text style={tailwind("text-center text-red-500")}>
-            {errorMessage}
+    <KeyboardAvoidingView
+      style={tailwind("flex-1 bg-white")}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={tailwind("flex-grow justify-center px-8 py-12")}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={tailwind("items-center mb-8")}>
+          <Ionicons name="paw" size={48} color="tomato" />
+          <Text style={tailwind("text-2xl font-bold text-gray-900 mt-4")}>
+            Welcome back
           </Text>
-        ) : null}
-        <View style={tailwind("mb-4")}>
-          <TextInput
-            style={tailwind("border border-gray-300 p-2 rounded")}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="sentences"
-            textContentType="emailAddress" // iOS only
-            placeholderTextColor="gray"
-          />
         </View>
-        <View style={tailwind("mb-6")}>
+
+        {errorMessage && (
+          <View style={tailwind("bg-red-50 border border-red-200 rounded-lg p-3 mb-4")}>
+            <Text style={tailwind("text-red-600 text-center")}>{errorMessage}</Text>
+          </View>
+        )}
+
+        {notice && (
+          <View style={tailwind("bg-green-50 border border-green-200 rounded-lg p-3 mb-4")}>
+            <Text style={tailwind("text-green-700 text-center")}>{notice}</Text>
+          </View>
+        )}
+
+        <TextInput
+          style={tailwind("border border-gray-300 rounded-lg px-3 py-3 mb-4 text-base")}
+          placeholder="Email"
+          placeholderTextColor="#a1a1a1"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
+          editable={!submitting}
+        />
+
+        <View
+          style={tailwind("flex-row items-center border border-gray-300 rounded-lg px-3 mb-2")}
+        >
           <TextInput
-            style={tailwind("border border-gray-300 p-2 rounded")}
+            style={tailwind("flex-1 py-3 text-base")}
             placeholder="Password"
+            placeholderTextColor="#a1a1a1"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="sentences"
-            textContentType="password" // iOS only
-            placeholderTextColor="gray"
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="current-password"
+            textContentType="password"
+            editable={!submitting}
+            returnKeyType="go"
+            onSubmitEditing={canSubmit ? onLoginPress : undefined}
           />
+          <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={22}
+              color="#888"
+            />
+          </Pressable>
         </View>
-        <AnimatedButton
-          text="Login"
+
+        <Pressable onPress={onForgotPassword} style={tailwind("self-end mb-6")}>
+          <Text style={tailwind("text-sm text-gray-500")}>Forgot password?</Text>
+        </Pressable>
+
+        <Pressable
           onPress={onLoginPress}
-          buttonStyle={tailwind("mt-4")}
-        />
-      </View>
-      <TwoFAModal
-        visible={showTwoFAModal}
-        onClose={() => setShowTwoFAModal(false)}
-        onEnable={handleEnableTwoFA}
-      />
-    </View>
+          disabled={!canSubmit}
+          style={tailwind(
+            `rounded-lg py-4 items-center ${canSubmit ? "bg-red-500" : "bg-gray-300"}`
+          )}
+        >
+          {submitting ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={tailwind("text-white font-semibold text-base")}>Sign in</Text>
+          )}
+        </Pressable>
+
+        <View style={tailwind("flex-row items-center my-6")}>
+          <View style={tailwind("flex-1 h-px bg-gray-200")} />
+          <Text style={tailwind("mx-3 text-gray-400 text-sm")}>or</Text>
+          <View style={tailwind("flex-1 h-px bg-gray-200")} />
+        </View>
+
+        <Pressable
+          onPress={onGooglePress}
+          disabled={submitting}
+          style={tailwind(
+            "flex-row items-center justify-center border border-gray-300 rounded-lg py-4"
+          )}
+        >
+          <Ionicons name="logo-google" size={20} color="#444" />
+          <Text style={tailwind("text-gray-800 font-semibold ml-3")}>
+            Continue with Google
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => navigation.navigate("PhoneAuth")}
+          style={tailwind("flex-row items-center justify-center border border-gray-300 rounded-lg py-4 mt-3")}
+        >
+          <Ionicons name="call-outline" size={20} color="#444" />
+          <Text style={tailwind("text-gray-800 font-semibold ml-3")}>
+            Continue with phone
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => navigation.navigate("Register")}
+          style={tailwind("mt-8 items-center")}
+        >
+          <Text style={tailwind("text-gray-600")}>
+            New here? <Text style={tailwind("text-red-500")}>Create an account</Text>
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
-
-export default LoginScreen;

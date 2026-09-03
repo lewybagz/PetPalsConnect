@@ -1,169 +1,287 @@
-// RegisterScreen.js
 import React, { useState } from "react";
-import { View, Text, TextInput, Alert, StyleSheet } from "react-native";
-
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   getAuth,
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   GoogleAuthProvider,
   signInWithCredential,
 } from "@react-native-firebase/auth";
-import { isEmail } from "validator"; // You need to install 'validator' package for this
+import { isEmail } from "validator";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import AnimatedButton from "../../components/AnimatedButton";
+
 import { useTailwind } from "../../styles/tailwind";
 import { GOOGLE_WEB_CLIENT_ID } from "../../config/env";
+import { describeAuthError } from "../../utils/authErrors";
+import { passwordRules, scorePassword } from "../../utils/passwordStrength";
 
-// Configure Google Sign-in (you should have this configuration outside of your component)
-GoogleSignin.configure({
-  webClientId: GOOGLE_WEB_CLIENT_ID,
-});
+GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
 
-function RegisterScreen({ navigation }) {
+const STRENGTH_COLOURS = ["bg-gray-300", "bg-red-400", "bg-yellow-400", "bg-green-500"];
+
+/**
+ * Creates the Firebase account.
+ *
+ * It deliberately stops there. The Mongo profile is created by
+ * CreateProfileScreen, which RootNavigator shows as soon as the session reports
+ * an authenticated user without one. Doing it here instead would mean an
+ * interruption between the two calls stranded the user in an app with no
+ * profile and no way back.
+ *
+ * There is also no navigation call on success: creating the account changes
+ * Firebase auth state, and the navigator swaps trees on its own. The previous
+ * version navigated to "Login", a route that no longer exists by that point.
+ */
+export default function RegisterScreen({ navigation }) {
+  const tailwind = useTailwind();
+  const auth = getAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState(null); // Define errorMessage as state
-  const tailwind = useTailwind();
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const auth = getAuth();
+  const strength = scorePassword(password);
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
-  const onRegisterPress = () => {
-    if (password !== confirmPassword) {
-      setErrorMessage("Passwords don't match.");
-      Alert.alert("Error", "Passwords don't match.");
-      return;
-    }
+  const canSubmit =
+    !submitting && isEmail(email.trim()) && strength.isAcceptable && passwordsMatch;
 
-    if (!isEmail(email)) {
+  const onRegisterPress = async () => {
+    setErrorMessage(null);
+
+    if (!isEmail(email.trim())) {
       setErrorMessage("Please enter a valid email address.");
-      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+    if (!strength.isAcceptable) {
+      setErrorMessage("Please choose a stronger password.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage("Those passwords don't match.");
       return;
     }
 
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        user
-          .sendEmailVerification()
-          .then(() => {
-            Alert.alert(
-              "Verify your email",
-              "A verification email has been sent to your email address."
-            );
-            navigation.navigate("Login");
-          })
-          .catch((verificationError) => {
-            // Use the error message from verificationError
-            const errorDetail =
-              verificationError.message ||
-              "There was a problem sending your verification email. Please check your email address and try again.";
-            setErrorMessage(errorDetail);
-            Alert.alert("Verification Email Error", errorDetail);
-          });
-      })
-      .catch((error) => {
-        // This catches errors related to user registration
-        setErrorMessage(error.message);
-        Alert.alert("Registration Error", error.message);
-      });
+    setSubmitting(true);
+    try {
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
+
+      // Best-effort: a failed verification email must not fail the signup, or
+      // the user ends up with an account they think was never created.
+      sendEmailVerification(credential.user).catch((error) =>
+        console.warn("[auth] Could not send verification email:", error.message)
+      );
+    } catch (error) {
+      setErrorMessage(describeAuthError(error));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const onGoogleButtonPress = async () => {
+    setErrorMessage(null);
+    setSubmitting(true);
     try {
-      const { idToken } = await GoogleSignin.signIn();
-      const googleCredential = GoogleAuthProvider.credential(idToken);
-      await signInWithCredential(auth, googleCredential);
-      navigation.navigate("Home"); // Assuming 'Home' is the name of your home screen in the navigator
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      const idToken = response?.data?.idToken ?? response?.idToken;
+      if (!idToken) throw new Error("Google sign-in returned no credential.");
+
+      await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+      // As above: no navigation. A first-time Google user has no profile yet,
+      // so the navigator routes them to CreateProfile automatically.
     } catch (error) {
-      Alert.alert("Error", error.message);
+      if (error?.code !== "SIGN_IN_CANCELLED") {
+        setErrorMessage(describeAuthError(error));
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
-
   return (
-    <View style={tailwind("flex-1 justify-center items-center bg-gray-100")}>
-      <View style={tailwind("w-full px-10")}>
-        <Text style={[styles.heading, tailwind("text-center text-gray-800")]}>
-          Register
-        </Text>
+    <KeyboardAvoidingView
+      style={tailwind("flex-1 bg-white")}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={tailwind("flex-grow justify-center px-8 py-12")}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={tailwind("items-center mb-8")}>
+          <Ionicons name="paw" size={48} color="tomato" />
+          <Text style={tailwind("text-2xl font-bold text-gray-900 mt-4")}>
+            Create your account
+          </Text>
+        </View>
 
         {errorMessage && (
-          <Text style={tailwind("text-center text-red-500 mb-4")}>
-            {errorMessage}
-          </Text>
+          <View style={tailwind("bg-red-50 border border-red-200 rounded-lg p-3 mb-4")}>
+            <Text style={tailwind("text-red-600 text-center")}>{errorMessage}</Text>
+          </View>
         )}
 
-        <View style={tailwind("mb-4")}>
-          <TextInput
-            style={[styles.input, tailwind("border-gray-300")]}
-            placeholder="Email"
-            placeholderTextColor="#a1a1a1"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="sentences"
-            textContentType="emailAddress"
-          />
-        </View>
+        <TextInput
+          style={tailwind("border border-gray-300 rounded-lg px-3 py-3 mb-4 text-base")}
+          placeholder="Email"
+          placeholderTextColor="#a1a1a1"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          // "sentences" here capitalised the first letter of every email and
+          // password, which is a small but constant annoyance.
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
+          editable={!submitting}
+        />
 
-        <View style={tailwind("mb-4")}>
+        <View
+          style={tailwind("flex-row items-center border border-gray-300 rounded-lg px-3 mb-2")}
+        >
           <TextInput
-            style={[styles.input, tailwind("border-gray-300")]}
+            style={tailwind("flex-1 py-3 text-base")}
             placeholder="Password"
+            placeholderTextColor="#a1a1a1"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="sentences"
-            textContentType="password"
-            placeholderTextColor="#a1a1a1"
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            editable={!submitting}
           />
+          <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={22}
+              color="#888"
+            />
+          </Pressable>
         </View>
 
-        <View style={tailwind("mb-6")}>
-          <TextInput
-            style={[styles.input, tailwind("border-gray-300")]}
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            autoCapitalize="sentences"
-            textContentType="password"
-            placeholderTextColor="#a1a1a1"
-          />
-        </View>
+        {password.length > 0 && (
+          <View style={tailwind("mb-4")}>
+            <View style={tailwind("flex-row items-center mb-2")}>
+              <View style={tailwind("flex-1 flex-row")}>
+                {[0, 1, 2].map((index) => (
+                  <View
+                    key={index}
+                    style={tailwind(
+                      `h-1 flex-1 mr-1 rounded ${
+                        index < strength.score ? STRENGTH_COLOURS[strength.score] : "bg-gray-200"
+                      }`
+                    )}
+                  />
+                ))}
+              </View>
+              <Text style={tailwind("text-xs text-gray-500 ml-2")}>{strength.label}</Text>
+            </View>
 
-        <AnimatedButton
-          text="Register"
-          onPress={onRegisterPress}
-          buttonStyle={tailwind("bg-blue-500 rounded-md")}
-          textStyle={tailwind("text-white font-semibold")}
+            {passwordRules.map((rule) => {
+              const met = strength.met.has(rule.id);
+              return (
+                <View key={rule.id} style={tailwind("flex-row items-center mb-1")}>
+                  <Ionicons
+                    name={met ? "checkmark-circle" : "ellipse-outline"}
+                    size={15}
+                    color={met ? "#16a34a" : "#c0c0c0"}
+                  />
+                  <Text
+                    style={tailwind(
+                      `text-xs ml-2 ${met ? "text-green-600" : "text-gray-500"}`
+                    )}
+                  >
+                    {rule.label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        <TextInput
+          style={tailwind(
+            `border rounded-lg px-3 py-3 mb-6 text-base ${
+              confirmPassword.length > 0 && !passwordsMatch
+                ? "border-red-400"
+                : "border-gray-300"
+            }`
+          )}
+          placeholder="Confirm password"
+          placeholderTextColor="#a1a1a1"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="newPassword"
+          editable={!submitting}
         />
-      </View>
-      <AnimatedButton
-        text="Sign In with Google"
-        onPress={() =>
-          onGoogleButtonPress().then(() => navigation.navigate("Home"))
-        }
-        buttonStyle={[tailwind("bg-red-500 rounded-md"), { marginTop: 16 }]}
-        textStyle={tailwind("text-white font-semibold")}
-      />
-    </View>
+
+        <Pressable
+          onPress={onRegisterPress}
+          disabled={!canSubmit}
+          style={tailwind(
+            `rounded-lg py-4 items-center ${canSubmit ? "bg-red-500" : "bg-gray-300"}`
+          )}
+        >
+          {submitting ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={tailwind("text-white font-semibold text-base")}>
+              Create account
+            </Text>
+          )}
+        </Pressable>
+
+        <View style={tailwind("flex-row items-center my-6")}>
+          <View style={tailwind("flex-1 h-px bg-gray-200")} />
+          <Text style={tailwind("mx-3 text-gray-400 text-sm")}>or</Text>
+          <View style={tailwind("flex-1 h-px bg-gray-200")} />
+        </View>
+
+        <Pressable
+          onPress={onGoogleButtonPress}
+          disabled={submitting}
+          style={tailwind(
+            "flex-row items-center justify-center border border-gray-300 rounded-lg py-4"
+          )}
+        >
+          <Ionicons name="logo-google" size={20} color="#444" />
+          <Text style={tailwind("text-gray-800 font-semibold ml-3")}>
+            Continue with Google
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => navigation.navigate("Login")}
+          style={tailwind("mt-8 items-center")}
+        >
+          <Text style={tailwind("text-gray-600")}>
+            Already have an account? <Text style={tailwind("text-red-500")}>Sign in</Text>
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  heading: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  input: {
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 12,
-  },
-});
-
-export default RegisterScreen;

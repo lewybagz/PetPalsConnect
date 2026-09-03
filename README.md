@@ -134,6 +134,24 @@ runtime" class of bug.
 CI runs lint, the backend suite, and an `expo export` for both platforms on
 every pull request.
 
+## How signing up works
+
+1. `RegisterScreen` (or Google sign-in) creates the **Firebase account** only.
+2. Firebase auth state changes, so `RootNavigator` re-evaluates the session.
+3. The session finds no Mongo profile and reports `needsProfile`.
+4. `CreateProfileScreen` collects a username (checked for availability as you
+   type) and calls `POST /api/users`, which derives identity from the verified
+   token.
+5. The session becomes `ready` and the app tree mounts.
+
+The two writes cannot be made atomic, so step 3 is the safety net: if the app
+crashes or the network drops between creating the account and the profile, the
+next launch lands back on step 4 rather than in an app where every request
+404s. `POST /api/users` is idempotent for the same reason.
+
+Accounts can be deleted from Settings, which removes the Mongo profile and the
+Firebase credential. Apple requires this of any app offering account creation.
+
 ## Known gaps
 
 - No app-side tests (the backend is covered)

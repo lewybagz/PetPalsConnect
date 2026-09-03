@@ -10,7 +10,8 @@ import { useTailwind } from "../../styles/tailwind";
 
 const VerificationSelectionScreen = ({ navigation, route }) => {
   const tailwind = useTailwind();
-  const { email } = route.params; // Assumed passed from previous screen
+  // Guarded: route.params is undefined when opened without navigation params.
+  const email = route.params?.email ?? "";
   const scaleAnim = new Animated.Value(1); // Initial scale value for button animation
 
   // Function to handle scale animation on press
