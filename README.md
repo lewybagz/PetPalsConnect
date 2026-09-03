@@ -136,18 +136,32 @@ every pull request.
 
 ## How signing up works
 
+Onboarding is driven by the session status, not by screens navigating to each
+other:
+
+```
+signedOut  ->  needsProfile  ->  needsPet  ->  ready
+ AuthStack    CreateProfile     AddFirstPet    AppStack
+```
+
 1. `RegisterScreen` (or Google sign-in) creates the **Firebase account** only.
 2. Firebase auth state changes, so `RootNavigator` re-evaluates the session.
-3. The session finds no Mongo profile and reports `needsProfile`.
-4. `CreateProfileScreen` collects a username (checked for availability as you
-   type) and calls `POST /api/users`, which derives identity from the verified
-   token.
-5. The session becomes `ready` and the app tree mounts.
+3. No Mongo profile yet -> `needsProfile`. `CreateProfileScreen` collects a
+   username (availability checked as you type) and calls `POST /api/users`,
+   which derives identity from the verified token.
+4. Profile but no pets -> `needsPet`. `AddFirstPetScreen` asks for a name,
+   breed and age, and `POST /api/pets` links the pet to the profile.
+5. `ready` — the app tree mounts.
 
-The two writes cannot be made atomic, so step 3 is the safety net: if the app
-crashes or the network drops between creating the account and the profile, the
-next launch lands back on step 4 rather than in an app where every request
-404s. `POST /api/users` is idempotent for the same reason.
+Those three writes cannot be made atomic, which is the point of modelling them
+as states: if the app crashes or the network drops partway, the next launch
+resumes at whichever step is still outstanding rather than dropping the user
+into an app where every request 404s. `POST /api/users` is idempotent for the
+same reason.
+
+The pet gate also means **screens below it can assume a pet exists**. Matching,
+playdates and chat all start from one, so it is a single check at the boundary
+instead of a "no pets yet" branch in every screen.
 
 Accounts can be deleted from Settings, which removes the Mongo profile and the
 Firebase credential. Apple requires this of any app offering account creation.

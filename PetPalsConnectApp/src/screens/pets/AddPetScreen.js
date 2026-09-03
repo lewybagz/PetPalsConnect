@@ -15,19 +15,19 @@ import { Picker } from "@react-native-picker/picker";
 import DropDownPicker from "react-native-dropdown-picker";
 import { useSelector, useDispatch } from "react-redux";
 import api from "../../api/axios";
-import { getStoredToken } from "../../../utils/tokenutil";
 import { removeCache, CacheKeys } from "../../services/localCache";
+import { useAuthSession } from "../../context/AuthSessionContext";
+import { BREEDS } from "../../data/breeds";
 import { clearError } from "../../redux/actions";
 import LoadingScreen from "../../components/LoadingScreenComponent";
-const AddPetScreen = (navigation) => {
+const AddPetScreen = ({ navigation }) => {
   const MAX_PHOTOS = 5;
   const [petDetails, setPetDetails] = useState([]);
-  const [isNewUser, setIsNewUser] = useState(false);
   const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const dispatch = useDispatch();
+  const { refresh } = useAuthSession();
 
-  const userId = useSelector((state) => state.userReducer.userId);
-  const currentUser = useSelector((state) => state.userReducer.currentUser);
   const isLoading = useSelector((state) => state.userReducer.isLoading);
   const error = useSelector((state) => state.userReducer.error);
 
@@ -69,81 +69,8 @@ const AddPetScreen = (navigation) => {
     { label: "Obstacle Course", value: "obstacle_course" },
   ]);
 
-  const breeds = [
-    "Labrador",
-    "Poodle",
-    "Beagle",
-    "Bulldog",
-    "Yorkshire Terrier",
-    "Chihuahua",
-    "German Shepherd",
-    "Golden Retriever",
-    "French Bulldog",
-    "Shih Tzu",
-    "Boxer",
-    "Pug",
-    "Dachshund",
-    "Great Dane",
-    "Siberian Husky",
-    "Maltese",
-    "Cavalier King Charles Spaniel",
-    "Pit Bull Terrier",
-    "Rottweiler",
-    "Australian Shepherd",
-    "Basset Hound",
-    "Border Collie",
-    "Cocker Spaniel",
-    "Doberman Pinscher",
-    "Bernese Mountain Dog",
-    "Bloodhound",
-    "Bulmastiff",
-    "Collie",
-    "Dalmatian",
-    "English Setter",
-    "Greyhound",
-    "Havanese",
-    "Irish Setter",
-    "Jack Russell Terrier",
-    "Lhasa Apso",
-    "Mastiff",
-    "Newfoundland",
-    "Old English Sheepdog",
-    "Papillon",
-    "Pointer",
-    "Rhodesian Ridgeback",
-    "Samoyed",
-    "Scottish Terrier",
-    "Weimaraner",
-    "Whippet",
-    "Akita",
-    "Alaskan Malamute",
-    "Bichon Frise",
-    "Boston Terrier",
-    "Brussels Griffon",
-    "Cairn Terrier",
-    "Chinese Shar-Pei",
-    "Cane Corso",
-    "Shiba Inu",
-    "American Bulldog",
-    "English Springer Spaniel",
-    "Staffordshire Bull Terrier",
-    "Miniature Schnauzer",
-    "Shetland Sheepdog",
-    "Vizsla",
-    "Chow Chow",
-    "Belgian Malinois",
-    "Pomeranian",
-    "Cardigan Welsh Corgi",
-    "Australian Cattle Dog",
-    "American Eskimo Dog",
-    "Shar Pei",
-    "Wire Fox Terrier",
-    "Portuguese Water Dog",
-    "West Highland White Terrier",
-    "Saint Bernard",
-    "Soft Coated Wheaten Terrier",
-  ];
-  const sortedBreeds = breeds.sort();
+  // Shared with onboarding so the two lists cannot drift apart.
+  const sortedBreeds = BREEDS;
   const temperaments = [
     "Calm",
     "Energetic",
@@ -266,67 +193,47 @@ const AddPetScreen = (navigation) => {
     }
   };
 
+  /**
+   * Adds every pet on the form.
+   *
+   * The server derives ownership from the token and links each pet to the
+   * profile itself. This used to read `response.data._id` (the response is
+   * `{ pet, matches }`, so that was always undefined) and then PATCH the
+   * collected ids onto the user - client-driven linking that wrote undefined.
+   */
   const submitPets = async () => {
-    try {
-      let petIds = [];
-      const token = await getStoredToken(); // Retrieve the token
-      for (const pet of petDetails) {
-        const response = await api.post("/api/pets", pet, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const newPetId = response.data._id;
-        petIds.push(newPetId);
+    if (petDetails.length === 0) return;
 
-        // Matching runs server-side. This screen used to import the backend's
-        // matchPets controller directly, which cannot execute on a device.
-        await api.post("/api/petmatches/match", { petId: newPetId }).catch((error) =>
-          console.warn("[pets] Match run failed:", error.message)
-        );
+    setSubmitting(true);
+    try {
+      for (const pet of petDetails) {
+        await api.post("/api/pets", {
+          name: pet.name,
+          breed: pet.breed,
+          age: Number(pet.age),
+          weight: pet.weight?.value ? Number(pet.weight.value) : undefined,
+          photos: pet.photos ?? [],
+          specialNeeds: pet.specialNeeds,
+          temperament: pet.temperament,
+          favoriteActivities: pet.favoriteActivities ?? [],
+        });
       }
 
       await removeCache(CacheKeys.pets);
+      // Keeps the session's pet list (and the onboarding gate) in step.
+      await refresh();
 
-      if (isNewUser) {
-        // Create a complete user profile in MongoDB for new users
-        await createUserProfileInMongoDB(currentUser, petIds);
-        navigation.navigate("Home", { showPopup: true, showTutorial: true });
-        setIsNewUser(false);
-      } else {
-        // Update existing user document with new pet IDs
-        await api.patch(
-          `/api/users/${userId}`,
-          { pets: petIds },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        navigation.navigate("Home");
-      }
-      Alert.alert("Success", "Pets added successfully!");
       setPetDetails([]);
-
-      navigation.navigate("Home", { showPopup: isNewUser });
+      Alert.alert("Success", "Pets added successfully!");
+      navigation.goBack();
     } catch (error) {
       console.error("Error submitting pets:", error);
-      Alert.alert("Error", "Failed to add pets. Please try again.");
-    }
-  };
-
-  // Function to create user profile in MongoDB
-  const createUserProfileInMongoDB = async (user, petIds) => {
-    const userProfile = {
-      email: user.email,
-      pets: petIds,
-      // Add other user details as required
-    };
-
-    try {
-      const token = await getStoredToken(); // Retrieve the token
-      await api.post("/api/users", userProfile, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch (error) {
-      console.error("Error creating user profile in MongoDB:", error);
+      Alert.alert(
+        "Error",
+        error.response?.data?.message ?? "Failed to add pets. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -472,8 +379,8 @@ const AddPetScreen = (navigation) => {
           </TouchableOpacity>
         ))}
       </View>
-      <TouchableOpacity onPress={handleAddPet}>
-        <Text>Add Pet</Text>
+      <TouchableOpacity onPress={handleAddPet} disabled={submitting}>
+        <Text>{submitting ? "Saving..." : "Add Pet"}</Text>
       </TouchableOpacity>
     </ScrollView>
   );

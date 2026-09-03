@@ -28,9 +28,15 @@ import { readCache, writeCache, removeCache, CacheKeys } from "../services/local
  *
  *   loading      - still resolving Firebase and/or the profile
  *   signedOut    - no Firebase user
- *   needsProfile - Firebase user, but no Mongo profile yet (resume onboarding)
- *   ready        - both exist
+ *   needsProfile - Firebase user, but no Mongo profile yet
+ *   needsPet     - profile exists, but no pets yet
+ *   ready        - everything the app assumes is present
  *   error        - profile lookup failed for a reason that isn't "absent"
+ *
+ * Onboarding is a sequence of these states rather than a screen that runs once,
+ * so it resumes correctly wherever it was interrupted. `needsPet` also removes
+ * a whole class of empty state: screens below the gate can assume the user has
+ * at least one pet instead of each handling "no pets yet" separately.
  */
 
 const AuthSessionContext = createContext(null);
@@ -39,9 +45,21 @@ const STATUS = {
   loading: "loading",
   signedOut: "signedOut",
   needsProfile: "needsProfile",
+  needsPet: "needsPet",
   ready: "ready",
   error: "error",
 };
+
+/**
+ * The onboarding step a profile still needs, if any.
+ *
+ * `pets` arrives populated from /api/users/me, but tolerate an id-only array
+ * (or a cached profile from an older shape) - all we need is "is it empty?".
+ */
+const statusForProfile = (profile) =>
+  Array.isArray(profile?.pets) && profile.pets.length > 0
+    ? STATUS.ready
+    : STATUS.needsPet;
 
 export const AuthSessionProvider = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState(null);
@@ -66,7 +84,7 @@ export const AuthSessionProvider = ({ children }) => {
 
       setProfile(data);
       setError(null);
-      setStatus(STATUS.ready);
+      setStatus(statusForProfile(data));
       writeCache(CacheKeys.userData, data);
       return data;
     } catch (err) {
@@ -85,7 +103,7 @@ export const AuthSessionProvider = ({ children }) => {
       const cached = await readCache(CacheKeys.userData);
       if (cached) {
         setProfile(cached);
-        setStatus(STATUS.ready);
+        setStatus(statusForProfile(cached));
         return cached;
       }
 
@@ -110,11 +128,25 @@ export const AuthSessionProvider = ({ children }) => {
       const { data } = await api.post("/api/users", details);
       setProfile(data);
       setError(null);
-      setStatus(STATUS.ready);
+      setStatus(statusForProfile(data));
       writeCache(CacheKeys.userData, data);
       return data;
     },
     []
+  );
+
+  /**
+   * Creates a pet for the current user and re-reads the profile so the gate
+   * moves on. The server owns the profile link, so refreshing is what makes the
+   * new pet visible to the session rather than patching local state.
+   */
+  const createPet = useCallback(
+    async (pet) => {
+      const { data } = await api.post("/api/pets", pet);
+      await loadProfile(getAuth().currentUser);
+      return data.pet;
+    },
+    [loadProfile]
   );
 
   const refresh = useCallback(
@@ -147,11 +179,22 @@ export const AuthSessionProvider = ({ children }) => {
       userId: profile?._id ?? null,
       isSignedIn: !!firebaseUser,
       createProfile,
+      createPet,
       refresh,
       signOut,
       deleteAccount,
     }),
-    [status, error, firebaseUser, profile, createProfile, refresh, signOut, deleteAccount]
+    [
+      status,
+      error,
+      firebaseUser,
+      profile,
+      createProfile,
+      createPet,
+      refresh,
+      signOut,
+      deleteAccount,
+    ]
   );
 
   return (

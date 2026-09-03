@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import AuthStack from "./AuthStack";
 import AppStack from "./AppStack";
 import CreateProfileScreen from "../auth/CreateProfileScreen";
+import AddFirstPetScreen from "../pets/AddFirstPetScreen";
 import usePushNotifications from "../../hooks/usePushNotifications";
 import { useAuthSession, AuthStatus } from "../../context/AuthSessionContext";
 
@@ -19,11 +20,16 @@ const Centered = ({ children }) => (
 /**
  * Chooses the navigation tree from the auth session.
  *
- * Three trees rather than two. "Signed in" is not enough to enter the app: a
- * user also needs a profile, and signup can be interrupted between creating the
- * Firebase account and creating that profile. Gating on both means such a user
- * lands back in onboarding on the next launch and finishes where they left off,
+ * Four trees rather than two. "Signed in" is not enough to enter the app: a
+ * user also needs a profile and at least one pet, and signup can be interrupted
+ * between any two of those. Gating on all three means an interrupted signup
+ * lands back in onboarding on the next launch and finishes where it left off,
  * instead of being stuck in an app where every request 404s.
+ *
+ * The pet gate also removes an entire class of empty state. Nearly every screen
+ * below here assumes the user has a pet - matching, playdates, chat all start
+ * from one. Guaranteeing it at the boundary is one check instead of a "no pets
+ * yet" branch in a dozen screens.
  *
  * Swapping the whole tree (rather than navigating between them) means signing
  * out cannot leave authenticated screens on the back stack.
@@ -78,6 +84,10 @@ export default function RootNavigator() {
 
       {status === AuthStatus.needsProfile && (
         <Root.Screen name="CreateProfile" component={CreateProfileScreen} />
+      )}
+
+      {status === AuthStatus.needsPet && (
+        <Root.Screen name="AddFirstPet" component={AddFirstPetScreen} />
       )}
 
       {status === AuthStatus.ready && <Root.Screen name="App" component={AppStack} />}

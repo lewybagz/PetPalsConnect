@@ -39,11 +39,25 @@ const PetSchema = new Schema({
   playdates: [{ type: Schema.Types.ObjectId, ref: "Playdate" }],
   specialNeeds: String,
   temperament: String,
-  weight: { type: Number, required: true },
+  // Optional so onboarding can ask for the minimum. It sharpens matching, so
+  // the pet's detail screen prompts for it later.
+  weight: { type: Number },
+  activityLevel: { type: String, enum: ["low", "moderate", "high"] },
+  socialisation: { type: String, enum: ["introvert", "balanced", "extrovert"] },
+  favoriteActivities: [{ type: String }],
   creator: { type: Schema.Types.ObjectId, ref: "User", required: true },
   modifiedDate: { type: Date, default: Date.now },
   slug: String,
 });
+
+// `title` is required on the base Content schema and means nothing for a pet,
+// so every pet insert failed validation - pet creation was impossible. Deriving
+// it from the name keeps the shared Content contract satisfied without asking
+// the client for a field it has no reason to know about.
+PetSchema.pre("validate", function setTitleFromName() {
+  if (!this.title && this.name) this.title = this.name;
+});
+
 const Pet = Content.discriminator("Pet", PetSchema);
 
 module.exports = {

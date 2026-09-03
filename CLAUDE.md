@@ -29,13 +29,19 @@ are public by definition.
 `npx expo prebuild` and are not committed. Configure through `app.json` and
 config plugins.
 
-**Signup is two non-atomic steps, so treat it as resumable.** Creating the
-Firebase account and creating the Mongo profile cannot be made atomic. Anything
-in between leaves an authenticated user with no profile. `AuthSessionContext`
-models that as a first-class state (`needsProfile`) and `RootNavigator` routes
-it to `CreateProfileScreen`, so an interrupted signup finishes on the next
-launch. Never assume "signed in" implies "has a profile", and keep
+**Onboarding is a sequence of session states, not a screen that runs once.**
+`AuthSessionContext` reports `signedOut -> needsProfile -> needsPet -> ready`
+and `RootNavigator` picks a tree from it. Creating the Firebase account, the
+Mongo profile and the first pet are three writes that cannot be made atomic, so
+an interruption between any two resumes at the next launch rather than
+stranding the user. Never assume "signed in" implies "has a profile", and keep
 `POST /api/users` idempotent.
+
+**Screens below the gate may assume the user has a profile and at least one
+pet.** That is what `needsPet` buys: matching, playdates and chat all start
+from a pet, so the check happens once at the boundary instead of as a "no pets
+yet" branch in a dozen screens. Don't add empty-state handling for that case;
+if a screen needs it, the gate is wrong.
 
 **Auth screens never navigate on success.** Signing in, signing up and signing
 out all change Firebase auth state, and `RootNavigator` swaps the whole tree in
@@ -71,6 +77,11 @@ clients call Firebase's `updatePassword()`.
 - `DELETE /api/users/me` removes the profile then the Firebase account. Apple
   requires in-app account deletion for any app offering signup, so this is a
   shipping requirement rather than a nicety.
+- Ownership of a pet comes from `req.userId`, never the body, and `createPet`
+  is what links it onto `user.pets`. Clients must not do that linking - the
+  onboarding gate reads that array to decide whether someone has a pet.
+- `Pet` is a discriminator of `Content`, which requires a `title`. A hook
+  derives it from the pet's name; without it every insert fails validation.
 - CommonJS throughout. Four controllers previously mixed `export` with
   `require`, which crashes at load; do not reintroduce ESM syntax here.
 - Every route is mounted behind `authenticate`, which resolves the Firebase
