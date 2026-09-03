@@ -103,7 +103,10 @@ Both stores use the bundle identifier `com.petpalsconnect.app`.
 - [ ] Add the two Firebase config files as EAS secrets
 - [ ] Restrict the Google Maps API key by platform and API
 - [ ] Fill in Apple privacy nutrition labels and Play data-safety declarations
-- [ ] Wire up Stripe keys if subscriptions ship in v1
+- [ ] Create the two recurring prices in Stripe and set `STRIPE_PRICE_MONTHLY`
+      and `STRIPE_PRICE_YEARLY`; a plan with no price id is hidden in the app
+- [ ] Add the Stripe webhook endpoint (`/api/stripe-webhooks`) in the dashboard
+      and set `STRIPE_WEBHOOK_SECRET` from it
 
 ## Security
 
@@ -172,7 +175,9 @@ Firebase credential. Apple requires this of any app offering account creation.
 
 ## Known gaps
 
-- No app-side tests (the backend is covered)
 - Onboarding walkthrough is disabled (`src/components/walkthrough.js` explains why)
 - Facebook login was removed; Google and email/phone remain
-- Stripe subscription screens exist but the payment SDK is not currently wired up
+- Apple Pay and Google Pay are off; subscriptions take a card through Stripe's
+  PaymentSheet. Turning Apple Pay on needs a registered merchant ID (see
+  `PetPalsConnectApp/.env.example`)
+- The codebase is plain JavaScript; there is no TypeScript yet

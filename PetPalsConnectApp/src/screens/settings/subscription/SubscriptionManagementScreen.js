@@ -1,146 +1,175 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, Button, StyleSheet, Alert } from "react-native";
-import LoadingScreen from "../../../components/LoadingScreenComponent";
-import api from "../../../api/axios";
-import { useSelector } from "react-redux";
-import { getStoredToken } from "../../../../utils/tokenutil";
-import { setError } from "../../../redux/actions";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from "react-native";
 
-const SubscriptionManagementScreen = () => {
-  const userId = useSelector((state) => state.user.userId);
+import { useTailwind } from "../../../styles/tailwind";
+import {
+  cancelSubscription,
+  describeStatus,
+  fetchCurrentSubscription,
+  formatPrice,
+  resumeSubscription,
+} from "../../../api/subscriptions";
+
+/**
+ * Shows and manages the current subscription.
+ *
+ * Everything this screen did before was broken in a way bundling cannot see:
+ * `handleRenew` and friends were used as `onPress` handlers, so their `token`
+ * parameter was actually the press event, and the `getToken()` call above it
+ * threw the real token away (the shared API client attaches it anyway). It read
+ * `subscription.PlanType` / `.StartDate` / `.Status`, none of which the schema
+ * has - they are lowercase - so every field rendered blank. It called `/renew`
+ * and `/change-plan`, which the server does not implement, and it rendered a
+ * permanent loading spinner for anyone without a subscription, since `null` is
+ * falsy and there was no empty state.
+ */
+const SubscriptionManagementScreen = ({ navigation }) => {
+  const tailwind = useTailwind();
+
   const [subscription, setSubscription] = useState(null);
-  const getToken = async () => {
-    try {
-      const token = await getStoredToken();
-      return token;
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
   useEffect(() => {
-    const fetchSubscription = async (token) => {
-      if (userId) {
-        try {
-          getToken();
-          const res = await api.get(`/api/subscriptions/${userId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          setSubscription(res.data);
-        } catch (error) {
-          console.warn("[subscriptionmanagement]", error.message);
-          Alert.alert("Error", "Could not load subscription information.");
-        }
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const current = await fetchCurrentSubscription();
+        if (!cancelled) setSubscription(current);
+      } catch (error) {
+        if (cancelled) return;
+        console.warn("[subscription]", error.message);
+        Alert.alert("Error", "Could not load your subscription.");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    })();
+
+    // The screen can be popped mid-request; setting state after that warns.
+    return () => {
+      cancelled = true;
     };
+  }, []);
 
-    fetchSubscription();
-  }, [userId]);
-
-  const handleRenew = async (token) => {
+  const run = async (action, confirmation) => {
+    setBusy(true);
     try {
-      getToken();
-      const res = await api.post(
-        `/api/subscriptions/renew`,
-        {
-          userId: userId,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setSubscription(res.data);
-      Alert.alert("Success", "Subscription renewed successfully.");
+      setSubscription(await action());
+      Alert.alert("Done", confirmation);
     } catch (error) {
-      console.error("Renewal error:", error);
-      Alert.alert("Error", "Failed to renew subscription.");
+      Alert.alert("Error", error.response?.data?.message || error.message);
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleChangePlan = async (planType, token) => {
-    try {
-      getToken();
-      const res = await api.post(
-        `/api/subscriptions/change-plan`,
+  const confirmCancel = () =>
+    Alert.alert(
+      "Cancel subscription?",
+      "You’ll keep your benefits until the end of the period you've already paid for.",
+      [
+        { text: "Keep it", style: "cancel" },
         {
-          userId: userId,
-          newPlan: planType,
+          text: "Cancel subscription",
+          style: "destructive",
+          onPress: () =>
+            run(cancelSubscription, "Your subscription will end at the period end."),
         },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setSubscription(res.data);
-      Alert.alert("Success", "Plan changed successfully.");
-    } catch (error) {
-      console.error("Plan change error:", error);
-      Alert.alert("Error", "Failed to change plan.");
-    }
-  };
+      ]
+    );
 
-  const handleCancel = async (token) => {
-    try {
-      getToken();
-      const res = await api.post(
-        `/api/subscriptions/cancel`,
-        {
-          userId: userId,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setSubscription(res.data);
-      Alert.alert("Success", "Subscription cancelled successfully.");
-    } catch (error) {
-      console.error("Cancellation error:", error);
-      Alert.alert("Error", "Failed to cancel subscription.");
-    }
-  };
+  if (loading) {
+    return (
+      <View testID="subscription-loading" style={tailwind("flex-1 items-center justify-center")}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (!subscription) {
+    return (
+      <View testID="subscription-empty" style={tailwind("flex-1 items-center justify-center p-8")}>
+        <Text style={tailwind("text-lg font-semibold mb-2")}>
+          You’re on the free plan
+        </Text>
+        <Text style={tailwind("text-base text-gray-500 text-center mb-6")}>
+          PetPals Plus adds unlimited matches and priority playdates.
+        </Text>
+        <TouchableOpacity
+          testID="see-plans"
+          onPress={() => navigation.navigate("ChoosePlan")}
+          style={tailwind("bg-blue-600 rounded-xl px-6 py-3")}
+        >
+          <Text style={tailwind("text-white font-semibold")}>See plans</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const renews = subscription.endDate ? new Date(subscription.endDate) : null;
 
   return (
-    <View style={styles.container}>
-      {subscription ? (
-        <>
-          <Text style={styles.title}>Your Subscription</Text>
-          <Text>Type: {subscription.PlanType}</Text>
-          <Text>
-            Start Date: {new Date(subscription.StartDate).toLocaleDateString()}
-          </Text>
-          <Text>
-            End Date: {new Date(subscription.EndDate).toLocaleDateString()}
-          </Text>
-          <Text>Status: {subscription.Status}</Text>
+    <View testID="subscription-detail" style={tailwind("flex-1 p-6")}>
+      <Text style={tailwind("text-2xl font-bold mb-4")}>Your subscription</Text>
 
-          <Button title="Renew Subscription" onPress={handleRenew} />
-          <Button
-            title="Change Plan"
-            onPress={() => handleChangePlan("New Plan Type")}
-          />
-          <Button
-            title="Cancel Subscription"
-            onPress={handleCancel}
-            color="red"
-          />
-        </>
+      <View style={tailwind("bg-white border border-gray-200 rounded-2xl p-5 mb-6")}>
+        <Text style={tailwind("text-base mb-1")}>
+          Status: {describeStatus(subscription)}
+        </Text>
+        <Text style={tailwind("text-base mb-1")}>
+          Billed: {subscription.planType === "year" ? "yearly" : "monthly"}
+          {subscription.amount != null
+            ? ` - ${formatPrice(subscription.amount, subscription.currency)}`
+            : ""}
+        </Text>
+        {renews ? (
+          <Text style={tailwind("text-base")}>
+            {subscription.cancelAtPeriodEnd ? "Ends" : "Renews"}:{" "}
+            {renews.toLocaleDateString()}
+          </Text>
+        ) : null}
+      </View>
+
+      {subscription.cancelAtPeriodEnd ? (
+        <TouchableOpacity
+          testID="resume-subscription"
+          disabled={busy}
+          onPress={() => run(resumeSubscription, "Your subscription will continue.")}
+          style={tailwind("bg-blue-600 rounded-xl py-3 items-center")}
+        >
+          {busy ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text style={tailwind("text-white font-semibold")}>Resume subscription</Text>
+          )}
+        </TouchableOpacity>
       ) : (
-        <LoadingScreen />
+        <TouchableOpacity
+          testID="cancel-subscription"
+          disabled={busy}
+          onPress={confirmCancel}
+          style={tailwind("border border-red-500 rounded-xl py-3 items-center")}
+        >
+          {busy ? (
+            <ActivityIndicator color="#ef4444" />
+          ) : (
+            <Text style={tailwind("text-red-500 font-semibold")}>
+              Cancel subscription
+            </Text>
+          )}
+        </TouchableOpacity>
       )}
+
+      <TouchableOpacity
+        testID="subscription-history"
+        onPress={() => navigation.navigate("SubscriptionHistory")}
+        style={tailwind("py-4 items-center")}
+      >
+        <Text style={tailwind("text-blue-600")}>Billing history</Text>
+      </TouchableOpacity>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-});
 
 export default SubscriptionManagementScreen;

@@ -1,140 +1,175 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Linking,
+  View,
 } from "react-native";
-import api from "../../../api/axios";
-import { getStoredToken } from "../../../../utils/tokenutil";
+import { useStripe } from "@stripe/stripe-react-native";
 
-const subscriptionTiers = [
-  {
-    id: "basic",
-    title: "Basic",
-    price: "$4.99/month",
-    duration: "1 Month",
-    features: [
-      "Access to basic pet matching",
-      "View and post to community forums",
-      "Limited direct messages per day",
-    ],
-  },
-  {
-    id: "premium",
-    title: "Premium",
-    price: "$9.99/month",
-    duration: "1 Month",
-    features: [
-      "Unlimited pet matching",
-      "Priority access to community forums",
-      "Unlimited direct messages",
-      "Access to advanced pet analytics",
-    ],
-  },
-  {
-    id: "vip",
-    title: "VIP",
-    price: "$19.99/month",
-    duration: "1 Month",
-    features: [
-      "All Premium features",
-      "Free participation in pet events",
-      "Access to VIP-only forums",
-      "Exclusive discounts on pet products",
-    ],
-  },
-];
+import { useTailwind } from "../../../styles/tailwind";
+import { createSubscription, fetchPlans } from "../../../api/subscriptions";
 
-const SubscriptionOptionsScreen = () => {
-  const [selectedTier, setSelectedTier] = useState(null);
+/**
+ * Plan picker.
+ *
+ * The previous version listed three hardcoded tiers with hardcoded prices, then
+ * POSTed to `/api/subscriptions/create-checkout-session` and tried to open
+ * `https://checkout.stripe.com/pay/<sessionId>` in a browser. Checkout is a web
+ * flow: a native app has no way to come back from it with a completed session,
+ * and that URL shape has not been valid for years. Prices also disagreed with
+ * whatever Stripe actually charged, because nothing connected the two.
+ *
+ * Plans now come from the server (which reads them from Stripe), and payment
+ * uses PaymentSheet, the native flow: the server creates an incomplete
+ * subscription, we collect the card, Stripe finishes it and tells the server
+ * over a webhook.
+ */
+const ChoosePlanScreen = ({ navigation }) => {
+  const tailwind = useTailwind();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
-  const handleSelectTier = async (tierId) => {
-    setSelectedTier(tierId);
+  const [plans, setPlans] = useState([]);
+  const [paymentsEnabled, setPaymentsEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [busyPlanId, setBusyPlanId] = useState(null);
 
-    try {
-      const token = await getStoredToken(); // Retrieve the token
-      const response = await api.post(
-        "/api/subscriptions/create-checkout-session",
-        { planId: tierId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  useEffect(() => {
+    let cancelled = false;
 
-      const sessionId = response.data.sessionId;
-      const url = `https://checkout.stripe.com/pay/${sessionId}`; // Construct the Stripe checkout URL
-      Linking.openURL(url).catch((err) => {
-        console.error("Error opening Stripe:", err);
-        Alert.alert("Error", "Unable to open Stripe checkout.");
-      });
-    } catch (error) {
-      console.error("Error creating Stripe checkout session:", error);
-      Alert.alert("Error", "Failed to initiate payment process.");
-    }
-  };
+    (async () => {
+      try {
+        const result = await fetchPlans();
+        if (cancelled) return;
+        setPlans(result.plans);
+        setPaymentsEnabled(result.paymentsEnabled);
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("[plans]", error.message);
+          setPaymentsEnabled(false);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const subscribe = useCallback(
+    async (plan) => {
+      setBusyPlanId(plan.id);
+      try {
+        const session = await createSubscription(plan.id);
+
+        if (!session.clientSecret) {
+          throw new Error("The server did not return a payment to complete");
+        }
+
+        const { error: initError } = await initPaymentSheet({
+          merchantDisplayName: "PetPals Connect",
+          customerId: session.customerId,
+          customerEphemeralKeySecret: session.ephemeralKey,
+          paymentIntentClientSecret: session.clientSecret,
+          allowsDelayedPaymentMethods: false,
+          returnURL: "petpalsconnect://stripe-redirect",
+        });
+        if (initError) throw new Error(initError.message);
+
+        const { error: sheetError } = await presentPaymentSheet();
+        if (sheetError) {
+          // Closing the sheet is a normal thing to do, not an error to report.
+          if (sheetError.code !== "Canceled") {
+            Alert.alert("Payment not completed", sheetError.message);
+          }
+          return;
+        }
+
+        navigation.navigate("SubscriptionConfirmation", {
+          action: "started",
+          planName: plan.name,
+        });
+      } catch (error) {
+        const message =
+          error.response?.status === 409
+            ? "You already have an active subscription."
+            : error.response?.data?.message || error.message;
+        Alert.alert("Could not start the subscription", message);
+      } finally {
+        setBusyPlanId(null);
+      }
+    },
+    [initPaymentSheet, presentPaymentSheet, navigation]
+  );
+
+  if (loading) {
+    return (
+      <View style={tailwind("flex-1 items-center justify-center")}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  const purchasable = plans.filter((plan) => plan.available);
+
+  if (!paymentsEnabled || purchasable.length === 0) {
+    return (
+      <View style={tailwind("flex-1 items-center justify-center p-8")}>
+        <Text style={tailwind("text-lg font-semibold text-center mb-2")}>
+          Subscriptions are not available yet
+        </Text>
+        <Text style={tailwind("text-base text-gray-500 text-center")}>
+          Check back soon - everything in the app still works without one.
+        </Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container}>
-      {subscriptionTiers.map((tier) => (
+    <ScrollView contentContainerStyle={tailwind("p-4")}>
+      {purchasable.map((plan) => (
         <TouchableOpacity
-          key={tier.id}
-          style={[styles.tier, selectedTier === tier.id && styles.selectedTier]}
-          onPress={() => handleSelectTier(tier.id)}
+          key={plan.id}
+          testID={`plan-${plan.id}`}
+          disabled={busyPlanId !== null}
+          onPress={() => subscribe(plan)}
+          style={tailwind(
+            `bg-white border border-gray-200 rounded-2xl p-5 mb-4 ${
+              busyPlanId !== null && busyPlanId !== plan.id ? "opacity-50" : ""
+            }`
+          )}
         >
-          <Text style={styles.title}>{tier.title}</Text>
-          <Text style={styles.price}>{tier.price}</Text>
-          <Text style={styles.duration}>{tier.duration}</Text>
-          <View style={styles.featuresList}>
-            {tier.features.map((feature, index) => (
-              <Text key={index} style={styles.feature}>
-                {feature}
+          <Text style={tailwind("text-xl font-bold mb-1")}>{plan.name}</Text>
+          <Text style={tailwind("text-base text-gray-600 mb-4")}>
+            {plan.description}
+          </Text>
+
+          <View
+            style={tailwind(
+              "bg-blue-600 rounded-xl py-3 items-center justify-center"
+            )}
+          >
+            {busyPlanId === plan.id ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={tailwind("text-white font-semibold text-base")}>
+                Subscribe {plan.interval === "year" ? "yearly" : "monthly"}
               </Text>
-            ))}
+            )}
           </View>
         </TouchableOpacity>
       ))}
+
+      <Text style={tailwind("text-xs text-gray-500 text-center mt-2")}>
+        Payments are handled by Stripe. Your card details never reach our
+        servers. You can cancel any time from Settings.
+      </Text>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  tier: {
-    backgroundColor: "#f0f0f0",
-    borderRadius: 10,
-    padding: 20,
-    margin: 10,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  selectedTier: {
-    borderColor: "#007bff",
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  price: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#d9534f",
-  },
-  duration: {
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  featuresList: {
-    marginTop: 10,
-  },
-  feature: {
-    fontSize: 16,
-    color: "#5e5e5e",
-  },
-});
-
-export default SubscriptionOptionsScreen;
+export default ChoosePlanScreen;

@@ -15,13 +15,42 @@ const SubscriptionSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  // Mirrors Stripe's own subscription statuses so the two cannot disagree.
   status: {
     type: String,
-    required: true,
+    enum: [
+      "incomplete",
+      "incomplete_expired",
+      "trialing",
+      "active",
+      "past_due",
+      "canceled",
+      "unpaid",
+    ],
+    default: "incomplete",
+    index: true,
   },
   amount: {
     type: Number,
-    required: true,
+  },
+  currency: {
+    type: String,
+    default: "usd",
+  },
+  stripeSubscriptionId: {
+    type: String,
+    index: true,
+  },
+  stripeCustomerId: {
+    type: String,
+    index: true,
+  },
+  stripePriceId: {
+    type: String,
+  },
+  cancelAtPeriodEnd: {
+    type: Boolean,
+    default: false,
   },
   user: {
     type: Schema.Types.ObjectId,
@@ -31,7 +60,6 @@ const SubscriptionSchema = new Schema({
   creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
-    required: true,
   },
   modifiedDate: {
     type: Date,

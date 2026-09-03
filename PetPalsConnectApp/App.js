@@ -9,6 +9,7 @@ import store from "./src/redux/store";
 import { AppThemeProvider } from "./src/context/AppThemeContext";
 import { AuthSessionProvider } from "./src/context/AuthSessionContext";
 import RootNavigator from "./src/screens/navigation/RootNavigator";
+import PaymentsProvider from "./src/components/PaymentsProvider";
 import { navigationRef } from "./src/navigation/navigationRef";
 
 /**
@@ -26,12 +27,14 @@ export default function App() {
       <ReduxProvider store={store}>
         <AppThemeProvider>
           <AuthSessionProvider>
-            <SafeAreaProvider>
-              <NavigationContainer ref={navigationRef}>
-                <StatusBar style="auto" />
-                <RootNavigator />
-              </NavigationContainer>
-            </SafeAreaProvider>
+            <PaymentsProvider>
+              <SafeAreaProvider>
+                <NavigationContainer ref={navigationRef}>
+                  <StatusBar style="auto" />
+                  <RootNavigator />
+                </NavigationContainer>
+              </SafeAreaProvider>
+            </PaymentsProvider>
           </AuthSessionProvider>
         </AppThemeProvider>
       </ReduxProvider>

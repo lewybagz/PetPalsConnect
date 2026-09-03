@@ -78,7 +78,10 @@
         }
       ],
       "expo-font",
-      "expo-splash-screen"
+      [
+        "@stripe/stripe-react-native",
+        {}
+      ]
     ],
     "extra": {
       "eas": {

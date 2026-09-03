@@ -1,64 +1,89 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, FlatList, StyleSheet } from "react-native";
-import api from "../../../api/axios";
-import { getStoredToken } from "../../../../utils/tokenutil";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, Text, View } from "react-native";
 
+import { useTailwind } from "../../../styles/tailwind";
+import {
+  describeStatus,
+  fetchSubscriptionHistory,
+  formatPrice,
+} from "../../../api/subscriptions";
+
+/**
+ * Billing history.
+ *
+ * The rows previously read `item.date`, `item.plan` and `item.amount`; the
+ * documents have `createdDate`, `planType` and `amount`, so two of three fields
+ * rendered blank. It also had no empty state, so a new account saw a bare white
+ * screen with no explanation.
+ */
 const SubscriptionHistoryScreen = () => {
+  const tailwind = useTailwind();
   const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSubscriptionHistory = async () => {
-      try {
-        const token = await getStoredToken();
-        const response = await api.get("/api/subscription-history", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setHistory(response.data);
-      } catch (error) {
-        console.error("Error fetching subscription history:", error);
-      }
-    };
+    let cancelled = false;
 
-    fetchSubscriptionHistory();
+    (async () => {
+      try {
+        const rows = await fetchSubscriptionHistory();
+        if (!cancelled) setHistory(rows);
+      } catch (error) {
+        if (!cancelled) console.warn("[subscription-history]", error.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  if (loading) {
+    return (
+      <View style={tailwind("flex-1 items-center justify-center")}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={history}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.historyItem}>
-            <Text style={styles.date}>{item.date}</Text>
-            <Text style={styles.details}>Plan: {item.plan}</Text>
-            <Text style={styles.details}>Amount: {item.amount}</Text>
-            <Text style={styles.details}>Status: {item.status}</Text>
-          </View>
-        )}
-      />
-    </View>
+    <FlatList
+      data={history}
+      keyExtractor={(item) => String(item._id ?? item.stripeSubscriptionId)}
+      contentContainerStyle={tailwind("p-4 flex-grow")}
+      ListEmptyComponent={
+        <View style={tailwind("flex-1 items-center justify-center p-8")}>
+          <Text style={tailwind("text-base text-gray-500 text-center")}>
+            Nothing here yet - you haven’t been billed for a subscription.
+          </Text>
+        </View>
+      }
+      renderItem={({ item }) => (
+        <View
+          style={tailwind("bg-white border border-gray-200 rounded-2xl p-4 mb-3")}
+        >
+          <Text style={tailwind("text-lg font-semibold mb-1")}>
+            {item.createdDate
+              ? new Date(item.createdDate).toLocaleDateString()
+              : "Unknown date"}
+          </Text>
+          <Text style={tailwind("text-base text-gray-600")}>
+            Plan: {item.planType === "year" ? "Yearly" : "Monthly"}
+          </Text>
+          {item.amount != null ? (
+            <Text style={tailwind("text-base text-gray-600")}>
+              Amount: {formatPrice(item.amount, item.currency)}
+            </Text>
+          ) : null}
+          <Text style={tailwind("text-base text-gray-600")}>
+            Status: {describeStatus(item)}
+          </Text>
+        </View>
+      )}
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-  },
-  historyItem: {
-    backgroundColor: "#f0f0f0",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  date: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  details: {
-    fontSize: 16,
-  },
-});
 
 export default SubscriptionHistoryScreen;

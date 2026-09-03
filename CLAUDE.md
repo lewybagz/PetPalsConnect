@@ -101,6 +101,39 @@ clients call Firebase's `updatePassword()`.
 - Never repeat the mount prefix inside a router: mounted at `/api/users`, the
   path is `/pets/:id`, not `/users/pets/:id`.
 
+### Subscriptions
+
+**Stripe is the source of truth for billing; Mongo mirrors it.** The only
+writer of `Subscription` is `syncFromStripe`, which upserts on
+`stripeSubscriptionId` and then sets `user.subscribed`. Nothing else may set a
+status - a status we invented and one Stripe holds will drift apart, and Stripe
+wins every time.
+
+**The price never comes from the client.** `services/subscriptions/plans.js`
+maps plan ids onto `STRIPE_PRICE_*` env vars, and `createSubscription` looks the
+price up there. A plan with no configured price id is reported `available:
+false` rather than half-working.
+
+**Mobile pays through PaymentSheet, not Checkout.** Checkout is a browser
+redirect a native app cannot return from. The server creates the subscription
+with `payment_behavior: "default_incomplete"` and hands back a client secret,
+an ephemeral key and the customer id; the SDK collects the card; the webhook
+confirms it moments later. So a successful sheet does **not** mean the record
+says `active` yet - never block the UI on that.
+
+**Cancelling sets `cancel_at_period_end`.** Deleting immediately takes away time
+the user has paid for. `resumeSubscription` undoes it.
+
+**`/api/stripe-webhooks` is mounted before the JSON parser and outside
+`authenticate`** (Server.js). Signature verification needs the raw body, and
+Stripe authenticates by signature, not by token. Acknowledge unknown event types
+with a 200 or Stripe retries them for days.
+
+**Payments are optional everywhere.** No `STRIPE_SECRET_KEY` and the routes
+report 503; no `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` and `PaymentsProvider`
+renders its children untouched and the plan picker shows an empty state. A
+missing key must never stop the app from opening.
+
 ## Verifying a change
 
 ```bash
@@ -139,7 +172,6 @@ Add a route, and this test tells you if nothing calls it or the path is wrong.
   Architecture. `src/components/walkthrough.js` provides inert shims so the tour
   markup survives; swap in a maintained library to re-enable it.
 - **Facebook login** — removed. Google and email/phone remain.
-- **Stripe** — subscription screens exist, the payment SDK is not wired up.
 - **TypeScript** — the codebase is plain JS. Converting is worthwhile but was
   out of scope for getting the app building again.
 - **App-side tests** — the backend has a suite; the app has none. `expo export`
