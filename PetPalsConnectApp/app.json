@@ -7,13 +7,9 @@
     "icon": "./assets/icon.png",
     "scheme": "petpalsconnect",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.petpalsconnect.app",
@@ -32,7 +28,6 @@
       "package": "com.petpalsconnect.app",
       "versionCode": 1,
       "googleServicesFile": "./google-services.json",
-      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -49,13 +44,24 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-system-ui",
       "expo-secure-store",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       [
         "expo-build-properties",
         {
-          "ios": { "useFrameworks": "static" }
+          "ios": {
+            "useFrameworks": "static"
+          }
         }
       ],
       [
@@ -70,7 +76,9 @@
           "photosPermission": "This app uses your Photos so you can upload images of you and your pet.",
           "cameraPermission": "This app uses your camera so you can take photos of you and your pet."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {
