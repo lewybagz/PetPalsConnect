@@ -7,6 +7,7 @@ import AppStack from "./AppStack";
 import CreateProfileScreen from "../auth/CreateProfileScreen";
 import AddFirstPetScreen from "../pets/AddFirstPetScreen";
 import usePushNotifications from "../../hooks/usePushNotifications";
+import { useSocketSession } from "../../hooks/useSocketEvents";
 import { useAuthSession, AuthStatus } from "../../context/AuthSessionContext";
 
 const Root = createNativeStackNavigator();
@@ -38,6 +39,10 @@ export default function RootNavigator() {
   const { status, error, refresh, signOut } = useAuthSession();
 
   usePushNotifications(status === AuthStatus.ready);
+  // The server pushes to a room named after the Mongo user id, so this device
+  // has to join it. Doing that here means every screen below inherits a live
+  // connection instead of each one arranging its own.
+  useSocketSession();
 
   if (status === AuthStatus.loading) {
     return (

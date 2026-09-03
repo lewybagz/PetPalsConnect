@@ -15,11 +15,9 @@ import UserPetCard from "../../components/UserPetCardComponent";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import GroupOptionsModal from "../../components/GroupOptionsModal";
 import MessageItemComponent from "../../components/MessageItemComponent";
-import { auth } from "../../../firebase/firebaseConfig";
 import { FontAwesome as Icon } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
-import { getStoredToken } from "../../../utils/tokenutil";
-import { useSocketNotification } from "../../hooks/useSocketNotification";
+import { useSocketMessage } from "../../hooks/useSocketEvents";
 import api from "../../api/axios";
 import { useSelector } from "react-redux";
 
@@ -40,7 +38,7 @@ const GroupChatScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
 
   // Setting up the socket to handle real-time group chat messages
-  useSocketNotification((newMessage) => {
+  useSocketMessage((newMessage) => {
     setMessages((prevMessages) => [...prevMessages, newMessage]);
   });
 
@@ -62,30 +60,23 @@ const GroupChatScreen = ({ route, navigation }) => {
     }
   };
 
+  // Both of these used bare `fetch` with a relative URL. React Native has no
+  // origin to resolve one against, so they never reached the server - and the
+  // second was missing even its leading slash. The shared client has the base
+  // URL and attaches the token itself.
   const fetchPetsData = async (groupId) => {
     try {
-      const token = await getStoredToken();
-      const response = await fetch(`/api/groupchats/${groupId}/pets`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      const petsData = await response.json();
-      setPets(petsData);
+      const { data } = await api.get(`/api/groupchats/${groupId}/pets`);
+      setPets(data);
     } catch (error) {
-      console.error("Error fetching pets data:", error);
+      console.warn("[groupchat] Could not load pets:", error.message);
       Alert.alert("Error", "Failed to load pets data");
     }
   };
   const fetchGroupInfo = async () => {
     try {
-      const token = await getStoredToken();
-      const response = await fetch(`api/groupchats/${route.params.group.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const updatedGroupInfo = await response.json();
-      setGroupInfo(updatedGroupInfo);
+      const { data } = await api.get(`/api/groupchats/${route.params.group._id}`);
+      setGroupInfo(data);
     } catch (error) {
       console.error("Error fetching group info:", error);
     }
@@ -191,7 +182,7 @@ const GroupChatScreen = ({ route, navigation }) => {
         onReply={handleReply}
         onDelete={handleDelete}
         onReact={(reaction) => handleReact(item, reaction)}
-        onCopy={() => copyMessageToClipboard(item.ContentText)}
+        onCopy={() => copyMessageToClipboard(item.contentText)}
       />
     );
   };

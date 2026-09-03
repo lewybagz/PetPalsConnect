@@ -17,9 +17,8 @@ import LoadingScreen from "../../components/LoadingScreenComponent";
 import ChatOptionsModal from "../../components/ChatOptionsModal";
 import { FontAwesome as Icon } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
-import { getStoredToken } from "../../../utils/tokenutil";
 import { clearError , startLoading, endLoading, setError } from "../../redux/actions";
-import { useSocketNotification } from "../../hooks/useSocketNotification";
+import { useSocketMessage } from "../../hooks/useSocketEvents";
 import api from "../../api/axios";
 
 const ChatScreen = ({ route, navigation }) => {
@@ -28,17 +27,24 @@ const ChatScreen = ({ route, navigation }) => {
   const [isModalVisible, setModalVisible] = useState(false);
   const [chatId, setChatId] = useState(null);
   const petInfo = route.params.pet;
+  const petId = petInfo?._id;
   const flatListRef = useRef(null);
   const dispatch = useDispatch();
   const tailwind = useTailwind();
 
   const userId = useSelector((state) => state.user.userId);
-  const currentUser = useSelector((state) => state.user.user);
   const isLoading = useSelector((state) => state.chat.isLoading);
   const error = useSelector((state) => state.chat.error);
 
-  useSocketNotification((newMessage) => {
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
+  useSocketMessage((incoming) => {
+    // The socket carries every message addressed to this user, not just this
+    // thread's, and a message we just posted ourselves can arrive twice.
+    if (String(incoming?.chat) !== String(chatId)) return;
+    setMessages((current) =>
+      current.some((message) => message._id === incoming._id)
+        ? current
+        : [...current, incoming]
+    );
   });
 
   useEffect(() => {
@@ -49,27 +55,24 @@ const ChatScreen = ({ route, navigation }) => {
     }
   }, [error, dispatch]);
 
-  const initiateChat = async () => {
+  /**
+   * Opens (or reuses) the conversation with this pet's owner.
+   *
+   * This used bare `fetch("/api/chat/findOrCreate")`: a relative URL, which in
+   * React Native has no origin to resolve against, at a path that is not a
+   * mount (`/api/chats`, plural). It also sent `userId` from the client - the
+   * server takes the caller from the token, and the other participant from the
+   * pet's owner.
+   */
+  const initiateChat = useCallback(async () => {
     try {
-      const token = await getStoredToken();
-      const petId = petInfo.id;
-
-      const response = await fetch("/api/chat/findOrCreate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId, petId }),
-      });
-
-      const chat = await response.json();
-      setChatId(chat._id);
+      const { data } = await api.post("/api/chats/findOrCreate", { petId });
+      setChatId(data._id);
     } catch (error) {
-      console.error("Error initiating chat:", error);
-      Alert.alert("Error", "Failed to initiate chat");
+      console.warn("[chat] Could not open chat:", error.message);
+      Alert.alert("Error", "Failed to open this conversation");
     }
-  };
+  }, [petId]);
 
   // Messages come from the API. This was a Firestore onSnapshot subscription;
   // the socket hook above delivers live updates now that Mongo is the store.
@@ -86,7 +89,7 @@ const ChatScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     initiateChat();
-  }, []);
+  }, [initiateChat]);
 
   useEffect(() => {
     loadMessages();
@@ -105,16 +108,18 @@ const ChatScreen = ({ route, navigation }) => {
       // Messages are stored in MongoDB via the API. They were previously
       // written to Firestore and then announced to the API, which meant two
       // sources of truth for the same conversation.
-      await api.post("/api/chats/addMessage", {
-        chatId: petInfo.id,
-        senderId: userId,
-        petId: petInfo.id,
+      // `chatId: petInfo.id` sent the *pet* id (and `.id`, not `._id`), so the
+      // server's `Chat.findOne({_id: chatId})` never matched and every send
+      // came back 404. The chat id is the one `findOrCreate` returned.
+      const { data } = await api.post("/api/chats/addMessage", {
+        chatId,
         text: newMessage,
-        senderName: currentUser?.displayName,
       });
 
+      // The socket push goes to the *recipient*, so without this the sender
+      // did not see their own message until the screen reloaded.
+      setMessages((current) => [...current, data]);
       setNewMessage("");
-      Alert.alert("Success", "Message sent successfully.");
     } catch (error) {
       console.error("Error sending message:", error);
       Alert.alert("Error", "Failed to send message");
@@ -155,14 +160,17 @@ const ChatScreen = ({ route, navigation }) => {
   };
 
   const renderMessageItem = ({ item }) => {
-    const isSender = item.senderId === userId;
+    // The schema has `sender` and `contentText`; this read `senderId` and
+    // `ContentText`, so every message rendered as someone else's and copying
+    // one copied `undefined`.
+    const isSender = String(item.sender) === String(userId);
     return (
       <MessageItemComponent
         message={item}
         isSender={isSender}
         onDelete={handleDelete}
         onReact={(reaction) => handleReact(item, reaction)}
-        onCopy={() => copyMessageToClipboard(item.ContentText)}
+        onCopy={() => copyMessageToClipboard(item.contentText)}
       />
     );
   };
@@ -183,7 +191,7 @@ const ChatScreen = ({ route, navigation }) => {
     <View style={tailwind("flex-1")}>
       {/* this is how they are displayed in chat */}
       <View style={styles.header}>
-        <Image source={{ uri: petInfo.photo }} style={styles.petImage} />
+        <Image source={{ uri: petInfo?.photos?.[0] }} style={styles.petImage} />
         <Text style={tailwind("text-lg font-bold")}>{petInfo.name}</Text>
         <ChatOptionsModal
           isVisible={isModalVisible}
@@ -194,7 +202,7 @@ const ChatScreen = ({ route, navigation }) => {
       <FlatList
         ref={flatListRef}
         data={messages}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
         renderItem={renderMessageItem}
         style={tailwind("flex-1")}
       />

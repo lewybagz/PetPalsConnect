@@ -58,7 +58,7 @@ const MessageItemComponent = ({
       );
     }
     // Here's where we handle text messages with potential links
-    if (typeof message.ContentText === "string") {
+    if (typeof message.contentText === "string") {
       return (
         // react-native-hyperlink (last published 2019) only auto-linked URLs.
         // React Native's own dataDetectorType does the same natively.
@@ -67,7 +67,7 @@ const MessageItemComponent = ({
           dataDetectorType="all"
           selectable
         >
-          {message.ContentText}
+          {message.contentText}
         </Text>
       );
     }
@@ -110,7 +110,7 @@ const MessageItemComponent = ({
         onLongPress={handleLongPress}
       >
         {renderMediaContent()}
-        <Text style={styles.timestamp}>{formatDate(message.Timestamp)}</Text>
+        <Text style={styles.timestamp}>{formatDate(message.timestamp)}</Text>
         {isSender && <Icon name="check-circle" size={12} color="green" />}
         <CustomActionSheet
           visible={actionSheetVisible}

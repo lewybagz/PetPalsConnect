@@ -138,6 +138,8 @@ io.on("connection", (socket) => {
 });
 
 app.set("io", io);
+// Services have no request in scope, so they reach the same rooms through here.
+require("./services/realtime").setIO(io);
 
 // ---------------------------------------------------------------------------
 // Boot

@@ -3,6 +3,7 @@ const User = require("../models/User");
 const Friend = require("../models/Friend");
 const { sendPushNotification } = require("./NotificationController");
 const { createNotification } = require("../services/NotificationService");
+const { emitToUser } = require("../services/realtime");
 
 async function updateFriendStatus(sender, receiver) {
   try {
@@ -78,9 +79,18 @@ const FriendRequestController = {
       res.friendRequest.modifiedDate = Date.now();
       await res.friendRequest.save();
 
+      // `createNotification` takes one options object, not (id, data): the
+      // positional call destructured `content`/`recipientId` off an ObjectId,
+      // so every field came out undefined.
       await Promise.all([
         sendPushNotification(requester._id, notificationData),
-        createNotification(requester._id, notificationData),
+        createNotification({
+          content: notificationData.body,
+          recipientId: requester._id,
+          type: "FriendRequestAccepted",
+          creatorId: req.userId,
+          petName,
+        }),
         updateFriendStatus(
           res.friendRequest.sender,
           res.friendRequest.receiver
@@ -144,8 +154,17 @@ const FriendRequestController = {
 
       await Promise.all([
         sendPushNotification(notificationData),
-        createNotification(notificationData),
+        createNotification({
+          content: notificationData.message,
+          recipientId: receiver,
+          type: "FriendRequest",
+          creatorId: sender,
+          petName: senderPetName,
+        }),
       ]);
+
+      // Let the recipient's friends list update without a refetch.
+      emitToUser(receiver, "friendRequest", savedFriendRequest);
 
       res.status(201).json(savedFriendRequest);
     } catch (err) {

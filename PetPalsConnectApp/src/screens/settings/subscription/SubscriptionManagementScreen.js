@@ -17,7 +17,7 @@ import {
  * `handleRenew` and friends were used as `onPress` handlers, so their `token`
  * parameter was actually the press event, and the `getToken()` call above it
  * threw the real token away (the shared API client attaches it anyway). It read
- * `subscription.PlanType` / `.StartDate` / `.Status`, none of which the schema
+ * `subscription.PlanType` / `.StartDate` / `.Status` - none of which the schema
  * has - they are lowercase - so every field rendered blank. It called `/renew`
  * and `/change-plan`, which the server does not implement, and it rendered a
  * permanent loading spinner for anyone without a subscription, since `null` is

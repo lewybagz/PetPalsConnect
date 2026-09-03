@@ -147,3 +147,64 @@ test("the session states match the ones the gate can report", () => {
     );
   }
 });
+
+/**
+ * Field-name drift, the read side.
+ *
+ * The schemas are lowercase, but screens all over the app read PascalCase
+ * versions of real field names: `item.ContentText` for a chat message,
+ * `playdate.Date`/`.Location`/`.Notes`, `item.Content` for a notification,
+ * `article.Title`/`.Content`/`.PublishedDate`, `subscription.PlanType`. Every
+ * one of them evaluates to `undefined`: the screen renders a blank line, or
+ * throws when something calls `.substring` on it. Nothing else catches this -
+ * it is valid JavaScript, it bundles, and only a device shows you the gap.
+ */
+test("no screen reads a PascalCase version of a real schema field", () => {
+  const mongoose = require("mongoose");
+  for (const name of ["User", "Pet", "Subscription", "Notification", "Message", "Playdate", "Article", "Chat"]) {
+    require(`../models/${name}`);
+  }
+
+  // Every top-level path any model declares, minus Mongo's own.
+  const schemaFields = new Set();
+  for (const model of Object.values(mongoose.models)) {
+    for (const path of Object.keys(model.schema.paths)) {
+      if (path.startsWith("_") || path === "__v") continue;
+      schemaFields.add(path.split(".")[0]);
+    }
+  }
+
+  const APP_SRC = path.resolve(__dirname, "../../PetPalsConnectApp/src");
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.[jt]sx?$/.test(entry.name) && !/\.test\./.test(entry.name)) files.push(full);
+    }
+  };
+  walk(APP_SRC);
+
+  const offenders = [];
+  for (const file of files) {
+    const source = fs
+      .readFileSync(file, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+
+    for (const match of source.matchAll(/\.([A-Z][a-zA-Z]*)\b/g)) {
+      const lower = match[1][0].toLowerCase() + match[1].slice(1);
+      if (schemaFields.has(lower)) {
+        offenders.push(
+          `${path.relative(APP_SRC, file)} reads .${match[1]}; the schema field is .${lower}`
+        );
+      }
+    }
+  }
+
+  assert.deepEqual(
+    [...new Set(offenders)],
+    [],
+    `screens reading PascalCase field names:\n  ${offenders.join("\n  ")}`
+  );
+});

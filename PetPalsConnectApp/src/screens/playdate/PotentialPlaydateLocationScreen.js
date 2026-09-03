@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
+  Alert,
   Text,
   Image,
   StyleSheet,
@@ -56,7 +57,15 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
   }, [placeId]);
 
   const handleOpenDirections = () => {
-    const destination = `${locationDetails.Latitude},${locationDetails.Longitude}`;
+    // The schema stores GeoJSON: `geoLocation.coordinates` is [lng, lat].
+    // There is no `Latitude`/`Longitude` on a location, so this produced
+    // "undefined,undefined" and opened Maps on nothing.
+    const [lng, lat] = locationDetails?.geoLocation?.coordinates ?? [];
+    if (lat == null || lng == null) {
+      Alert.alert("No directions", "This place has no coordinates on file.");
+      return;
+    }
+    const destination = `${lat},${lng}`;
     const googleMapsURL = `http://maps.google.com/maps?daddr=${destination}`;
     const appleMapsURL = `http://maps.apple.com/maps?daddr=${destination}`;
 
@@ -89,8 +98,8 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     <ScrollView style={styles.container}>
       {locationDetails ? (
         <>
-          <Text style={styles.title}>{locationDetails.Name}</Text>
-          <Image source={{ uri: locationDetails.Photo }} style={styles.image} />
+          <Text style={styles.title}>{locationDetails.address}</Text>
+          <Image source={{ uri: locationDetails.photo }} style={styles.image} />
           <Text style={styles.address}>{locationDetails.Address}</Text>
           <Text style={styles.description}>{locationDetails.Description}</Text>
           {/* Was a bare block statement in the function body, so it never

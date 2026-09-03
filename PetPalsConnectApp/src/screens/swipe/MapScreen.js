@@ -175,8 +175,8 @@ const MapScreen = ({ start, route, navigation }) => {
               <Marker
                 key={playdate._id}
                 coordinate={{
-                  latitude: playdate.Location.lat,
-                  longitude: playdate.Location.lng,
+                  latitude: playdate.location?.lat,
+                  longitude: playdate.location?.lng,
                 }}
                 title={playdate.name}
                 description={"Playdate Spot"}

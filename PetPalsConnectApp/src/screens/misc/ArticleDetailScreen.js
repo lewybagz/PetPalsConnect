@@ -38,11 +38,11 @@ const ArticleDetailScreen = ({ route }) => {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>{article.Title}</Text>
+      <Text style={styles.title}>{article.title}</Text>
       <Text style={styles.date}>
-        {new Date(article.PublishedDate).toLocaleDateString()}
+        {new Date(article.publishedDate).toLocaleDateString()}
       </Text>
-      <Text style={styles.content}>{article.Content}</Text>
+      <Text style={styles.content}>{article.content}</Text>
       {/* You can add more article details here if needed */}
     </ScrollView>
   );

@@ -20,18 +20,20 @@ const NotificationSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  // Contextual, not universal: "you have a new message" concerns no pet.
+  // Requiring it made every notification in the app fail validation.
   petName: {
     type: String,
-    required: true,
   },
   type: {
     type: String,
     required: true,
   },
+  // Optional so the server can raise a notification nobody caused - a playdate
+  // reminder from the scheduler has no creating user.
   creator: {
     type: Schema.Types.ObjectId,
     ref: "User",
-    required: true,
   },
   modifiedDate: {
     type: Date,

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 
-import { useSocketFriendRequest } from "../../hooks/useSocketFriendRequest";
+import { useSocketFriendRequest } from "../../hooks/useSocketEvents";
 import SwipeableUserPetCard from "../swipe/SwipeableUserPetCard";
 import api from "../../api/axios";
 import { staleWhileRevalidate, CacheKeys } from "../../services/localCache";

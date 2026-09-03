@@ -3,7 +3,7 @@ import { View, Text, FlatList, StyleSheet, RefreshControl } from "react-native";
 import NotificationItem from "../../components/NotificationItemComponent";
 import api from "../../api/axios";
 import { useSelector } from "react-redux";
-import { useSocketNotification } from "../../hooks/useSocketNotification";
+import { useSocketNotification } from "../../hooks/useSocketEvents";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const NotificationsScreen = ({ navigation }) => {
@@ -11,7 +11,11 @@ const NotificationsScreen = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
   const userId = useSelector((state) => state.user.userId);
 
-  useSocketNotification(setNotifications);
+  // The old hook prepended to the list itself and this passed the setter, so a
+  // live notification would have *replaced* the whole list with one object.
+  useSocketNotification((notification) =>
+    setNotifications((current) => [notification, ...current])
+  );
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -52,7 +56,7 @@ const NotificationsScreen = ({ navigation }) => {
           data={notifications}
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
-            <NotificationItem content={item.Content} navigation={navigation} />
+            <NotificationItem content={item.content} navigation={navigation} />
           )}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

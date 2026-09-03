@@ -5,10 +5,13 @@ const { createHash } = require("node:crypto");
 
 // Node's built-in crypto replaces the crypto-js dependency.
 const SHA256 = (value) => createHash("sha256").update(String(value)).digest("hex");
-const {
-  createNotification,
-  sendPushNotification,
-} = require("../services/NotificationService");
+const Pet = require("../models/Pet");
+const { createNotification } = require("../services/NotificationService");
+// `sendPushNotification` lives in NotificationController, not the service. The
+// service does not export it, so this was `undefined` and every push threw a
+// TypeError into the catch below - silently, since the catch only warns.
+const { sendPushNotification } = require("./NotificationController");
+const { emitToUser } = require("../services/realtime");
 
 const ChatController = {
   /** Every chat the caller participates in, most recently active first. */
@@ -45,20 +48,54 @@ const ChatController = {
     }
   },
 
+  /**
+   * The conversation between the caller and a pet's owner, created on demand.
+   *
+   * This took `userId` from the request body and created the chat with
+   * `participants: [userId]` - one participant, the caller. The owner was never
+   * added, so `sendMessage` (which finds "the participant who is not me") never
+   * resolved a recipient: no receiver on the message, no notification, no
+   * socket delivery. The other person could not see the chat at all, because
+   * `getUserChats` filters on participants.
+   *
+   * The body-supplied `userId` was also the identity bug this codebase has
+   * elsewhere - a client could open a chat as somebody else. The caller comes
+   * from the token now, and the second participant from the pet's owner.
+   *
+   * The chat key is derived from the two user ids *sorted*. `${userId}-${petId}`
+   * is asymmetric, so A messaging B's pet and B messaging A's pet produced two
+   * different threads for the same conversation.
+   */
   async findOrCreateChat(req, res) {
-    const { userId, petId } = req.body;
-    const chatId = SHA256(`${userId}-${petId}`);
+    const { petId } = req.body;
+
+    if (!petId) {
+      return res.status(400).json({ message: "petId is required" });
+    }
 
     try {
+      const pet = await Pet.findById(petId).select("owner name");
+      if (!pet) {
+        return res.status(404).json({ message: "Pet not found" });
+      }
+      if (!pet.owner) {
+        return res.status(409).json({ message: "That pet has no owner to message" });
+      }
+      if (String(pet.owner) === String(req.userId)) {
+        return res.status(400).json({ message: "You cannot start a chat with yourself" });
+      }
+
+      const pair = [String(req.userId), String(pet.owner)].sort().join("-");
+      const chatId = SHA256(pair);
+
       let chat = await Chat.findOne({ chatId }).populate("messages");
 
       if (!chat) {
-        chat = new Chat({
+        chat = await Chat.create({
           chatId,
-          participants: [userId],
+          participants: [req.userId, pet.owner],
           petId,
         });
-        await chat.save();
       }
 
       res.status(200).json(chat);
@@ -108,7 +145,7 @@ const ChatController = {
       await chat.save();
 
       // Push the message to anyone watching this conversation right now.
-      req.app.get("io")?.to(String(recipient?._id)).emit("message", message);
+      emitToUser(recipient?._id, "message", message);
 
       if (recipient) {
         const senderName = req.user?.username ?? "Someone";

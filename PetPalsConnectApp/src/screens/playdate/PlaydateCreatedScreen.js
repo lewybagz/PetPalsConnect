@@ -42,18 +42,18 @@ const PlaydateCreatedScreen = ({ route, navigation }) => {
       <Text style={styles.header}>Playdate Scheduled Successfully!</Text>
       <View style={styles.detailsContainer}>
         <Text style={styles.label}>Date & Time:</Text>
-        <Text style={styles.detail}>{formatDate(playdate.Date)}</Text>
+        <Text style={styles.detail}>{formatDate(playdate.date)}</Text>
 
         <Text style={styles.label}>Location:</Text>
         <PlayDateLocationCard
-          locationData={playdate.Location}
+          locationData={playdate.location}
           navigation={navigation}
         />
 
-        {playdate.Notes && (
+        {playdate.notes && (
           <>
             <Text style={styles.label}>Notes:</Text>
-            <Text style={styles.detail}>{playdate.Notes}</Text>
+            <Text style={styles.detail}>{playdate.notes}</Text>
           </>
         )}
       </View>
