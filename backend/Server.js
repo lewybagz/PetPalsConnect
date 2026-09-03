@@ -1,106 +1,190 @@
-const express = require("express");
 const http = require("http");
-const mongoose = require("mongoose");
-const bodyParser = require("body-parser");
-const { ServerApiVersion } = require("mongoose");
+const express = require("express");
 const cors = require("cors");
-const socketIo = require("socket.io");
+const helmet = require("helmet");
+const morgan = require("morgan");
+const rateLimit = require("express-rate-limit");
+const { Server: SocketIOServer } = require("socket.io");
 const cron = require("node-cron");
+
+const env = require("./config/env");
+const db = require("./config/db");
+require("./config/firebase"); // Initialise Firebase Admin before any route needs it.
+const scheduler = require("./services/scheduler");
 const authenticate = require("./middleware/authenticate");
 const { updateLocations } = require("./controllers/LocationController");
 
-require("dotenv").config();
-
 const app = express();
-const server = http.createServer(app); // Create HTTP server by wrapping the Express app
-const io = socketIo(server);
-// Connect to MongoDB with Mongoose
-// Connect to MongoDB with Mongoose
-const uri = process.env.MONGODB_URI;
-mongoose
-  .connect(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverApi: ServerApiVersion.v1,
+const server = http.createServer(app);
+
+// ---------------------------------------------------------------------------
+// Core middleware
+// ---------------------------------------------------------------------------
+app.set("trust proxy", 1); // Correct client IPs behind a hosting proxy (Fly/Render/Railway).
+app.use(helmet());
+app.use(
+  cors({
+    // No CORS_ORIGINS configured (development) => reflect any origin.
+    origin: env.corsOrigins.length > 0 ? env.corsOrigins : true,
+    credentials: true,
   })
-  .then(() => {
-    console.log("Successfully connected to MongoDB using Mongoose!");
-  })
-  .catch((err) => {
-    console.error("Connection error", err.message);
-  });
-
-io.on("connection", (socket) => {
-  console.log("A user connected");
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected");
-  });
-});
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
-
-// Protected Routes
-app.use("/api/articles", authenticate, require("./routes/articles"));
-app.use("/api/pets", authenticate, require("./routes/pets"));
-app.use(
-  "/api/userpreferences",
-  authenticate,
-  require("./routes/userPreferences")
 );
-app.use("/api/events", authenticate, require("./routes/events"));
-app.use("/api/favorites", authenticate, require("./routes/favorites"));
-app.use("/api/groupchats", authenticate, require("./routes/groupChats"));
-app.use("/api/messages", authenticate, require("./routes/messages"));
-app.use("/api/petmatches", authenticate, require("./routes/petMatches"));
-app.use("/api/playdates", authenticate, require("./routes/playdates"));
-app.use("/api/reviews", authenticate, require("./routes/reviews"));
-app.use("/api/notifications", authenticate, require("./routes/notifications"));
-app.use("/api/reports", authenticate, require("./routes/reports"));
-app.use("/api/services", authenticate, require("./routes/services"));
-app.use("/api/subscriptions", authenticate, require("./routes/subscriptions"));
-app.use("/api/friends", authenticate, require("./routes/friends"));
-app.use("/api/locations", authenticate, require("./routes/locations"));
-app.use("/api/activitylogs", authenticate, require("./routes/activityLogs"));
-app.use("/api/blocklists", authenticate, require("./routes/blockLists"));
-app.use(
-  "/api/supportmessages",
-  authenticate,
-  require("./routes/supportMessages")
-);
-app.use(
-  "/api/friendrequests",
-  authenticate,
-  require("./routes/friendRequests")
-);
-app.use("/api/playdates", authenticate, require("./routes/playdates"));
-app.use("/api/users", authenticate, require("./routes/users"));
+app.use(morgan(env.isProduction ? "combined" : "dev"));
+
+// Stripe signature verification needs the raw body, so this route is mounted
+// BEFORE the JSON parser and is deliberately not behind `authenticate`
+// (Stripe calls it directly and authenticates via webhook signature).
 app.use(
   "/api/stripe-webhooks",
-  authenticate,
+  express.raw({ type: "application/json" }),
   require("./routes/stripeWebhooks")
 );
+
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true }));
+
 app.use(
-  "/api/subscription-history",
-  authenticate,
-  require("./routes/subscriptionHistory")
+  "/api",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 1000,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+  })
 );
-app.use("/api/payments", authenticate, require("./routes/payment"));
-app.use("/api/media", authenticate, require("./routes/media"));
 
-app.use((err, req, res) => {
-  console.error(err.stack);
-  res.status(500).send("Something broke!");
+// ---------------------------------------------------------------------------
+// Health check - unauthenticated, used by hosting platforms and smoke tests.
+// ---------------------------------------------------------------------------
+app.get("/health", (req, res) => {
+  const states = ["disconnected", "connected", "connecting", "disconnecting"];
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+    database: states[db.mongoose.connection.readyState] ?? "unknown",
+    firebase: require("./config/firebase").isEnabled() ? "configured" : "not configured",
+  });
 });
 
-cron.schedule("0 0 1 * *", async () => {
-  console.log("Running a job at the start of the month at midnight");
-  await updateLocations();
+// ---------------------------------------------------------------------------
+// API routes (all authenticated)
+// ---------------------------------------------------------------------------
+const routes = {
+  activitylogs: "activityLogs",
+  articles: "articles",
+  blocklists: "blockLists",
+  chats: "chats",
+  events: "events",
+  favorites: "favorites",
+  friendrequests: "friendRequests",
+  friends: "friends",
+  groupchats: "groupChats",
+  locations: "locations",
+  media: "medias",
+  messages: "messages",
+  notifications: "notifications",
+  payments: "payments",
+  petmatches: "petMatches",
+  pets: "pets",
+  playdates: "playdates",
+  potentialplaydatelocations: "potentialPlaydateLocation",
+  reports: "reports",
+  reviews: "reviews",
+  services: "services",
+  "subscription-history": "subscriptionHistory",
+  subscriptions: "subscriptions",
+  supportmessages: "supportMessages",
+  userpreferences: "userPreferences",
+  users: "users",
+};
+
+for (const [mountPath, moduleName] of Object.entries(routes)) {
+  app.use(`/api/${mountPath}`, authenticate, require(`./routes/${moduleName}`));
+}
+
+// ---------------------------------------------------------------------------
+// 404 + error handling. The error handler MUST take four arguments or Express
+// treats it as ordinary middleware and never invokes it - the previous
+// three-argument version silently never ran.
+// ---------------------------------------------------------------------------
+app.use((req, res) => {
+  res.status(404).json({ message: `Not found: ${req.method} ${req.originalUrl}` });
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error("[error]", err.stack || err.message);
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    message: env.isProduction && status === 500 ? "Internal server error" : err.message,
+  });
 });
+
+// ---------------------------------------------------------------------------
+// Realtime
+// ---------------------------------------------------------------------------
+const io = new SocketIOServer(server, {
+  cors: { origin: env.corsOrigins.length > 0 ? env.corsOrigins : true },
+});
+
+io.on("connection", (socket) => {
+  console.log(`[socket] connected: ${socket.id}`);
+
+  // Clients join a room named after their user id so the server can target them.
+  socket.on("join", (userId) => {
+    if (userId) socket.join(String(userId));
+  });
+
+  socket.on("disconnect", () => console.log(`[socket] disconnected: ${socket.id}`));
+});
+
+app.set("io", io);
+
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+const start = async () => {
+  // Start listening immediately so platform health checks succeed even while the
+  // database is still connecting or is temporarily unreachable. /health reports
+  // the real database state, so an outage is visible without being fatal.
+  server.listen(env.port, () => {
+    console.log(`[server] Listening on port ${env.port} (${env.nodeEnv})`);
+  });
+
+  db.connect().catch((error) => {
+    console.error("[db] Initial connection failed:", error.message);
+  });
+
+  scheduler.start();
+
+  // Refresh cached place data at 00:00 on the 1st of each month.
+  cron.schedule("0 0 1 * *", async () => {
+    console.log("[cron] Refreshing locations");
+    try {
+      await updateLocations();
+    } catch (error) {
+      console.error("[cron] updateLocations failed:", error.message);
+    }
+  });
+};
+
+const shutdown = async (signal) => {
+  console.log(`\n[server] ${signal} received, shutting down`);
+  scheduler.stop();
+  io.close();
+  server.close(async () => {
+    await db.disconnect();
+    process.exit(0);
+  });
+  // Don't hang forever if a connection refuses to close.
+  setTimeout(() => process.exit(1), 10000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+if (require.main === module) {
+  start();
+}
+
+module.exports = { app, server, start };

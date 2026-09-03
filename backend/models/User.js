@@ -2,6 +2,14 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 // Create Schema for User
 const UserSchema = new Schema({
+  // Links this profile to the Firebase Auth account. Firebase is the single
+  // source of truth for credentials; this server never stores passwords.
+  firebaseUid: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+  },
   fcmToken: {
     type: String,
     required: false, // This is not a required field because not all users may have an FCM token (e.g., web users)
@@ -30,11 +38,13 @@ const UserSchema = new Schema({
     type: Boolean,
     default: true,
   },
+  // `required: false` was previously listed here as if it were a field, which
+  // Mongoose 9 rejects as an invalid schema type. Subdocument arrays are
+  // optional by default, so it is simply removed.
   securityQuestions: [
     {
       question: String,
       answer: String,
-      required: false,
     },
   ],
 
@@ -69,10 +79,8 @@ const UserSchema = new Schema({
     required: true,
     unique: true,
   },
-  password: {
-    type: String,
-    required: true,
-  },
+  // NOTE: no password field by design. Firebase Auth owns credentials, so this
+  // database never sees or stores one. Do not reintroduce it.
   modifiedDate: {
     type: Date,
     default: Date.now,

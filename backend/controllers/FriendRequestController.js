@@ -2,7 +2,7 @@ const FriendRequest = require("../models/FriendRequest");
 const User = require("../models/User");
 const Friend = require("../models/Friend");
 const { sendPushNotification } = require("./NotificationController");
-import { createNotification } from "../services/NotificationService";
+const { createNotification } = require("../services/NotificationService");
 
 async function updateFriendStatus(sender, receiver) {
   try {

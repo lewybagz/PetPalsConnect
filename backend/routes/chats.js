@@ -1,5 +1,5 @@
 const express = require("express");
-const ChatController = require("../controllers/ChatController");
+const ChatController = require("../controllers/chatController");
 
 const router = express.Router();
 
@@ -7,7 +7,7 @@ const router = express.Router();
 router.post("/findOrCreate", ChatController.findOrCreateChat);
 
 // Endpoint to add a message to a chat
-router.post("/addMessage", ChatController.addMessage);
+router.post("/addMessage", ChatController.sendMessage);
 
 router.post("/:chatId/archive", ChatController.archiveChat);
 

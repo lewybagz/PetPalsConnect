@@ -1,7 +1,7 @@
 // stripeWebhooks.js
 const express = require("express");
 const router = express.Router();
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const { getStripe } = require("../config/stripe");
 const endpointSecret = process.env.STRIPE_ENDPOINT_SECRET;
 const Subscription = require("../models/Subscription"); // Adjust path as needed
 const User = require("../models/User"); // Adjust path as needed
@@ -14,7 +14,7 @@ router.post(
     let event;
 
     try {
-      event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+      event = getStripe().webhooks.constructEvent(request.body, sig, endpointSecret);
     } catch (err) {
       return response.status(400).send(`Webhook Error: ${err.message}`);
     }

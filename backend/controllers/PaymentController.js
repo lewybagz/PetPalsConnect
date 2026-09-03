@@ -1,6 +1,6 @@
 // In your payment methods controller
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const { getStripe } = require("../config/stripe");
 const User = require("../models/User"); // Adjust the path as necessary
 
 const PaymentController = {
@@ -15,7 +15,7 @@ const PaymentController = {
           .json({ message: "User or Stripe customer not found" });
       }
 
-      const paymentMethods = await stripe.paymentMethods.list({
+      const paymentMethods = await getStripe().paymentMethods.list({
         customer: user.stripeCustomerId,
         type: "card",
       });
@@ -30,7 +30,7 @@ const PaymentController = {
   async deletePaymentMethod(req, res) {
     try {
       const { paymentMethodId } = req.params;
-      await stripe.paymentMethods.detach(paymentMethodId);
+      await getStripe().paymentMethods.detach(paymentMethodId);
 
       res.json({ message: "Payment method deleted successfully" });
     } catch (error) {
@@ -49,7 +49,7 @@ const PaymentController = {
       let stripeCustomerId = user.stripeCustomerId;
 
       if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
+        const customer = await getStripe().customers.create({
           /* ... */
         });
         stripeCustomerId = customer.id;
@@ -59,12 +59,12 @@ const PaymentController = {
       }
 
       // Attach the payment method to the Stripe customer
-      await stripe.paymentMethods.attach(paymentMethodId, {
+      await getStripe().paymentMethods.attach(paymentMethodId, {
         customer: stripeCustomerId,
       });
 
       // Set it as the default payment method
-      await stripe.customers.update(stripeCustomerId, {
+      await getStripe().customers.update(stripeCustomerId, {
         invoice_settings: { default_payment_method: paymentMethodId },
       });
 

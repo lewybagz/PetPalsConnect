@@ -1,12 +1,15 @@
 const GroupChat = require("../models/GroupChat");
 const Media = require("../models/Media");
 const Message = require("../models/Message");
-import { sendPushNotification } from "./NotificationController";
-import {
+const { sendPushNotification } = require("./NotificationController");
+const {
   createNotification,
   fetchGroupParticipants,
-} from "../services/NotificationService";
-const SHA256 = require("crypto-js/sha256");
+} = require("../services/NotificationService");
+const { createHash } = require("node:crypto");
+
+// Node's built-in crypto replaces the crypto-js dependency.
+const SHA256 = (value) => createHash("sha256").update(String(value)).digest("hex");
 
 const GroupChatController = {
   async getAllGroupChats(req, res) {
@@ -270,7 +273,7 @@ const GroupChatController = {
 
     let baseId = Participants.map((id) => id.substring(0, 3)).join("");
     baseId = baseId.length > 50 ? baseId.substring(0, 50) : baseId;
-    let chatId = SHA256(baseId).toString();
+    let chatId = SHA256(baseId);
 
     try {
       let chat = await chat.findOne({ chatId });
@@ -280,7 +283,7 @@ const GroupChatController = {
         !this.isEqualParticipants(chat.participants, Participants)
       ) {
         baseId = this.scrambleId(baseId);
-        chatId = SHA256(baseId).toString();
+        chatId = SHA256(baseId);
         chat = await chat.findOne({ chatId });
       }
 

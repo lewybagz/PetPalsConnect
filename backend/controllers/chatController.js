@@ -1,6 +1,9 @@
 const Chat = require("../models/Chat");
 const Media = require("../models/Media");
-const SHA256 = require("crypto-js/sha256");
+const { createHash } = require("node:crypto");
+
+// Node's built-in crypto replaces the crypto-js dependency.
+const SHA256 = (value) => createHash("sha256").update(String(value)).digest("hex");
 const {
   createNotification,
   sendPushNotification,
@@ -9,7 +12,7 @@ const {
 const ChatController = {
   async findOrCreateChat(req, res) {
     const { userId, petId } = req.body;
-    const chatId = SHA256(`${userId}-${petId}`).toString();
+    const chatId = SHA256(`${userId}-${petId}`);
 
     try {
       let chat = await Chat.findOne({ chatId }).populate("messages");

@@ -1,35 +1,67 @@
 const Notification = require("../models/Notification");
-const Bull = require("bull");
-
-const {
-  findUserById,
-} = require("../../PetPalsConnectApp/services/UserService");
-const admin = require("firebase-admin");
 const User = require("../models/User");
-const serviceAccount = require("../config/serviceAccountKey.json");
 const Playdate = require("../models/Playdate");
+const firebase = require("../config/firebase");
+const scheduler = require("../services/scheduler");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-export const findTokenByUserId = async (userId) => {
-  try {
-    const user = await User.findOne({ _id: userId });
-    return user ? user.fcmToken : null;
-  } catch (error) {
-    console.error("Error finding user:", error);
+const findTokenByUserId = async (userId) => {
+  const user = await User.findById(userId).select("fcmToken");
+  return user ? user.fcmToken : null;
+};
+
+const findPlaydateById = (playdateId) => Playdate.findById(playdateId);
+
+/** Send a push to a single user. No-ops safely when the user has no token. */
+const sendPushNotification = async (userId, notificationData) => {
+  const token = await findTokenByUserId(userId);
+  if (!token) {
+    console.warn(`[notifications] No FCM token for user ${userId}; skipping push`);
     return null;
+  }
+
+  return firebase.sendMessage({
+    token,
+    notification: {
+      title: notificationData.title,
+      body: notificationData.body,
+    },
+    // FCM requires every data value to be a string.
+    data: Object.fromEntries(
+      Object.entries(notificationData.data || {}).map(([k, v]) => [k, String(v)])
+    ),
+  });
+};
+
+const sendPlaydateNotification = async (req, res, next) => {
+  try {
+    const { to, title, body, data } = req.body;
+    await sendPushNotification(to, { title, body, data });
+    res.json({ message: "Notification sent successfully" });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const findPlaydateById = async (playdateId) => {
-  try {
-    const playdate = await Playdate.findById(playdateId);
-    return playdate;
-  } catch (error) {
-    console.error("Error finding playdate:", error);
-    throw error;
-  }
+const REVIEW_REMINDER_JOB = "playdate:review-reminder";
+
+// Registered once at module load; the scheduler drains due jobs every minute.
+scheduler.registerHandler(REVIEW_REMINDER_JOB, async ({ userId, playdateId }) => {
+  await sendPushNotification(userId, {
+    title: "Playdate Review",
+    body: "How was your playdate? Leave a review!",
+    data: { type: "reviewReminder", screen: "PostPlaydateReview", playdateId },
+  });
+});
+
+/** Queue a "leave a review" nudge for one hour after the playdate starts. */
+const pushPlaydateReviewReminderNotification = async (playdateId, userId) => {
+  const playdate = await findPlaydateById(playdateId);
+  if (!playdate) throw new Error("Playdate not found");
+
+  const runAt = new Date(new Date(playdate.startTime).getTime() + 60 * 60 * 1000);
+  if (runAt.getTime() <= Date.now()) return null;
+
+  return scheduler.schedule(REVIEW_REMINDER_JOB, { userId, playdateId }, runAt);
 };
 
 const NotificationController = {
@@ -78,7 +110,7 @@ const NotificationController = {
   async saveDeviceToken(req, res) {
     try {
       const { fcmToken } = req.body;
-      const userId = req.user._id;
+      const userId = req.userId;
 
       const updatedUser = await User.findByIdAndUpdate(
         userId,
@@ -114,8 +146,9 @@ const NotificationController = {
       const token = await findTokenByUserId(userId);
       if (!token) throw new Error("FCM token not found for user");
 
-      const requester = await findUserById(requesterId);
-      const requesterName = requester.name;
+      const requester = await User.findById(requesterId).populate("pets", "name");
+      if (!requester) throw new Error("Requester not found");
+      const requesterName = requester.username;
       const firstPetName = requester.pets[0]?.name || "No pet name";
 
       const message = {
@@ -133,7 +166,7 @@ const NotificationController = {
         },
       };
 
-      await admin.messaging().send(message);
+      await firebase.sendMessage(message);
       res.json({ message: "Friend request notification sent successfully" });
     } catch (error) {
       console.log("Error sending friend request notification:", error);
@@ -143,7 +176,7 @@ const NotificationController = {
 
   async fetchRecentNotifications(req, res) {
     try {
-      const userId = req.user.id; // Adjust based on how you get the current user's ID
+      const userId = req.userId;
       const threshold = new Date(new Date().getTime() - 73 * 60 * 60 * 1000);
 
       const notifications = await Notification.find({
@@ -178,84 +211,10 @@ const NotificationController = {
   },
 };
 
-export const sendPushNotification = async (userId, notificationData) => {
-  try {
-    const token = await findTokenByUserId(userId);
-    if (!token) throw new Error("FCM token not found for user");
-
-    const message = {
-      token: token,
-      notification: {
-        title: notificationData.title,
-        body: notificationData.body,
-      },
-      data: notificationData.data,
-    };
-
-    await admin.messaging().send(message);
-    console.log("Successfully sent message");
-  } catch (error) {
-    console.log("Error sending message:", error);
-    throw error;
-  }
-};
-
-export const sendPlaydateNotification = async (req, res) => {
-  try {
-    const { to, title, body, data } = req.body;
-    await sendPushNotification(to, { title, body, data });
-    res.json({ message: "Notification sent successfully" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-const notificationQueue = new Bull("notificationQueue");
-
-export const pushPlaydateReviewReminderNotification = async (
-  playdateId,
-  userId
-) => {
-  try {
-    const playdate = await findPlaydateById(playdateId);
-    if (!playdate) throw new Error("Playdate not found");
-
-    const delay =
-      new Date(playdate.startTime).getTime() + 60 * 60 * 1000 - Date.now();
-
-    if (delay > 0) {
-      notificationQueue.add(
-        {
-          userId: userId,
-          playdateId: playdateId,
-        },
-        { delay: delay }
-      );
-    }
-  } catch (error) {
-    console.error("Error scheduling playdate review reminder:", error);
-    throw error;
-  }
-};
-
-exports.saveDeviceToken = async (req, res) => {
-  try {
-    const { fcmToken } = req.body;
-    const userId = req.user._id;
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { fcmToken },
-      { new: true }
-    );
-
-    res.status(200).json({
-      message: "Device token saved successfully",
-      user: updatedUser,
-    });
-  } catch (error) {
-    console.error("Error saving device token:", error);
-    res.status(500).json({ message: "Failed to save device token", error });
-  }
-};
 module.exports = NotificationController;
+module.exports.sendPushNotification = sendPushNotification;
+module.exports.sendPlaydateNotification = sendPlaydateNotification;
+module.exports.pushPlaydateReviewReminderNotification =
+  pushPlaydateReviewReminderNotification;
+module.exports.findTokenByUserId = findTokenByUserId;
+module.exports.findPlaydateById = findPlaydateById;

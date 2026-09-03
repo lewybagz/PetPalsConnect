@@ -1,5 +1,24 @@
 const User = require("../models/User");
-const bcrypt = require("bcrypt");
+const { scrypt, randomBytes, timingSafeEqual } = require("node:crypto");
+const { promisify } = require("node:util");
+
+const scryptAsync = promisify(scrypt);
+
+// Replaces bcrypt with Node's built-in scrypt - one less native dependency to
+// compile, and no separate package to keep patched.
+const hashSecret = async (value) => {
+  const salt = randomBytes(16).toString("hex");
+  const derived = await scryptAsync(value, salt, 64);
+  return `${salt}:${derived.toString("hex")}`;
+};
+
+const verifySecret = async (value, stored) => {
+  const [salt, hash] = String(stored).split(":");
+  if (!salt || !hash) return false;
+  const derived = await scryptAsync(value, salt, 64);
+  const expected = Buffer.from(hash, "hex");
+  return expected.length === derived.length && timingSafeEqual(expected, derived);
+};
 
 const UserController = {
   async getAllUsers(req, res) {
@@ -27,7 +46,7 @@ const UserController = {
     }
   },
 
-  async getUserpets(req, res) {
+  async getUserPets(req, res) {
     const userId = req.userId;
     try {
       const user = await User.findById(userId).populate("pets");
@@ -164,32 +183,18 @@ const UserController = {
     }
   },
 
+  /**
+   * Password changes are handled entirely by Firebase Auth on the client via
+   * `updatePassword()`. This server never stores passwords, so there is nothing
+   * for it to change. Kept as an explicit response so older clients get a clear
+   * message instead of a confusing 404.
+   */
   async changeUserPassword(req, res) {
-    const { userId, currentPassword, newPassword } = req.body;
-
-    try {
-      const user = await User.findById(userId);
-
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Verify current password
-      const isMatch = await bcrypt.compare(currentPassword, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: "Incorrect current password" });
-      }
-
-      // Hash new password and update
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      user.password = hashedPassword;
-      await user.save();
-
-      res.json({ message: "Password changed successfully" });
-    } catch (error) {
-      console.error("Error changing password:", error);
-      res.status(500).json({ message: "Failed to change password" });
-    }
+    res.status(410).json({
+      message:
+        "Password changes are handled by Firebase Auth on the client. " +
+        "Call updatePassword() from the app instead.",
+    });
   },
 
   async updateSecurityQuestion(req, res) {
@@ -203,7 +208,7 @@ const UserController = {
       }
 
       // Hash the answer
-      const hashedAnswer = await bcrypt.hash(answer, 10);
+      const hashedAnswer = await hashSecret(answer);
 
       // Update or add security question
       const securityQuestion = { question, answer: hashedAnswer };

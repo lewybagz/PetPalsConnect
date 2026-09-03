@@ -1,35 +1,21 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Most ignore rules live in the repository-root .gitignore.
+# This file only covers app-local build output.
 
-# dependencies
 node_modules/
-
-# Expo
 .expo/
 dist/
 web-build/
-
-# Native
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Metro
+expo-env.d.ts
 .metro-health-check*
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Generated native projects (Continuous Native Generation)
+/ios/
+/android/
 
-# macOS
-.DS_Store
-*.pem
+# Firebase client config files - provide via EAS secrets, not source control.
+google-services.json
+GoogleService-Info.plist
 
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
+.env
+.env.*
+!.env.example

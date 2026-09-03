@@ -1,9 +1,9 @@
 const Playdate = require("../models/Playdate");
-import {
+const {
   sendPlaydateNotification,
   pushPlaydateReviewReminderNotification,
-} from "./NotificationController";
-import { createNotification } from "../services/NotificationService";
+} = require("./NotificationController");
+const { createNotification } = require("../services/NotificationService");
 const Pet = require("../models/Pet");
 const User = require("../models/User");
 const { sendPushNotification } = require("./NotificationController");

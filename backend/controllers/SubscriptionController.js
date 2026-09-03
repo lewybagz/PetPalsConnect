@@ -1,5 +1,5 @@
 const Subscription = require("../models/Subscription");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const { getStripe } = require("../config/stripe");
 
 const SubscriptionController = {
   async getAllSubscriptions(req, res) {
@@ -41,7 +41,7 @@ const SubscriptionController = {
 
   async createStripeCheckoutSession(planId, planDetails) {
     // Create a checkout session with Stripe
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {
@@ -112,7 +112,7 @@ const SubscriptionController = {
       }
 
       // Update the subscription's plan on Stripe
-      const updatedSubscription = await stripe.subscriptions.update(
+      const updatedSubscription = await getStripe().subscriptions.update(
         subscription.stripeSubscriptionId,
         { items: [{ plan: newPlanId }] }
       );
@@ -134,7 +134,7 @@ const SubscriptionController = {
         return res.status(404).json({ message: "Subscription not found" });
       }
 
-      const canceledSubscription = await stripe.subscriptions.del(
+      const canceledSubscription = await getStripe().subscriptions.del(
         subscription.stripeSubscriptionId
       );
 

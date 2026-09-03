@@ -1,28 +1,6 @@
-const mongoose = require("mongoose");
-const { ContentSchema } = require("./Content"); // Ensure Content.js exports ContentSchema
-
-// Extend Content Schema for Article
-const ArticleSchema = new mongoose.Schema({
-  content: {
-    type: String,
-    required: true,
-  },
-  publishedDate: {
-    type: Date,
-    default: Date.now,
-  },
-  tags: [
-    {
-      type: String,
-    },
-  ],
-  title: {
-    type: String,
-    required: true,
-  },
-});
-
-// Create Article model as a discriminator of Content
-const Article = ContentSchema.discriminator("Article", ArticleSchema);
+// Article is a discriminator of the Content base model and is defined, once, in
+// Content.js. See the note in Pet.js - this file had the same broken
+// `ContentSchema.discriminator(...)` call and is now a re-export.
+const { Article } = require("./Content");
 
 module.exports = Article;

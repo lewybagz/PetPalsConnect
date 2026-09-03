@@ -1,8 +1,8 @@
 const express = require("express");
-const app = express();
-const mediaRoutes = require("./routes/mediaRoutes"); // Adjust the path to your mediaRoutes
+const MediaController = require("../controllers/MediaController");
 
-// Use mediaRoutes with '/api/media' prefix
-app.use("/", mediaRoutes);
+const router = express.Router();
 
-app.listen(/* ... */);
+router.get("/:id", MediaController.getMediaDetails);
+
+module.exports = router;
