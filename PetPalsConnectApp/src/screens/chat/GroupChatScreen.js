@@ -32,7 +32,11 @@ const GroupChatScreen = ({ route, navigation }) => {
   const [replyTo, setReplyTo] = useState(null);
   const [isSearchEnabled, setSearchEnabled] = useState(false);
   const messageInputRef = useRef(null);
-  const [groupInfo, setGroupInfo] = useState(route.params.group);
+  // Both callers navigate here with `{ chatId }`; this read `route.params.group`
+  // and then `route.params.group._id`, so opening a group chat threw on
+  // undefined. Accept either, and look the group up when given an id.
+  const groupId = route?.params?.chatId ?? route?.params?.group?._id;
+  const [groupInfo, setGroupInfo] = useState(route?.params?.group ?? null);
   const flatListRef = useRef(null);
   const userId = useSelector((state) => state.user.userId);
   const tailwind = useTailwind();
@@ -52,7 +56,7 @@ const GroupChatScreen = ({ route, navigation }) => {
   // Mongo is the store now and the socket hook delivers live updates.
   const loadMessages = async () => {
     try {
-      const { data } = await api.get(`/api/groupchats/${groupInfo.id}/messages`);
+      const { data } = await api.get(`/api/groupchats/${groupId}/messages`);
       setMessages(data);
     } catch (error) {
       console.warn("[groupchat] Could not load messages:", error.message);
@@ -75,20 +79,24 @@ const GroupChatScreen = ({ route, navigation }) => {
   };
   const fetchGroupInfo = async () => {
     try {
-      const { data } = await api.get(`/api/groupchats/${route.params.group._id}`);
+      const { data } = await api.get(`/api/groupchats/${groupId}`);
       setGroupInfo(data);
     } catch (error) {
       console.error("Error fetching group info:", error);
     }
   };
 
+  // Everything below keyed off `groupInfo.id`. Mongo documents serialise with
+  // `_id`, not `id` - Mongoose's default toJSON does not include the virtual -
+  // so that was `undefined` on every read, the effect never ran, and the screen
+  // stayed empty. The id from the route is what the callers actually have.
   useEffect(() => {
-    if (groupInfo.id) {
-      fetchGroupInfo();
-      fetchPetsData(groupInfo.id);
-      loadMessages();
-    }
-  }, [groupInfo.id]);
+    if (!groupId) return;
+    fetchGroupInfo();
+    fetchPetsData(groupId);
+    loadMessages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
 
 
 
@@ -115,7 +123,7 @@ const GroupChatScreen = ({ route, navigation }) => {
   const handleDelete = async (message) => {
     try {
       await api.delete(
-        `/api/groupchats/${groupInfo.id}/messages/${message._id}`
+        `/api/groupchats/${groupId}/messages/${message._id}`
       );
       setMessages((prev) => prev.filter((m) => m._id !== message._id));
       Alert.alert("Message Deleted");
@@ -128,7 +136,7 @@ const GroupChatScreen = ({ route, navigation }) => {
   const handleReact = async (message, reaction) => {
     try {
       await api.post("/api/groupchats/react", {
-        groupId: groupInfo.id,
+        groupId,
         messageId: message._id,
         reaction,
       });
@@ -155,7 +163,7 @@ const GroupChatScreen = ({ route, navigation }) => {
       // One call now persists the message and notifies the other members. It
       // previously wrote to Firestore first, then told the API about the id.
       const { data } = await api.post("/api/groupchats/send", {
-        groupId: groupInfo.id,
+        groupId,
         text: newMessage,
       });
 
@@ -235,17 +243,17 @@ const GroupChatScreen = ({ route, navigation }) => {
           <Icon name="refresh" size={20} color="#007bff" />
         </TouchableOpacity>
         <Image
-          source={{ uri: groupInfo.groupImage }}
+          source={{ uri: groupInfo?.groupImage }}
           style={styles.groupImage}
         />
-        <Text style={tailwind("text-lg font-bold")}>{groupInfo.groupName}</Text>
+        <Text style={tailwind("text-lg font-bold")}>{groupInfo?.groupName}</Text>
         <Text style={tailwind("text-sm")}>
-          {groupInfo.participantCount} Members
+          {groupInfo?.participants?.length ?? 0} Members
         </Text>
 
         <TouchableOpacity
           onPress={() =>
-            navigation.navigate("GroupInfo", { groupId: groupInfo.id })
+            navigation.navigate("ChatDetails", { chatId: groupId, isGroupChat: true })
           }
         >
           <Icon name="info-circle" size={20} color="#007bff" />
@@ -259,7 +267,7 @@ const GroupChatScreen = ({ route, navigation }) => {
           isVisible={isModalVisible}
           onClose={toggleModal}
           navigation={navigation}
-          groupId={groupInfo.id}
+          groupId={groupId}
         />
       </View>
 

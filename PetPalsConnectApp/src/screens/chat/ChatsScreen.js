@@ -36,7 +36,8 @@ const ChatsScreen = ({ navigation }) => {
   };
 
   const handleChatPress = (chat) => {
-    navigation.navigate("ChatDetail", { chatId: chat.id });
+    // The route is "ChatDetails", and Mongo documents serialise `_id`.
+    navigation.navigate("ChatDetails", { chatId: chat._id });
   };
 
   if (loading) {

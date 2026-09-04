@@ -17,7 +17,10 @@ import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 const PotentialPlaydateLocationScreen = ({ route }) => {
-  const { placeId } = route.params; // Assumed that placeId is passed in navigation
+  // Every caller sends `locationId`, and both endpoints below look the record
+  // up by its Mongo `_id` - `placeId` on a Location is the Google place id, a
+  // different value entirely. `placeId` stays accepted for older call sites.
+  const locationId = route?.params?.locationId ?? route?.params?.placeId;
   const [locationDetails, setLocationDetails] = useState(null);
   const [reviews, setReviews] = useState([]);
 
@@ -25,7 +28,7 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     const fetchReviews = async () => {
       try {
         const token = await getStoredToken(); // Retrieve the token
-        const response = await api.get(`/api/reviews/location/${placeId}`, {
+        const response = await api.get(`/api/reviews/location/${locationId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setReviews(response.data);
@@ -35,14 +38,14 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     };
 
     fetchReviews();
-  }, [placeId]);
+  }, [locationId]);
 
   useEffect(() => {
     const fetchLocationDetails = async () => {
       try {
         const token = await getStoredToken(); // Retrieve the token
         const response = await api.get(
-          `/api/playdates/locations/${placeId}`,
+          `/api/playdates/locations/${locationId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -54,7 +57,7 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     };
 
     fetchLocationDetails();
-  }, [placeId]);
+  }, [locationId]);
 
   const handleOpenDirections = () => {
     // The schema stores GeoJSON: `geoLocation.coordinates` is [lng, lat].

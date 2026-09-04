@@ -22,7 +22,7 @@ const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
         "Playdate Cancelled",
         "Your playdate has been successfully cancelled."
       );
-      navigation.navigate("ScheduledPlaydates");
+      navigation.navigate("Playdates");
     } catch (error) {
       console.error("Error cancelling playdate:", error);
       Alert.alert("Error", "There was an error cancelling the playdate.");

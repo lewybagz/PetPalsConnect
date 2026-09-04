@@ -48,7 +48,7 @@ const PlaydateList = ({ type, navigation }) => {
 
   const renderPlaydate = ({ item }) => {
     const handlePress = () => {
-      navigation.navigate("PlaydateDetail", { playdateId: item._id });
+      navigation.navigate("PlaydateDetails", { playdateId: item._id });
     };
 
     return (

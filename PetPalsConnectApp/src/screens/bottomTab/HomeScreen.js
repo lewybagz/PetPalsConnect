@@ -15,7 +15,6 @@ import CustomTooltip from "../../components/CustomTooltip";
 import ArticleCard from "../../components/ArticleCardComponent";
 import AnimatedButton from "../../components/AnimatedButton";
 import MatchingAlgorithmPopup from "../../components/MatchingAlgorithmPopupComponent";
-import { useAuthSession } from "../../context/AuthSessionContext";
 import api from "../../api/axios";
 
 /**
@@ -61,7 +60,6 @@ const petPhoto = (pet) => (Array.isArray(pet?.photos) ? pet.photos[0] : null) ??
 
 const HomeScreen = ({ navigation, route, start }) => {
   const tailwind = useTailwind();
-  const { userId } = useAuthSession();
 
   const [latestPets, setLatestPets] = useState([]);
   const [favorites, setFavorites] = useState([]);
@@ -85,9 +83,8 @@ const HomeScreen = ({ navigation, route, start }) => {
     const load = async () => {
       const [pets, favouriteRows, article] = await Promise.all([
         api.get("/api/pets/latest").then((r) => r.data, () => []),
-        userId
-          ? api.get(`/api/users/favorites/${userId}`).then((r) => r.data, () => [])
-          : Promise.resolve([]),
+        // Scoped by the token, so this does not wait on the profile to load.
+        api.get("/api/favorites").then((r) => r.data, () => []),
         api.get("/api/articles/latest").then((r) => r.data, () => null),
       ]);
 
@@ -102,7 +99,7 @@ const HomeScreen = ({ navigation, route, start }) => {
     return () => {
       cancelled = true;
     };
-  }, [userId, reloadToken]);
+  }, [reloadToken]);
 
   useEffect(() => {
     if (route.params?.showTutorial) start();

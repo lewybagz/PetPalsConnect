@@ -22,6 +22,8 @@ module.exports = [
         global: "writable",
         require: "readonly",
         module: "writable",
+        __dirname: "readonly",
+        process: "readonly",
       },
     },
     rules: {

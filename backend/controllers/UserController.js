@@ -220,6 +220,12 @@ const UserController = {
 
   /** The caller's favourited pets. */
   async getUserFavorites(req, res) {
+    // Identity comes from the token. The id in the path is accepted for the
+    // existing call sites, but reading somebody else's favourites is not.
+    if (req.params.userId && String(req.params.userId) !== String(req.userId)) {
+      return res.status(403).json({ message: "You can only read your own favourites" });
+    }
+
     try {
       const user = await User.findById(req.params.userId ?? req.userId).populate({
         path: "favorites",

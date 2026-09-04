@@ -59,11 +59,12 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const navigateToEditProfile = () => {
-    navigation.navigate("EditProfile");
+    // No "EditProfile" screen exists; account details are edited here.
+    navigation.navigate("AccountInformation");
   };
 
   const navigateToPetList = () => {
-    navigation.navigate("Pets");
+    navigation.navigate("PetList");
   };
 
   if (loading) {

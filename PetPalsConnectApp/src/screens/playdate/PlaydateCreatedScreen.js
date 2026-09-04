@@ -59,7 +59,7 @@ const PlaydateCreatedScreen = ({ route, navigation }) => {
       </View>
       <Button
         title="Done"
-        onPress={() => navigation.navigate("ScheduledPlaydatesScreen")}
+        onPress={() => navigation.navigate("Playdates")}
       />
     </ScrollView>
   );

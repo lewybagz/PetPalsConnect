@@ -61,7 +61,7 @@ const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
       });
       const mediaArray = response.data.media;
       if (mediaArray.length > 0) {
-        navigation.navigate("MediaView", { mediaItems: mediaArray });
+        navigation.navigate("MediaView", { media: mediaArray });
       } else {
         console.log("No media available for this chat.");
       }

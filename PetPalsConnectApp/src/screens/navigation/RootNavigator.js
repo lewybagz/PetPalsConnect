@@ -8,6 +8,7 @@ import CreateProfileScreen from "../auth/CreateProfileScreen";
 import AddFirstPetScreen from "../pets/AddFirstPetScreen";
 import usePushNotifications from "../../hooks/usePushNotifications";
 import { useSocketSession } from "../../hooks/useSocketEvents";
+import useSessionStore from "../../hooks/useSessionStore";
 import { useAuthSession, AuthStatus } from "../../context/AuthSessionContext";
 
 const Root = createNativeStackNavigator();
@@ -43,6 +44,9 @@ export default function RootNavigator() {
   // has to join it. Doing that here means every screen below inherits a live
   // connection instead of each one arranging its own.
   useSocketSession();
+  // Fifteen screens read `state.user.userId` from Redux and nothing ever set
+  // it. The session is the source of truth; this keeps the store in step.
+  useSessionStore();
 
   if (status === AuthStatus.loading) {
     return (

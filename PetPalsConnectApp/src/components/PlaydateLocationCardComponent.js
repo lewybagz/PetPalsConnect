@@ -36,7 +36,9 @@ const PlayDateLocationCard = ({ locationData, navigation }) => {
   }, [locationData]);
 
   const handleSchedulePlaydate = () => {
-    navigation.navigate("PetSelection", { locationId: locationData._id });
+    // "PetSelection" picks a *friend's* pet and wants a userPetId. Scheduling
+    // from a location goes to PlaydatePetSelection, which takes a locationId.
+    navigation.navigate("PlaydatePetSelection", { locationId: locationData._id });
   };
   return (
     <View style={styles.card}>

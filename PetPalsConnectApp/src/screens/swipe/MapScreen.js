@@ -53,7 +53,10 @@ const MapScreen = ({ start, route, navigation }) => {
   const fetchPlaydateLocations = async (latitude, longitude, range) => {
     try {
       const token = await getStoredToken();
-      const response = await api.get("/api/playdates/playdate-locations", {
+      // Mounted at /api/locations, not /api/playdates. Sent to the wrong mount
+      // this matched `/api/playdates/:id` and asked for a playdate whose id is
+      // the string "playdate-locations" - a CastError and a 500.
+      const response = await api.get("/api/locations/playdate-locations", {
         params: {
           userLat: latitude,
           userLng: longitude,
@@ -273,8 +276,10 @@ const MapScreen = ({ start, route, navigation }) => {
                         petId: selectedMarker._id,
                       });
                     } else if (selectedMarker.type === "playdate") {
+                      // These markers are Location documents, so this is a
+                      // location id; the screen looks it up as one.
                       navigation.navigate("PotentialPlaydateLocation", {
-                        playdateId: selectedMarker._id,
+                        locationId: selectedMarker._id,
                       });
                     }
                     bottomSheetRef.current.close();

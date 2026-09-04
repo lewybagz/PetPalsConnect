@@ -47,7 +47,7 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
       );
 
       Alert.alert("Accepted", "You have accepted the playdate request.");
-      navigation.navigate("UpcomingPlaydates");
+      navigation.navigate("UpcomingPlaydate");
     } catch (error) {
       console.warn("[playdaterequest]", error.message);
       Alert.alert("Error", "Failed to accept the playdate request.");

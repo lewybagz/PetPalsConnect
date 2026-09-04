@@ -10,5 +10,6 @@ router.get("/:id", FavoriteController.getFavoriteById);
 
 // Route to create a new favorite
 router.post("/", FavoriteController.createFavorite);
+router.delete("/pet/:petId", FavoriteController.removeFavorite);
 
 module.exports = router;

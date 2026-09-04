@@ -73,7 +73,7 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
       });
       const mediaArray = response.data.media;
       if (mediaArray.length > 0) {
-        navigation.navigate("MediaView", { mediaItems: mediaArray });
+        navigation.navigate("MediaView", { media: mediaArray });
       } else {
         console.log("No media available for this chat.");
       }
@@ -98,7 +98,9 @@ const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
         }
       );
 
-      navigation.navigate("ChatsList");
+      // "ChatsList" is not a registered route; leaving a group returns to the
+      // Chats tab.
+      navigation.navigate("Chats");
     } catch (error) {
       console.error("Error leaving group chat:", error);
     }
