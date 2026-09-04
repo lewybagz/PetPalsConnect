@@ -40,7 +40,15 @@ const candidate = (id, name, extra = {}) => ({
 
 const respondWith = (candidates, pet = { _id: "mine", name: "Rex" }, extra = {}) => {
   api.get.mockResolvedValue({
-    data: { pet, candidates, threshold: 45, range: null, locationKnown: true, ...extra },
+    data: {
+      pet,
+      candidates,
+      threshold: 45,
+      range: null,
+      locationKnown: true,
+      preview: false,
+      ...extra,
+    },
   });
 };
 
@@ -60,16 +68,18 @@ describe("DiscoverScreen", () => {
     await waitFor(() => expect(screen.getByTestId("discover-card")).toBeTruthy());
   });
 
-  it("asks for a pet first when the user has none", async () => {
-    // The add-a-pet step is skippable, so reaching this tab without one is a
-    // normal state rather than a bug.
+  it("shows the deck to somebody with no pet, instead of a wall", async () => {
+    // The add-a-pet step is skippable, and this screen used to answer it with a
+    // "add a pet first" wall - so a user who skipped saw nothing of the app
+    // whose whole reason to exist is browsing pets, and had no way to find out
+    // what they had skipped for. The server sends the same pets, unranked.
     useAuthSession.mockReturnValue({ hasPet: false });
-    render(<DiscoverScreen navigation={navigation} />);
+    respondWith([candidate("pet-1", "Bo")], null, { preview: true });
 
-    await waitFor(() =>
-      expect(screen.getByTestId("requires-pet-empty-state")).toBeTruthy()
-    );
-    expect(api.get).not.toHaveBeenCalled();
+    await render(<DiscoverScreen navigation={navigation} />);
+
+    await waitFor(() => expect(screen.getByTestId("discover-card")).toBeTruthy());
+    expect(screen.getByText("Bo")).toBeTruthy();
   });
 
   it("shows an empty state when nobody is left", async () => {
@@ -230,5 +240,83 @@ describe("safety, from the card", () => {
 
     // Their second dog coming back next reads as the block having failed.
     await waitFor(() => expect(screen.getByText("Sky")).toBeTruthy());
+  });
+});
+
+describe("browsing without a pet", () => {
+  const previewCandidate = (id, name) => ({
+    pet: {
+      _id: id,
+      name,
+      breed: "Beagle",
+      age: 4,
+      weight: 25,
+      photos: [],
+      owner: `owner-of-${id}`,
+    },
+    // No acting pet means nothing to compare against, so the server sends no
+    // score rather than a number the client would have to know to distrust.
+    score: null,
+    breakdown: null,
+    distanceMiles: 3,
+  });
+
+  beforeEach(() => {
+    useAuthSession.mockReturnValue({ hasPet: false });
+    respondWith([previewCandidate("pet-1", "Bo")], null, { preview: true });
+  });
+
+  it("offers to add a pet next to the one being looked at", async () => {
+    await render(<DiscoverScreen navigation={navigation} />);
+
+    await waitFor(() => expect(screen.getByTestId("discover-preview")).toBeTruthy());
+    // A better moment to ask than a wall before anything is shown.
+    expect(screen.getByText(/Add your pet to say hello to Bo/)).toBeTruthy();
+  });
+
+  it("routes the call to action at adding a pet", async () => {
+    await render(<DiscoverScreen navigation={navigation} />);
+
+    await fireEvent.press(await waitFor(() => screen.getByTestId("discover-add-pet")));
+    expect(navigation.navigate).toHaveBeenCalledWith("AddPet");
+  });
+
+  it("keeps browsing without deciding anything", async () => {
+    respondWith(
+      [previewCandidate("pet-1", "Bo"), previewCandidate("pet-2", "Sky")],
+      null,
+      { preview: true }
+    );
+    await render(<DiscoverScreen navigation={navigation} />);
+
+    await fireEvent.press(
+      await waitFor(() => screen.getByTestId("discover-preview-next"))
+    );
+
+    await waitFor(() => expect(screen.getByText("Sky")).toBeTruthy());
+    // Matching compares two pets; there is only one, so nothing is recorded.
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("hides the like and pass controls, which cannot mean anything yet", async () => {
+    await render(<DiscoverScreen navigation={navigation} />);
+
+    await waitFor(() => expect(screen.getByTestId("discover-preview")).toBeTruthy());
+    expect(screen.queryByTestId("discover-like")).toBeNull();
+    expect(screen.queryByTestId("discover-pass")).toBeNull();
+  });
+
+  it("shows no match score, since there is nothing to score against", async () => {
+    await render(<DiscoverScreen navigation={navigation} />);
+
+    await waitFor(() => expect(screen.getByTestId("discover-preview")).toBeTruthy());
+    expect(screen.queryByTestId("discover-score")).toBeNull();
+  });
+
+  it("still offers block and report", async () => {
+    // Strangers are strangers whether or not you own a pet.
+    await render(<DiscoverScreen navigation={navigation} />);
+
+    await waitFor(() => expect(screen.getByTestId("discover-safety")).toBeTruthy());
   });
 });

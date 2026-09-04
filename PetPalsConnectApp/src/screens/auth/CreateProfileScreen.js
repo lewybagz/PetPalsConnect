@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
+import { OnboardingProgress } from "../../components/ui";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import useUsernameAvailability from "../../hooks/useUsernameAvailability";
 import { describeApiError } from "../../utils/authErrors";
@@ -98,6 +99,11 @@ export default function CreateProfileScreen() {
         contentContainerStyle={tailwind("flex-grow justify-center px-8 py-12")}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Signing up is three writes that cannot be made atomic, and none of
+            the screens said so. Being interrupted after this one left no way to
+            tell whether you had finished. */}
+        <OnboardingProgress step={2} />
+
         <View style={tailwind("items-center mb-8")}>
           <Ionicons name="paw" size={48} color="tomato" />
           <Text style={tailwind("text-2xl font-bold text-gray-900 mt-4")}>

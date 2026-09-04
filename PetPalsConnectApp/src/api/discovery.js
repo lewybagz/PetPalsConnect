@@ -25,6 +25,10 @@ export const fetchCandidates = async (petId) => {
     // limit at all. The empty state needs this to say something useful.
     range: typeof data?.range === "number" ? data.range : null,
     locationKnown: Boolean(data?.locationKnown),
+    // True when the caller has no pet of their own: the same pets, filtered the
+    // same way, but unranked and undecidable. Matching compares two pets and
+    // there is only one.
+    preview: Boolean(data?.preview),
   };
 };
 

@@ -13,7 +13,6 @@ import {
   Text,
   useToast,
 } from "../../components/ui";
-import { RequiresPet } from "../../components/RequiresPet";
 import SafetyMenu from "../../components/SafetyMenu";
 import {
   decide,
@@ -53,7 +52,7 @@ const Stat = ({ tailwind, label, value }) =>
     </View>
   );
 
-const DiscoverContent = ({ navigation }) => {
+const DiscoverScreen = ({ navigation }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
   const toast = useToast();
@@ -61,6 +60,7 @@ const DiscoverContent = ({ navigation }) => {
   const [myPet, setMyPet] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [threshold, setThreshold] = useState(0);
+  const [preview, setPreview] = useState(false);
   const [range, setRange] = useState(null);
   const [locationKnown, setLocationKnown] = useState(false);
   const [index, setIndex] = useState(0);
@@ -74,6 +74,7 @@ const DiscoverContent = ({ navigation }) => {
       setMyPet(result.pet);
       setCandidates(result.candidates);
       setThreshold(result.threshold);
+      setPreview(result.preview);
       setRange(result.range);
       setLocationKnown(result.locationKnown);
       setIndex(0);
@@ -244,7 +245,7 @@ const DiscoverContent = ({ navigation }) => {
   return (
     <Screen testID="discover-card">
       <Text variant="caption" tone="muted" style={tailwind("mb-sm")}>
-        Matches for {myPet?.name}
+        {preview ? "Pets near you" : `Matches for ${myPet?.name}`}
       </Text>
 
       <View
@@ -273,11 +274,13 @@ const DiscoverContent = ({ navigation }) => {
               {current.pet.name}
             </Text>
             <View style={tailwind("flex-row items-center")}>
-              <View style={tailwind("bg-primarySoft rounded-pill px-md py-xs")}>
-                <Text testID="discover-score" variant="caption" tone="primary" weight="600">
-                  {describeScore(current.score, threshold)}
-                </Text>
-              </View>
+              {preview ? null : (
+                <View style={tailwind("bg-primarySoft rounded-pill px-md py-xs")}>
+                  <Text testID="discover-score" variant="caption" tone="primary" weight="600">
+                    {describeScore(current.score, threshold)}
+                  </Text>
+                </View>
+              )}
               {/* This is where strangers meet, so this is where reporting one
                   has to be. It used to live only on a card component nothing
                   rendered. */}
@@ -318,7 +321,11 @@ const DiscoverContent = ({ navigation }) => {
             />
           </View>
 
-          {reasons.length > 0 ? (
+          {preview ? (
+            <Text variant="caption" tone="faint" style={tailwind("mt-lg")}>
+              Add a pet and we&apos;ll show you how well they fit.
+            </Text>
+          ) : reasons.length > 0 ? (
             <View style={tailwind("mt-lg")}>
               {reasons.map((reason) => (
                 <View
@@ -347,9 +354,33 @@ const DiscoverContent = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Icon-only, so each needs a label of its own: without one a screen
-          reader announces the two most important controls in the app as
-          nothing at all. */}
+      {/*
+        Without a pet there is nothing to match *with*, so the deck browses
+        rather than decides. Asking here - next to a specific dog somebody is
+        already looking at - is a better moment than the wall this screen used
+        to put up before showing anything at all.
+      */}
+      {preview ? (
+        <View testID="discover-preview" style={tailwind("py-lg")}>
+          <Text variant="caption" tone="muted" align="center" style={tailwind("mb-md")}>
+            Add your pet to say hello to {current.pet.name}.
+          </Text>
+          <Button
+            testID="discover-add-pet"
+            title="Add my pet"
+            onPress={() => navigation.navigate("AddPet")}
+          />
+          <Button
+            testID="discover-preview-next"
+            title="Keep looking"
+            variant="ghost"
+            onPress={() => setIndex((position) => position + 1)}
+          />
+        </View>
+      ) : (
+      /* Icon-only, so each needs a label of its own: without one a screen
+         reader announces the two most important controls in the app as
+         nothing at all. */
       <View style={tailwind("flex-row justify-center items-center py-xl")}>
         <Pressable
           testID="discover-pass"
@@ -383,24 +414,11 @@ const DiscoverContent = ({ navigation }) => {
           <Ionicons name="heart" size={28} color={tokens.onPrimary} />
         </Pressable>
       </View>
+      )}
 
       {matchModal}
     </Screen>
   );
 };
-
-/**
- * Matching starts from a pet's profile, so this is one of the screens that
- * genuinely cannot work without one - hence the wrapper rather than an inline
- * `pets.length === 0` branch.
- */
-const DiscoverScreen = (props) => (
-  <RequiresPet
-    title="Add a pet to start matching"
-    message="Matching compares your pet's size, temperament and favourite activities. Add one and we'll find their people."
-  >
-    <DiscoverContent {...props} />
-  </RequiresPet>
-);
 
 export default DiscoverScreen;

@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
 import { NavigationContainer } from "@react-navigation/native";
 import { Provider as ReduxProvider } from "react-redux";
 
@@ -12,6 +13,14 @@ import { AuthSessionProvider } from "./src/context/AuthSessionContext";
 import RootNavigator from "./src/screens/navigation/RootNavigator";
 import PaymentsProvider from "./src/components/PaymentsProvider";
 import { navigationRef } from "./src/navigation/navigationRef";
+import { useAppFonts } from "./src/styles/fonts";
+
+/**
+ * Held until the faces are on the device, so the first frame is not a flash of
+ * the system font reflowing into Nunito. `catch` because a splash screen that
+ * refuses to be held is not a reason to fail the launch.
+ */
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 /**
  * Application root.
@@ -33,8 +42,18 @@ const ThemedStatusBar = () => {
 };
 
 export default function App() {
+  // "Settled", not "loaded": a typeface that fails to download must never stop
+  // the app from opening, so an error renders in the system face instead.
+  const fontsSettled = useAppFonts();
+
+  const onReady = useCallback(() => {
+    if (fontsSettled) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsSettled]);
+
+  if (!fontsSettled) return null;
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onReady}>
       <ReduxProvider store={store}>
         <AppThemeProvider>
           <AuthSessionProvider>

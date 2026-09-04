@@ -14,6 +14,7 @@
 export { default as Button } from "./Button";
 export { default as Card } from "./Card";
 export { default as EmptyState } from "./EmptyState";
+export { default as OnboardingProgress, ONBOARDING_STEPS } from "./OnboardingProgress";
 export { default as Screen } from "./Screen";
 export { default as Text } from "./Text";
 export { default as Skeleton, CardSkeleton, ListSkeleton, RowSkeleton } from "./Skeleton";

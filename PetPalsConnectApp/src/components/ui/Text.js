@@ -2,6 +2,7 @@ import React from "react";
 import { Text as RNText } from "react-native";
 
 import { useTailwind } from "../../styles/tailwind";
+import { displayFamily } from "../../styles/fonts";
 import { type } from "../../styles/tokens";
 
 /**
@@ -42,6 +43,11 @@ const Text = ({
   const tailwind = useTailwind();
   const role = type[variant] ?? type.body;
 
+  // Only the display roles carry the brand face, and only once it has loaded.
+  // The family names the weight on Android, so a caller's `weight` override is
+  // ignored for those roles rather than producing a synthesised bold.
+  const family = displayFamily(variant);
+
   return (
     <RNText
       maxFontSizeMultiplier={role.maxScale}
@@ -50,7 +56,9 @@ const Text = ({
         {
           fontSize: role.fontSize,
           lineHeight: role.lineHeight,
-          fontWeight: weight ?? role.fontWeight,
+          ...(family
+            ? { fontFamily: family }
+            : { fontWeight: weight ?? role.fontWeight }),
         },
         align ? { textAlign: align } : null,
         style,

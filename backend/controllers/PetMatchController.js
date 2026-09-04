@@ -76,6 +76,65 @@ const runMatching = async (petId, { isSubscribed = false } = {}) => {
   }));
 };
 
+/**
+ * The pets a given account may see, already filtered by distance.
+ *
+ * Shared by the two ways of arriving at the deck - with a pet of your own, and
+ * without one - because the filtering is the part that has to be identical.
+ * Blocking, suspension and range are safety and privacy rules; a second code
+ * path is a second place for one of them to be forgotten.
+ *
+ * Returns `[{ pet, distanceMiles }]`. `distanceMiles` is null when either side
+ * has not shared a position, and such a pet stays in rather than dropping out:
+ * excluding them empties the deck for everyone early on.
+ */
+const reachableCandidates = async ({
+  userId,
+  origin,
+  maxMiles,
+  excludePetIds = [],
+  limit = CANDIDATE_LIMIT,
+}) => {
+  const [blockedIds, suspendedIds] = await Promise.all([
+    blocking.blockedIdsFor(userId),
+    User.distinct("_id", { suspended: true }),
+  ]);
+  const excludedOwners = [...new Set([...blockedIds, ...suspendedIds.map(String)])];
+
+  const query = {
+    owner: { $ne: userId, $exists: true, $nin: excludedOwners },
+  };
+  if (excludePetIds.length > 0) query._id = { $nin: excludePetIds };
+
+  const candidates = await Pet.find(query).limit(limit).lean();
+
+  const ownerIds = [...new Set(candidates.map((pet) => String(pet.owner)))];
+  const owners = await User.find({ _id: { $in: ownerIds } })
+    .select("geoLocation")
+    .lean();
+  const coordsByOwner = new Map(
+    owners.map((candidateOwner) => [
+      String(candidateOwner._id),
+      candidateOwner.geoLocation?.coordinates ?? null,
+    ])
+  );
+
+  // Without a position of our own we cannot measure anything, so everyone
+  // stays in rather than nobody.
+  const reachable = origin
+    ? withinRange(
+        origin,
+        candidates.map((pet) => ({
+          pet,
+          coordinates: coordsByOwner.get(String(pet.owner)),
+        })),
+        maxMiles
+      )
+    : candidates.map((pet) => ({ pet, distanceMiles: null }));
+
+  return reachable;
+};
+
 const PetMatchController = {
   /** Exposed for PetController and tests. */
   runMatching,
@@ -211,11 +270,43 @@ const PetMatchController = {
         return res.status(404).json({ message: "No profile for this account yet" });
       }
 
+      const maxMiles = rangeToMiles(owner.playdateRange);
+      const origin = owner.geoLocation?.coordinates ?? null;
       const actingPetId = req.query.petId ?? owner.pets?.[0];
+
+      /**
+       * Browsing without a pet of your own.
+       *
+       * The add-a-pet step is skippable by design, and this used to answer an
+       * empty deck - so somebody who skipped it landed in an app whose entire
+       * reason to exist showed them nothing, and had no way to find out what
+       * they had skipped for. They see the same pets, filtered by the same
+       * distance and the same blocks; what they cannot do is match, because
+       * matching compares two pets and there is only one.
+       */
       if (!actingPetId) {
-        // Not an error: the add-a-pet step is skippable, so this is a normal
-        // state the screen renders an empty state for.
-        return res.json({ pet: null, candidates: [], threshold: MATCH_THRESHOLD });
+        const preview = await reachableCandidates({
+          userId: req.userId,
+          origin,
+          maxMiles,
+          limit: Number(req.query.limit) || 20,
+        });
+
+        return res.json({
+          pet: null,
+          preview: true,
+          threshold: MATCH_THRESHOLD,
+          range: maxMiles,
+          locationKnown: Boolean(origin),
+          candidates: preview.map((entry) => ({
+            pet: entry.pet,
+            // Nothing to compare against, so no score and no reasons rather
+            // than a number the client would have to know to distrust.
+            score: null,
+            breakdown: null,
+            distanceMiles: formatMiles(entry.distanceMiles),
+          })),
+        });
       }
 
       const actingPet = await Pet.findById(actingPetId).lean();
@@ -230,60 +321,18 @@ const PetMatchController = {
         .select("toPet")
         .lean();
 
-      // Blocking did nothing before this. A person you blocked - or who blocked
-      // you - stayed in the deck, and the block was a menu item that wrote a row
-      // nothing read. Suspended accounts drop out here too: the point of hiding
-      // somebody is that they stop appearing in front of people.
-      const [blockedIds, suspendedIds] = await Promise.all([
-        blocking.blockedIdsFor(req.userId),
-        User.distinct("_id", { suspended: true }),
-      ]);
-      const excludedOwners = [
-        ...new Set([...blockedIds, ...suspendedIds.map(String)]),
-      ];
-
-      const candidates = await Pet.find({
-        _id: {
-          $ne: actingPet._id,
-          $nin: decided.map((decision) => decision.toPet),
-        },
-        owner: { $ne: req.userId, $exists: true, $nin: excludedOwners },
-      })
-        .limit(CANDIDATE_LIMIT)
-        .lean();
-
-      // A playdate is a thing you travel to, so a pet you could never meet is
-      // not a match. Distance filters the deck; it deliberately does not score
-      // - you want the best fit among pets you can reach, not the nearest one.
-      const maxMiles = rangeToMiles(owner.playdateRange);
-      const origin = owner.geoLocation?.coordinates ?? null;
-
-      const ownerIds = [...new Set(candidates.map((pet) => String(pet.owner)))];
-      const owners = await User.find({ _id: { $in: ownerIds } })
-        .select("geoLocation")
-        .lean();
-      const coordsByOwner = new Map(
-        owners.map((candidateOwner) => [
-          String(candidateOwner._id),
-          candidateOwner.geoLocation?.coordinates ?? null,
-        ])
-      );
-
-      // Without a position of our own we cannot measure anything, so everyone
-      // stays in rather than nobody.
-      const reachable = origin
-        ? withinRange(
-            origin,
-            candidates.map((pet) => ({
-              pet,
-              coordinates: coordsByOwner.get(String(pet.owner)),
-            })),
-            maxMiles
-          )
-        : candidates.map((pet) => ({ pet, distanceMiles: null }));
+      const reachable = await reachableCandidates({
+        userId: req.userId,
+        origin,
+        maxMiles,
+        excludePetIds: [actingPet._id, ...decided.map((decision) => decision.toPet)],
+      });
 
       const distanceByPet = new Map(
         reachable.map((entry) => [String(entry.pet._id), entry.distanceMiles])
+      );
+      const byId = new Map(
+        reachable.map((entry) => [String(entry.pet._id), entry.pet])
       );
 
       const ranked = rankMatches(
@@ -292,13 +341,12 @@ const PetMatchController = {
         { limit: Number(req.query.limit) || 20 }
       );
 
-      const byId = new Map(candidates.map((pet) => [String(pet._id), pet]));
-
       res.json({
         pet: actingPet,
+        preview: false,
         threshold: MATCH_THRESHOLD,
         // In miles; 0 or null means no limit.
-        range: rangeToMiles(owner.playdateRange),
+        range: maxMiles,
         locationKnown: Boolean(origin),
         candidates: ranked
           .map((match) => ({

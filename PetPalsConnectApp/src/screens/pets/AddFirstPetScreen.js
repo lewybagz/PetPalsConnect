@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { addPetPhoto } from "../../services/photos";
 
 import { useTailwind } from "../../styles/tailwind";
+import { OnboardingProgress } from "../../components/ui";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { describeApiError } from "../../utils/authErrors";
 import { BREEDS } from "../../data/breeds";
@@ -37,7 +38,7 @@ import { BREEDS } from "../../data/breeds";
  */
 export default function AddFirstPetScreen() {
   const tailwind = useTailwind();
-  const { createPet, skipPetSetup, profile, signOut } = useAuthSession();
+  const { createPet, skipPetSetup, signOut } = useAuthSession();
 
   const [name, setName] = useState("");
   const [breed, setBreed] = useState("");
@@ -158,6 +159,8 @@ export default function AddFirstPetScreen() {
         contentContainerStyle={tailwind("flex-grow justify-center px-8 py-12")}
         keyboardShouldPersistTaps="handled"
       >
+        <OnboardingProgress step={3} />
+
         <View style={tailwind("items-center mb-8")}>
           <Ionicons name="paw" size={48} color="tomato" />
           <Text style={tailwind("text-2xl font-bold text-gray-900 mt-4")}>

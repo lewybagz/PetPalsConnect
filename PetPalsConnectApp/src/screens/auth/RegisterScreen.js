@@ -21,6 +21,7 @@ import { isEmail } from "validator";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
 import { useTailwind } from "../../styles/tailwind";
+import { OnboardingProgress } from "../../components/ui";
 import { GOOGLE_WEB_CLIENT_ID } from "../../config/env";
 import { describeAuthError } from "../../utils/authErrors";
 import { passwordRules, scorePassword } from "../../utils/passwordStrength";
@@ -125,6 +126,8 @@ export default function RegisterScreen({ navigation }) {
         contentContainerStyle={tailwind("flex-grow justify-center px-8 py-12")}
         keyboardShouldPersistTaps="handled"
       >
+        <OnboardingProgress step={1} />
+
         <View style={tailwind("items-center mb-8")}>
           <Ionicons name="paw" size={48} color="tomato" />
           <Text style={tailwind("text-2xl font-bold text-gray-900 mt-4")}>

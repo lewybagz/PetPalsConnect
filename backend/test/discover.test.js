@@ -113,18 +113,105 @@ test("a pet you already passed on does not come back", async () => {
   assert.deepEqual(res.body.candidates, []);
 });
 
-test("having no pet is an empty deck, not an error", async () => {
+/**
+ * Browsing without a pet of your own.
+ *
+ * This answered an empty deck. The add-a-pet step is skippable by design, so
+ * somebody who skipped it landed in an app whose entire reason to exist showed
+ * them nothing - and had no way to find out what they had skipped for. The
+ * retention research the redesign leans on is blunt about this: the users who
+ * never reach a core value action in the first session are the ones who leave.
+ */
+test("having no pet shows the deck in preview rather than an empty state", async () => {
   await User.create({
     firebaseUid: "petless",
     username: "petless",
     email: "petless@example.test",
   });
+  await makeOwnerWithPet("has-a-pet");
 
-  const res = await request(app).get("/api/petmatches/discover").set(...auth("petless"));
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("petless"))
+    .expect(200);
 
-  // The add-a-pet step is skippable, so this is a normal state.
-  assert.equal(res.status, 200);
   assert.equal(res.body.pet, null);
+  assert.equal(res.body.preview, true);
+  assert.equal(res.body.candidates.length, 1);
+});
+
+test("a preview carries no score, because there is nothing to compare against", async () => {
+  await User.create({
+    firebaseUid: "petless-score",
+    username: "petless-score",
+    email: "petless-score@example.test",
+  });
+  await makeOwnerWithPet("scored-pet");
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("petless-score"))
+    .expect(200);
+
+  // A number here would be one the client has to know to distrust.
+  assert.equal(res.body.candidates[0].score, null);
+  assert.equal(res.body.candidates[0].breakdown, null);
+  assert.ok(res.body.candidates[0].pet.name);
+});
+
+test("a preview is not a way round a block", async () => {
+  const me = await User.create({
+    firebaseUid: "petless-blocker",
+    username: "petless-blocker",
+    email: "petless-blocker@example.test",
+  });
+  const them = await makeOwnerWithPet("blocked-owner");
+
+  await request(app)
+    .post("/api/blocklists")
+    .set(...auth("petless-blocker"))
+    .send({ blockedUser: String(them.user._id) })
+    .expect(201);
+  assert.ok(me._id);
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("petless-blocker"))
+    .expect(200);
+
+  // Both paths through discovery share one candidate loader precisely so a
+  // safety rule cannot be enforced on one of them and forgotten on the other.
+  assert.deepEqual(res.body.candidates, []);
+});
+
+test("a preview does not show a suspended account's pets", async () => {
+  await User.create({
+    firebaseUid: "petless-viewer",
+    username: "petless-viewer",
+    email: "petless-viewer@example.test",
+  });
+  const them = await makeOwnerWithPet("suspended-owner");
+  await User.updateOne({ _id: them.user._id }, { suspended: true });
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("petless-viewer"))
+    .expect(200);
+
+  assert.deepEqual(res.body.candidates, []);
+});
+
+test("a preview never includes your own pets", async () => {
+  // Reachable when somebody deletes their last pet but the profile remains.
+  const mine = await makeOwnerWithPet("solo-owner");
+  await User.updateOne({ _id: mine.user._id }, { $set: { pets: [] } });
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("solo-owner"))
+    .expect(200);
+
+  assert.equal(res.body.preview, true);
   assert.deepEqual(res.body.candidates, []);
 });
 
