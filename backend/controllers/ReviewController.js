@@ -20,12 +20,14 @@ const ReviewController = {
   async getReviewById(req, res, next) {
     let review;
     try {
+      // `.populate("reviewer")` with no projection returned the whole user
+      // document on a public read - email, firebaseUid and the device's FCM
+      // token included.
       review = await Review.findById(req.params.id)
         .populate("relatedArticle")
         .populate("relatedPlaydate")
         .populate("relatedService")
-        .populate("reviewer")
-        .populate("creator");
+        .populate("reviewer", "username userPhoto");
       if (review == null) {
         return res.status(404).json({ message: "Cannot find review" });
       }
@@ -37,14 +39,21 @@ const ReviewController = {
     next();
   },
 
+  /**
+   * Shows or hides one of the caller's own reviews.
+   *
+   * `Visibility` is not a path - the schema has `visibility` - so strict mode
+   * dropped the key and `findByIdAndUpdate` changed nothing while answering
+   * with the unchanged document, which reads exactly like success. It was also
+   * addressed by id alone, so it would have hidden anybody's review.
+   */
   async updateReviewVisibility(req, res) {
     try {
-      const reviewId = req.params.id;
-      const { Visibility } = req.body;
+      const visibility = req.body.visibility ?? req.body.Visibility;
 
-      const updatedReview = await Review.findByIdAndUpdate(
-        reviewId,
-        { Visibility: Visibility },
+      const updatedReview = await Review.findOneAndUpdate(
+        { _id: req.params.id, reviewer: req.userId },
+        { visibility: Boolean(visibility), modifiedDate: new Date() },
         { new: true }
       );
 
@@ -61,9 +70,15 @@ const ReviewController = {
   async getReviewsByLocation(req, res) {
     try {
       const locationId = req.params.locationId;
-      const reviews = await Review.find({ relatedLocation: locationId }) // Now referencing the relatedLocation field
-        .populate("reviewer")
-        .populate("creator"); // Add other necessary populate methods
+      // Hidden reviews are hidden. And the reviewer is projected: this
+      // returned every field of their user document to anybody who asked a
+      // location for its reviews.
+      const reviews = await Review.find({
+        relatedLocation: locationId,
+        visibility: { $ne: false },
+      })
+        .populate("reviewer", "username userPhoto")
+        .sort({ date: -1 });
 
       res.json(reviews);
     } catch (err) {
@@ -86,9 +101,12 @@ const ReviewController = {
       relatedArticle: req.body.relatedArticle,
       relatedPlaydate: req.body.relatedPlaydate,
       relatedService: req.body.relatedService,
+      // Never set, so a review of a place could not be attached to one and
+      // `getReviewsByLocation` had nothing to find.
+      relatedLocation: req.body.relatedLocation,
       // Identity comes from the verified token, never the request body.
       reviewer: req.userId,
-      visibility: req.body.visibility,
+      visibility: req.body.visibility !== false,
       creator: req.userId,
       slug: req.body.slug,
     });

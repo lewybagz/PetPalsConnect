@@ -1,60 +1,57 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, Image } from "react-native";
-import api from "../../api/axios";
-import LoadingScreen from "../../components/LoadingScreenComponent";
-import { getStoredToken } from "../../../utils/tokenutil";
+import React from "react";
+import { Image, ScrollView, View } from "react-native";
 
-// Custom hook for fetching media details
-const useFetchMediaDetails = (media) => {
-  const [mediaDetails, setMediaDetails] = useState([]);
-  const [loading, setLoading] = useState(false);
+import { EmptyState, Screen, Text } from "../../components/ui";
+import { useTailwind } from "../../styles/tailwind";
+import { radius } from "../../styles/tokens";
 
-  useEffect(() => {
-    if (!media || media.length === 0) return;
-
-    const fetchMediaDetails = async () => {
-      setLoading(true);
-      try {
-        const token = await getStoredToken(); // Retrieve the token
-        const mediaResponses = await Promise.all(
-          media.map((mediaItem) =>
-            api.get(`/api/media/${mediaItem}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            })
-          )
-        );
-        setMediaDetails(mediaResponses.map((response) => response.data));
-      } catch (error) {
-        console.error("Error fetching media details:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMediaDetails();
-  }, [media]);
-
-  return { mediaDetails, loading };
-};
+/**
+ * Everything shared in a conversation.
+ *
+ * It received a list of media *ids* and fetched each one individually - N
+ * requests to open a gallery - with a token attached by hand that the shared
+ * client already sets. The chat endpoints populate the media now, so the two
+ * option sheets hand this the documents themselves and there is nothing left
+ * to fetch.
+ *
+ * Accepts either shape: a stored URL string, or a Media document.
+ */
+const urlOf = (item) => (typeof item === "string" ? item : item?.url ?? null);
 
 const MediaViewScreen = ({ route }) => {
-  const { media } = route.params;
-  const { mediaDetails, loading } = useFetchMediaDetails(media);
+  const tailwind = useTailwind();
+  const media = route?.params?.media ?? [];
+  const items = media.map(urlOf).filter(Boolean);
 
-  if (loading) return <LoadingScreen />;
-  if (!mediaDetails.length) return <Text>No media available</Text>;
+  if (items.length === 0) {
+    return (
+      <Screen testID="media-view">
+        <EmptyState
+          icon="images-outline"
+          title="Nothing shared yet"
+          message="Photos sent in this conversation turn up here."
+        />
+      </Screen>
+    );
+  }
 
   return (
-    <ScrollView>
-      {mediaDetails.map((mediaItem, index) => (
-        <View key={index}>
-          <Image
-            source={{ uri: mediaItem.url }}
-            style={{ width: "100%", height: 200 }}
-          />
-        </View>
-      ))}
-    </ScrollView>
+    <Screen testID="media-view" padded={false}>
+      <ScrollView contentContainerStyle={tailwind("p-lg")}>
+        {items.map((url, index) => (
+          <View key={`${url}-${index}`} style={tailwind("mb-md")}>
+            <Image
+              source={{ uri: url }}
+              style={{ width: "100%", height: 240, borderRadius: radius.card }}
+              resizeMode="cover"
+            />
+          </View>
+        ))}
+        <Text variant="caption" tone="muted" align="center">
+          {items.length === 1 ? "1 item" : `${items.length} items`}
+        </Text>
+      </ScrollView>
+    </Screen>
   );
 };
 

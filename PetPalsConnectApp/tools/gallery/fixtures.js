@@ -220,4 +220,30 @@ export const ROUTES = {
     },
   ],
   "/api/notifications": NOTIFICATIONS,
+  "/api/userpreferences/categories": {
+    categories: [
+      { key: "messages", label: "Messages" },
+      { key: "matches", label: "New matches" },
+      { key: "playdateReminders", label: "Playdates and reminders" },
+      { key: "friendRequests", label: "Friend requests" },
+      { key: "appUpdates", label: "Everything else" },
+    ],
+  },
+  "/api/locations/loc-1": {
+    _id: "loc-1",
+    name: "Dolores Park",
+    address: "19th St & Dolores St",
+    rating: 4.6,
+  },
+  "/api/userpreferences/me": {
+    notificationPreferences: {
+      pushNotificationsEnabled: true,
+      emailNotificationsEnabled: false,
+      messages: true,
+      matches: true,
+      playdateReminders: false,
+      friendRequests: true,
+      appUpdates: true,
+    },
+  },
 };

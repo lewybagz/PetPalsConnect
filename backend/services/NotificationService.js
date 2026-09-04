@@ -3,7 +3,8 @@ const GroupChat = require("../models/GroupChat");
 const User = require("../models/User");
 const firebase = require("../config/firebase");
 const { emitToUser } = require("./realtime");
-const { normalise, titleFor } = require("./notificationTypes");
+const UserPreferences = require("../models/UserPreferences");
+const { normalise, titleFor, categoryFor } = require("./notificationTypes");
 
 /**
  * Creates a notification and pushes it to the recipient if they are connected.
@@ -86,6 +87,37 @@ const sendPush = async (userId, { title, body, data } = {}) => {
 };
 
 /**
+ * Whether this person wants a push for this kind of thing.
+ *
+ * Nothing consulted the preferences, and nothing could: the only read of them
+ * passed the whole Express request where a user id goes, so it 404'd on every
+ * call, and the screen behind it kept its toggles in component state and never
+ * saved. A notification-preferences screen that does not change which
+ * notifications arrive is worse than not having one.
+ *
+ * A missing row means the defaults, which are "yes" - a preference nobody has
+ * expressed must not silence them. So must a failed read: it is better to
+ * send a push somebody has muted than to drop one they are waiting on.
+ */
+const wantsPush = async (userId, type) => {
+  try {
+    const preferences = await UserPreferences.findOne({ user: userId })
+      .select("notificationPreferences")
+      .lean();
+    if (!preferences) return true;
+
+    const settings = preferences.notificationPreferences ?? {};
+    if (settings.pushNotificationsEnabled === false) return false;
+
+    const category = categoryFor(type);
+    return category ? settings[category] !== false : true;
+  } catch (error) {
+    console.warn("[notifications] Could not read preferences:", error.message);
+    return true;
+  }
+};
+
+/**
  * Tells somebody something: the stored row, the live socket event, and the push.
  *
  * Every call site did these separately - `Promise.all([createNotification(...),
@@ -119,7 +151,7 @@ const notify = async ({
     petName,
   });
 
-  if (!push) return notification;
+  if (!push || !(await wantsPush(recipientId, canonical))) return notification;
 
   try {
     await sendPush(recipientId, {
@@ -158,6 +190,7 @@ const fetchGroupParticipants = async (groupId, senderId) => {
 module.exports = {
   createNotification,
   sendPush,
+  wantsPush,
   notify,
   fetchGroupParticipants,
 };

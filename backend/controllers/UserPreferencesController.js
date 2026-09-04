@@ -1,6 +1,38 @@
 const UserPreferences = require("../models/UserPreferences");
+const { CATEGORIES } = require("../services/notificationTypes");
+
+/**
+ * Notification preferences.
+ *
+ * Nothing here worked. `getUserPreferences` did
+ * `UserPreferences.findOne({ user: req })` - the whole Express request object
+ * where a user id goes - so it 404'd on every call and the `:userId` in the
+ * path was never read. `getUserPreferencesById` did `findById` on that same
+ * *user* id, looking for a preferences document with a user's `_id`, which
+ * also never matched. Create and update wrote `notificationSettings` and
+ * `searchSettings`, neither of which is a path on the schema, so strict mode
+ * dropped both and a "saved" preference was a document of defaults.
+ *
+ * And the screen behind it - `NotificationPreferencesScreen` - held two
+ * toggles in component state with a comment where the save should be, so
+ * turning notifications off did nothing at all and said it had.
+ *
+ * Preferences are read-through: the first read creates the row from the
+ * schema's defaults rather than 404ing, because a settings screen that cannot
+ * open until something has been saved has nothing to save from.
+ */
+
+/** The caller's preferences, created from defaults on first read. */
+const forUser = async (userId) => {
+  const existing = await UserPreferences.findOne({ user: userId });
+  if (existing) return existing;
+
+  return UserPreferences.create({ user: userId });
+};
 
 const UserPreferencesController = {
+  forUser,
+
   async getAllUserPreferences(req, res) {
     try {
       // Was `find()` with no filter: behind `authenticate`, but that only means
@@ -12,103 +44,106 @@ const UserPreferencesController = {
     }
   },
 
+  /**
+   * The caller's own preferences.
+   *
+   * The `:userId` in the path is checked against the token rather than
+   * trusted: it named whose settings to fetch, and settings include what
+   * somebody has chosen to be quiet about.
+   */
   async getUserPreferences(req, res) {
+    const { userId } = req.params;
+
+    if (userId && userId !== "me" && String(userId) !== String(req.userId)) {
+      return res.status(403).json({ message: "Not your preferences" });
+    }
+
     try {
-      const userPreferences = await UserPreferences.findOne({
-        user: req,
-      });
-      if (!userPreferences) {
-        return res.status(404).json({ message: "User preferences not found" });
-      }
-      res.json({ notificationsEnabled: userPreferences.notificationsEnabled });
+      res.json(await forUser(req.userId));
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
   },
 
-  async getUserPreferencesById(req, res, next) {
-    let userPreferences;
-    try {
-      userPreferences = await UserPreferences.findById(req.params.id)
-        .populate("user")
-        .populate("creator");
-      if (userPreferences == null) {
-        return res
-          .status(404)
-          .json({ message: "Cannot find user preferences" });
-      }
-    } catch (err) {
-      return res.status(500).json({ message: err.message });
-    }
-
-    res.userPreferences = userPreferences;
-    next();
-  },
-
-  async createUserPreferences(req, res) {
-    const userPreferences = new UserPreferences({
-      notificationSettings: req.body.notificationSettings,
-      searchSettings: req.body.searchSettings,
-      // Identity comes from the verified token, never the request body.
-      user: req.userId,
-      creator: req.userId,
-      slug: req.body.slug,
-    });
-
-    try {
-      const newUserPreferences = await userPreferences.save();
-      res.status(201).json(newUserPreferences);
-    } catch (err) {
-      res.status(400).json({ message: err.message });
-    }
-  },
-
+  /** Turns everything off in one tap. */
   async muteAllNotifications(req, res) {
+    const { userId } = req.params;
+
+    if (userId && userId !== "me" && String(userId) !== String(req.userId)) {
+      return res.status(403).json({ message: "Not your preferences" });
+    }
+
     try {
-      const userPreferences = await UserPreferences.findOne({
-        user: req.userId,
-      });
+      const preferences = await forUser(req.userId);
 
-      if (!userPreferences) {
-        return res.status(404).json({ message: "User preferences not found" });
+      for (const key of Object.keys(
+        preferences.notificationPreferences.toObject
+          ? preferences.notificationPreferences.toObject()
+          : preferences.notificationPreferences
+      )) {
+        preferences.notificationPreferences[key] = false;
       }
+      preferences.modifiedDate = new Date();
 
-      userPreferences.notificationPreferences.petPalsMapUpdates = false;
-      userPreferences.notificationPreferences.playdateReminders = false;
-      userPreferences.notificationPreferences.appUpdates = false;
-      userPreferences.notificationPreferences.pushNotificationsEnabled = false;
-      userPreferences.notificationPreferences.emailNotificationsEnabled = false;
-
-      await userPreferences.save();
-      res.status(200).json({
-        message: "All notifications have been muted",
-        userPreferences,
-      });
+      await preferences.save();
+      res.status(200).json(preferences);
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
   },
 
-  async updateUserPreferences(req, res) {
-    if (req.body.notificationSettings != null) {
-      res.userPreferences.notificationSettings = req.body.notificationSettings;
-    }
-    if (req.body.searchSettings != null) {
-      res.userPreferences.searchSettings = req.body.searchSettings;
-    }
-    // `user` is who these preferences belong to. Letting a request reassign it
-    // hands someone else's settings to the caller.
-
-    if (req.body.modifiedDate != null) {
-      res.userPreferences.modifiedDate = req.body.modifiedDate;
-    }
-
+  async createUserPreferences(req, res) {
     try {
-      const updatedUserPreferences = await res.userPreferences.save();
-      res.json(updatedUserPreferences);
+      // One row per account, so asking twice is not an error worth showing.
+      res.status(201).json(await forUser(req.userId));
     } catch (err) {
       res.status(400).json({ message: err.message });
     }
+  },
+
+  /**
+   * Changes some of them.
+   *
+   * A merge rather than a replace: the screen sends the toggle that moved, and
+   * a replace would reset every other preference to its default each time
+   * somebody flipped one.
+   */
+  async updateUserPreferences(req, res) {
+    const { userId } = req.params;
+
+    if (userId && userId !== "me" && String(userId) !== String(req.userId)) {
+      return res.status(403).json({ message: "Not your preferences" });
+    }
+
+    const incoming =
+      req.body.notificationPreferences ?? req.body.notificationSettings ?? {};
+
+    try {
+      const preferences = await forUser(req.userId);
+
+      for (const [key, value] of Object.entries(incoming)) {
+        // Anything not on the schema would be dropped silently, which is how
+        // this failed before. Refuse it instead.
+        if (!(key in preferences.notificationPreferences)) {
+          return res
+            .status(400)
+            .json({ message: `"${key}" is not a notification preference` });
+        }
+        preferences.notificationPreferences[key] = Boolean(value);
+      }
+
+      preferences.modifiedDate = new Date();
+      await preferences.save();
+
+      res.json(preferences);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  },
+
+  /** The categories a notification type can fall under, for the screen. */
+  async getCategories(req, res) {
+    res.json({ categories: CATEGORIES });
   },
 };
 

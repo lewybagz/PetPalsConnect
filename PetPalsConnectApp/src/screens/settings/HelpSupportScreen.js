@@ -1,118 +1,123 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-} from "react-native";
-import { useTailwind } from "../../styles/tailwind";
-import { getStoredToken } from "../../../utils/tokenutil";
+import { ScrollView, TextInput, View } from "react-native";
+
+import { Button, Card, Screen, Text, useToast } from "../../components/ui";
 import api from "../../api/axios";
+import { useTailwind } from "../../styles/tailwind";
+import { useTokens } from "../../context/AppThemeContext";
+import { radius, space } from "../../styles/tokens";
+
+/**
+ * Getting in touch.
+ *
+ * The submit button was `onPress={() => submitForm(FormData)}` - the global
+ * `FormData` *constructor*, not the three fields above it - so every request
+ * body serialised to `{}` and no support message has ever contained anything.
+ * It then checked `response.status === 200` while the server answers 201, so a
+ * successful send showed "There was an issue sending your message."
+ *
+ * The name and email fields are gone: they were sent to the server, which used
+ * the address to send a confirmation email, so anyone with an account could
+ * make this app email arbitrary text to an arbitrary address. Both come from
+ * the signed-in profile now.
+ */
+
+const FAQS = [
+  {
+    question: "How do I change my pet's profile?",
+    answer: "Open Pets from the More tab, choose your pet, and tap Edit.",
+  },
+  {
+    question: "Can I cancel a playdate?",
+    answer: "Yes — open the playdate and choose Cancel. Everyone invited is told.",
+  },
+  {
+    question: "Someone is making me uncomfortable.",
+    answer:
+      "Use Report on their card or in the chat header. Reporting blocks them at " +
+      "the same time, so you will not see them again while we look.",
+  },
+  {
+    question: "I found a bug.",
+    answer: "Tell us below — what you were doing and what happened is plenty.",
+  },
+];
 
 const HelpSupportScreen = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
   const tailwind = useTailwind();
+  const tokens = useTokens();
+  const toast = useToast();
 
-  const submitForm = async (formData) => {
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const submit = async () => {
+    const text = message.trim();
+    if (!text) {
+      toast.error("Tell us what's happened first.");
+      return;
+    }
+
+    setSending(true);
     try {
-      const token = await getStoredToken();
-      if (!token) {
-        throw new Error("Authorization token not found");
-      }
-
-      const response = await api.post("/api/supportmessages", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 200) {
-        Alert.alert(
-          "Message Sent",
-          "Thank you for reaching out. We will get back to you shortly."
-        );
-      } else {
-        throw new Error("Failed to send message");
-      }
+      await api.post("/api/supportmessages", { message: text });
+      setMessage("");
+      toast.success("Sent — we'll get back to you.");
     } catch (error) {
-      console.error(error);
-      Alert.alert(
-        "Submission Error",
-        "There was an issue sending your message. Please try again later."
-      );
+      console.warn("[support] Could not send:", error.message);
+      toast.error("Couldn't send that. Try again in a moment.");
+    } finally {
+      setSending(false);
     }
   };
 
   return (
-    <ScrollView style={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold mb-4")}>Help & Support</Text>
+    <Screen testID="help-support">
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Text variant="title">Help &amp; support</Text>
+        <Text variant="body" tone="muted" style={tailwind("mt-sm mb-lg")}>
+          Tell us what&rsquo;s happened and we&rsquo;ll reply to the email on your
+          account.
+        </Text>
 
-      {/* Contact Form */}
-      <View>
         <TextInput
-          style={tailwind("border border-border p-2 rounded mb-4")}
-          value={name}
-          onChangeText={setName}
-          placeholder="Your Name"
-        />
-        <TextInput
-          style={tailwind("border border-border p-2 rounded mb-4")}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Email"
-          keyboardType="email-address"
-        />
-        <TextInput
-          style={tailwind("border border-border p-2 rounded mb-4")}
+          testID="support-message"
+          style={[
+            tailwind("bg-surface border border-border text-text p-md"),
+            { borderRadius: radius.control, minHeight: 120, textAlignVertical: "top" },
+          ]}
           value={message}
           onChangeText={setMessage}
-          placeholder="Message"
+          placeholder="What happened?"
+          placeholderTextColor={tokens.textFaint}
           multiline
+          editable={!sending}
         />
-        <TouchableOpacity
-          onPress={() => submitForm(FormData)}
-          style={tailwind("bg-primary py-2 px-4 rounded")}
-        >
-          <Text style={tailwind("text-onPrimary text-center")}>Submit</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* FAQs */}
-      <View style={tailwind("mt-6")}>
-        <Text style={tailwind("text-lg font-semibold mb-2")}>
-          Frequently Asked Questions
-        </Text>
-        <Text style={tailwind("mb-2")}>
-          Q: How do I change my pet&rsquo;s profile?
-        </Text>
-        <Text style={tailwind("mb-4")}>
-          A: Go to your profile, select your pet, and tap &rsquo;Edit&rsquo;.
-        </Text>
-        <Text style={tailwind("mb-2")}>Q: Can I cancel a playdate?</Text>
-        <Text style={tailwind("mb-4")}>
-          A: Yes, go to the playdate details and select &rsquo;Cancel&rsquo;.
-        </Text>
-        <Text style={tailwind("mb-2")}>
-          Q: What to do if I encounter a technical issue?
-        </Text>
-        <Text style={tailwind("mb-4")}>
-          A: Contact us using the form above, detailing the issue.
-        </Text>
-      </View>
+        <Button
+          testID="support-submit"
+          title="Send"
+          onPress={submit}
+          loading={sending}
+          style={tailwind("mt-md")}
+        />
 
-      {/* Contact Information */}
-      <View style={tailwind("mt-6")}>
-        <Text style={tailwind("text-lg font-semibold mb-2")}>
-          Contact Information
+        <Text variant="caption" tone="muted" style={tailwind("mt-xxl mb-sm")}>
+          Common questions
         </Text>
-        <Text>Email: support@petpalsconnect.com</Text>
-        <Text>Phone: 123-456-7890</Text>
-      </View>
-    </ScrollView>
+
+        {FAQS.map((faq) => (
+          <Card key={faq.question} style={tailwind("mb-sm")}>
+            <Text variant="label">{faq.question}</Text>
+            <Text variant="body" tone="muted" style={tailwind("mt-xs")}>
+              {faq.answer}
+            </Text>
+          </Card>
+        ))}
+
+        <View style={{ height: space.xxl }} />
+      </ScrollView>
+    </Screen>
   );
 };
 

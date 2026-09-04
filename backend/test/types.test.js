@@ -298,3 +298,74 @@ test("every notification destination is a screen the app registers", () => {
     );
   }
 });
+
+test("no screen writes a PascalCase version of a real schema field", () => {
+  const mongoose = require("mongoose");
+  for (const name of fs.readdirSync(path.resolve(__dirname, "../models"))) {
+    if (name.endsWith(".js")) require(`../models/${name}`);
+  }
+
+  const schemaFields = new Set();
+  for (const model of Object.values(mongoose.models)) {
+    for (const modelPath of Object.keys(model.schema.paths)) {
+      if (modelPath.startsWith("_") || modelPath === "__v") continue;
+      schemaFields.add(modelPath.split(".")[0]);
+    }
+  }
+
+  const APP_SRC = path.resolve(__dirname, "../../PetPalsConnectApp/src");
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.[jt]sx?$/.test(entry.name) && !/\.test\./.test(entry.name)) files.push(full);
+    }
+  };
+  walk(APP_SRC);
+
+  /**
+   * The mirror image of the read check above, and the half that bites hardest.
+   *
+   * A PascalCase *read* renders a blank line. A PascalCase *write* is dropped
+   * by Mongoose strict mode without an error, so the save then fails on the
+   * required fields that look present in the source - or, worse, succeeds and
+   * stores nothing. `PostPlaydateReviewScreen` sent
+   * `{ Comment, Rating, RelatedPlaydate, Reviewer, Visibility }`, so no review
+   * has ever been submitted; `GroupChatCreationScreen` sent
+   * `{ GroupName, Participants, Creator }`; three safety payloads did the same
+   * before them.
+   *
+   * Only object-literal keys count - `Comment: comment` - so a component prop
+   * or a JSX attribute is not mistaken for a payload field.
+   */
+  const offenders = [];
+  for (const file of files) {
+    // Route names are PascalCase by convention, so the navigators are full of
+    // keys that look like payload fields and are not.
+    if (file.includes(`${path.sep}navigation${path.sep}`)) continue;
+
+    const source = fs
+      .readFileSync(file, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+    // A payload is only a payload if the file talks to the API at all.
+    if (!/\bapi\.(post|put|patch)\b/.test(source)) continue;
+
+    for (const match of source.matchAll(/(^|[{,]\s*)([A-Z][a-zA-Z]*)\s*:/gm)) {
+      const lower = match[2][0].toLowerCase() + match[2].slice(1);
+      if (schemaFields.has(lower)) {
+        offenders.push(
+          `${path.relative(APP_SRC, file)} writes ${match[2]}:; the schema field is ${lower}`
+        );
+      }
+    }
+  }
+
+  assert.deepEqual(
+    [...new Set(offenders)],
+    [],
+    `payloads with PascalCase keys the schema drops:\n  ${[...new Set(offenders)].join("\n  ")}`
+  );
+});

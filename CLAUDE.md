@@ -286,6 +286,16 @@ people or their pets filters through it: discovery, `getUserChats`,
 say "not available", never "they blocked you": the second confirms the block to
 a harasser.
 
+**Support tickets are the caller's own, and the name and email come from the
+token.** `createSupportMessage` took both from the body and then *sent an email
+to that address* quoting the body text back — a mail relay with
+attacker-controlled recipient and content, reachable by anyone with an account.
+Reading, editing and deleting a ticket were all by id and unscoped; editing is
+gone entirely (410), because a support conversation is a record of what
+somebody said. The create path also pruned the oldest 500 tickets, everybody's,
+whenever the collection reached 1,000 — a cap that throws away other people's
+open tickets is not a retention policy.
+
 **Reporting blocks.** `POST /api/reports` files the report *and* blocks the
 reported person in one request, so the two cannot come apart. Asking somebody
 who has just said they feel unsafe to keep looking at the reason is not a thing
@@ -370,6 +380,18 @@ of the store, which the screen and the push handler both keep current.
 `GroupChat` is per person — a single `isMuted` boolean would let one side
 silence the other — and `notify({ push: false })` is how a muted conversation
 skips the push while the message still appears in the list.
+
+**`UserPreferences` holds notification preferences and nothing else.** It used
+to be a parallel copy of the account settings — `playdateRange`,
+`locationSharingEnabled`, `securityQuestions`, `darkModeEnabled` — every one of
+which also lives on `User`, which is the copy matching and playdates read. Two
+homes for a setting is two answers to the same question. `notify()` consults
+it through `wantsPush()`, which fails open: a missing row or a failed read
+means the defaults, because it is better to send a push somebody has muted than
+to drop one they are waiting on. `CATEGORY_OF` in `notificationTypes.js` maps a
+type to the switch that governs it, and the preferences screen fetches
+`CATEGORIES` rather than listing them, so a switch always governs something the
+server actually checks.
 
 ### Matching and discovery
 
@@ -526,10 +548,13 @@ copies of the notification type table entry for entry, and checks every
 destination in it is a screen `AppStack` registers — the whole point of that
 table is that a tap lands somewhere, and neither half can prove that alone.
 
-`backend/test/types.test.js` also fails on any app read of a PascalCase version
-of a real schema field (`item.ContentText`, `playdate.Date`, `article.Title`).
-The schemas are lowercase; those reads are `undefined`, and a blank line on a
-device is the only symptom.
+`backend/test/types.test.js` also fails on any app read *or write* of a
+PascalCase version of a real schema field. A read (`item.ContentText`,
+`playdate.Date`) is `undefined` and leaves a blank line on a device. A write is
+worse: strict mode drops the key without an error, so the save then fails on
+the required fields that are visibly present in the source — which is why no
+review, group chat or playdate could be created from three separate screens
+that all read as though they worked.
 
 `backend/test/schemaAudit.test.js` — writes: every `new Model({...})`,
 `Model.create({...})` and upsert in the backend sets each field its schema

@@ -1,145 +1,152 @@
-import React, { useState, useMemo } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  StyleSheet,
-  Alert,
-} from "react-native";
-import { auth } from "../../../firebase/firebaseConfig";
-import { useDispatch } from "react-redux";
+import React, { useMemo, useState } from "react";
+import { FlatList, TextInput, View } from "react-native";
+
 import api from "../../api/axios";
-import { getStoredToken } from "../../../utils/tokenutil";
+import { Button, Card, Screen, Text, useToast } from "../../components/ui";
+import { useTailwind } from "../../styles/tailwind";
 import { useTokens } from "../../context/AppThemeContext";
+import { radius } from "../../styles/tokens";
 
+/**
+ * Naming a new group.
+ *
+ * Four things stopped this working. `const [setChatId] = useState(null)`
+ * destructures the *value* into a variable named like the setter, so
+ * `dispatch(setChatId(id))` called `null(...)` and threw. The payload was
+ * `{ GroupName, Participants, Creator }` against a lowercase schema, so strict
+ * mode dropped all three. `Creator` was `auth.currentUser.uid` - a Firebase
+ * uid where a Mongo user id belongs - and the server takes the creator from
+ * the token anyway. And the "Initial Message" field was collected and never
+ * sent anywhere.
+ */
 const GroupChatCreationScreen = ({ route, navigation }) => {
+  const tailwind = useTailwind();
   const tokens = useTokens();
-  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+  const toast = useToast();
 
-  const { selectedPets } = route.params;
-  const [setChatId] = useState(null);
+  const selectedPets = useMemo(
+    () => route?.params?.selectedPets ?? [],
+    [route?.params?.selectedPets]
+  );
+
   const [groupName, setGroupName] = useState("");
   const [initialMessage, setInitialMessage] = useState("");
-  const dispatch = useDispatch();
+  const [creating, setCreating] = useState(false);
+
+  /** The owners of the chosen pets - a group is people, not animals. */
+  const participants = useMemo(
+    () =>
+      [
+        ...new Set(
+          selectedPets
+            .map((pet) => pet?.owner?._id ?? pet?.owner)
+            .filter(Boolean)
+            .map(String)
+        ),
+      ],
+    [selectedPets]
+  );
 
   const createGroupChat = async () => {
-
     if (!groupName.trim()) {
-      Alert.alert(
-        "Group Name Required",
-        "Please enter a name for the group chat."
-      );
+      toast.error("Give the group a name first.");
+      return;
+    }
+    if (participants.length === 0) {
+      toast.error("Choose at least one pet to start a group with.");
       return;
     }
 
+    setCreating(true);
     try {
-      const token = await getStoredToken(); // Retrieve the token
-      const groupChatData = {
-        GroupName: groupName,
-        Participants: selectedPets.map((pet) => pet.owner), // userIds of participants
-        Creator: auth.currentUser.uid,
-      };
+      const { data } = await api.post("/api/groupchats/findOrCreate", {
+        groupName: groupName.trim(),
+        participants,
+      });
 
-      const response = await api.post(
-        "/api/groupchats/findOrCreate",
-        groupChatData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (response.status === 201 || response.status === 200) {
-        const groupChatId = response.data._id;
-        dispatch(setChatId(groupChatId));
-        navigation.navigate("GroupChat", { chatId: groupChatId });
-      } else {
-        throw new Error("Failed to find or create group chat");
+      // The field existed and went nowhere; a group that opens with what you
+      // meant to say is the whole point of collecting it.
+      if (initialMessage.trim()) {
+        await api
+          .post("/api/groupchats/send", {
+            groupId: data._id,
+            text: initialMessage.trim(),
+          })
+          .catch((error) =>
+            console.warn("[groupchat] Opening message failed:", error.message)
+          );
       }
+
+      navigation.navigate("GroupChat", { chatId: data._id });
     } catch (error) {
-      console.error("Error with group chat:", error);
-      Alert.alert("Error", "Failed to process group chat. Please try again.");
+      console.warn("[groupchat] Could not create:", error.message);
+      toast.error(
+        error.response?.data?.message ?? "Couldn't create that group chat."
+      );
+    } finally {
+      setCreating(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Creating Group Chat</Text>
+    <Screen testID="group-chat-creation">
+      <Text variant="title">New group</Text>
 
-      <Text style={styles.label}>Selected Pets:</Text>
+      <Text variant="caption" tone="muted" style={tailwind("mt-lg mb-sm")}>
+        With
+      </Text>
       <FlatList
         data={selectedPets}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => String(item?._id ?? index)}
         renderItem={({ item }) => (
-          <Text style={styles.petName}>{item.name}</Text>
+          <Card style={tailwind("mb-sm")}>
+            <Text variant="body">{item?.name ?? "A pet"}</Text>
+          </Card>
         )}
+        ListEmptyComponent={
+          <Text variant="body" tone="muted">
+            No pets chosen yet.
+          </Text>
+        }
       />
 
       <TextInput
-        style={styles.input}
-        placeholder="Enter Group Chat Name"
+        testID="group-name"
+        style={[
+          tailwind("bg-surface border border-border text-text p-md mt-lg"),
+          { borderRadius: radius.control },
+        ]}
+        placeholder="Group name"
+        placeholderTextColor={tokens.textFaint}
         value={groupName}
         onChangeText={setGroupName}
+        editable={!creating}
       />
 
       <TextInput
-        style={[styles.input, styles.messageInput]}
-        placeholder="Initial Message (optional)"
+        testID="group-first-message"
+        style={[
+          tailwind("bg-surface border border-border text-text p-md mt-md"),
+          { borderRadius: radius.control, minHeight: 88, textAlignVertical: "top" },
+        ]}
+        placeholder="Say something to start it off (optional)"
+        placeholderTextColor={tokens.textFaint}
         value={initialMessage}
         onChangeText={setInitialMessage}
+        editable={!creating}
         multiline
       />
 
-      <TouchableOpacity style={styles.button} onPress={createGroupChat}>
-        <Text style={styles.buttonText}>Create Group Chat</Text>
-      </TouchableOpacity>
-    </View>
+      <View style={tailwind("mt-lg")}>
+        <Button
+          testID="create-group"
+          title="Create group"
+          onPress={createGroupChat}
+          loading={creating}
+        />
+      </View>
+    </Screen>
   );
 };
-
-const makeStyles = (t) => StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-  },
-  header: {
-    color: t.text,
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  label: {
-    color: t.text,
-    fontWeight: "bold",
-    marginTop: 10,
-  },
-  petName: {
-    color: t.text,
-    fontSize: 16,
-    marginVertical: 2,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: t.border,
-    padding: 10,
-    borderRadius: 4,
-    marginTop: 10,
-  },
-  messageInput: {
-    height: 100,
-    textAlignVertical: "top", // Aligns text to the top in multiline input
-  },
-  button: {
-    backgroundColor: t.primary,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  buttonText: {
-    color: t.surface,
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-});
 
 export default GroupChatCreationScreen;

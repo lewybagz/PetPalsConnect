@@ -8,6 +8,9 @@ import BlockedAccountsScreen from "../../src/screens/settings/BlockedAccountsScr
 import PetPhotosScreen from "../../src/screens/pets/PetPhotosScreen";
 import SettingsScreen from "../../src/screens/settings/SettingsScreen";
 import NotificationsScreen from "../../src/screens/bottomTab/NotificationsScreen";
+import NotificationPreferencesScreen from "../../src/screens/settings/NotificationPreferencesScreen";
+import HelpSupportScreen from "../../src/screens/settings/HelpSupportScreen";
+import PostPlaydateReviewScreen from "../../src/screens/playdate/PostPlaydateReviewScreen";
 import MapScreen from "../../src/screens/swipe/MapScreen";
 import { CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
 
@@ -179,6 +182,35 @@ export const BOARDS = [
     label: "Notifications - skeleton",
     routes: { ...ROUTES, "/api/notifications": pending },
     render: () => <NotificationsScreen navigation={navigation} />,
+  },
+  {
+    id: "notification-preferences",
+    label: "Notification preferences",
+    routes: ROUTES,
+    render: () => <NotificationPreferencesScreen />,
+  },
+  {
+    id: "support",
+    label: "Help & support",
+    routes: ROUTES,
+    render: () => <HelpSupportScreen />,
+  },
+  {
+    id: "review",
+    label: "Post-playdate review",
+    routes: ROUTES,
+    render: () => (
+      <PostPlaydateReviewScreen
+        navigation={navigation}
+        route={{
+          params: {
+            playdateId: "playdate-1",
+            pet: { _id: "pet-2", name: "Bo", breed: "Border Collie" },
+            playdate: { _id: "playdate-1", location: "loc-1" },
+          },
+        }}
+      />
+    ),
   },
   {
     id: "settings",

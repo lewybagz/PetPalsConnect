@@ -105,6 +105,38 @@ const LEGACY = {
   PlaydateReminder: "reviewReminder",
 };
 
+/**
+ * Which preference switches a type off.
+ *
+ * Coarser than the types on purpose: "mute messages" is a thing somebody
+ * wants, "mute group message reactions but not group messages" is not, and a
+ * settings screen with eleven switches is one nobody reads. Anything not
+ * listed here is only governed by the master switch.
+ */
+const CATEGORY_OF = {
+  message: "messages",
+  groupMessage: "messages",
+  messageReaction: "messages",
+  friendRequest: "friendRequests",
+  friendAccepted: "friendRequests",
+  petMatch: "matches",
+  playdate: "playdateReminders",
+  playdateAccepted: "playdateReminders",
+  playdateDeclined: "playdateReminders",
+  playdateCancelled: "playdateReminders",
+  reviewReminder: "playdateReminders",
+  general: "appUpdates",
+};
+
+/** The categories, for the preferences screen to render. */
+const CATEGORIES = [
+  { key: "messages", label: "Messages" },
+  { key: "matches", label: "New matches" },
+  { key: "playdateReminders", label: "Playdates and reminders" },
+  { key: "friendRequests", label: "Friend requests" },
+  { key: "appUpdates", label: "Everything else" },
+];
+
 const isType = (type) => Object.prototype.hasOwnProperty.call(TYPES, type);
 
 /** The canonical key for a stored or incoming type. Unknown becomes "general". */
@@ -129,4 +161,17 @@ const destinationFor = (type, data = {}) => {
   return [entry.screen, params];
 };
 
-module.exports = { TYPES, LEGACY, isType, normalise, titleFor, destinationFor };
+/** The preference key that governs a type, or null if only the master switch does. */
+const categoryFor = (type) => CATEGORY_OF[normalise(type)] ?? null;
+
+module.exports = {
+  TYPES,
+  LEGACY,
+  CATEGORIES,
+  CATEGORY_OF,
+  isType,
+  normalise,
+  titleFor,
+  categoryFor,
+  destinationFor,
+};

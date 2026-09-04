@@ -49,7 +49,12 @@ const PlayDateLocationCard = ({ locationData, navigation }) => {
       {locationData.photo && (
         <Image source={{ uri: locationData.photo }} style={styles.image} />
       )}
-      <Text style={styles.title}>{locationData.address}</Text>
+      {/* The heading was the street address, so a card for Dolores Park was
+          titled "19th St & Dolores St" and the name appeared nowhere. */}
+      <Text style={styles.title}>{locationData.name ?? locationData.address}</Text>
+      {locationData.name && locationData.address ? (
+        <Text style={styles.description}>{locationData.address}</Text>
+      ) : null}
       {locationData.description && (
         <Text style={styles.description}>{locationData.description}</Text>
       )}
