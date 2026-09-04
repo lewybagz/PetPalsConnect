@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, TextInput, Button, Alert, StyleSheet } from "react-native";
 import api from "../../api/axios";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 import { clearError } from "../../redux/actions";
 import { useSelector, useDispatch } from "react-redux";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const dispatch = useDispatch();
   const userId = useSelector((state) => state.user.userId);
   const error = useSelector((state) => state.user.error);
@@ -96,7 +100,7 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
@@ -107,7 +111,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   input: {
-    borderColor: "gray",
+    borderColor: t.textMuted,
     borderWidth: 1,
     padding: 10,
     marginBottom: 10,

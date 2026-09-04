@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Platform,
@@ -7,8 +7,12 @@ import {
   Text,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useTokens } from "../context/AppThemeContext";
 
 const DateTimePickerComponent = ({ date, onDateChange, mode }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [showPicker, setShowPicker] = useState(false);
 
   const showDateTimePicker = () => {
@@ -45,29 +49,29 @@ const DateTimePickerComponent = ({ date, onDateChange, mode }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     padding: 10,
     borderRadius: 10,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: t.surfaceAlt,
     borderWidth: 1,
-    borderColor: "#d0d0d0",
+    borderColor: t.textFaint,
     alignItems: "center",
     marginVertical: 10,
   },
   button: {
-    backgroundColor: "#007bff",
+    backgroundColor: t.primary,
     padding: 12,
     borderRadius: 6,
   },
   buttonText: {
-    color: "white",
+    color: t.surface,
     fontWeight: "bold",
   },
   picker: {
     width: "100%",
-    backgroundColor: "white",
-    color: "black", // For text color inside the picker
+    backgroundColor: t.surface,
+    color: t.text, // For text color inside the picker
   },
   // Add more complex styles here as needed
 });

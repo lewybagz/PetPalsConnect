@@ -26,10 +26,10 @@ const LegalPoliciesScreen = () => {
           onPress={() => setSelectedDocument("terms")}
           style={tailwind("mr-4")}
         >
-          <Text style={tailwind("text-blue-500")}>Terms of Service</Text>
+          <Text style={tailwind("text-primary")}>Terms of Service</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setSelectedDocument("privacy")}>
-          <Text style={tailwind("text-blue-500")}>Privacy Policy</Text>
+          <Text style={tailwind("text-primary")}>Privacy Policy</Text>
         </TouchableOpacity>
       </View>
 

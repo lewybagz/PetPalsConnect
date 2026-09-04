@@ -5,6 +5,7 @@ import { useSocketFriendRequest } from "../../hooks/useSocketEvents";
 import SwipeableUserPetCard from "../swipe/SwipeableUserPetCard";
 import api from "../../api/axios";
 import { staleWhileRevalidate, CacheKeys } from "../../services/localCache";
+import { useTokens } from "../../context/AppThemeContext";
 
 /**
  * Friends list.
@@ -15,6 +16,9 @@ import { staleWhileRevalidate, CacheKeys } from "../../services/localCache";
  * callback, which breaks the rules of hooks - it is now called at the top level.
  */
 const FriendsListScreen = ({ navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -89,10 +93,10 @@ const FriendsListScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  empty: { color: "#666", textAlign: "center" },
+  empty: { color: t.textMuted, textAlign: "center" },
 });
 
 export default FriendsListScreen;

@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTailwind } from "../../styles/tailwind";
 import { useToast } from "../../components/ui";
 import { fetchBlocked, unblockUser } from "../../api/safety";
+import { useTokens } from "../../context/AppThemeContext";
 
 /**
  * Who you have blocked, and how to undo it.
@@ -23,6 +24,7 @@ import { fetchBlocked, unblockUser } from "../../api/safety";
  */
 const BlockedAccountsScreen = () => {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const toast = useToast();
 
   const [blocked, setBlocked] = useState([]);
@@ -83,7 +85,7 @@ const BlockedAccountsScreen = () => {
 
   return (
     <ScrollView testID="blocked-accounts" contentContainerStyle={tailwind("p-4")}>
-      <Text style={tailwind("text-sm text-gray-500 mb-4")}>
+      <Text style={tailwind("text-sm text-textMuted mb-4")}>
         Blocked accounts can&apos;t see you in matches or search, and neither of
         you can message the other.
       </Text>
@@ -93,8 +95,8 @@ const BlockedAccountsScreen = () => {
           testID="blocked-empty"
           style={tailwind("items-center justify-center py-16")}
         >
-          <Ionicons name="shield-checkmark-outline" size={44} color="#d0d0d0" />
-          <Text style={tailwind("text-base text-gray-500 mt-3")}>
+          <Ionicons name="shield-checkmark-outline" size={44} color={tokens.textFaint} />
+          <Text style={tailwind("text-base text-textMuted mt-3")}>
             You haven&apos;t blocked anyone.
           </Text>
         </View>
@@ -104,7 +106,7 @@ const BlockedAccountsScreen = () => {
             key={entry._id}
             testID={`blocked-${entry.blockedUser?._id}`}
             style={tailwind(
-              "flex-row items-center bg-white border border-gray-200 rounded-2xl p-3 mb-3"
+              "flex-row items-center bg-surface border border-border rounded-2xl p-3 mb-3"
             )}
           >
             {entry.blockedUser?.userPhoto ? (
@@ -115,10 +117,10 @@ const BlockedAccountsScreen = () => {
             ) : (
               <View
                 style={tailwind(
-                  "h-12 w-12 rounded-full bg-gray-100 items-center justify-center"
+                  "h-12 w-12 rounded-full bg-surfaceAlt items-center justify-center"
                 )}
               >
-                <Ionicons name="person-outline" size={22} color="#9ca3af" />
+                <Ionicons name="person-outline" size={22} color={tokens.textFaint} />
               </View>
             )}
 
@@ -130,9 +132,9 @@ const BlockedAccountsScreen = () => {
               testID={`unblock-${entry.blockedUser?._id}`}
               disabled={busyId === entry.blockedUser?._id}
               onPress={() => unblock(entry)}
-              style={tailwind("border border-gray-300 rounded-xl px-4 py-2")}
+              style={tailwind("border border-border rounded-xl px-4 py-2")}
             >
-              <Text style={tailwind("font-semibold text-gray-700")}>Unblock</Text>
+              <Text style={tailwind("font-semibold text-textMuted")}>Unblock</Text>
             </TouchableOpacity>
           </View>
         ))

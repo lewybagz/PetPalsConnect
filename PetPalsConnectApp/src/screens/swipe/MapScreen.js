@@ -22,12 +22,14 @@ import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 import BottomSheet from "@gorhom/bottom-sheet";
 import CustomTooltip from "../../components/CustomTooltip";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 const WalkthroughableMapView = walkthroughable(MapView);
 const WalkthroughableText = walkthroughable(Text);
 const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
 
 const MapScreen = ({ start, route, navigation }) => {
+  const tokens = useTokens();
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [matchedPets, setMatchedPets] = useState([]);
@@ -170,7 +172,7 @@ const MapScreen = ({ start, route, navigation }) => {
                 description={"Matched Pet"}
                 onPress={() => handleMarkerPress(pet, "pet")}
               >
-                <Icon name="dog" size={30} color="#2E8B57" />
+                <Icon name="dog" size={30} color={tokens.success} />
               </Marker>
             ))}
           {showPlaydateLocations &&
@@ -185,7 +187,7 @@ const MapScreen = ({ start, route, navigation }) => {
                 description={"Playdate Spot"}
                 onPress={() => handleMarkerPress(playdate, "playdate")}
               >
-                <Icon name="paw" size={30} color="#FF6347" />
+                <Icon name="paw" size={30} color={tokens.danger} />
               </Marker>
             ))}
         </WalkthroughableMapView>
@@ -196,7 +198,7 @@ const MapScreen = ({ start, route, navigation }) => {
         name="toggleTheme"
       ></CopilotStep>
       <WalkthroughableTouchableOpacity
-        style={tailwind("absolute bottom-4 right-4 bg-white rounded-full p-2")}
+        style={tailwind("absolute bottom-4 right-4 bg-surface rounded-full p-2")}
         onPress={toggleMapTheme}
       >
         <Icon
@@ -216,10 +218,10 @@ const MapScreen = ({ start, route, navigation }) => {
           name="matchedPetsToggle"
         >
           <WalkthroughableTouchableOpacity
-            style={tailwind("m-2 p-2 bg-blue-500 rounded")}
+            style={tailwind("m-2 p-2 bg-primary rounded")}
             onPress={toggleMatchedPets}
           >
-            <WalkthroughableText style={tailwind("text-white")}>
+            <WalkthroughableText style={tailwind("text-onPrimary")}>
               {showMatchedPets ? "Hide Matched Pets" : "Show Matched Pets"}
             </WalkthroughableText>
           </WalkthroughableTouchableOpacity>
@@ -231,10 +233,10 @@ const MapScreen = ({ start, route, navigation }) => {
           name="playdatesToggle"
         >
           <WalkthroughableTouchableOpacity
-            style={tailwind("m-2 p-2 bg-green-500 rounded")}
+            style={tailwind("m-2 p-2 bg-success rounded")}
             onPress={togglePlaydateLocations}
           >
-            <WalkthroughableText style={tailwind("text-white")}>
+            <WalkthroughableText style={tailwind("text-onPrimary")}>
               {showPlaydateLocations ? "Hide Playdates" : "Show Playdates"}
             </WalkthroughableText>
           </WalkthroughableTouchableOpacity>
@@ -269,7 +271,7 @@ const MapScreen = ({ start, route, navigation }) => {
                 name="viewDetails"
               >
                 <WalkthroughableTouchableOpacity
-                  style={tailwind("bg-blue-500 py-2 px-4 rounded")}
+                  style={tailwind("bg-primary py-2 px-4 rounded")}
                   onPress={() => {
                     if (selectedMarker.type === "pet") {
                       navigation.navigate("PetDetails", {
@@ -286,7 +288,7 @@ const MapScreen = ({ start, route, navigation }) => {
                   }}
                 >
                   <WalkthroughableText
-                    style={tailwind("text-white text-center")}
+                    style={tailwind("text-onPrimary text-center")}
                   >
                     View Details
                   </WalkthroughableText>

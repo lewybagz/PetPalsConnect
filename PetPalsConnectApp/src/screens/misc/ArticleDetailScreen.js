@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ScrollView, Text, StyleSheet } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 const ArticleDetailScreen = ({ route }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const { articleId } = route.params;
   const [article, setArticle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +52,7 @@ const ArticleDetailScreen = ({ route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
@@ -60,7 +64,7 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 14,
-    color: "gray",
+    color: t.textMuted,
     marginBottom: 10,
   },
   content: {

@@ -1,7 +1,11 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { useTokens } from "../context/AppThemeContext";
 
 const MatchingAlgorithmPopup = ({ visible, onClose, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const onNavigateToSubscription = () => {
     onClose(); // Close the current modal
     navigation.navigate("ChoosePlan");
@@ -60,7 +64,7 @@ const MatchingAlgorithmPopup = ({ visible, onClose, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   featureTitle: {
     fontWeight: "bold",
   },
@@ -72,11 +76,11 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: "white",
+    backgroundColor: t.surface,
     borderRadius: 20,
     padding: 35,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -93,10 +97,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 10,
     elevation: 2,
-    backgroundColor: "#2196F3",
+    backgroundColor: t.primary,
   },
   buttonText: {
-    color: "white",
+    color: t.surface,
     fontWeight: "bold",
     textAlign: "center",
   },

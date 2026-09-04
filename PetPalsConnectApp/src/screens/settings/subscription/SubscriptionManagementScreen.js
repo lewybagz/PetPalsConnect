@@ -9,6 +9,7 @@ import {
   formatPrice,
   resumeSubscription,
 } from "../../../api/subscriptions";
+import { useTokens } from "../../../context/AppThemeContext";
 
 /**
  * Shows and manages the current subscription.
@@ -25,6 +26,7 @@ import {
  */
 const SubscriptionManagementScreen = ({ navigation }) => {
   const tailwind = useTailwind();
+  const tokens = useTokens();
 
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,15 +95,15 @@ const SubscriptionManagementScreen = ({ navigation }) => {
         <Text style={tailwind("text-lg font-semibold mb-2")}>
           You’re on the free plan
         </Text>
-        <Text style={tailwind("text-base text-gray-500 text-center mb-6")}>
+        <Text style={tailwind("text-base text-textMuted text-center mb-6")}>
           PetPals Plus adds unlimited matches and priority playdates.
         </Text>
         <TouchableOpacity
           testID="see-plans"
           onPress={() => navigation.navigate("ChoosePlan")}
-          style={tailwind("bg-blue-600 rounded-xl px-6 py-3")}
+          style={tailwind("bg-primary rounded-xl px-6 py-3")}
         >
-          <Text style={tailwind("text-white font-semibold")}>See plans</Text>
+          <Text style={tailwind("text-onPrimary font-semibold")}>See plans</Text>
         </TouchableOpacity>
       </View>
     );
@@ -113,7 +115,7 @@ const SubscriptionManagementScreen = ({ navigation }) => {
     <View testID="subscription-detail" style={tailwind("flex-1 p-6")}>
       <Text style={tailwind("text-2xl font-bold mb-4")}>Your subscription</Text>
 
-      <View style={tailwind("bg-white border border-gray-200 rounded-2xl p-5 mb-6")}>
+      <View style={tailwind("bg-surface border border-border rounded-2xl p-5 mb-6")}>
         <Text style={tailwind("text-base mb-1")}>
           Status: {describeStatus(subscription)}
         </Text>
@@ -136,12 +138,12 @@ const SubscriptionManagementScreen = ({ navigation }) => {
           testID="resume-subscription"
           disabled={busy}
           onPress={() => run(resumeSubscription, "Your subscription will continue.")}
-          style={tailwind("bg-blue-600 rounded-xl py-3 items-center")}
+          style={tailwind("bg-primary rounded-xl py-3 items-center")}
         >
           {busy ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={tokens.surface} />
           ) : (
-            <Text style={tailwind("text-white font-semibold")}>Resume subscription</Text>
+            <Text style={tailwind("text-onPrimary font-semibold")}>Resume subscription</Text>
           )}
         </TouchableOpacity>
       ) : (
@@ -149,12 +151,12 @@ const SubscriptionManagementScreen = ({ navigation }) => {
           testID="cancel-subscription"
           disabled={busy}
           onPress={confirmCancel}
-          style={tailwind("border border-red-500 rounded-xl py-3 items-center")}
+          style={tailwind("border border-danger rounded-xl py-3 items-center")}
         >
           {busy ? (
-            <ActivityIndicator color="#ef4444" />
+            <ActivityIndicator color={tokens.danger} />
           ) : (
-            <Text style={tailwind("text-red-500 font-semibold")}>
+            <Text style={tailwind("text-danger font-semibold")}>
               Cancel subscription
             </Text>
           )}
@@ -166,7 +168,7 @@ const SubscriptionManagementScreen = ({ navigation }) => {
         onPress={() => navigation.navigate("SubscriptionHistory")}
         style={tailwind("py-4 items-center")}
       >
-        <Text style={tailwind("text-blue-600")}>Billing history</Text>
+        <Text style={tailwind("text-primary")}>Billing history</Text>
       </TouchableOpacity>
     </View>
   );

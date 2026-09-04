@@ -55,29 +55,29 @@ const SubscriptionHistoryScreen = () => {
       contentContainerStyle={tailwind("p-4 flex-grow")}
       ListEmptyComponent={
         <View style={tailwind("flex-1 items-center justify-center p-8")}>
-          <Text style={tailwind("text-base text-gray-500 text-center")}>
+          <Text style={tailwind("text-base text-textMuted text-center")}>
             Nothing here yet - you haven’t been billed for a subscription.
           </Text>
         </View>
       }
       renderItem={({ item }) => (
         <View
-          style={tailwind("bg-white border border-gray-200 rounded-2xl p-4 mb-3")}
+          style={tailwind("bg-surface border border-border rounded-2xl p-4 mb-3")}
         >
           <Text style={tailwind("text-lg font-semibold mb-1")}>
             {item.createdDate
               ? new Date(item.createdDate).toLocaleDateString()
               : "Unknown date"}
           </Text>
-          <Text style={tailwind("text-base text-gray-600")}>
+          <Text style={tailwind("text-base text-textMuted")}>
             Plan: {item.planType === "year" ? "Yearly" : "Monthly"}
           </Text>
           {item.amount != null ? (
-            <Text style={tailwind("text-base text-gray-600")}>
+            <Text style={tailwind("text-base text-textMuted")}>
               Amount: {formatPrice(item.amount, item.currency)}
             </Text>
           ) : null}
-          <Text style={tailwind("text-base text-gray-600")}>
+          <Text style={tailwind("text-base text-textMuted")}>
             Status: {describeStatus(item)}
           </Text>
         </View>

@@ -31,7 +31,7 @@ const ChangePasswordScreen = () => {
       <Text style={tailwind("text-xl font-bold mb-4")}>Change Password</Text>
 
       <TextInput
-        style={tailwind("border border-gray-300 p-2 rounded mb-4")}
+        style={tailwind("border border-border p-2 rounded mb-4")}
         value={currentPassword}
         onChangeText={setCurrentPassword}
         placeholder="Current Password"
@@ -39,7 +39,7 @@ const ChangePasswordScreen = () => {
       />
 
       <TextInput
-        style={tailwind("border border-gray-300 p-2 rounded mb-4")}
+        style={tailwind("border border-border p-2 rounded mb-4")}
         value={newPassword}
         onChangeText={setNewPassword}
         placeholder="New Password"
@@ -47,7 +47,7 @@ const ChangePasswordScreen = () => {
       />
 
       <TextInput
-        style={tailwind("border border-gray-300 p-2 rounded mb-6")}
+        style={tailwind("border border-border p-2 rounded mb-6")}
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         placeholder="Confirm New Password"
@@ -56,9 +56,9 @@ const ChangePasswordScreen = () => {
 
       <TouchableOpacity
         onPress={handleChangePassword}
-        style={tailwind("bg-blue-500 py-2 px-4 rounded")}
+        style={tailwind("bg-primary py-2 px-4 rounded")}
       >
-        <Text style={tailwind("text-white text-center")}>Change Password</Text>
+        <Text style={tailwind("text-onPrimary text-center")}>Change Password</Text>
       </TouchableOpacity>
     </View>
   );

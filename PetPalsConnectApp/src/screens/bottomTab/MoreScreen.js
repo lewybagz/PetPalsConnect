@@ -1,14 +1,18 @@
 // MoreScreen.js
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
 import { copilot, walkthroughable, CopilotStep } from "../../components/walkthrough";
 import CustomTooltip from "../../components/CustomTooltip";
+import { useTokens } from "../../context/AppThemeContext";
 
 // Walkthroughable components
 const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
 const WalkthroughableText = walkthroughable(Text);
 
 const MoreScreen = ({ route, start, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   useEffect(() => {
     if (route.params?.showTutorial) {
       start(); // Start copilot tutorial
@@ -95,7 +99,7 @@ const MoreScreen = ({ route, start, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
@@ -103,14 +107,14 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   button: {
-    backgroundColor: "tomato",
+    backgroundColor: t.primary,
     padding: 15,
     borderRadius: 5,
     marginBottom: 10,
     width: "100%",
   },
   buttonText: {
-    color: "white",
+    color: t.surface,
     textAlign: "center",
     fontSize: 16,
   },

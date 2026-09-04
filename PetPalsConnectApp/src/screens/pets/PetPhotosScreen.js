@@ -19,6 +19,7 @@ import {
   deleteStoredPhoto,
   makePrimary,
 } from "../../services/photos";
+import { useTokens } from "../../context/AppThemeContext";
 
 /**
  * Add, reorder and remove a pet's photos.
@@ -30,6 +31,7 @@ import {
  */
 const PetPhotosScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const toast = useToast();
   const petId = route?.params?.petId ?? route?.params?.pet?._id;
 
@@ -139,30 +141,30 @@ const PetPhotosScreen = ({ route, navigation }) => {
       <Text style={tailwind("text-xl font-bold mb-1")}>
         {pet?.name ? `${pet.name}'s photos` : "Photos"}
       </Text>
-      <Text style={tailwind("text-sm text-gray-500 mb-4")}>
+      <Text style={tailwind("text-sm text-textMuted mb-4")}>
         The first photo is the one people see when they find {pet?.name ?? "your pet"}.
       </Text>
 
       {photos.length === 0 ? (
         <View
           testID="photos-empty"
-          style={tailwind("items-center justify-center py-10 bg-gray-50 rounded-2xl mb-4")}
+          style={tailwind("items-center justify-center py-10 bg-surfaceAlt rounded-2xl mb-4")}
         >
-          <Ionicons name="camera-outline" size={40} color="#9ca3af" />
-          <Text style={tailwind("text-gray-500 mt-2")}>No photos yet</Text>
+          <Ionicons name="camera-outline" size={40} color={tokens.textFaint} />
+          <Text style={tailwind("text-textMuted mt-2")}>No photos yet</Text>
         </View>
       ) : (
         photos.map((url, index) => (
           <View
             key={url}
             testID={`photo-${index}`}
-            style={tailwind("flex-row items-center bg-white border border-gray-200 rounded-2xl p-3 mb-3")}
+            style={tailwind("flex-row items-center bg-surface border border-border rounded-2xl p-3 mb-3")}
           >
             <Image source={{ uri: url }} style={tailwind("h-20 w-20 rounded-xl")} />
 
             <View style={tailwind("flex-1 ml-3")}>
               {index === 0 ? (
-                <Text style={tailwind("text-xs font-semibold text-blue-700 mb-1")}>
+                <Text style={tailwind("text-xs font-semibold text-primary mb-1")}>
                   Main photo
                 </Text>
               ) : (
@@ -170,12 +172,12 @@ const PetPhotosScreen = ({ route, navigation }) => {
                   testID={`make-primary-${index}`}
                   onPress={() => save(makePrimary(photos, url))}
                 >
-                  <Text style={tailwind("text-blue-600 mb-1")}>Make main photo</Text>
+                  <Text style={tailwind("text-primary mb-1")}>Make main photo</Text>
                 </TouchableOpacity>
               )}
 
               <TouchableOpacity testID={`remove-${index}`} onPress={() => remove(url)}>
-                <Text style={tailwind("text-red-500")}>Remove</Text>
+                <Text style={tailwind("text-danger")}>Remove</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -185,7 +187,7 @@ const PetPhotosScreen = ({ route, navigation }) => {
       {busy ? (
         <View testID="photos-uploading" style={tailwind("items-center py-4")}>
           <ActivityIndicator />
-          <Text style={tailwind("text-sm text-gray-500 mt-2")}>
+          <Text style={tailwind("text-sm text-textMuted mt-2")}>
             {progress > 0 ? `Uploading ${Math.round(progress * 100)}%` : "Preparing…"}
           </Text>
         </View>
@@ -194,14 +196,14 @@ const PetPhotosScreen = ({ route, navigation }) => {
           <TouchableOpacity
             testID="add-from-library"
             onPress={() => add(false)}
-            style={tailwind("flex-1 bg-blue-600 rounded-xl py-3 items-center mr-2")}
+            style={tailwind("flex-1 bg-primary rounded-xl py-3 items-center mr-2")}
           >
-            <Text style={tailwind("text-white font-semibold")}>Add a photo</Text>
+            <Text style={tailwind("text-onPrimary font-semibold")}>Add a photo</Text>
           </TouchableOpacity>
           <TouchableOpacity
             testID="add-from-camera"
             onPress={() => add(true)}
-            style={tailwind("flex-1 border border-gray-300 rounded-xl py-3 items-center")}
+            style={tailwind("flex-1 border border-border rounded-xl py-3 items-center")}
           >
             <Text style={tailwind("font-semibold")}>Take one</Text>
           </TouchableOpacity>
@@ -213,7 +215,7 @@ const PetPhotosScreen = ({ route, navigation }) => {
         onPress={() => navigation.goBack()}
         style={tailwind("py-4 items-center")}
       >
-        <Text style={tailwind("text-gray-500")}>Done</Text>
+        <Text style={tailwind("text-textMuted")}>Done</Text>
       </TouchableOpacity>
     </ScrollView>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Alert,
   Modal,
@@ -14,8 +14,12 @@ import { useSelector } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
 import { setError } from "../redux/actions";
 import { blockUser } from "../api/safety";
+import { useTokens } from "../context/AppThemeContext";
 
 const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [modalVisible, setModalVisible] = useState(false);
   const currentUser = useSelector((state) => state.user.user);
 
@@ -143,7 +147,7 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
             style={styles.addFriendIcon}
             onPress={() => handleAddFriend(petData.ownerId)}
           >
-            <Icon name="account-plus" size={24} color="#5cb85c" />
+            <Icon name="account-plus" size={24} color={tokens.success} />
           </TouchableOpacity>
         )}
         {reviews.map((review) => (
@@ -215,13 +219,13 @@ const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
 
   return <View>{renderContent()}</View>;
 };
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   UserPetCard: {
-    backgroundColor: "#fff",
+    backgroundColor: t.surface,
     borderRadius: 8,
     padding: 10,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -252,7 +256,7 @@ const styles = StyleSheet.create({
   },
   details: {
     fontSize: 14,
-    color: "gray",
+    color: t.textMuted,
     marginTop: 4,
   },
   kebabIcon: {
@@ -269,11 +273,11 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: "white",
+    backgroundColor: t.surface,
     borderRadius: 20,
     padding: 35,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -287,7 +291,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   optionText: {
-    color: "black",
+    color: t.text,
     fontWeight: "bold",
     textAlign: "center",
   },

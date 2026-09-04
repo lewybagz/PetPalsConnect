@@ -17,6 +17,7 @@ import { OnboardingProgress } from "../../components/ui";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import useUsernameAvailability from "../../hooks/useUsernameAvailability";
 import { describeApiError } from "../../utils/authErrors";
+import { useTokens } from "../../context/AppThemeContext";
 
 /**
  * Finishes signup by creating the Mongo profile for the current Firebase
@@ -29,6 +30,7 @@ import { describeApiError } from "../../utils/authErrors";
  */
 export default function CreateProfileScreen() {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const { firebaseUser, createProfile, signOut } = useAuthSession();
 
   // Google gives us a display name; use it as a starting point.
@@ -83,16 +85,16 @@ export default function CreateProfileScreen() {
   }[availability.status];
 
   const hintColour = {
-    idle: "text-gray-500",
-    checking: "text-gray-500",
-    available: "text-green-600",
-    unavailable: "text-red-500",
-    unknown: "text-gray-500",
+    idle: "text-textMuted",
+    checking: "text-textMuted",
+    available: "text-success",
+    unavailable: "text-danger",
+    unknown: "text-textMuted",
   }[availability.status];
 
   return (
     <KeyboardAvoidingView
-      style={tailwind("flex-1 bg-white")}
+      style={tailwind("flex-1 bg-surface")}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
@@ -105,11 +107,11 @@ export default function CreateProfileScreen() {
         <OnboardingProgress step={2} />
 
         <View style={tailwind("items-center mb-8")}>
-          <Ionicons name="paw" size={48} color="tomato" />
-          <Text style={tailwind("text-2xl font-bold text-gray-900 mt-4")}>
+          <Ionicons name="paw" size={48} color={tokens.primary} />
+          <Text style={tailwind("text-2xl font-bold text-text mt-4")}>
             Pick your username
           </Text>
-          <Text style={tailwind("text-center text-gray-600 mt-2")}>
+          <Text style={tailwind("text-center text-textMuted mt-2")}>
             This is how other pet owners will find you.
           </Text>
         </View>
@@ -119,18 +121,18 @@ export default function CreateProfileScreen() {
             style={tailwind(
               `flex-row items-center border rounded-lg px-3 ${
                 availability.status === "unavailable"
-                  ? "border-red-400"
+                  ? "border-danger"
                   : availability.status === "available"
-                    ? "border-green-500"
-                    : "border-gray-300"
+                    ? "border-success"
+                    : "border-border"
               }`
             )}
           >
-            <Text style={tailwind("text-gray-400 text-base")}>@</Text>
+            <Text style={tailwind("text-textFaint text-base")}>@</Text>
             <TextInput
-              style={tailwind("flex-1 py-3 px-1 text-base text-gray-900")}
+              style={tailwind("flex-1 py-3 px-1 text-base text-text")}
               placeholder="username"
-              placeholderTextColor="#a1a1a1"
+              placeholderTextColor={tokens.textFaint}
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
@@ -143,10 +145,10 @@ export default function CreateProfileScreen() {
             />
             {availability.status === "checking" && <ActivityIndicator size="small" />}
             {availability.status === "available" && (
-              <Ionicons name="checkmark-circle" size={22} color="#16a34a" />
+              <Ionicons name="checkmark-circle" size={22} color={tokens.success} />
             )}
             {availability.status === "unavailable" && (
-              <Ionicons name="close-circle" size={22} color="#ef4444" />
+              <Ionicons name="close-circle" size={22} color={tokens.danger} />
             )}
           </View>
         </View>
@@ -154,25 +156,25 @@ export default function CreateProfileScreen() {
         <Text style={tailwind(`text-sm mb-6 ${hintColour}`)}>{hint}</Text>
 
         {submitError && (
-          <Text style={tailwind("text-red-500 text-center mb-4")}>{submitError}</Text>
+          <Text style={tailwind("text-danger text-center mb-4")}>{submitError}</Text>
         )}
 
         <Pressable
           onPress={onSubmit}
           disabled={!canSubmit}
           style={tailwind(
-            `rounded-lg py-4 items-center ${canSubmit ? "bg-red-500" : "bg-gray-300"}`
+            `rounded-lg py-4 items-center ${canSubmit ? "bg-danger" : "bg-border"}`
           )}
         >
           {submitting ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={tokens.surface} />
           ) : (
-            <Text style={tailwind("text-white font-semibold text-base")}>Continue</Text>
+            <Text style={tailwind("text-onPrimary font-semibold text-base")}>Continue</Text>
           )}
         </Pressable>
 
         <Pressable onPress={onCancel} style={tailwind("mt-6 items-center")}>
-          <Text style={tailwind("text-gray-500")}>Not now</Text>
+          <Text style={tailwind("text-textMuted")}>Not now</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

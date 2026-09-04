@@ -9,6 +9,7 @@ import ScheduledPlaydatesScreen from "../bottomTab/ScheduledPlaydatesScreen";
 import NotificationsScreen from "../bottomTab/NotificationsScreen";
 import MoreScreen from "../bottomTab/MoreScreen";
 import NotificationTabIcon from "../../components/TabIcon";
+import { useTokens } from "../../context/AppThemeContext";
 
 const Tab = createBottomTabNavigator();
 
@@ -23,12 +24,13 @@ const ICONS = {
 };
 
 export default function BottomTabNavigator() {
+  const tokens = useTokens();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: "tomato",
-        tabBarInactiveTintColor: "gray",
+        tabBarActiveTintColor: tokens.primary,
+        tabBarInactiveTintColor: tokens.textMuted,
         tabBarIcon: ({ focused, color, size }) => {
           const pair = ICONS[route.name];
           if (!pair) return null;

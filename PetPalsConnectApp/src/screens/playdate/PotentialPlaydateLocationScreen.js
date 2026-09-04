@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Alert,
   Text,
@@ -15,8 +15,12 @@ import {
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 const PotentialPlaydateLocationScreen = ({ route }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   // Every caller sends `locationId`, and both endpoints below look the record
   // up by its Mongo `_id` - `placeId` on a Location is the Google place id, a
   // different value entirely. `placeId` stays accepted for older call sites.
@@ -133,7 +137,7 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
@@ -154,7 +158,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: "gray",
+    color: t.textMuted,
     marginTop: 10,
   },
   // Add additional styles as needed

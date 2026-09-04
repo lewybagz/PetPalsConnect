@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,8 +12,12 @@ import { auth } from "../../../firebase/firebaseConfig";
 import { useDispatch } from "react-redux";
 import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 const GroupChatCreationScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const { selectedPets } = route.params;
   const [setChatId] = useState(null);
   const [groupName, setGroupName] = useState("");
@@ -92,7 +96,7 @@ const GroupChatCreationScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
@@ -112,7 +116,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: t.border,
     padding: 10,
     borderRadius: 4,
     marginTop: 10,
@@ -122,14 +126,14 @@ const styles = StyleSheet.create({
     textAlignVertical: "top", // Aligns text to the top in multiline input
   },
   button: {
-    backgroundColor: "#007bff",
+    backgroundColor: t.primary,
     padding: 15,
     borderRadius: 8,
     alignItems: "center",
     marginTop: 20,
   },
   buttonText: {
-    color: "#fff",
+    color: t.surface,
     fontWeight: "bold",
     fontSize: 16,
   },

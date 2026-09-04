@@ -88,7 +88,7 @@ const AccountInformationScreen = () => {
       </Text>
 
       <TextInput
-        style={tailwind("border border-gray-300 p-2 rounded mb-4")}
+        style={tailwind("border border-border p-2 rounded mb-4")}
         value={user?.email || ""}
         onChangeText={(text) =>
           dispatch({ type: "SET_USER", payload: { ...user, email: text } })
@@ -98,7 +98,7 @@ const AccountInformationScreen = () => {
       />
 
       <TextInput
-        style={tailwind("border border-gray-300 p-2 rounded mb-4")}
+        style={tailwind("border border-border p-2 rounded mb-4")}
         value={user?.phone || ""}
         onChangeText={(text) =>
           dispatch({ type: "SET_USER", payload: { ...user, phone: text } })
@@ -109,9 +109,9 @@ const AccountInformationScreen = () => {
 
       <TouchableOpacity
         onPress={handleUpdate}
-        style={tailwind("bg-blue-500 py-2 px-4 rounded")}
+        style={tailwind("bg-primary py-2 px-4 rounded")}
       >
-        <Text style={tailwind("text-white text-center")}>
+        <Text style={tailwind("text-onPrimary text-center")}>
           Update Information
         </Text>
       </TouchableOpacity>

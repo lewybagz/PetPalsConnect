@@ -1,9 +1,13 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, ScrollView, Image, Button } from "react-native";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent"; // Assuming this component displays location details
 import messaging from "@react-native-firebase/messaging";
+import { useTokens } from "../../context/AppThemeContext";
 
 const PlaydateCreatedScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const { playdate, pet } = route.params;
 
   useEffect(() => {
@@ -65,7 +69,7 @@ const PlaydateCreatedScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
@@ -85,9 +89,9 @@ const styles = StyleSheet.create({
   },
   detailsContainer: {
     padding: 10,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: t.surfaceAlt,
     borderRadius: 8,
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,

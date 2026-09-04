@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,12 @@ import api from "../../api/axios";
 import { getAuth } from "@react-native-firebase/auth";
 import UserPetCard from "../../components/UserPetCardComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 const UsersPetsScreen = (navigation) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const auth = getAuth();
   const currentUser = auth.currentUser;
   const [userPets, setUserPets] = useState([]);
@@ -79,20 +83,20 @@ const UsersPetsScreen = (navigation) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
   },
   deleteButton: {
-    backgroundColor: "red",
+    backgroundColor: t.danger,
     padding: 10,
     borderRadius: 8,
     alignItems: "center",
     marginTop: 10,
   },
   buttonText: {
-    color: "#fff",
+    color: t.surface,
     fontSize: 16,
   },
 });

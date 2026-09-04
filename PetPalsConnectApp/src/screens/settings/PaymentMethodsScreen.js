@@ -63,15 +63,15 @@ const PaymentMethodsScreen = (navigation) => {
   };
 
   const renderItem = ({ item }) => (
-    <View style={tailwind("border-b border-gray-200 py-2")}>
+    <View style={tailwind("border-b border-border py-2")}>
       <Text
         style={tailwind("text-lg")}
       >{`${item.type} ending in ${item.last4}`}</Text>
       <Text
-        style={tailwind("text-sm text-gray-600")}
+        style={tailwind("text-sm text-textMuted")}
       >{`Exp: ${item.exp}`}</Text>
       <TouchableOpacity onPress={() => handleDeletePaymentMethod(item.id)}>
-        <Text style={tailwind("text-red-500 mt-1")}>Delete</Text>
+        <Text style={tailwind("text-danger mt-1")}>Delete</Text>
       </TouchableOpacity>
     </View>
   );
@@ -86,9 +86,9 @@ const PaymentMethodsScreen = (navigation) => {
       />
       <TouchableOpacity
         onPress={handleAddPaymentMethod}
-        style={tailwind("mt-4 bg-blue-500 py-2 px-4 rounded")}
+        style={tailwind("mt-4 bg-primary py-2 px-4 rounded")}
       >
-        <Text style={tailwind("text-white text-center")}>
+        <Text style={tailwind("text-onPrimary text-center")}>
           Add Payment Method
         </Text>
       </TouchableOpacity>

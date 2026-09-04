@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -20,8 +20,12 @@ import * as Clipboard from "expo-clipboard";
 import { useSocketMessage } from "../../hooks/useSocketEvents";
 import api from "../../api/axios";
 import { useSelector } from "react-redux";
+import { useTokens } from "../../context/AppThemeContext";
 
 const GroupChatScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [pets, setPets] = useState([]);
   const [searchType, setSearchType] = useState("messages");
   const [isModalVisible, setModalVisible] = useState(false);
@@ -214,12 +218,12 @@ const GroupChatScreen = ({ route, navigation }) => {
     <View style={tailwind("flex-1")}>
       <View style={styles.header}>
         <TouchableOpacity onPress={toggleSearch}>
-          <Icon name="search" size={20} color="#007bff" />
+          <Icon name="search" size={20} color={tokens.primary} />
         </TouchableOpacity>
         {isSearchEnabled && (
           <>
             <TextInput
-              style={tailwind("border border-gray-300 p-2 rounded mx-4 my-2")}
+              style={tailwind("border border-border p-2 rounded mx-4 my-2")}
               placeholder={
                 searchType === "messages"
                   ? "Search messages..."
@@ -240,7 +244,7 @@ const GroupChatScreen = ({ route, navigation }) => {
           </>
         )}
         <TouchableOpacity onPress={fetchGroupInfo}>
-          <Icon name="refresh" size={20} color="#007bff" />
+          <Icon name="refresh" size={20} color={tokens.primary} />
         </TouchableOpacity>
         <Image
           source={{ uri: groupInfo?.groupImage }}
@@ -256,11 +260,11 @@ const GroupChatScreen = ({ route, navigation }) => {
             navigation.navigate("ChatDetails", { chatId: groupId, isGroupChat: true })
           }
         >
-          <Icon name="info-circle" size={20} color="#007bff" />
+          <Icon name="info-circle" size={20} color={tokens.primary} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={toggleModal}>
-          <Icon name="ellipsis-v" size={20} color="#007bff" />
+          <Icon name="ellipsis-v" size={20} color={tokens.primary} />
         </TouchableOpacity>
 
         <GroupOptionsModal
@@ -281,19 +285,19 @@ const GroupChatScreen = ({ route, navigation }) => {
         style={tailwind("flex-1")}
       />
       <View
-        style={tailwind("flex-row items-center p-2 border-t border-gray-300")}
+        style={tailwind("flex-row items-center p-2 border-t border-border")}
       >
         {replyTo && (
           <View style={styles.replyContainer}>
             <Text style={styles.replyText}>{replyTo}</Text>
             <TouchableOpacity onPress={() => setReplyTo(null)}>
-              <Icon name="times-circle" size={12} color="#000" />
+              <Icon name="times-circle" size={12} color={tokens.text} />
             </TouchableOpacity>
           </View>
         )}
         <TextInput
           ref={messageInputRef}
-          style={tailwind("flex-1 border border-gray-300 p-2 rounded mr-2")}
+          style={tailwind("flex-1 border border-border p-2 rounded mr-2")}
           placeholder="Type your message..."
           value={newMessage}
           onChangeText={setNewMessage}
@@ -304,7 +308,7 @@ const GroupChatScreen = ({ route, navigation }) => {
           <LoadingScreen />
         ) : (
           <TouchableOpacity onPress={handleSendMessage} disabled={isLoading}>
-            <Icon name="send" size={24} color="#007bff" />
+            <Icon name="send" size={24} color={tokens.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -312,13 +316,13 @@ const GroupChatScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    borderBottomColor: t.border,
     justifyContent: "space-between",
   },
   groupImage: {
@@ -328,7 +332,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   searchBar: {
-    borderColor: "#ddd",
+    borderColor: t.border,
     borderWidth: 1,
     borderRadius: 5,
     padding: 10,
@@ -338,12 +342,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 4,
-    backgroundColor: "#ececec",
+    backgroundColor: t.surfaceAlt,
     borderRadius: 15,
   },
   replyText: {
     fontSize: 12,
-    color: "#333",
+    color: t.text,
     marginRight: 8,
   },
   // Add styles for additional group info or icons here

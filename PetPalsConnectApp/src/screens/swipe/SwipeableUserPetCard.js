@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Animated,
   View,
@@ -16,8 +16,12 @@ import { useSelector } from "react-redux";
 import { setError } from "../../redux/actions";
 import api from "../../api/axios";
 import { blockUser } from "../../api/safety";
+import { useTokens } from "../../context/AppThemeContext";
 
 const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [modalVisible, setModalVisible] = useState(false);
   const currentUser = useSelector((state) => state.user.user);
 
@@ -136,7 +140,7 @@ const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
             style={styles.addFriendIcon}
             onPress={() => handleAddFriend(petData.ownerId)}
           >
-            <Icon name="account-plus" size={24} color="#5cb85c" />
+            <Icon name="account-plus" size={24} color={tokens.success} />
           </TouchableOpacity>
         )}
         {reviews.map((review) => (
@@ -229,12 +233,12 @@ const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
           width: 100,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "red",
+          backgroundColor: tokens.danger,
         }}
         onPress={() => console.log("Remove friend action")}
       >
         <Animated.View style={{ transform: [{ translateX: trans }] }}>
-          <Icon name="account-minus" size={30} color="#fff" />
+          <Icon name="account-minus" size={30} color={tokens.onPrimary} />
         </Animated.View>
       </TouchableOpacity>
     );
@@ -250,13 +254,13 @@ const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   UserPetCard: {
-    backgroundColor: "#fff",
+    backgroundColor: t.surface,
     borderRadius: 8,
     padding: 10,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -287,7 +291,7 @@ const styles = StyleSheet.create({
   },
   details: {
     fontSize: 14,
-    color: "gray",
+    color: t.textMuted,
     marginTop: 4,
   },
   kebabIcon: {
@@ -304,11 +308,11 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: "white",
+    backgroundColor: t.surface,
     borderRadius: 20,
     padding: 35,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -322,7 +326,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   optionText: {
-    color: "black",
+    color: t.text,
     fontWeight: "bold",
     textAlign: "center",
   },

@@ -1,12 +1,16 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
 import UserPetCardComponent from "../components/UserPetCardComponent";
 import PlayDateLocationCard from "./PlaydateLocationCardComponent";
 import { useSelector, useDispatch } from "react-redux";
 import LoadingScreen from "./LoadingScreenComponent";
 import { clearError } from "../redux/actions";
+import { useTokens } from "../context/AppThemeContext";
 
 const PlaydateCardComponent = ({ playdate, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.user.user);
   const isLoading = useSelector((state) => state.playdate.isLoading);
@@ -66,17 +70,17 @@ const PlaydateCardComponent = ({ playdate, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   card: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: t.surfaceAlt,
     padding: 15,
     borderRadius: 8,
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     marginBottom: 10,
-    borderColor: "#ddd",
+    borderColor: t.border,
     borderWidth: 1,
   },
   sectionTitle: {

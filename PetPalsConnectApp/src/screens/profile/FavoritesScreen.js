@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,12 +13,16 @@ import UserPetCard from "../../components/UserPetCardComponent";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import CustomTooltip from "../../components/CustomTooltip";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 // Walkthroughable components
 const WalkthroughableText = walkthroughable(Text);
 const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
 
 const FavoritesScreen = ({ route, start, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [favorites, setFavorites] = useState([]);
   const [activeTab, setActiveTab] = useState("pets");
 
@@ -124,7 +128,7 @@ const FavoritesScreen = ({ route, start, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
@@ -140,16 +144,16 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: "blue",
+    borderBottomColor: t.primary,
   },
   tabText: {
-    color: "grey",
+    color: t.textMuted,
   },
   noFavoritesText: {
     textAlign: "center",
     marginTop: 20,
     fontSize: 18,
-    color: "gray",
+    color: t.textMuted,
   },
 });
 

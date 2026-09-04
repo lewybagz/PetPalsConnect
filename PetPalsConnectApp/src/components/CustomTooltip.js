@@ -1,10 +1,14 @@
 // CustomTooltip.js
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import AnimatedButton from "./AnimatedButton";
 import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
+import { useTokens } from "../context/AppThemeContext";
 
 const CustomTooltip = ({ handleNext, handlePrev, handleStop, currentStep }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   return (
     <View style={styles.tooltipContainer}>
       <Text style={styles.tooltipText}>{currentStep.text}</Text>
@@ -39,13 +43,13 @@ const CustomTooltip = ({ handleNext, handlePrev, handleStop, currentStep }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   tooltipContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 10,
-    backgroundColor: "#ffffff",
+    backgroundColor: t.surface,
     borderRadius: 5,
   },
   tooltipText: {
@@ -60,7 +64,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   buttonText: {
-    color: "#007bff",
+    color: t.primary,
   },
 });
 

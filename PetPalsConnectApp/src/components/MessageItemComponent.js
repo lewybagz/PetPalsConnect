@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import moment from "moment";
 import { FontAwesome as Icon } from "@expo/vector-icons";
 import { Swipeable } from "react-native-gesture-handler";
 import CustomActionSheet from "./CustomActionSheet";
 import ReactionSelectorComponent from "./ReactionSelectorComponent";
+import { useTokens } from "../context/AppThemeContext";
 
 const MessageItemComponent = ({
   message,
@@ -14,6 +15,9 @@ const MessageItemComponent = ({
   onReact,
   onCopy,
 }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const isMediaMessage = message.mediaUrl && message.mediaType;
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [showReactionsSelector, setShowReactionsSelector] = useState(false);
@@ -76,7 +80,7 @@ const MessageItemComponent = ({
       return (
         <TouchableOpacity style={styles.voiceMessage}>
           {/* Add an icon for voice play */}
-          <Icon name="play-circle" size={30} color="#007bff" />
+          <Icon name="play-circle" size={30} color={tokens.primary} />
         </TouchableOpacity>
       );
     }
@@ -90,7 +94,7 @@ const MessageItemComponent = ({
           style={styles.swipeAction}
           onPress={() => onDelete(message)}
         >
-          <Icon name="trash" size={20} color="#fff" />
+          <Icon name="trash" size={20} color={tokens.onPrimary} />
         </TouchableOpacity>
       )}
       renderLeftActions={() => (
@@ -98,7 +102,7 @@ const MessageItemComponent = ({
           style={styles.swipeAction}
           onPress={() => onReply(message)}
         >
-          <Icon name="reply" size={20} color="#fff" />
+          <Icon name="reply" size={20} color={tokens.onPrimary} />
         </TouchableOpacity>
       )}
     >
@@ -124,7 +128,7 @@ const MessageItemComponent = ({
     </Swipeable>
   );
 };
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     marginVertical: 4,
     padding: 10,
@@ -132,11 +136,11 @@ const styles = StyleSheet.create({
     maxWidth: "80%",
   },
   senderContainer: {
-    backgroundColor: "#daf8cb", // Light green for sender
+    backgroundColor: t.successSoft, // Light green for sender
     alignSelf: "flex-end",
   },
   receiverContainer: {
-    backgroundColor: "#f0f0f0", // Light grey for receiver
+    backgroundColor: t.surfaceAlt, // Light grey for receiver
     alignSelf: "flex-start",
   },
   messageText: {
@@ -144,7 +148,7 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 12,
-    color: "gray",
+    color: t.textMuted,
     marginTop: 4,
     alignSelf: "flex-end",
   },
@@ -157,7 +161,7 @@ const styles = StyleSheet.create({
   voiceMessage: {
     padding: 10,
     borderRadius: 25,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: t.surfaceAlt,
     alignItems: "center",
   },
 });

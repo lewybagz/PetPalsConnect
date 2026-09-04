@@ -17,5 +17,6 @@ export { default as EmptyState } from "./EmptyState";
 export { default as OnboardingProgress, ONBOARDING_STEPS } from "./OnboardingProgress";
 export { default as Screen } from "./Screen";
 export { default as Text } from "./Text";
+export { default as Toggle } from "./Toggle";
 export { default as Skeleton, CardSkeleton, ListSkeleton, RowSkeleton } from "./Skeleton";
 export { ToastProvider, useToast } from "./Toast";

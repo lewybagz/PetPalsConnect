@@ -5,20 +5,18 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 /**
- * A ratchet on hardcoded colours.
+ * No colour outside `src/styles/tokens.ts`.
  *
- * The app held 185 hex literals across 55 files and 55 uses of bare CSS colour
- * keywords, which is why the dark-mode switch could not do anything: there was
- * nothing for a theme to change. `src/styles/tokens.ts` is where colour lives
- * now, and `useTailwind()` resolves `bg-surface` and `text-textMuted` against
- * it.
+ * The app held 227 hardcoded colours across 67 files - 185 hex literals and 55
+ * bare CSS keywords - which is why the dark-mode switch could not do anything:
+ * there was nothing for a theme to change. Colour lives in one module now, and
+ * `useTailwind()` resolves `bg-surface` and `text-textMuted` against it.
  *
- * A lint rule banning raw hex outright would fail on every unconverted file, so
- * it would have to be disabled everywhere - which is the same as not having it.
- * This is the version that works during a migration: a committed count per
- * file, and a failure if any file gets worse. Converting a screen lowers its
- * number; nothing can raise one. When a file reaches zero it leaves the
- * baseline and can never regress.
+ * This began as a ratchet, because a rule banning raw hex would have failed in
+ * 67 files and had to be disabled in all of them, which is the same as not
+ * having one. The baseline is empty now that the migration has landed, so it is
+ * simply a ban: the ratchet and the rule are the same code, and the only thing
+ * that changed is that there is nothing left to permit.
  *
  * Same shape as the backend's `check:schemas` and `check:auth`: a static pass
  * over the source that catches a whole class rather than one instance.
@@ -38,7 +36,18 @@ const HEX = /#[0-9a-fA-F]{3,8}\b/g;
  * `backgroundColor: "white"` - so a `name="white"` icon prop or the word "red"
  * in a sentence is not a finding.
  */
-const KEYWORD = /(?:color|Color|borderColor|tintColor)\s*:\s*"(?:white|black|gray|grey|red|blue|green|yellow|orange|purple|transparent)"/g;
+const KEYWORD = /(?:color|Color|borderColor|tintColor)\s*:\s*"(?:white|black|gray|grey|red|blue|green|yellow|orange|purple|transparent|tomato)"/g;
+
+/**
+ * Comments are prose, not style.
+ *
+ * This codebase documents what a change replaced - "six literals, `#767577`,
+ * `#81b0ff`..." - and counting those would mean the reward for explaining a
+ * migration is a failing build. Stripping them first also stops a commented-out
+ * block of old styles from holding a file's number up forever.
+ */
+const stripComments = (source) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 const walk = (dir, found = []) => {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -59,7 +68,7 @@ const count = () => {
     const relative = path.relative(ROOT, file);
     if (ALLOWED.has(relative)) continue;
 
-    const source = fs.readFileSync(file, "utf8");
+    const source = stripComments(fs.readFileSync(file, "utf8"));
     const total =
       (source.match(HEX) ?? []).length + (source.match(KEYWORD) ?? []).length;
 
@@ -81,8 +90,9 @@ const audit = () => {
     const allowed = baseline[file] ?? 0;
     if (total > allowed) {
       problems.push(
-        `${file}: ${total} hardcoded colours, up from ${allowed}. Use a token ` +
-          `class (\`bg-surface\`, \`text-textMuted\`) or \`useTokens()\`.`
+        `${file}: ${total} hardcoded colour${total === 1 ? "" : "s"}` +
+          (allowed > 0 ? `, up from ${allowed}` : "") +
+          `. Use a token class (\`bg-surface\`, \`text-textMuted\`) or \`useTokens()\`.`
       );
     }
   }
@@ -90,7 +100,10 @@ const audit = () => {
   return { problems, current, baseline };
 };
 
-module.exports = { audit, count, readBaseline, BASELINE };
+/** Every file the check looks at, so a pass cannot mean "found no files". */
+const scanned = () => walk(SRC).map((file) => path.relative(ROOT, file));
+
+module.exports = { audit, count, scanned, readBaseline, BASELINE };
 
 if (require.main === module) {
   const flag = process.argv[2];
@@ -113,9 +126,12 @@ if (require.main === module) {
   }
 
   const remaining = Object.values(current).reduce((sum, n) => sum + n, 0);
-  const was = Object.values(baseline).reduce((sum, n) => sum + n, 0);
+  const permitted = Object.keys(baseline).length;
+
   console.log(
-    `No new hardcoded colours. ${remaining} left across ` +
-      `${Object.keys(current).length} files (baseline ${was}).`
+    remaining === 0 && permitted === 0
+      ? `Colour lives only in src/styles/tokens.ts (${scanned().length} files checked).`
+      : `No new hardcoded colours. ${remaining} left across ` +
+          `${Object.keys(current).length} files.`
   );
 }

@@ -30,19 +30,19 @@ const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
   };
 
   return (
-    <View style={tailwind("flex-1 bg-gray-100 p-4")}>
+    <View style={tailwind("flex-1 bg-surfaceAlt p-4")}>
       <Text
-        style={tailwind("text-3xl font-bold text-center text-gray-800 mb-6")}
+        style={tailwind("text-3xl font-bold text-center text-text mb-6")}
       >
         Cancel Playdate
       </Text>
-      <Text style={tailwind("text-lg text-gray-600 mb-4")}>
+      <Text style={tailwind("text-lg text-textMuted mb-4")}>
         Send a message with your cancellation?{" "}
-        <Text style={tailwind("text-sm text-gray-400")}>(optional)</Text>
+        <Text style={tailwind("text-sm text-textFaint")}>(optional)</Text>
       </Text>
 
       <TextInput
-        style={tailwind("border border-gray-300 p-4 rounded-md bg-white mb-6")}
+        style={tailwind("border border-border p-4 rounded-md bg-surface mb-6")}
         placeholder="Enter your message here"
         placeholderTextColor="gray"
         value={message}
@@ -51,10 +51,10 @@ const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
         numberOfLines={4}
       />
       <TouchableOpacity
-        style={tailwind("bg-red-500 py-3 rounded-md items-center")}
+        style={tailwind("bg-danger py-3 rounded-md items-center")}
         onPress={handleCancellation}
       >
-        <Text style={tailwind("text-white text-lg font-semibold")}>
+        <Text style={tailwind("text-onPrimary text-lg font-semibold")}>
           Confirm Cancellation
         </Text>
       </TouchableOpacity>

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Switch,
+  
   Alert,
   ScrollView,
   Picker,
@@ -14,6 +14,7 @@ import { auth } from "../../../firebase/firebaseConfig";
 import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { setError } from "../../redux/actions";
+import { Toggle } from "../../components/ui";
 
 const SecuritySettingsScreen = () => {
   const [twoFactorAuthEnabled, setTwoFactorAuthEnabled] = useState(false);
@@ -115,9 +116,7 @@ const SecuritySettingsScreen = () => {
 
       <View style={tailwind("flex-row justify-between py-2")}>
         <Text>Two-Factor Authentication</Text>
-        <Switch
-          trackColor={{ false: "#767577", true: "#81b0ff" }}
-          thumbColor={twoFactorAuthEnabled ? "#f5dd4b" : "#f4f3f4"}
+        <Toggle
           onValueChange={toggleTwoFactorAuth}
           value={twoFactorAuthEnabled}
         />

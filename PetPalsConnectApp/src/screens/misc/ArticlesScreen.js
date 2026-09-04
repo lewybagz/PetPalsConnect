@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useCallback} from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { View, FlatList, TextInput, StyleSheet } from "react-native";
 import ArticleCard from "../../components/ArticleCardComponent";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 import api from "../../api/axios";
+import { useTokens } from "../../context/AppThemeContext";
 
 const ArticlesScreen = ({ navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [articles, setArticles] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -71,11 +75,11 @@ const ArticlesScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   searchBar: {
     padding: 10,
     margin: 10,
-    borderColor: "#ddd",
+    borderColor: t.border,
     borderWidth: 1,
     borderRadius: 5,
   },

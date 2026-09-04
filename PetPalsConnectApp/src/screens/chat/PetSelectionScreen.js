@@ -1,5 +1,5 @@
 // PetSelectionScreen.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,12 @@ import {
 } from "react-native";
 import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 const PetSelectionScreen = ({ navigation, route }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [pets, setPets] = useState([]);
   const [selectedPets, setSelectedPets] = useState([]);
   const { userPetId } = route.params;
@@ -81,7 +85,7 @@ const PetSelectionScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "space-between", // Adjust the layout to make room for the button
@@ -92,7 +96,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   selectedItem: {
-    backgroundColor: "#e7e7e7",
+    backgroundColor: t.surfaceAlt,
     borderRadius: 15,
     padding: 8,
     margin: 4,
@@ -101,14 +105,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   doneButton: {
-    backgroundColor: "#007bff",
+    backgroundColor: t.primary,
     padding: 15,
     borderRadius: 8,
     alignItems: "center",
     margin: 10,
   },
   doneButtonText: {
-    color: "#fff",
+    color: t.surface,
     fontWeight: "bold",
     fontSize: 16,
   },

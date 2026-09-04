@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ActivityIndicator, View, Text, StyleSheet } from "react-native";
 import * as Progress from "react-native-progress";
+import { useTokens } from "../context/AppThemeContext";
 
 const petCareTips = [
   "Regular exams prevent health issues. Yearly vet visits are crucial for health screenings and vaccinations.",
@@ -16,6 +17,7 @@ const petCareTips = [
 ];
 
 const LoadingScreen = () => {
+  const tokens = useTokens();
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -45,7 +47,7 @@ const LoadingScreen = () => {
       <Progress.Bar
         progress={progress}
         width={null} // Take the full width of the container
-        color="#0000ff"
+        color={tokens.primary}
         style={styles.progressBar}
       />
     </View>

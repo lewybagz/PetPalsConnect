@@ -4,10 +4,12 @@ import ChatsScreen from "./ChatsScreen";
 import GroupChatsScreen from "./GroupChatsScreen";
 import { MaterialIcons as Icon } from "@expo/vector-icons";
 import { readCache, writeCache, CacheKeys } from "../../services/localCache";
+import { useTokens } from "../../context/AppThemeContext";
 
 const Tab = createMaterialTopTabNavigator();
 
 const ChatTabsScreen = () => {
+  const tokens = useTokens();
   const [initialState, setInitialState] = useState(null);
   const [restored, setRestored] = useState(false);
 
@@ -40,10 +42,11 @@ const ChatTabsScreen = () => {
       swipeEnabled={true}
       lazy={true}
       screenOptions={{
-        tabBarActiveTintColor: "#e91e63",
-        tabBarIndicatorStyle: { backgroundColor: "white" },
+        tabBarActiveTintColor: tokens.primary,
+        tabBarIndicatorStyle: { backgroundColor: tokens.primary },
         tabBarLabelStyle: { fontSize: 12 },
-        tabBarStyle: { backgroundColor: "powderblue" },
+        tabBarStyle: { backgroundColor: tokens.surface },
+        tabBarInactiveTintColor: tokens.textMuted,
       }}
     >
       <Tab.Screen

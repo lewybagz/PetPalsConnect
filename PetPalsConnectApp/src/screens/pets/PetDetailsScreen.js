@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -18,6 +18,7 @@ import { useAuthSession } from "../../context/AuthSessionContext";
 import api from "../../api/axios";
 import { useToast } from "../../components/ui";
 import { setChatId } from "../../redux/actions";
+import { useTokens } from "../../context/AppThemeContext";
 
 /**
  * One pet's profile, and the three things you can do from it.
@@ -34,6 +35,9 @@ import { setChatId } from "../../redux/actions";
  * value ChatScreen needs to load or post messages.
  */
 const PetDetailsScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const dispatch = useDispatch();
   const toast = useToast();
   const { userId } = useAuthSession();
@@ -157,7 +161,7 @@ const PetDetailsScreen = ({ route, navigation }) => {
         </View>
       ) : (
         <View style={[styles.image, styles.placeholder]}>
-          <Icon name="paw" size={32} color="#9ca3af" />
+          <Icon name="paw" size={32} color={tokens.textFaint} />
           {isMine ? (
             <Text style={styles.placeholderText}>
               Add a photo so people can find {pet.name}
@@ -205,7 +209,7 @@ const PetDetailsScreen = ({ route, navigation }) => {
           onPress={() => navigation.navigate("PetPhotos", { pet })}
           style={styles.secondaryButton}
         >
-          <Icon name="camera" size={16} color="#2563eb" />
+          <Icon name="camera" size={16} color={tokens.primary} />
           <Text style={styles.secondaryButtonText}>
             {photos.length > 0 ? "Manage photos" : "Add photos"}
           </Text>
@@ -217,7 +221,7 @@ const PetDetailsScreen = ({ route, navigation }) => {
 
 const screenWidth = Dimensions.get("window").width;
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   dots: {
     flexDirection: "row",
     justifyContent: "center",
@@ -227,14 +231,14 @@ const styles = StyleSheet.create({
     height: 6,
     width: 6,
     borderRadius: 3,
-    backgroundColor: "#d1d5db",
+    backgroundColor: t.border,
     marginHorizontal: 3,
   },
   dotActive: {
-    backgroundColor: "#2563eb",
+    backgroundColor: t.primary,
   },
   placeholderText: {
-    color: "#6b7280",
+    color: t.textMuted,
     marginTop: 8,
     textAlign: "center",
     paddingHorizontal: 20,
@@ -244,13 +248,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#2563eb",
+    borderColor: t.primary,
     borderRadius: 5,
     padding: 10,
     margin: 5,
   },
   secondaryButtonText: {
-    color: "#2563eb",
+    color: t.primary,
     fontSize: 14,
     marginLeft: 6,
   },
@@ -269,7 +273,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   placeholder: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: t.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -283,7 +287,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   buttonText: {
-    color: "white",
+    color: t.surface,
     fontSize: 14,
   },
   buttonsContainer: {
@@ -295,7 +299,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#007bff",
+    backgroundColor: t.primary,
     padding: 10,
     borderRadius: 5,
     margin: 5,

@@ -1,5 +1,5 @@
 // ScheduledPlaydatesScreen.js
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Text,
   FlatList,
@@ -10,8 +10,12 @@ import {
 import api from "../../api/axios";
 import { useTailwind } from "../../styles/tailwind";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 const ScheduledPlaydatesScreen = (navigation) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [playdates, setPlaydates] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const tailwind = useTailwind();
@@ -45,7 +49,7 @@ const ScheduledPlaydatesScreen = (navigation) => {
   const renderPlaydateItem = ({ item }) => (
     <TouchableOpacity
       onPress={() => navigateToDetails(item._id)}
-      style={[tailwind("p-4 border-b border-gray-200"), styles.playdateItem]}
+      style={[tailwind("p-4 border-b border-border"), styles.playdateItem]}
     >
       <Text style={[tailwind("text-lg font-bold"), styles.playdateTitle]}>
         {item.petsInvolved.map((pet) => pet.name).join(", ")}
@@ -71,7 +75,7 @@ const ScheduledPlaydatesScreen = (navigation) => {
 };
 
 // Additional specific styles
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   playdateItem: {
     // Specific styles for the playdate item
   },
@@ -80,7 +84,7 @@ const styles = StyleSheet.create({
   },
   playdateDetails: {
     // Styles for the playdate details
-    color: "gray", // Example
+    color: t.textMuted, // Example
   },
   locationText: {
     // Styles for the location text

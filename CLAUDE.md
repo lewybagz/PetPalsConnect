@@ -108,12 +108,38 @@ for "Playdate scheduled" as readily as for a failure.
 Home and the chat list know their own shape before the response arrives, and
 they are the three screens a new user waits on first.
 
-**`npm run check:colours` is a ratchet, not a ban.** It records a per-file
-count in `scripts/colour-baseline.json` and fails if any file gains a
-hardcoded colour. Converting a screen lowers its number; nothing raises one.
-Run it with `-- --update` only to record a reduction. A lint rule banning hex
-outright would have to be disabled in 67 files, which is the same as not
-having one.
+**`npm run check:colours` fails on any colour outside `tokens.ts`.** It began
+as a ratchet — a per-file count in `scripts/colour-baseline.json`, failing only
+on an increase — because a ban would have had to be disabled in 67 files, which
+is the same as not having one. The migration is finished, so the baseline is
+empty and the same code is now a ban. `-- --update` still exists; needing it
+means you are adding a colour, and the answer is almost always a token.
+
+**A colour in a `StyleSheet.create` cannot follow a theme.** Where a file keeps
+one, it is `const makeStyles = (t) => StyleSheet.create({...})` called as
+`useMemo(() => makeStyles(tokens), [tokens])`. Same for a default prop: a
+default cannot read a hook, so `checkedColor`/`fullStarColor` and friends
+resolve in the component body and a caller's override still wins.
+
+**Stock Tailwind colour classes are as un-themed as a hex literal.**
+`bg-white`, `text-gray-500` and `border-gray-300` resolve to fixed values in
+both palettes, so they are gone too: use `bg-surface`, `text-textMuted`,
+`border-border`. `text-onPrimary` is checked against all four fills in
+`tokens.test.js`, because screens set it on danger and success buttons as well
+as on the blue one.
+
+**Nunito carries the display, title and label roles; body copy stays on the
+system face.** `src/styles/fonts.js` asks `expo-font` whether a face is really
+on the device rather than keeping a flag - naming a family that has not loaded
+renders an arbitrary substitute - and each role names a weight *inside* the
+family, because Android ignores `fontWeight` when a family is set. A face that
+fails to load never blocks the launch.
+
+**Discovery has a preview mode.** A caller with no pet gets the same deck,
+filtered by the same distance and the same blocks, with no score - matching
+compares two pets and there is only one. Both paths share
+`reachableCandidates` on purpose: the filtering is where blocking, suspension
+and range live, and a second code path is a second place to forget one.
 
 #### TypeScript
 

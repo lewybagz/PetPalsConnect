@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,15 +8,19 @@ import {
   ScrollView,
   Alert,
   Image,
-  Switch,
-} from "react-native";
+  } from "react-native";
 import api from "../../api/axios";
 import StarRating from "../../components/StarRating";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { setError } from "../../redux/actions";
+import { useTokens } from "../../context/AppThemeContext";
+import { Toggle } from "../../components/ui";
 
 const PostPlaydateReviewScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const { playdateId, petId } = route.params;
   const { playdate, pet } = route.params;
 
@@ -184,9 +188,7 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
       />
       <View style={styles.visibilityContainer}>
         <Text style={styles.label}>Make review public:</Text>
-        <Switch
-          trackColor={{ false: "#767577", true: "#81b0ff" }}
-          thumbColor={isReviewVisible ? "#f5dd4b" : "#f4f3f4"}
+        <Toggle
           onValueChange={handleVisibilityToggle}
           value={isReviewVisible}
         />
@@ -196,7 +198,7 @@ const PostPlaydateReviewScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
@@ -213,7 +215,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   input: {
-    borderColor: "gray",
+    borderColor: t.textMuted,
     borderWidth: 1,
     borderRadius: 5,
     padding: 10,
@@ -236,7 +238,7 @@ const styles = StyleSheet.create({
   },
   petBreed: {
     fontSize: 16,
-    color: "gray",
+    color: t.textMuted,
     marginLeft: 10,
   },
   // ... other styles as needed ...

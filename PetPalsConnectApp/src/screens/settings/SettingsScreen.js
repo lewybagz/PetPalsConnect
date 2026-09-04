@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Switch, TouchableOpacity, Alert } from "react-native";
+import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { getAuth, signOut } from "@react-native-firebase/auth";
 import Slider from "@react-native-community/slider";
 import { useTailwind } from "../../styles/tailwind";
@@ -7,6 +7,7 @@ import { useAppTheme } from "../../context/AppThemeContext";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import api from "../../api/axios";
 import { readCache, writeCache, CacheKeys } from "../../services/localCache";
+import { Toggle } from "../../components/ui";
 
 const SettingsScreen = ({ navigation }) => {
   const tailwind = useTailwind();
@@ -144,7 +145,7 @@ const SettingsScreen = ({ navigation }) => {
 
       <TouchableOpacity
         onPress={() => navigation.navigate("SubscriptionManagement")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>Manage Subscription</Text>
       </TouchableOpacity>
@@ -152,9 +153,7 @@ const SettingsScreen = ({ navigation }) => {
       {/* Location Sharing Setting */}
       <View style={tailwind("flex-row justify-between py-2")}>
         <Text>Share My Location On The PetPalsMap</Text>
-        <Switch
-          trackColor={{ false: "#767577", true: "#81b0ff" }}
-          thumbColor={locationSharingEnabled ? "#f5dd4b" : "#f4f3f4"}
+        <Toggle
           onValueChange={toggleLocationSharing}
           value={locationSharingEnabled}
         />
@@ -163,7 +162,7 @@ const SettingsScreen = ({ navigation }) => {
       <Text testID="playdate-range" style={tailwind("my-2")}>
         PetPalsConnect Location Range: {playdateRange} miles
       </Text>
-      <Text style={tailwind("text-center text-gray-600 mb-2")}>
+      <Text style={tailwind("text-center text-textMuted mb-2")}>
         Discovery only shows you pets within this range - a playdate is
         something you have to travel to.
       </Text>
@@ -178,56 +177,56 @@ const SettingsScreen = ({ navigation }) => {
 
       <TouchableOpacity
         onPress={() => navigation.navigate("ChangePassword")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>Change Password</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => navigation.navigate("PaymentMethods")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>Payment Methods</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => navigation.navigate("AccountInformation")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>Account Information</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => navigation.navigate("SecuritySettings")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>Security Settings</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => navigation.navigate("NotificationPreferences")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>Notification Preferences</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => navigation.navigate("HelpSupport")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>Help & Support</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => navigation.navigate("LegalPolicies")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>Legal Policies</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => navigation.navigate("PrivacySettings")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>Privacy Settings</Text>
       </TouchableOpacity>
@@ -236,14 +235,14 @@ const SettingsScreen = ({ navigation }) => {
       <TouchableOpacity
         testID="settings-blocked-accounts"
         onPress={() => navigation.navigate("BlockedAccounts")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>Blocked Accounts</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => navigation.navigate("AboutApp")}
-        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+        style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>About PetPalsConnect</Text>
       </TouchableOpacity>
@@ -254,9 +253,7 @@ const SettingsScreen = ({ navigation }) => {
             {key.replace(/([A-Z])/g, " $1")}{" "}
             {/* Make the key more user-friendly */}
           </Text>
-          <Switch
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={value ? "#f5dd4b" : "#f4f3f4"}
+          <Toggle
             onValueChange={() => toggleNotificationSetting(key)}
             value={value}
           />
@@ -266,9 +263,7 @@ const SettingsScreen = ({ navigation }) => {
       {/* Dark Mode Setting */}
       <View style={tailwind("flex-row justify-between py-2")}>
         <Text>Dark Mode</Text>
-        <Switch
-          trackColor={{ false: "#767577", true: "#81b0ff" }}
-          thumbColor={darkMode ? "#f5dd4b" : "#f4f3f4"}
+        <Toggle
           onValueChange={toggleAppTheme}
           value={darkMode}
         />
@@ -277,17 +272,17 @@ const SettingsScreen = ({ navigation }) => {
       {/* Sign Out */}
       <TouchableOpacity
         onPress={handleSignOut}
-        style={tailwind("mt-4 bg-red-500 py-2 px-4 rounded")}
+        style={tailwind("mt-4 bg-danger py-2 px-4 rounded")}
       >
-        <Text style={tailwind("text-white text-center")}>Sign Out</Text>
+        <Text style={tailwind("text-onPrimary text-center")}>Sign Out</Text>
       </TouchableOpacity>
 
       {/* Account deletion - required by App Store guideline 5.1.1(v) */}
       <TouchableOpacity
         onPress={handleDeleteAccount}
-        style={tailwind("mt-3 mb-8 py-2 px-4 rounded border border-red-300")}
+        style={tailwind("mt-3 mb-8 py-2 px-4 rounded border border-danger")}
       >
-        <Text style={tailwind("text-red-600 text-center")}>Delete My Account</Text>
+        <Text style={tailwind("text-danger text-center")}>Delete My Account</Text>
       </TouchableOpacity>
     </View>
   );

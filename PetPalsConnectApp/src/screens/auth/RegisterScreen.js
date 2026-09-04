@@ -25,10 +25,11 @@ import { OnboardingProgress } from "../../components/ui";
 import { GOOGLE_WEB_CLIENT_ID } from "../../config/env";
 import { describeAuthError } from "../../utils/authErrors";
 import { passwordRules, scorePassword } from "../../utils/passwordStrength";
+import { useTokens } from "../../context/AppThemeContext";
 
 GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
 
-const STRENGTH_COLOURS = ["bg-gray-300", "bg-red-400", "bg-yellow-400", "bg-green-500"];
+const STRENGTH_COLOURS = ["bg-border", "bg-danger", "bg-warning", "bg-success"];
 
 /**
  * Creates the Firebase account.
@@ -45,6 +46,7 @@ const STRENGTH_COLOURS = ["bg-gray-300", "bg-red-400", "bg-yellow-400", "bg-gree
  */
 export default function RegisterScreen({ navigation }) {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const auth = getAuth();
 
   const [email, setEmail] = useState("");
@@ -119,7 +121,7 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={tailwind("flex-1 bg-white")}
+      style={tailwind("flex-1 bg-surface")}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
@@ -129,22 +131,22 @@ export default function RegisterScreen({ navigation }) {
         <OnboardingProgress step={1} />
 
         <View style={tailwind("items-center mb-8")}>
-          <Ionicons name="paw" size={48} color="tomato" />
-          <Text style={tailwind("text-2xl font-bold text-gray-900 mt-4")}>
+          <Ionicons name="paw" size={48} color={tokens.primary} />
+          <Text style={tailwind("text-2xl font-bold text-text mt-4")}>
             Create your account
           </Text>
         </View>
 
         {errorMessage && (
-          <View style={tailwind("bg-red-50 border border-red-200 rounded-lg p-3 mb-4")}>
-            <Text style={tailwind("text-red-600 text-center")}>{errorMessage}</Text>
+          <View style={tailwind("bg-dangerSoft border border-danger rounded-lg p-3 mb-4")}>
+            <Text style={tailwind("text-danger text-center")}>{errorMessage}</Text>
           </View>
         )}
 
         <TextInput
-          style={tailwind("border border-gray-300 rounded-lg px-3 py-3 mb-4 text-base")}
+          style={tailwind("border border-border rounded-lg px-3 py-3 mb-4 text-base")}
           placeholder="Email"
-          placeholderTextColor="#a1a1a1"
+          placeholderTextColor={tokens.textFaint}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -158,12 +160,12 @@ export default function RegisterScreen({ navigation }) {
         />
 
         <View
-          style={tailwind("flex-row items-center border border-gray-300 rounded-lg px-3 mb-2")}
+          style={tailwind("flex-row items-center border border-border rounded-lg px-3 mb-2")}
         >
           <TextInput
             style={tailwind("flex-1 py-3 text-base")}
             placeholder="Password"
-            placeholderTextColor="#a1a1a1"
+            placeholderTextColor={tokens.textFaint}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -177,7 +179,7 @@ export default function RegisterScreen({ navigation }) {
             <Ionicons
               name={showPassword ? "eye-off-outline" : "eye-outline"}
               size={22}
-              color="#888"
+              color={tokens.textMuted}
             />
           </Pressable>
         </View>
@@ -191,13 +193,13 @@ export default function RegisterScreen({ navigation }) {
                     key={index}
                     style={tailwind(
                       `h-1 flex-1 mr-1 rounded ${
-                        index < strength.score ? STRENGTH_COLOURS[strength.score] : "bg-gray-200"
+                        index < strength.score ? STRENGTH_COLOURS[strength.score] : "bg-surfaceAlt"
                       }`
                     )}
                   />
                 ))}
               </View>
-              <Text style={tailwind("text-xs text-gray-500 ml-2")}>{strength.label}</Text>
+              <Text style={tailwind("text-xs text-textMuted ml-2")}>{strength.label}</Text>
             </View>
 
             {passwordRules.map((rule) => {
@@ -207,11 +209,11 @@ export default function RegisterScreen({ navigation }) {
                   <Ionicons
                     name={met ? "checkmark-circle" : "ellipse-outline"}
                     size={15}
-                    color={met ? "#16a34a" : "#c0c0c0"}
+                    color={met ? tokens.success : tokens.textFaint}
                   />
                   <Text
                     style={tailwind(
-                      `text-xs ml-2 ${met ? "text-green-600" : "text-gray-500"}`
+                      `text-xs ml-2 ${met ? "text-success" : "text-textMuted"}`
                     )}
                   >
                     {rule.label}
@@ -226,12 +228,12 @@ export default function RegisterScreen({ navigation }) {
           style={tailwind(
             `border rounded-lg px-3 py-3 mb-6 text-base ${
               confirmPassword.length > 0 && !passwordsMatch
-                ? "border-red-400"
-                : "border-gray-300"
+                ? "border-danger"
+                : "border-border"
             }`
           )}
           placeholder="Confirm password"
-          placeholderTextColor="#a1a1a1"
+          placeholderTextColor={tokens.textFaint}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry={!showPassword}
@@ -245,33 +247,33 @@ export default function RegisterScreen({ navigation }) {
           onPress={onRegisterPress}
           disabled={!canSubmit}
           style={tailwind(
-            `rounded-lg py-4 items-center ${canSubmit ? "bg-red-500" : "bg-gray-300"}`
+            `rounded-lg py-4 items-center ${canSubmit ? "bg-danger" : "bg-border"}`
           )}
         >
           {submitting ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={tokens.surface} />
           ) : (
-            <Text style={tailwind("text-white font-semibold text-base")}>
+            <Text style={tailwind("text-onPrimary font-semibold text-base")}>
               Create account
             </Text>
           )}
         </Pressable>
 
         <View style={tailwind("flex-row items-center my-6")}>
-          <View style={tailwind("flex-1 h-px bg-gray-200")} />
-          <Text style={tailwind("mx-3 text-gray-400 text-sm")}>or</Text>
-          <View style={tailwind("flex-1 h-px bg-gray-200")} />
+          <View style={tailwind("flex-1 h-px bg-surfaceAlt")} />
+          <Text style={tailwind("mx-3 text-textFaint text-sm")}>or</Text>
+          <View style={tailwind("flex-1 h-px bg-surfaceAlt")} />
         </View>
 
         <Pressable
           onPress={onGoogleButtonPress}
           disabled={submitting}
           style={tailwind(
-            "flex-row items-center justify-center border border-gray-300 rounded-lg py-4"
+            "flex-row items-center justify-center border border-border rounded-lg py-4"
           )}
         >
-          <Ionicons name="logo-google" size={20} color="#444" />
-          <Text style={tailwind("text-gray-800 font-semibold ml-3")}>
+          <Ionicons name="logo-google" size={20} color={tokens.text} />
+          <Text style={tailwind("text-text font-semibold ml-3")}>
             Continue with Google
           </Text>
         </Pressable>
@@ -280,8 +282,8 @@ export default function RegisterScreen({ navigation }) {
           onPress={() => navigation.navigate("Login")}
           style={tailwind("mt-8 items-center")}
         >
-          <Text style={tailwind("text-gray-600")}>
-            Already have an account? <Text style={tailwind("text-red-500")}>Sign in</Text>
+          <Text style={tailwind("text-textMuted")}>
+            Already have an account? <Text style={tailwind("text-danger")}>Sign in</Text>
           </Text>
         </Pressable>
       </ScrollView>

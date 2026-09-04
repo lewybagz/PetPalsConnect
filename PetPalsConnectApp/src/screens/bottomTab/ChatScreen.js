@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { useSocketMessage } from "../../hooks/useSocketEvents";
 import SafetyMenu from "../../components/SafetyMenu";
 import { useToast } from "../../components/ui";
 import api from "../../api/axios";
+import { useTokens } from "../../context/AppThemeContext";
 
 /** You block a person, not a dog. `owner` may be an id or a populated user. */
 const ownerId = (pet) => {
@@ -29,6 +30,9 @@ const ownerId = (pet) => {
 };
 
 const ChatScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [isModalVisible, setModalVisible] = useState(false);
@@ -244,10 +248,10 @@ const ChatScreen = ({ route, navigation }) => {
         style={tailwind("flex-1")}
       />
       <View
-        style={tailwind("flex-row items-center p-2 border-t border-gray-300")}
+        style={tailwind("flex-row items-center p-2 border-t border-border")}
       >
         <TextInput
-          style={tailwind("flex-1 border border-gray-300 p-2 rounded mr-2")}
+          style={tailwind("flex-1 border border-border p-2 rounded mr-2")}
           placeholder="Send a PAWesome message..."
           value={newMessage}
           onChangeText={setNewMessage}
@@ -258,7 +262,7 @@ const ChatScreen = ({ route, navigation }) => {
           <LoadingScreen />
         ) : (
           <TouchableOpacity onPress={handleSendMessage} disabled={isLoading}>
-            <Icon name="send" size={24} color="#007bff" />
+            <Icon name="send" size={24} color={tokens.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -266,13 +270,13 @@ const ChatScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    borderBottomColor: t.border,
   },
   petImage: {
     width: 40,

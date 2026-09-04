@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,8 +13,12 @@ import api from "../../api/axios";
 import { useDispatch, useSelector } from "react-redux";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { fetchPlaydateDetails , setError } from "../../redux/actions";
+import { useTokens } from "../../context/AppThemeContext";
 
 const PlaydateRequestScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const { playdateId } = route.params;
   const dispatch = useDispatch();
   const getToken = async () => {
@@ -130,7 +134,7 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flexGrow: 1,
     justifyContent: "center",
@@ -154,7 +158,7 @@ const styles = StyleSheet.create({
   },
   ownerName: {
     fontSize: 18,
-    color: "gray",
+    color: t.textMuted,
     marginBottom: 10,
   },
   location: {
@@ -178,13 +182,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   acceptButton: {
-    backgroundColor: "green",
+    backgroundColor: t.success,
   },
   declineButton: {
-    backgroundColor: "red",
+    backgroundColor: t.danger,
   },
   buttonText: {
-    color: "white",
+    color: t.surface,
     fontSize: 18,
   },
 });

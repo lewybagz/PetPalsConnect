@@ -54,20 +54,20 @@ const HelpSupportScreen = () => {
       {/* Contact Form */}
       <View>
         <TextInput
-          style={tailwind("border border-gray-300 p-2 rounded mb-4")}
+          style={tailwind("border border-border p-2 rounded mb-4")}
           value={name}
           onChangeText={setName}
           placeholder="Your Name"
         />
         <TextInput
-          style={tailwind("border border-gray-300 p-2 rounded mb-4")}
+          style={tailwind("border border-border p-2 rounded mb-4")}
           value={email}
           onChangeText={setEmail}
           placeholder="Email"
           keyboardType="email-address"
         />
         <TextInput
-          style={tailwind("border border-gray-300 p-2 rounded mb-4")}
+          style={tailwind("border border-border p-2 rounded mb-4")}
           value={message}
           onChangeText={setMessage}
           placeholder="Message"
@@ -75,9 +75,9 @@ const HelpSupportScreen = () => {
         />
         <TouchableOpacity
           onPress={() => submitForm(FormData)}
-          style={tailwind("bg-blue-500 py-2 px-4 rounded")}
+          style={tailwind("bg-primary py-2 px-4 rounded")}
         >
-          <Text style={tailwind("text-white text-center")}>Submit</Text>
+          <Text style={tailwind("text-onPrimary text-center")}>Submit</Text>
         </TouchableOpacity>
       </View>
 

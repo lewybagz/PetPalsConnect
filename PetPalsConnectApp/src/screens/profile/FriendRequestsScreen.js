@@ -1,12 +1,16 @@
 // FriendRequestsScreen.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, FlatList, StyleSheet, Alert } from "react-native";
 import api from "../../api/axios";
 import FriendRequestsCard from "../../components/FriendRequestsCard";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { setError } from "../../redux/actions";
+import { useTokens } from "../../context/AppThemeContext";
 
 const FriendRequestsScreen = () => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [friendRequests, setFriendRequests] = useState([]);
   const getToken = async () => {
     try {
@@ -84,10 +88,10 @@ const FriendRequestsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: t.surfaceAlt,
   },
 });
 

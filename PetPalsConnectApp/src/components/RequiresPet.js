@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../styles/tailwind";
 import { useAuthSession } from "../context/AuthSessionContext";
+import { useTokens } from "../context/AppThemeContext";
 
 /**
  * Renders `children` only when the user has at least one pet.
@@ -24,6 +25,7 @@ export function RequiresPet({
   message = "This part of PetPals works from your pet's profile. Add one and you're in.",
 }) {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const navigation = useNavigation();
   const { hasPet } = useAuthSession();
 
@@ -32,25 +34,25 @@ export function RequiresPet({
   return (
     <View
       testID="requires-pet-empty-state"
-      style={tailwind("flex-1 items-center justify-center px-8 bg-white")}
+      style={tailwind("flex-1 items-center justify-center px-8 bg-surface")}
     >
-      <Ionicons name="paw-outline" size={56} color="#d0d0d0" />
+      <Ionicons name="paw-outline" size={56} color={tokens.textFaint} />
       <Text
         testID="requires-pet-title"
-        style={tailwind("text-xl font-bold text-gray-900 mt-5 text-center")}
+        style={tailwind("text-xl font-bold text-text mt-5 text-center")}
       >
         {title}
       </Text>
-      <Text testID="requires-pet-message" style={tailwind("text-center text-gray-600 mt-2 mb-6")}>
+      <Text testID="requires-pet-message" style={tailwind("text-center text-textMuted mt-2 mb-6")}>
         {message}
       </Text>
 
       <Pressable
         testID="requires-pet-add-button"
         onPress={() => navigation.navigate("AddPet")}
-        style={tailwind("bg-red-500 rounded-lg py-3 px-8")}
+        style={tailwind("bg-danger rounded-lg py-3 px-8")}
       >
-        <Text style={tailwind("text-white font-semibold")}>Add my pet</Text>
+        <Text style={tailwind("text-onPrimary font-semibold")}>Add my pet</Text>
       </Pressable>
     </View>
   );

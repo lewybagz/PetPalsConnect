@@ -1,88 +1,86 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const { audit, count, readBaseline } = require("./checkTokens");
+const { audit, count, scanned, readBaseline } = require("./checkTokens");
 
 /**
- * The ratchet has to actually ratchet.
- *
  * A guard that passes vacuously is worse than none: it reads like the codebase
- * is protected while the number quietly climbs. So this proves it counts real
- * files, that adding a colour fails, and that the baseline it compares against
- * is the one on disk.
+ * is protected while the number quietly climbs. This began as a ratchet over
+ * 227 hardcoded colours in 67 files; now that the migration has landed and the
+ * baseline is empty, the same code is an outright ban - so the thing most worth
+ * proving is that it is still looking at the source tree at all.
  */
 
-describe("the colour ratchet", () => {
+describe("the colour ban", () => {
   it("passes on the codebase as committed", () => {
     expect(audit().problems).toEqual([]);
   });
 
-  it("is counting real files, so it cannot pass by finding nothing", () => {
-    const counts = count();
-    expect(Object.keys(counts).length).toBeGreaterThan(10);
+  it("is reading the source tree, so a pass cannot mean it found no files", () => {
+    const files = scanned();
+    expect(files.length).toBeGreaterThan(100);
+    expect(files).toContain("src/screens/swipe/DiscoverScreen.js");
+  });
+
+  it("finds no colour left outside the token module", () => {
+    // The migration is done: 227 across 67 files, down to none.
+    expect(count()).toEqual({});
   });
 
   it("leaves the token file alone, since colour lives there by definition", () => {
     expect(count()["src/styles/tokens.ts"]).toBeUndefined();
   });
 
-  it("has a baseline entry for every file that still holds colours", () => {
-    const baseline = readBaseline();
-    for (const file of Object.keys(count())) {
-      expect(baseline[file]).toBeDefined();
-    }
+  it("permits nothing, now that nothing needs permitting", () => {
+    expect(readBaseline()).toEqual({});
   });
 
-  it("fails when a file gains a colour", () => {
-    const file = path.resolve(__dirname, "../src/components/ui/Card.js");
-    const original = fs.readFileSync(file, "utf8");
-
+  /**
+   * Written into a scratch file rather than an existing one.
+   *
+   * Jest runs suites in parallel workers off one working tree, so mutating a
+   * real source file here breaks whichever screen suite happens to import it at
+   * that moment - which is exactly the intermittent, unreproducible failure
+   * that wastes an afternoon.
+   */
+  const withScratchFile = (contents, assertion) => {
+    const file = path.resolve(__dirname, "../src/__ratchet-scratch.js");
+    fs.writeFileSync(file, contents);
     try {
-      fs.writeFileSync(
-        file,
-        original.replace(
-          "const Card = ({",
-          'const SNEAKY = "#ff00ff";\n\nconst Card = ({'
-        )
-      );
-
-      const problems = audit().problems;
-      expect(problems.some((problem) => problem.includes("Card.js"))).toBe(true);
+      assertion(audit().problems, "src/__ratchet-scratch.js");
     } finally {
-      fs.writeFileSync(file, original);
+      fs.unlinkSync(file);
     }
+  };
+
+  it("fails when a file gains a colour", () => {
+    withScratchFile('export const SNEAKY = "#ff00ff";\n', (problems, name) => {
+      expect(problems.some((problem) => problem.includes(name))).toBe(true);
+    });
   });
 
   it("catches a bare colour keyword in a style position too", () => {
     // `color: "gray"` bypasses theming exactly as a hex literal does, and there
     // were 55 of them.
-    const file = path.resolve(__dirname, "../src/components/ui/Card.js");
-    const original = fs.readFileSync(file, "utf8");
-
-    try {
-      fs.writeFileSync(
-        file,
-        original.replace(
-          "const Card = ({",
-          'const SNEAKY = { color: "gray" };\n\nconst Card = ({'
-        )
-      );
-
-      expect(audit().problems.some((p) => p.includes("Card.js"))).toBe(true);
-    } finally {
-      fs.writeFileSync(file, original);
-    }
+    withScratchFile('export const S = { color: "gray" };\n', (problems, name) => {
+      expect(problems.some((problem) => problem.includes(name))).toBe(true);
+    });
   });
 
   it("does not flag an icon name that happens to be a colour word", () => {
-    const file = path.resolve(__dirname, "../src/components/ui/Card.js");
-    const original = fs.readFileSync(file, "utf8");
+    withScratchFile('export const NAME = "white";\n', (problems, name) => {
+      expect(problems.some((problem) => problem.includes(name))).toBe(false);
+    });
+  });
 
-    try {
-      fs.writeFileSync(file, original.replace("const Card = ({", 'const NAME = "white";\n\nconst Card = ({'));
-      expect(audit().problems.some((p) => p.includes("Card.js"))).toBe(false);
-    } finally {
-      fs.writeFileSync(file, original);
-    }
+  it("does not count a colour quoted in a comment", () => {
+    // This codebase documents what a change replaced. Counting those would make
+    // the reward for explaining a migration a failing build.
+    withScratchFile(
+      '// Replaced #767577 and #81b0ff with tokens.\nexport const OK = 1;\n',
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(false);
+      }
+    );
   });
 });

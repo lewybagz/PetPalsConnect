@@ -11,6 +11,7 @@ import { useStripe } from "@stripe/stripe-react-native";
 
 import { useTailwind } from "../../../styles/tailwind";
 import { createSubscription, fetchPlans } from "../../../api/subscriptions";
+import { useTokens } from "../../../context/AppThemeContext";
 
 /**
  * Plan picker.
@@ -29,6 +30,7 @@ import { createSubscription, fetchPlans } from "../../../api/subscriptions";
  */
 const ChoosePlanScreen = ({ navigation }) => {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [plans, setPlans] = useState([]);
@@ -122,7 +124,7 @@ const ChoosePlanScreen = ({ navigation }) => {
         <Text style={tailwind("text-lg font-semibold text-center mb-2")}>
           Subscriptions are not available yet
         </Text>
-        <Text style={tailwind("text-base text-gray-500 text-center")}>
+        <Text style={tailwind("text-base text-textMuted text-center")}>
           Check back soon - everything in the app still works without one.
         </Text>
       </View>
@@ -138,25 +140,25 @@ const ChoosePlanScreen = ({ navigation }) => {
           disabled={busyPlanId !== null}
           onPress={() => subscribe(plan)}
           style={tailwind(
-            `bg-white border border-gray-200 rounded-2xl p-5 mb-4 ${
+            `bg-surface border border-border rounded-2xl p-5 mb-4 ${
               busyPlanId !== null && busyPlanId !== plan.id ? "opacity-50" : ""
             }`
           )}
         >
           <Text style={tailwind("text-xl font-bold mb-1")}>{plan.name}</Text>
-          <Text style={tailwind("text-base text-gray-600 mb-4")}>
+          <Text style={tailwind("text-base text-textMuted mb-4")}>
             {plan.description}
           </Text>
 
           <View
             style={tailwind(
-              "bg-blue-600 rounded-xl py-3 items-center justify-center"
+              "bg-primary rounded-xl py-3 items-center justify-center"
             )}
           >
             {busyPlanId === plan.id ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={tokens.surface} />
             ) : (
-              <Text style={tailwind("text-white font-semibold text-base")}>
+              <Text style={tailwind("text-onPrimary font-semibold text-base")}>
                 Subscribe {plan.interval === "year" ? "yearly" : "monthly"}
               </Text>
             )}
@@ -164,7 +166,7 @@ const ChoosePlanScreen = ({ navigation }) => {
         </TouchableOpacity>
       ))}
 
-      <Text style={tailwind("text-xs text-gray-500 text-center mt-2")}>
+      <Text style={tailwind("text-xs text-textMuted text-center mt-2")}>
         Payments are handled by Stripe. Your card details never reach our
         servers. You can cancel any time from Settings.
       </Text>

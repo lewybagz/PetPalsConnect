@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { FlatList, Text, StyleSheet, RefreshControl } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import ChatCard from "../../components/ChatCardComponent";
 import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 const GroupChatsScreen = ({ navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -69,7 +73,7 @@ const GroupChatsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   loader: {
     marginTop: 20,
   },
@@ -80,7 +84,7 @@ const styles = StyleSheet.create({
   error: {
     marginTop: 20,
     textAlign: "center",
-    color: "red",
+    color: t.danger,
   },
 });
 

@@ -1,12 +1,16 @@
 // ReactionSelectorComponent.js
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useTokens } from "../context/AppThemeContext";
 
 // These are already Unicode emoji, so react-native-emoji (which maps :shortcodes:
 // to characters) was never doing anything here and is no longer a dependency.
 const reactions = ["😀", "😍", "😢", "😡", "👍", "👎"];
 
 const ReactionSelectorComponent = ({ onReact }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   return (
     <View style={styles.container}>
       {reactions.map((reaction, index) => (
@@ -22,14 +26,14 @@ const ReactionSelectorComponent = ({ onReact }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flexDirection: "row",
     justifyContent: "space-around",
     padding: 10,
-    backgroundColor: "white",
+    backgroundColor: t.surface,
     borderRadius: 20,
-    shadowColor: "black",
+    shadowColor: t.text,
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 5,

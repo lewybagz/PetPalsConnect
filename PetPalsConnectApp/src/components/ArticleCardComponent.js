@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
+import { useTokens } from "../context/AppThemeContext";
 
 /**
  * The schema is lowercase - `title`, `content`, `publishedDate`. This read
@@ -12,6 +13,9 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
  * asynchronously and pass null on the first render.
  */
 const ArticleCard = ({ article, onPress }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   if (!article) return null;
 
   const published = article.publishedDate ? new Date(article.publishedDate) : null;
@@ -39,11 +43,11 @@ const ArticleCard = ({ article, onPress }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: t.surface,
     borderRadius: 8,
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -67,12 +71,12 @@ const styles = StyleSheet.create({
   },
   content: {
     fontSize: 14,
-    color: "#666",
+    color: t.textMuted,
     marginBottom: 5,
   },
   date: {
     fontSize: 12,
-    color: "#999",
+    color: t.textMuted,
   },
 });
 

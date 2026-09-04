@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,8 +13,12 @@ import UserPetCard from "../../components/UserPetCardComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import { clearError } from "../../redux/actions";
+import { useTokens } from "../../context/AppThemeContext";
 
 const PetListScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const { participants } = route.params || {};
   const dispatch = useDispatch();
 
@@ -120,20 +124,20 @@ const PetListScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
   },
   deleteButton: {
-    backgroundColor: "red",
+    backgroundColor: t.danger,
     padding: 10,
     borderRadius: 8,
     alignItems: "center",
     marginTop: 10,
   },
   buttonText: {
-    color: "#fff",
+    color: t.surface,
     fontSize: 16,
   },
 });

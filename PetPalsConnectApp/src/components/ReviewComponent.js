@@ -1,9 +1,13 @@
 // ReviewComponent.js
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { FontAwesome as Icon } from "@expo/vector-icons";
+import { useTokens } from "../context/AppThemeContext";
 
 const ReviewComponent = ({ reviewData }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   // Render stars based on the rating
   const renderStars = () => {
     let stars = [];
@@ -13,7 +17,7 @@ const ReviewComponent = ({ reviewData }) => {
           key={i}
           name={i <= reviewData.rating ? "star" : "star-o"}
           size={20}
-          color="#FFD700"
+          color={tokens.warning}
         />
       );
     }
@@ -31,12 +35,12 @@ const ReviewComponent = ({ reviewData }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   reviewCard: {
-    backgroundColor: "#fff",
+    backgroundColor: t.surface,
     padding: 10,
     borderRadius: 8,
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
@@ -44,7 +48,7 @@ const styles = StyleSheet.create({
   },
   comment: {
     fontSize: 16,
-    color: "#333",
+    color: t.text,
     marginBottom: 5,
   },
   rating: {
@@ -53,7 +57,7 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 14,
-    color: "#666",
+    color: t.textMuted,
     textAlign: "right",
   },
 });

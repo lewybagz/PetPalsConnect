@@ -22,12 +22,12 @@ const SubscriptionConfirmationScreen = ({ route, navigation }) => {
       <Text style={tailwind("text-2xl font-bold text-center mb-3")}>
         You’re all set
       </Text>
-      <Text style={tailwind("text-base text-gray-600 text-center mb-2")}>
+      <Text style={tailwind("text-base text-textMuted text-center mb-2")}>
         {planName
           ? `Your ${planName} subscription has been ${action}.`
           : `Your subscription has been ${action}.`}
       </Text>
-      <Text style={tailwind("text-sm text-gray-500 text-center mb-8")}>
+      <Text style={tailwind("text-sm text-textMuted text-center mb-8")}>
         It can take a few seconds for the payment to be confirmed. You can check
         it any time under Settings.
       </Text>
@@ -35,15 +35,15 @@ const SubscriptionConfirmationScreen = ({ route, navigation }) => {
       <TouchableOpacity
         testID="confirmation-manage"
         onPress={() => navigation.navigate("SubscriptionManagement")}
-        style={tailwind("bg-blue-600 rounded-xl px-6 py-3 mb-3")}
+        style={tailwind("bg-primary rounded-xl px-6 py-3 mb-3")}
       >
-        <Text style={tailwind("text-white font-semibold")}>
+        <Text style={tailwind("text-onPrimary font-semibold")}>
           View my subscription
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity testID="confirmation-done" onPress={() => navigation.navigate("Tabs")}>
-        <Text style={tailwind("text-blue-600")}>Back to the app</Text>
+        <Text style={tailwind("text-primary")}>Back to the app</Text>
       </TouchableOpacity>
     </View>
   );

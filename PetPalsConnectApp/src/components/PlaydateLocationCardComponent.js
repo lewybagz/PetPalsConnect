@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,12 @@ import {
 import ReviewComponent from "./ReviewComponent";
 import { getStoredToken } from "../../utils/tokenutil";
 import api from "../api/axios";
+import { useTokens } from "../context/AppThemeContext";
 
 const PlayDateLocationCard = ({ locationData, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
@@ -65,13 +69,13 @@ const PlayDateLocationCard = ({ locationData, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: t.surface,
     borderRadius: 8,
     padding: 10,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -88,22 +92,22 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: "gray",
+    color: t.textMuted,
     marginTop: 4,
   },
   rating: {
     fontSize: 14,
-    color: "green",
+    color: t.success,
     marginTop: 4,
   },
   scheduleButton: {
     marginTop: 10,
-    backgroundColor: "#007bff",
+    backgroundColor: t.primary,
     padding: 10,
     borderRadius: 5,
   },
   scheduleButtonText: {
-    color: "#fff",
+    color: t.surface,
     textAlign: "center",
   },
 });

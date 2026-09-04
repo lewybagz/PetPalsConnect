@@ -18,6 +18,7 @@ import LoadingScreen from "../../components/LoadingScreenComponent";
 import api from "../../api/axios";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { addProfilePhoto } from "../../services/photos";
+import { useTokens } from "../../context/AppThemeContext";
 
 const ProfileScreen = ({ navigation }) => {
   const [recentPlaydates, setRecentPlaydates] = useState([]);
@@ -25,6 +26,7 @@ const ProfileScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const auth = getAuth();
   const { profile, userId, refresh } = useAuthSession();
   const [photo, setPhoto] = useState(profile?.userPhoto ?? null);
@@ -117,7 +119,7 @@ const ProfileScreen = ({ navigation }) => {
   }
 
   if (error) {
-    return <Text style={tailwind("text-red-500")}>{error}</Text>;
+    return <Text style={tailwind("text-danger")}>{error}</Text>;
   }
 
   return (
@@ -135,16 +137,16 @@ const ProfileScreen = ({ navigation }) => {
         ) : (
           <View
             style={tailwind(
-              "h-24 w-24 rounded-full bg-gray-100 items-center justify-center"
+              "h-24 w-24 rounded-full bg-surfaceAlt items-center justify-center"
             )}
           >
-            <Ionicons name="person-outline" size={36} color="#9ca3af" />
+            <Ionicons name="person-outline" size={36} color={tokens.textFaint} />
           </View>
         )}
         {uploadingPhoto ? (
           <ActivityIndicator style={tailwind("mt-2")} />
         ) : (
-          <Text style={tailwind("text-blue-600 mt-2")}>
+          <Text style={tailwind("text-primary mt-2")}>
             {photo ? "Change photo" : "Add a photo"}
           </Text>
         )}
@@ -156,15 +158,15 @@ const ProfileScreen = ({ navigation }) => {
       <Text style={tailwind("text-sm mb-4")}>{userInfo.phone}</Text>
       <TouchableOpacity
         onPress={navigateToEditProfile}
-        style={tailwind("bg-blue-500 py-2 px-4 rounded mb-4")}
+        style={tailwind("bg-primary py-2 px-4 rounded mb-4")}
       >
-        <Text style={tailwind("text-white text-center")}>Edit Profile</Text>
+        <Text style={tailwind("text-onPrimary text-center")}>Edit Profile</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={navigateToPetList}
-        style={tailwind("bg-blue-500 py-2 px-4 rounded mb-4")}
+        style={tailwind("bg-primary py-2 px-4 rounded mb-4")}
       >
-        <Text style={tailwind("text-white text-center")}>View My Pets</Text>
+        <Text style={tailwind("text-onPrimary text-center")}>View My Pets</Text>
       </TouchableOpacity>
       <FlatList
         data={recentPlaydates}
@@ -177,17 +179,17 @@ const ProfileScreen = ({ navigation }) => {
       />
       <TouchableOpacity
         onPress={viewAllPlaydates}
-        style={tailwind("bg-blue-500 py-2 px-4 rounded my-4")}
+        style={tailwind("bg-primary py-2 px-4 rounded my-4")}
       >
-        <Text style={tailwind("text-white text-center")}>View All</Text>
+        <Text style={tailwind("text-onPrimary text-center")}>View All</Text>
       </TouchableOpacity>{" "}
       <TouchableOpacity
         onPress={() => {
           /* Implement logout functionality */
         }}
-        style={tailwind("bg-red-500 py-2 px-4 rounded mb-4")}
+        style={tailwind("bg-danger py-2 px-4 rounded mb-4")}
       >
-        <Text style={tailwind("text-white text-center")}>Logout</Text>
+        <Text style={tailwind("text-onPrimary text-center")}>Logout</Text>
       </TouchableOpacity>
     </ScrollView>
   );

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, Switch, ScrollView } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { useTailwind } from "../../styles/tailwind";
+import { Toggle } from "../../components/ui";
 
 const PrivacySettingsScreen = () => {
   const [locationSharingEnabled, setLocationSharingEnabled] = useState(false);
@@ -23,9 +24,7 @@ const PrivacySettingsScreen = () => {
 
       <View style={tailwind("flex-row justify-between py-2")}>
         <Text>Share Location</Text>
-        <Switch
-          trackColor={{ false: "#767577", true: "#81b0ff" }}
-          thumbColor={locationSharingEnabled ? "#f5dd4b" : "#f4f3f4"}
+        <Toggle
           onValueChange={toggleLocationSharing}
           value={locationSharingEnabled}
         />
@@ -33,9 +32,7 @@ const PrivacySettingsScreen = () => {
 
       <View style={tailwind("flex-row justify-between py-2")}>
         <Text>Profile Visibility</Text>
-        <Switch
-          trackColor={{ false: "#767577", true: "#81b0ff" }}
-          thumbColor={profileVisibility ? "#f5dd4b" : "#f4f3f4"}
+        <Toggle
           onValueChange={toggleProfileVisibility}
           value={profileVisibility}
         />

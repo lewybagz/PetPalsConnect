@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,12 @@ import api from "../../api/axios";
 import { FontAwesome5 as Icon } from "@expo/vector-icons";
 import { getStoredToken } from "../../../utils/tokenutil";
 import PlaydateCardComponent from "../../components/PlaydateCardComponent";
+import { useTokens } from "../../context/AppThemeContext";
 
 const PlaydateHistoryScreen = ({ navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [pastPlaydates, setPastPlaydates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -52,7 +56,7 @@ const PlaydateHistoryScreen = ({ navigation }) => {
         <LoadingScreen />
       ) : error ? (
         <View style={styles.errorContainer}>
-          <Icon name="exclamation-circle" size={30} color="#FF0000" />
+          <Icon name="exclamation-circle" size={30} color={tokens.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : (
@@ -66,19 +70,19 @@ const PlaydateHistoryScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: t.surface,
   },
   item: {
-    backgroundColor: "#f8f8f8",
+    backgroundColor: t.surfaceAlt,
     padding: 20,
     marginVertical: 8,
     marginHorizontal: 16,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: t.border,
   },
   title: {
     fontSize: 18,
@@ -92,7 +96,7 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 8,
     fontSize: 16,
-    color: "red",
+    color: t.danger,
   },
 });
 

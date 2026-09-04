@@ -1,8 +1,12 @@
 // CustomActionSheet.js
-import React from "react";
+import React, { useMemo } from "react";
 import { Modal, View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { useTokens } from "../context/AppThemeContext";
 
 const CustomActionSheet = ({ visible, onClose, onActionPress }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const actions = ["Reply", "React", "Copy", "Delete", "Cancel"];
 
   return (
@@ -29,14 +33,14 @@ const CustomActionSheet = ({ visible, onClose, onActionPress }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: t.scrim,
   },
   actionSheet: {
-    backgroundColor: "white",
+    backgroundColor: t.surface,
     paddingVertical: 10,
   },
   actionItem: {

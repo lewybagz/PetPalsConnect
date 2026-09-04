@@ -1,8 +1,12 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
 import { useSelector } from "react-redux";
+import { useTokens } from "../context/AppThemeContext";
 
 const FriendRequestsCard = ({ friendRequest, onAccept, onDecline }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const currentUser = useSelector((state) => state.user.user);
   const isSender = currentUser.pets.some(
     (pet) => pet._id === friendRequest.sender._id
@@ -43,13 +47,13 @@ const FriendRequestsCard = ({ friendRequest, onAccept, onDecline }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   card: {
     margin: 10,
     padding: 10,
-    backgroundColor: "#fff",
+    backgroundColor: t.surface,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: t.border,
     borderRadius: 5,
   },
   text: {

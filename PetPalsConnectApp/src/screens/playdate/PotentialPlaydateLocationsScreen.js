@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import LoadingScreen from "../../components/LoadingScreenComponent";
@@ -12,8 +12,12 @@ import {
   startLoading,
   setError,
 } from "../../redux/actions";
+import { useTokens } from "../../context/AppThemeContext";
 
 const PotentialPlaydateLocationsScreen = (navigation) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [locations, setLocations] = useState([]);
   const dispatch = useDispatch();
   const userId = useSelector((state) => state.user.userId);
@@ -101,7 +105,7 @@ const PotentialPlaydateLocationsScreen = (navigation) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
@@ -113,7 +117,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: "red",
+    color: t.danger,
     textAlign: "center",
     marginBottom: 10,
   },

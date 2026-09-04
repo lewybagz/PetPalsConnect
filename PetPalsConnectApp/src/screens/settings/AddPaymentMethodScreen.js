@@ -53,7 +53,7 @@ const AddPaymentMethodScreen = ({ navigation }) => {
     <View style={tailwind("p-4")}>
       <Text style={tailwind("text-xl font-bold mb-4")}>Add Payment Method</Text>
       <TextInput
-        style={tailwind("border border-gray-300 p-2 mb-2")}
+        style={tailwind("border border-border p-2 mb-2")}
         placeholder="Card Number"
         value={cardNumber}
         onChangeText={setCardNumber}
@@ -61,7 +61,7 @@ const AddPaymentMethodScreen = ({ navigation }) => {
         maxLength={16}
       />
       <TextInput
-        style={tailwind("border border-gray-300 p-2 mb-2")}
+        style={tailwind("border border-border p-2 mb-2")}
         placeholder="Expiry Date (MM/YY)"
         value={expiryDate}
         onChangeText={handleExpiryDateChange}
@@ -69,7 +69,7 @@ const AddPaymentMethodScreen = ({ navigation }) => {
         maxLength={5}
       />
       <TextInput
-        style={tailwind("border border-gray-300 p-2 mb-4")}
+        style={tailwind("border border-border p-2 mb-4")}
         placeholder="CVV"
         value={cvv}
         onChangeText={setCvv}
@@ -77,7 +77,7 @@ const AddPaymentMethodScreen = ({ navigation }) => {
         maxLength={3}
       />
       <TextInput
-        style={tailwind("border border-gray-300 p-2 mb-4")}
+        style={tailwind("border border-border p-2 mb-4")}
         placeholder="Zip Code"
         value={zipCode}
         onChangeText={setZipCode}
@@ -86,9 +86,9 @@ const AddPaymentMethodScreen = ({ navigation }) => {
       />
       <TouchableOpacity
         onPress={handleAddPaymentMethod}
-        style={tailwind("bg-blue-500 py-2 px-4 rounded")}
+        style={tailwind("bg-primary py-2 px-4 rounded")}
       >
-        <Text style={tailwind("text-white text-center")}>
+        <Text style={tailwind("text-onPrimary text-center")}>
           Add Payment Method
         </Text>
       </TouchableOpacity>

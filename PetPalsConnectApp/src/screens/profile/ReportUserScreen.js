@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
 import { useToast } from "../../components/ui";
+import { useTokens } from "../../context/AppThemeContext";
 import { REPORT_REASONS, reportUser } from "../../api/safety";
 
 /**
@@ -32,6 +33,7 @@ import { REPORT_REASONS, reportUser } from "../../api/safety";
  */
 const ReportUserScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const toast = useToast();
 
   const userId = route?.params?.userId;
@@ -87,7 +89,7 @@ const ReportUserScreen = ({ route, navigation }) => {
         testID="report-missing"
         style={tailwind("flex-1 items-center justify-center p-8")}
       >
-        <Text style={tailwind("text-base text-gray-500 text-center")}>
+        <Text style={tailwind("text-base text-textMuted text-center")}>
           There&apos;s nobody to report here.
         </Text>
       </View>
@@ -96,14 +98,14 @@ const ReportUserScreen = ({ route, navigation }) => {
 
   return (
     <ScrollView testID="report-user" contentContainerStyle={tailwind("p-4 pb-10")}>
-      <Text style={tailwind("text-xl font-bold text-gray-900")}>
+      <Text style={tailwind("text-xl font-bold text-text")}>
         Report {name}
       </Text>
-      <Text style={tailwind("text-sm text-gray-500 mt-1 mb-5")}>
+      <Text style={tailwind("text-sm text-textMuted mt-1 mb-5")}>
         Reports are private. Reporting someone also blocks them.
       </Text>
 
-      <Text style={tailwind("text-sm font-semibold text-gray-700 mb-2")}>
+      <Text style={tailwind("text-sm font-semibold text-textMuted mb-2")}>
         What&apos;s the problem?
       </Text>
 
@@ -117,28 +119,28 @@ const ReportUserScreen = ({ route, navigation }) => {
             onPress={() => setReason(option.value)}
             style={tailwind(
               `flex-row items-center border rounded-xl p-3 mb-2 ${
-                chosen ? "border-blue-600 bg-blue-50" : "border-gray-200"
+                chosen ? "border-primary bg-primarySoft" : "border-border"
               }`
             )}
           >
             <Ionicons
               name={chosen ? "radio-button-on" : "radio-button-off"}
               size={20}
-              color={chosen ? "#2563eb" : "#9ca3af"}
+              color={chosen ? tokens.primary : tokens.textFaint}
             />
-            <Text style={tailwind("text-base text-gray-800 ml-3 flex-1")}>
+            <Text style={tailwind("text-base text-text ml-3 flex-1")}>
               {option.label}
             </Text>
           </TouchableOpacity>
         );
       })}
 
-      <Text style={tailwind("text-sm font-semibold text-gray-700 mt-5 mb-2")}>
+      <Text style={tailwind("text-sm font-semibold text-textMuted mt-5 mb-2")}>
         What happened?
       </Text>
       <TextInput
         testID="report-content"
-        style={tailwind("border border-gray-200 rounded-xl p-3 h-32 text-base")}
+        style={tailwind("border border-border rounded-xl p-3 h-32 text-base")}
         placeholder="A sentence or two is plenty."
         value={content}
         onChangeText={setContent}
@@ -156,9 +158,9 @@ const ReportUserScreen = ({ route, navigation }) => {
         <TouchableOpacity
           testID="report-submit"
           onPress={submit}
-          style={tailwind("bg-red-600 rounded-xl py-4 items-center mt-5")}
+          style={tailwind("bg-danger rounded-xl py-4 items-center mt-5")}
         >
-          <Text style={tailwind("text-white font-semibold text-base")}>
+          <Text style={tailwind("text-onPrimary font-semibold text-base")}>
             Report and block
           </Text>
         </TouchableOpacity>
@@ -169,7 +171,7 @@ const ReportUserScreen = ({ route, navigation }) => {
         onPress={() => navigation.goBack()}
         style={tailwind("py-4 items-center")}
       >
-        <Text style={tailwind("text-gray-500")}>Cancel</Text>
+        <Text style={tailwind("text-textMuted")}>Cancel</Text>
       </TouchableOpacity>
     </ScrollView>
   );

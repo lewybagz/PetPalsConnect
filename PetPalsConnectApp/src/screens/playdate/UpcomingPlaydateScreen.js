@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, FlatList, StyleSheet, Alert } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import api from "../../api/axios";
@@ -6,7 +6,11 @@ import { FontAwesome as Icon } from "@expo/vector-icons";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 import ScheduledPlaydateCardComponent from "../../components/ScheduledPlaydateCardComponent";
+import { useTokens } from "../../context/AppThemeContext";
 const UpcomingPlaydateScreen = (navigation) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [playdates, setPlaydates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -78,13 +82,13 @@ const UpcomingPlaydateScreen = (navigation) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 22,
   },
   itemContainer: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: t.surfaceAlt,
     padding: 20,
     marginVertical: 8,
     marginHorizontal: 16,

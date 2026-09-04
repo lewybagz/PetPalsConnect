@@ -11,6 +11,7 @@ import { useSocketSession } from "../../hooks/useSocketEvents";
 import useSessionStore from "../../hooks/useSessionStore";
 import useLocationSync from "../../hooks/useLocationSync";
 import { useAuthSession, AuthStatus } from "../../context/AuthSessionContext";
+import { useTokens } from "../../context/AppThemeContext";
 
 const Root = createNativeStackNavigator();
 
@@ -39,6 +40,7 @@ const Centered = ({ children }) => (
  */
 export default function RootNavigator() {
   const { status, error, refresh, signOut } = useAuthSession();
+  const tokens = useTokens();
 
   usePushNotifications(status === AuthStatus.ready);
   // The server pushes to a room named after the Mongo user id, so this device
@@ -67,22 +69,22 @@ export default function RootNavigator() {
         <Text style={{ fontSize: 17, fontWeight: "600", marginBottom: 8 }}>
           Can&apos;t reach PetPals Connect
         </Text>
-        <Text style={{ color: "#666", textAlign: "center", marginBottom: 20 }}>
+        <Text style={{ color: tokens.textMuted, textAlign: "center", marginBottom: 20 }}>
           {error ?? "Check your connection and try again."}
         </Text>
         <Pressable
           onPress={refresh}
           style={{
-            backgroundColor: "tomato",
+            backgroundColor: tokens.primary,
             paddingVertical: 12,
             paddingHorizontal: 28,
             borderRadius: 8,
           }}
         >
-          <Text style={{ color: "white", fontWeight: "600" }}>Try again</Text>
+          <Text style={{ color: tokens.onPrimary, fontWeight: "600" }}>Try again</Text>
         </Pressable>
         <Pressable onPress={signOut} style={{ marginTop: 16 }}>
-          <Text style={{ color: "#888" }}>Sign out</Text>
+          <Text style={{ color: tokens.textMuted }}>Sign out</Text>
         </Pressable>
       </Centered>
     );

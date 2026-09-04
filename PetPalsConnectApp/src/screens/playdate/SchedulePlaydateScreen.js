@@ -16,6 +16,7 @@ import { useAuthSession } from "../../context/AuthSessionContext";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 import { fetchUserPreferences } from "../../../services/UserService";
 import { createPlaydate, fetchNearbyLocations } from "../../api/playdates";
+import { useTokens } from "../../context/AppThemeContext";
 
 /**
  * Arrange a playdate with another owner's pet.
@@ -39,6 +40,7 @@ const DEFAULT_RANGE_MILES = 10;
 
 const SchedulePlaydateScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const { profile } = useAuthSession();
 
   const pet = route?.params?.pet ?? null;
@@ -144,12 +146,12 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
       </Text>
 
       <Text style={tailwind("text-base font-semibold mb-2")}>
-        <Icon name="map-marker" size={16} color="#2563eb" /> Where
+        <Icon name="map-marker" size={16} color={tokens.primary} /> Where
       </Text>
 
       {loadingLocations ? <ActivityIndicator /> : null}
       {locationError ? (
-        <Text testID="location-error" style={tailwind("text-gray-500 mb-2")}>
+        <Text testID="location-error" style={tailwind("text-textMuted mb-2")}>
           {locationError}
         </Text>
       ) : null}
@@ -163,27 +165,27 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
             onPress={() => setSelectedLocation(place)}
             style={tailwind(
               `border rounded-2xl p-4 mb-2 ${
-                chosen ? "border-blue-600 bg-blue-50" : "border-gray-200"
+                chosen ? "border-primary bg-primarySoft" : "border-border"
               }`
             )}
           >
             <Text style={tailwind("text-base font-semibold")}>{place.address}</Text>
             {place.description ? (
-              <Text style={tailwind("text-sm text-gray-500")}>{place.description}</Text>
+              <Text style={tailwind("text-sm text-textMuted")}>{place.description}</Text>
             ) : null}
           </TouchableOpacity>
         );
       })}
 
       <Text style={tailwind("text-base font-semibold mb-2 mt-4")}>
-        <Icon name="calendar" size={16} color="#2563eb" /> When
+        <Icon name="calendar" size={16} color={tokens.primary} /> When
       </Text>
       <DateTimePickerComponent mode="date" date={date} onDateChange={setDate} />
       <DateTimePickerComponent mode="time" date={time} onDateChange={setTime} />
 
       <TextInput
         testID="playdate-notes"
-        style={tailwind("border border-gray-300 rounded-xl p-3 mt-3 h-24")}
+        style={tailwind("border border-border rounded-xl p-3 mt-3 h-24")}
         placeholder="Anything they should know?"
         multiline
         onChangeText={setNotes}
@@ -196,14 +198,14 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
         onPress={submit}
         style={tailwind(
           `rounded-xl py-3 items-center mt-4 ${
-            submitting ? "bg-blue-300" : "bg-blue-600"
+            submitting ? "bg-border" : "bg-primary"
           }`
         )}
       >
         {submitting ? (
-          <ActivityIndicator color="#ffffff" />
+          <ActivityIndicator color={tokens.surface} />
         ) : (
-          <Text style={tailwind("text-white font-semibold")}>
+          <Text style={tailwind("text-onPrimary font-semibold")}>
             Send playdate request
           </Text>
         )}

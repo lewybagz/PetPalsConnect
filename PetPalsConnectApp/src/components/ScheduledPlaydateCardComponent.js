@@ -1,13 +1,17 @@
 // ScheduledPlaydateCardComponent.js
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { FontAwesome as Icon } from "@expo/vector-icons";
+import { useTokens } from "../context/AppThemeContext";
 
 const ScheduledPlaydateCardComponent = ({
   playdate,
   onCancel,
   onNavigateToReview,
 }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   return (
     <View style={styles.cardContainer}>
       <Text style={styles.title}>{playdate.petName}</Text>
@@ -32,9 +36,9 @@ const ScheduledPlaydateCardComponent = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   cardContainer: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: t.surfaceAlt,
     padding: 20,
     marginVertical: 8,
     marginHorizontal: 16,
@@ -45,14 +49,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   reviewButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: t.success,
     padding: 10,
     marginTop: 10,
     borderRadius: 5,
     alignItems: "center",
   },
   reviewButtonText: {
-    color: "white",
+    color: t.surface,
     fontSize: 16,
   },
   cancelButton: {
@@ -61,7 +65,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   cancelText: {
-    color: "red",
+    color: t.danger,
     marginLeft: 10,
   },
 });

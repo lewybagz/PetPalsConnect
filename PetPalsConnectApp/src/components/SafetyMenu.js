@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../styles/tailwind";
 import { useToast } from "./ui";
+import { useTokens } from "../context/AppThemeContext";
 import { blockUser } from "../api/safety";
 
 /**
@@ -23,10 +24,11 @@ const SafetyMenu = ({
   navigation,
   onBlocked,
   testID = "safety-menu",
-  tint = "#6b7280",
+  tint,
   extraOptions = [],
 }) => {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -75,7 +77,7 @@ const SafetyMenu = ({
         onPress={() => setOpen(true)}
         style={tailwind("p-2")}
       >
-        <Ionicons name="ellipsis-horizontal" size={22} color={tint} />
+        <Ionicons name="ellipsis-horizontal" size={22} color={tint ?? tokens.textMuted} />
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="slide">
@@ -83,9 +85,9 @@ const SafetyMenu = ({
           testID={`${testID}-backdrop`}
           activeOpacity={1}
           onPress={() => setOpen(false)}
-          style={tailwind("flex-1 justify-end bg-black bg-opacity-50")}
+          style={tailwind("flex-1 justify-end bg-scrim")}
         >
-          <View style={tailwind("bg-white rounded-t-3xl p-4 pb-8")}>
+          <View style={tailwind("bg-surface rounded-t-3xl p-4 pb-8")}>
             {extraOptions.map((option) => (
               <TouchableOpacity
                 key={option.label}
@@ -94,7 +96,7 @@ const SafetyMenu = ({
                   setOpen(false);
                   option.onPress();
                 }}
-                style={tailwind("py-4 border-b border-gray-100")}
+                style={tailwind("py-4 border-b border-border")}
               >
                 <Text style={tailwind("text-lg text-center")}>{option.label}</Text>
               </TouchableOpacity>
@@ -103,9 +105,9 @@ const SafetyMenu = ({
             <TouchableOpacity
               testID={`${testID}-report`}
               onPress={report}
-              style={tailwind("py-4 border-b border-gray-100")}
+              style={tailwind("py-4 border-b border-border")}
             >
-              <Text style={tailwind("text-lg text-center text-red-600")}>
+              <Text style={tailwind("text-lg text-center text-danger")}>
                 Report {who}
               </Text>
             </TouchableOpacity>
@@ -113,9 +115,9 @@ const SafetyMenu = ({
             <TouchableOpacity
               testID={`${testID}-block`}
               onPress={confirmBlock}
-              style={tailwind("py-4 border-b border-gray-100")}
+              style={tailwind("py-4 border-b border-border")}
             >
-              <Text style={tailwind("text-lg text-center text-red-600")}>
+              <Text style={tailwind("text-lg text-center text-danger")}>
                 Block {who}
               </Text>
             </TouchableOpacity>
@@ -125,7 +127,7 @@ const SafetyMenu = ({
               onPress={() => setOpen(false)}
               style={tailwind("py-4")}
             >
-              <Text style={tailwind("text-lg text-center text-gray-500")}>
+              <Text style={tailwind("text-lg text-center text-textMuted")}>
                 Cancel
               </Text>
             </TouchableOpacity>

@@ -99,7 +99,7 @@ const ChatDetailsScreen = ({ route, navigation }) => {
           />
           {chatDetails.participants?.length > 5 && (
             <TouchableOpacity onPress={viewAllPets} style={tailwind("mt-2")}>
-              <Text style={tailwind("text-blue-500")}>View All</Text>
+              <Text style={tailwind("text-primary")}>View All</Text>
             </TouchableOpacity>
           )}
         </>
@@ -119,7 +119,7 @@ const ChatDetailsScreen = ({ route, navigation }) => {
       />
       {chatDetails.media?.length > 6 && (
         <TouchableOpacity onPress={viewAllMedia} style={tailwind("mt-2")}>
-          <Text style={tailwind("text-blue-500")}>View All</Text>
+          <Text style={tailwind("text-primary")}>View All</Text>
         </TouchableOpacity>
       )}
       {/* Additional details as needed */}

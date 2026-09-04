@@ -1,11 +1,15 @@
-import React from "react";
+import React, { useMemo } from "react";
 import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { useSelector } from "react-redux";
 
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { useTokens } from "../../context/AppThemeContext";
 
 const PlaydateModificationConfirmationScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const userId = useSelector((state) => state.user.userId);
   const { playdateId, date, time, location } = route.params;
 
@@ -70,7 +74,7 @@ const PlaydateModificationConfirmationScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
@@ -96,7 +100,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   button: {
-    backgroundColor: "#007bff",
+    backgroundColor: t.primary,
     padding: 15,
     borderRadius: 5,
     marginTop: 10,
@@ -104,7 +108,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonText: {
-    color: "#ffffff",
+    color: t.surface,
     fontSize: 16,
     fontWeight: "bold",
   },

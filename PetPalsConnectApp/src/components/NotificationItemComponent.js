@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,11 @@ import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
 import api from "../api/axios";
+import { useTokens } from "../context/AppThemeContext";
 const NotificationItem = ({ content, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [modalVisible, setModalVisible] = useState(false);
   const tailwind = useTailwind();
   // Hooks must be called at the top level of the component, never inside a
@@ -94,7 +98,7 @@ const NotificationItem = ({ content, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   centeredView: {
     flex: 1,
     justifyContent: "center",
@@ -102,11 +106,11 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: "white",
+    backgroundColor: t.surface,
     borderRadius: 20,
     padding: 35,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -118,7 +122,7 @@ const styles = StyleSheet.create({
   optionButton: {
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    borderBottomColor: t.border,
   },
   optionText: {
     fontSize: 16,

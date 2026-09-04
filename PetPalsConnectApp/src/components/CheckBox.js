@@ -2,6 +2,8 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { useTokens } from "../context/AppThemeContext";
+
 /**
  * Replaces the CheckBox from `react-native-elements`, which is unmaintained and
  * was the only thing that package was used for.
@@ -13,9 +15,14 @@ export default function CheckBox({
   disabled = false,
   containerStyle,
   textStyle,
-  checkedColor = "tomato",
-  uncheckedColor = "#888",
+  // Resolved in the body rather than as a default, which cannot read a hook.
+  checkedColor,
+  uncheckedColor,
 }) {
+  const tokens = useTokens();
+  const onColour = checkedColor ?? tokens.primary;
+  const offColour = uncheckedColor ?? tokens.borderStrong;
+
   return (
     <Pressable
       onPress={onPress}
@@ -30,7 +37,7 @@ export default function CheckBox({
       <MaterialCommunityIcons
         name={checked ? "checkbox-marked" : "checkbox-blank-outline"}
         size={24}
-        color={checked ? checkedColor : uncheckedColor}
+        color={checked ? onColour : offColour}
       />
       {title ? (
         <Text style={[{ marginLeft: 8, fontSize: 16 }, textStyle]}>{title}</Text>

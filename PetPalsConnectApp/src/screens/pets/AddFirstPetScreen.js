@@ -21,6 +21,7 @@ import { OnboardingProgress } from "../../components/ui";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { describeApiError } from "../../utils/authErrors";
 import { BREEDS } from "../../data/breeds";
+import { useTokens } from "../../context/AppThemeContext";
 
 /**
  * The last step of onboarding: the user's first pet.
@@ -38,6 +39,7 @@ import { BREEDS } from "../../data/breeds";
  */
 export default function AddFirstPetScreen() {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const { createPet, skipPetSetup, signOut } = useAuthSession();
 
   const [name, setName] = useState("");
@@ -152,7 +154,7 @@ export default function AddFirstPetScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={tailwind("flex-1 bg-white")}
+      style={tailwind("flex-1 bg-surface")}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
@@ -162,26 +164,26 @@ export default function AddFirstPetScreen() {
         <OnboardingProgress step={3} />
 
         <View style={tailwind("items-center mb-8")}>
-          <Ionicons name="paw" size={48} color="tomato" />
-          <Text style={tailwind("text-2xl font-bold text-gray-900 mt-4")}>
+          <Ionicons name="paw" size={48} color={tokens.primary} />
+          <Text style={tailwind("text-2xl font-bold text-text mt-4")}>
             Add your first pet
           </Text>
-          <Text style={tailwind("text-center text-gray-600 mt-2")}>
+          <Text style={tailwind("text-center text-textMuted mt-2")}>
             PetPals is built around your pet. Matching, playdates and chat all
             start here - but you can look around first if you&apos;d rather.
           </Text>
         </View>
 
         {error && (
-          <View style={tailwind("bg-red-50 border border-red-200 rounded-lg p-3 mb-4")}>
-            <Text style={tailwind("text-red-600 text-center")}>{error}</Text>
+          <View style={tailwind("bg-dangerSoft border border-danger rounded-lg p-3 mb-4")}>
+            <Text style={tailwind("text-danger text-center")}>{error}</Text>
           </View>
         )}
 
         <Pressable onPress={onChoosePhoto} style={tailwind("items-center mb-6")}>
           <View
             style={tailwind(
-              "w-24 h-24 rounded-full bg-gray-100 items-center justify-center overflow-hidden border border-gray-200"
+              "w-24 h-24 rounded-full bg-surfaceAlt items-center justify-center overflow-hidden border border-border"
             )}
           >
             {uploading ? (
@@ -189,19 +191,19 @@ export default function AddFirstPetScreen() {
             ) : photo ? (
               <Image source={{ uri: photo }} style={{ width: 96, height: 96 }} />
             ) : (
-              <Ionicons name="camera-outline" size={28} color="#999" />
+              <Ionicons name="camera-outline" size={28} color={tokens.textMuted} />
             )}
           </View>
-          <Text style={tailwind("text-sm text-gray-500 mt-2")}>
+          <Text style={tailwind("text-sm text-textMuted mt-2")}>
             {photo ? "Change photo" : "Add a photo (optional)"}
           </Text>
         </Pressable>
 
-        <Text style={tailwind("text-sm font-medium text-gray-700 mb-1")}>Name</Text>
+        <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>Name</Text>
         <TextInput
-          style={tailwind("border border-gray-300 rounded-lg px-3 py-3 mb-4 text-base")}
+          style={tailwind("border border-border rounded-lg px-3 py-3 mb-4 text-base")}
           placeholder="Rex"
-          placeholderTextColor="#a1a1a1"
+          placeholderTextColor={tokens.textFaint}
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
@@ -209,29 +211,29 @@ export default function AddFirstPetScreen() {
           editable={!submitting}
         />
 
-        <Text style={tailwind("text-sm font-medium text-gray-700 mb-1")}>Breed</Text>
+        <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>Breed</Text>
         <Pressable
           onPress={() => setBreedPickerOpen(true)}
           disabled={submitting}
           style={tailwind(
-            "border border-gray-300 rounded-lg px-3 py-3 mb-4 flex-row items-center justify-between"
+            "border border-border rounded-lg px-3 py-3 mb-4 flex-row items-center justify-between"
           )}
         >
-          <Text style={tailwind(breed ? "text-base text-gray-900" : "text-base text-gray-400")}>
+          <Text style={tailwind(breed ? "text-base text-text" : "text-base text-textFaint")}>
             {breed || "Choose a breed"}
           </Text>
-          <Ionicons name="chevron-down" size={18} color="#888" />
+          <Ionicons name="chevron-down" size={18} color={tokens.textMuted} />
         </Pressable>
 
-        <Text style={tailwind("text-sm font-medium text-gray-700 mb-1")}>Age (years)</Text>
+        <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>Age (years)</Text>
         <TextInput
           style={tailwind(
             `border rounded-lg px-3 py-3 mb-2 text-base ${
-              age !== "" && !ageIsValid ? "border-red-400" : "border-gray-300"
+              age !== "" && !ageIsValid ? "border-danger" : "border-border"
             }`
           )}
           placeholder="3"
-          placeholderTextColor="#a1a1a1"
+          placeholderTextColor={tokens.textFaint}
           value={age}
           onChangeText={(value) => setAge(value.replace(/[^0-9.]/g, ""))}
           keyboardType="decimal-pad"
@@ -239,40 +241,40 @@ export default function AddFirstPetScreen() {
           editable={!submitting}
         />
         {age !== "" && !ageIsValid && (
-          <Text style={tailwind("text-xs text-red-500 mb-4")}>
+          <Text style={tailwind("text-xs text-danger mb-4")}>
             Enter an age between 0 and 40.
           </Text>
         )}
 
-        <Text style={tailwind("text-sm font-medium text-gray-700 mb-1 mt-2")}>Weight</Text>
+        <Text style={tailwind("text-sm font-medium text-textMuted mb-1 mt-2")}>Weight</Text>
         <View style={tailwind("flex-row items-center mb-2")}>
           <TextInput
             style={tailwind(
               `flex-1 border rounded-lg px-3 py-3 text-base ${
-                weight !== "" && !weightIsValid ? "border-red-400" : "border-gray-300"
+                weight !== "" && !weightIsValid ? "border-danger" : "border-border"
               }`
             )}
             placeholder={weightUnit === "kg" ? "12" : "25"}
-            placeholderTextColor="#a1a1a1"
+            placeholderTextColor={tokens.textFaint}
             value={weight}
             onChangeText={(value) => setWeight(value.replace(/[^0-9.]/g, ""))}
             keyboardType="decimal-pad"
             maxLength={5}
             editable={!submitting}
           />
-          <View style={tailwind("flex-row ml-3 border border-gray-300 rounded-lg overflow-hidden")}>
+          <View style={tailwind("flex-row ml-3 border border-border rounded-lg overflow-hidden")}>
             {["lbs", "kg"].map((unit) => (
               <Pressable
                 key={unit}
                 onPress={() => setWeightUnit(unit)}
                 disabled={submitting}
                 style={tailwind(
-                  `px-4 py-3 ${weightUnit === unit ? "bg-red-500" : "bg-white"}`
+                  `px-4 py-3 ${weightUnit === unit ? "bg-danger" : "bg-surface"}`
                 )}
               >
                 <Text
                   style={tailwind(
-                    `font-medium ${weightUnit === unit ? "text-white" : "text-gray-600"}`
+                    `font-medium ${weightUnit === unit ? "text-onPrimary" : "text-textMuted"}`
                   )}
                 >
                   {unit}
@@ -282,11 +284,11 @@ export default function AddFirstPetScreen() {
           </View>
         </View>
         {weight !== "" && !weightIsValid ? (
-          <Text style={tailwind("text-xs text-red-500 mb-4")}>
+          <Text style={tailwind("text-xs text-danger mb-4")}>
             Enter a weight between 0 and 400 {weightUnit}.
           </Text>
         ) : (
-          <Text style={tailwind("text-xs text-gray-500 mb-4")}>
+          <Text style={tailwind("text-xs text-textMuted mb-4")}>
             We use this to match your pet with others of a similar size.
           </Text>
         )}
@@ -295,19 +297,19 @@ export default function AddFirstPetScreen() {
           onPress={onSubmit}
           disabled={!canSubmit}
           style={tailwind(
-            `rounded-lg py-4 items-center mt-4 ${canSubmit ? "bg-red-500" : "bg-gray-300"}`
+            `rounded-lg py-4 items-center mt-4 ${canSubmit ? "bg-danger" : "bg-border"}`
           )}
         >
           {submitting ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={tokens.surface} />
           ) : (
-            <Text style={tailwind("text-white font-semibold text-base")}>
+            <Text style={tailwind("text-onPrimary font-semibold text-base")}>
               Finish setting up
             </Text>
           )}
         </Pressable>
 
-        <Text style={tailwind("text-xs text-center text-gray-400 mt-4")}>
+        <Text style={tailwind("text-xs text-center text-textFaint mt-4")}>
           You can add temperament and favourite activities from your pet&apos;s
           profile later - they help us find even better matches.
         </Text>
@@ -317,11 +319,11 @@ export default function AddFirstPetScreen() {
           disabled={submitting}
           style={tailwind("mt-5 items-center py-2")}
         >
-          <Text style={tailwind("text-gray-600 font-medium")}>Skip for now</Text>
+          <Text style={tailwind("text-textMuted font-medium")}>Skip for now</Text>
         </Pressable>
 
         <Pressable onPress={onSignOut} style={tailwind("mt-3 items-center")}>
-          <Text style={tailwind("text-gray-400 text-sm")}>Sign out</Text>
+          <Text style={tailwind("text-textFaint text-sm")}>Sign out</Text>
         </Pressable>
       </ScrollView>
 
@@ -330,18 +332,18 @@ export default function AddFirstPetScreen() {
         animationType="slide"
         onRequestClose={() => setBreedPickerOpen(false)}
       >
-        <View style={tailwind("flex-1 bg-white pt-14 px-6")}>
+        <View style={tailwind("flex-1 bg-surface pt-14 px-6")}>
           <View style={tailwind("flex-row items-center justify-between mb-4")}>
-            <Text style={tailwind("text-lg font-bold text-gray-900")}>Choose a breed</Text>
+            <Text style={tailwind("text-lg font-bold text-text")}>Choose a breed</Text>
             <Pressable onPress={() => setBreedPickerOpen(false)} hitSlop={8}>
-              <Ionicons name="close" size={26} color="#444" />
+              <Ionicons name="close" size={26} color={tokens.text} />
             </Pressable>
           </View>
 
           <TextInput
-            style={tailwind("border border-gray-300 rounded-lg px-3 py-3 mb-3 text-base")}
+            style={tailwind("border border-border rounded-lg px-3 py-3 mb-3 text-base")}
             placeholder="Search breeds"
-            placeholderTextColor="#a1a1a1"
+            placeholderTextColor={tokens.textFaint}
             value={breedQuery}
             onChangeText={setBreedQuery}
             autoCapitalize="none"
@@ -359,16 +361,16 @@ export default function AddFirstPetScreen() {
                   setBreedQuery("");
                   setBreedPickerOpen(false);
                 }}
-                style={tailwind("py-3 border-b border-gray-100 flex-row items-center justify-between")}
+                style={tailwind("py-3 border-b border-border flex-row items-center justify-between")}
               >
-                <Text style={tailwind("text-base text-gray-800")}>{item}</Text>
+                <Text style={tailwind("text-base text-text")}>{item}</Text>
                 {breed === item && (
-                  <Ionicons name="checkmark" size={20} color="tomato" />
+                  <Ionicons name="checkmark" size={20} color={tokens.primary} />
                 )}
               </Pressable>
             )}
             ListEmptyComponent={
-              <Text style={tailwind("text-gray-500 text-center mt-8")}>
+              <Text style={tailwind("text-textMuted text-center mt-8")}>
                 No breeds match “{breedQuery}”. Choose “Other”.
               </Text>
             }

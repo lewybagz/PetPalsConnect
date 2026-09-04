@@ -32,25 +32,25 @@ const VerificationSelectionScreen = ({ navigation, route }) => {
       <AnimatedTouchableOpacity
         style={[
           styles.buttonContainer,
-          tailwind("bg-blue-500 mb-2"),
+          tailwind("bg-primary mb-2"),
           { transform: [{ scale: scaleAnim }] },
         ]}
         onPressIn={() => animateScale(0.95)} // Scales down the button
         onPressOut={() => animateScale(1)} // Scales up the button back to normal
         onPress={() => navigation.navigate("PhoneAuth")}
       >
-        <Text style={[styles.buttonText, tailwind("text-white")]}>
+        <Text style={[styles.buttonText, tailwind("text-onPrimary")]}>
           Verify by Phone
         </Text>
       </AnimatedTouchableOpacity>
 
       <AnimatedTouchableOpacity
-        style={[styles.buttonContainer, tailwind("bg-green-500")]}
+        style={[styles.buttonContainer, tailwind("bg-success")]}
         onPressIn={() => animateScale(0.95)}
         onPressOut={() => animateScale(1)}
         onPress={() => navigation.navigate("EmailAuth", { email })}
       >
-        <Text style={[styles.buttonText, tailwind("text-white")]}>
+        <Text style={[styles.buttonText, tailwind("text-onPrimary")]}>
           Verify by Email
         </Text>
       </AnimatedTouchableOpacity>

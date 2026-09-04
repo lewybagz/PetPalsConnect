@@ -23,6 +23,7 @@ import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { useTailwind } from "../../styles/tailwind";
 import { GOOGLE_WEB_CLIENT_ID } from "../../config/env";
 import { describeAuthError } from "../../utils/authErrors";
+import { useTokens } from "../../context/AppThemeContext";
 
 GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
 
@@ -39,6 +40,7 @@ GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
  */
 export default function LoginScreen({ navigation }) {
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const auth = getAuth();
 
   const [email, setEmail] = useState("");
@@ -105,7 +107,7 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={tailwind("flex-1 bg-white")}
+      style={tailwind("flex-1 bg-surface")}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
@@ -113,28 +115,28 @@ export default function LoginScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={tailwind("items-center mb-8")}>
-          <Ionicons name="paw" size={48} color="tomato" />
-          <Text style={tailwind("text-2xl font-bold text-gray-900 mt-4")}>
+          <Ionicons name="paw" size={48} color={tokens.primary} />
+          <Text style={tailwind("text-2xl font-bold text-text mt-4")}>
             Welcome back
           </Text>
         </View>
 
         {errorMessage && (
-          <View style={tailwind("bg-red-50 border border-red-200 rounded-lg p-3 mb-4")}>
-            <Text style={tailwind("text-red-600 text-center")}>{errorMessage}</Text>
+          <View style={tailwind("bg-dangerSoft border border-danger rounded-lg p-3 mb-4")}>
+            <Text style={tailwind("text-danger text-center")}>{errorMessage}</Text>
           </View>
         )}
 
         {notice && (
-          <View style={tailwind("bg-green-50 border border-green-200 rounded-lg p-3 mb-4")}>
-            <Text style={tailwind("text-green-700 text-center")}>{notice}</Text>
+          <View style={tailwind("bg-successSoft border border-success rounded-lg p-3 mb-4")}>
+            <Text style={tailwind("text-success text-center")}>{notice}</Text>
           </View>
         )}
 
         <TextInput
-          style={tailwind("border border-gray-300 rounded-lg px-3 py-3 mb-4 text-base")}
+          style={tailwind("border border-border rounded-lg px-3 py-3 mb-4 text-base")}
           placeholder="Email"
-          placeholderTextColor="#a1a1a1"
+          placeholderTextColor={tokens.textFaint}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -146,12 +148,12 @@ export default function LoginScreen({ navigation }) {
         />
 
         <View
-          style={tailwind("flex-row items-center border border-gray-300 rounded-lg px-3 mb-2")}
+          style={tailwind("flex-row items-center border border-border rounded-lg px-3 mb-2")}
         >
           <TextInput
             style={tailwind("flex-1 py-3 text-base")}
             placeholder="Password"
-            placeholderTextColor="#a1a1a1"
+            placeholderTextColor={tokens.textFaint}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -167,54 +169,54 @@ export default function LoginScreen({ navigation }) {
             <Ionicons
               name={showPassword ? "eye-off-outline" : "eye-outline"}
               size={22}
-              color="#888"
+              color={tokens.textMuted}
             />
           </Pressable>
         </View>
 
         <Pressable onPress={onForgotPassword} style={tailwind("self-end mb-6")}>
-          <Text style={tailwind("text-sm text-gray-500")}>Forgot password?</Text>
+          <Text style={tailwind("text-sm text-textMuted")}>Forgot password?</Text>
         </Pressable>
 
         <Pressable
           onPress={onLoginPress}
           disabled={!canSubmit}
           style={tailwind(
-            `rounded-lg py-4 items-center ${canSubmit ? "bg-red-500" : "bg-gray-300"}`
+            `rounded-lg py-4 items-center ${canSubmit ? "bg-danger" : "bg-border"}`
           )}
         >
           {submitting ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={tokens.surface} />
           ) : (
-            <Text style={tailwind("text-white font-semibold text-base")}>Sign in</Text>
+            <Text style={tailwind("text-onPrimary font-semibold text-base")}>Sign in</Text>
           )}
         </Pressable>
 
         <View style={tailwind("flex-row items-center my-6")}>
-          <View style={tailwind("flex-1 h-px bg-gray-200")} />
-          <Text style={tailwind("mx-3 text-gray-400 text-sm")}>or</Text>
-          <View style={tailwind("flex-1 h-px bg-gray-200")} />
+          <View style={tailwind("flex-1 h-px bg-surfaceAlt")} />
+          <Text style={tailwind("mx-3 text-textFaint text-sm")}>or</Text>
+          <View style={tailwind("flex-1 h-px bg-surfaceAlt")} />
         </View>
 
         <Pressable
           onPress={onGooglePress}
           disabled={submitting}
           style={tailwind(
-            "flex-row items-center justify-center border border-gray-300 rounded-lg py-4"
+            "flex-row items-center justify-center border border-border rounded-lg py-4"
           )}
         >
-          <Ionicons name="logo-google" size={20} color="#444" />
-          <Text style={tailwind("text-gray-800 font-semibold ml-3")}>
+          <Ionicons name="logo-google" size={20} color={tokens.text} />
+          <Text style={tailwind("text-text font-semibold ml-3")}>
             Continue with Google
           </Text>
         </Pressable>
 
         <Pressable
           onPress={() => navigation.navigate("PhoneAuth")}
-          style={tailwind("flex-row items-center justify-center border border-gray-300 rounded-lg py-4 mt-3")}
+          style={tailwind("flex-row items-center justify-center border border-border rounded-lg py-4 mt-3")}
         >
-          <Ionicons name="call-outline" size={20} color="#444" />
-          <Text style={tailwind("text-gray-800 font-semibold ml-3")}>
+          <Ionicons name="call-outline" size={20} color={tokens.text} />
+          <Text style={tailwind("text-text font-semibold ml-3")}>
             Continue with phone
           </Text>
         </Pressable>
@@ -223,8 +225,8 @@ export default function LoginScreen({ navigation }) {
           onPress={() => navigation.navigate("Register")}
           style={tailwind("mt-8 items-center")}
         >
-          <Text style={tailwind("text-gray-600")}>
-            New here? <Text style={tailwind("text-red-500")}>Create an account</Text>
+          <Text style={tailwind("text-textMuted")}>
+            New here? <Text style={tailwind("text-danger")}>Create an account</Text>
           </Text>
         </Pressable>
       </ScrollView>

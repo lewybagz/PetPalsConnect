@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Modal,
   View,
@@ -13,8 +13,12 @@ import { useSelector, useDispatch } from "react-redux";
 import { getStoredToken } from "../../utils/tokenutil";
 import LoadingScreen from "./LoadingScreenComponent";
 import { clearError, setError } from "../redux/actions";
+import { useTokens } from "../context/AppThemeContext";
 
 const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const tailwind = useTailwind();
   const dispatch = useDispatch();
   const userId = useSelector((state) => state.user.userId);
@@ -86,8 +90,8 @@ const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
 
   return (
     <Modal visible={isVisible} animationType="slide" transparent>
-      <View style={tailwind("flex-1 justify-end bg-opacity-50 bg-black")}>
-        <View style={tailwind("bg-white p-4 rounded-t-3xl")}>
+      <View style={tailwind("flex-1 justify-end bg-scrim")}>
+        <View style={tailwind("bg-surface p-4 rounded-t-3xl")}>
           {/* Mute Notifications */}
           <TouchableOpacity
             style={styles.option}
@@ -113,18 +117,18 @@ const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
+    backgroundColor: t.scrim, // Semi-transparent background
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: t.surface,
     padding: 16,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    shadowColor: "#000",
+    shadowColor: t.text,
     shadowOffset: {
       width: 0,
       height: -2,
@@ -135,18 +139,18 @@ const styles = StyleSheet.create({
   option: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: t.border,
   },
   optionText: {
     fontSize: 18,
     textAlign: "center",
-    color: "#333",
+    color: t.text,
   },
   leaveGroup: {
     borderBottomWidth: 0, // Remove border for the last option
   },
   leaveGroupText: {
-    color: "#ff3b30", // Red color for critical actions
+    color: t.danger, // Red color for critical actions
   },
   cancelOption: {
     paddingVertical: 12,

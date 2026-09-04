@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,12 @@ import {
 import { useTailwind } from "../styles/tailwind";
 import { getStoredToken } from "../../utils/tokenutil";
 import api from "../api/axios";
+import { useTokens } from "../context/AppThemeContext";
 
 const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const tailwind = useTailwind();
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -117,8 +121,8 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
         )}
       </View>
       <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={tailwind("flex-1 justify-end bg-opacity-50 bg-black")}>
-          <View style={tailwind("bg-white p-4 rounded-t-3xl")}>
+        <View style={tailwind("flex-1 justify-end bg-scrim")}>
+          <View style={tailwind("bg-surface p-4 rounded-t-3xl")}>
             {/* Archive Chat */}
             <TouchableOpacity style={styles.option} onPress={handleArchiveChat}>
               <Text style={tailwind("text-lg text-center")}>Archive Chat</Text>
@@ -153,12 +157,12 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   card: {
     flexDirection: "row",
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
+    borderBottomColor: t.textFaint,
     alignItems: "center",
   },
   chatImage: {
@@ -176,15 +180,15 @@ const styles = StyleSheet.create({
   },
   messagePreview: {
     fontSize: 14,
-    color: "gray",
+    color: t.textMuted,
   },
   timestamp: {
     fontSize: 12,
-    color: "gray",
+    color: t.textMuted,
     marginTop: 5,
   },
   unreadBadge: {
-    backgroundColor: "red",
+    backgroundColor: t.danger,
     borderRadius: 15,
     width: 30,
     height: 30,
@@ -192,7 +196,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   unreadCount: {
-    color: "white",
+    color: t.surface,
     fontWeight: "bold",
   },
 });

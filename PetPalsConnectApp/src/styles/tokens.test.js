@@ -61,6 +61,17 @@ describe.each([
     expect(contrast(palette[fg], palette[bg])).toBeGreaterThanOrEqual(AA_TEXT);
   });
 
+  it.each(["primary", "danger", "success", "warning"])(
+    "a label on a %s fill is readable",
+    (fill) => {
+      // Screens set `text-onPrimary` on every filled button, not just the blue
+      // one, so `onPrimary` has to work on all four fills in both themes.
+      expect(contrast(palette.onPrimary, palette[fill])).toBeGreaterThanOrEqual(
+        AA_TEXT
+      );
+    }
+  );
+
   it("a label on a primary fill is readable", () => {
     // 3.98:1 is what white on #007bff scored. That was the button people press
     // most, and the failure is invisible because the button looks fine.

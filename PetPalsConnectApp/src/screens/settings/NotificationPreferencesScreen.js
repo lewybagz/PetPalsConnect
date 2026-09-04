@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, Switch, ScrollView } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { useTailwind } from "../../styles/tailwind";
+import { Toggle } from "../../components/ui";
 
 const NotificationPreferencesScreen = () => {
   const [pushNotificationsEnabled, setPushNotificationsEnabled] =
@@ -27,9 +28,7 @@ const NotificationPreferencesScreen = () => {
 
       <View style={tailwind("flex-row justify-between py-2")}>
         <Text>Push Notifications</Text>
-        <Switch
-          trackColor={{ false: "#767577", true: "#81b0ff" }}
-          thumbColor={pushNotificationsEnabled ? "#f5dd4b" : "#f4f3f4"}
+        <Toggle
           onValueChange={togglePushNotifications}
           value={pushNotificationsEnabled}
         />
@@ -37,9 +36,7 @@ const NotificationPreferencesScreen = () => {
 
       <View style={tailwind("flex-row justify-between py-2")}>
         <Text>Email Notifications</Text>
-        <Switch
-          trackColor={{ false: "#767577", true: "#81b0ff" }}
-          thumbColor={emailNotificationsEnabled ? "#f5dd4b" : "#f4f3f4"}
+        <Toggle
           onValueChange={toggleEmailNotifications}
           value={emailNotificationsEnabled}
         />
