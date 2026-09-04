@@ -630,6 +630,8 @@ missing key must never stop the app from opening.
 ```bash
 # Backend: lint, schema audit, tests. Tests run against an in-memory MongoDB,
 # so they need no database, no service-account key and no network.
+# `npm test` goes through scripts/test.js; `node --test test/auth.test.js` still
+# runs one file on its own.
 cd backend && npm run lint && npm run check:schemas && npm run check:auth && npm test
 
 # App: lint, types, the colour ban, tests, then both bundles
@@ -649,6 +651,48 @@ the full Babel/Metro transform. It does not execute anything, though, which is
 why the app has a jest suite as well — four sessions of crash-class bugs
 (a styling shim that threw on every screen, selectors reading slices that do not
 exist) survived lint and both bundles untouched.
+
+### One database server per run, not one per file
+
+**`backend/scripts/test.js` starts a single in-memory MongoDB and hands its URI
+to `node --test` as `MONGO_TEST_URI`.** Every test file used to call
+`MongoMemoryServer.create()` in its own `before`, and node gives each file its
+own process, so a run spawned eighteen `mongod` processes. Each one picks a
+random free port and then binds it, which is a check-then-act with a gap in the
+middle: about one run in fifteen, one of the eighteen lost that race, its
+`before` threw, and every test in that file was reported failed. A green suite
+became "10 failures" with no cause visible in the output, and the next run was
+green.
+
+That shape is worth recognising: **the failure rate was per spawn, not per
+file.** Running any single file twenty-five times never reproduced it; the whole
+suite rolled the dice eighteen times per run. A suite that fails
+one-run-in-fifteen and passes in isolation is describing a shared resource, not
+a bad test.
+
+Each file still gets a database of its own, named after the file, so files
+cannot empty each other's collections in `clear()` and `--test-concurrency`
+could be raised again later. The runner owns the server's lifetime including on
+SIGINT, which is what keeps `/tmp/mongo-mem-*` from accumulating. Process
+isolation is deliberately kept — `--experimental-test-isolation=none` would also
+have fixed it, by giving every file a shared module registry and one mongoose
+instance, which trades a flake with a known cause for a class of leak that is
+much harder to see. The harness falls back to its own server when
+`MONGO_TEST_URI` is absent, so `node --test test/auth.test.js` still works.
+
+**The runner uses the `spec` reporter.** The default TAP output states a failure
+count and buries the reason; a red run has to say which test failed and why, or
+the next person re-runs it until it is green, which is what happened here.
+
+**A test must not be able to damage what it is testing.** `authAudit.test.js`
+proved the audit still catches a fixed hole by writing a sabotaged controller to
+disk and restoring it in a `finally`. A run interrupted between the two — Ctrl-C,
+a crash, a cancelled CI job — leaves that controller in the working tree, and
+every later run fails somewhere else for a reason that looks like a real bug.
+The audit functions take an optional map of controller basename to source text
+instead, so the tests mutate a string and never touch the tree. An override
+naming a controller that does not exist throws, because a typo would otherwise
+audit the tree unchanged, find nothing, and report that the audit works.
 
 ### The contract tests earn their keep
 

@@ -89,6 +89,45 @@ const controllerFiles = () =>
     .map((name) => path.join(ROOT, "controllers", name));
 
 /**
+ * The controllers to audit, as `{ file, source }`.
+ *
+ * `overrides` maps a controller's basename to source text used in place of what
+ * is on disk. That is how the suite proves the audit still catches a hole that
+ * has been fixed: it hands over a mutated copy of a controller rather than
+ * writing one to the working tree and restoring it in a `finally`.
+ *
+ * The write-and-restore version was a genuine hazard, not a style point. A run
+ * interrupted between the two - Ctrl-C, a crash, a cancelled CI job - leaves a
+ * deliberately broken controller committed-adjacent in the tree, and every run
+ * after it fails somewhere else entirely, for a reason that looks like a real
+ * bug. A test must not be able to damage the thing it is testing.
+ */
+const controllerSources = (overrides = {}) => {
+  const seen = new Set();
+
+  const fromDisk = controllerFiles().map((file) => {
+    const name = path.basename(file);
+    seen.add(name);
+    return {
+      file,
+      source: Object.hasOwn(overrides, name)
+        ? overrides[name]
+        : fs.readFileSync(file, "utf8"),
+    };
+  });
+
+  // An override naming a controller that does not exist is a typo in a test,
+  // and silently auditing nothing would let it pass.
+  for (const name of Object.keys(overrides)) {
+    if (!seen.has(name)) {
+      throw new Error(`No controller named ${name} to override`);
+    }
+  }
+
+  return fromDisk;
+};
+
+/**
  * Splits a controller into its handlers.
  *
  * Method shorthand in an object literal, which is how every controller here is
@@ -125,12 +164,11 @@ const handlers = (source) => {
 };
 
 /** Handlers that read a collection without narrowing it to the caller. */
-const unscopedReads = () => {
+const unscopedReads = (overrides) => {
   const problems = [];
 
-  for (const file of controllerFiles()) {
+  for (const { file, source } of controllerSources(overrides)) {
     const controller = path.basename(file, ".js");
-    const source = fs.readFileSync(file, "utf8");
 
     for (const handler of handlers(source)) {
       const key = `${controller}.${handler.name}`;
@@ -170,11 +208,10 @@ const IDENTITY_FIELDS = [
   "createdBy",
 ];
 
-const bodyIdentityWrites = () => {
+const bodyIdentityWrites = (overrides) => {
   const problems = [];
 
-  for (const file of controllerFiles()) {
-    const source = fs.readFileSync(file, "utf8");
+  for (const { file, source } of controllerSources(overrides)) {
     const lines = source.split("\n");
 
     lines.forEach((line, index) => {
@@ -288,12 +325,10 @@ const OWNERSHIP_FIELDS = [
  * An ownership field takes its value from the token. If a handler genuinely
  * needs to name another user, it belongs in `GUARDED_READS` behind a guard.
  */
-const requestSuppliedOwners = () => {
+const requestSuppliedOwners = (overrides) => {
   const problems = [];
 
-  for (const file of controllerFiles()) {
-    const source = fs.readFileSync(file, "utf8");
-
+  for (const { file, source } of controllerSources(overrides)) {
     source.split("\n").forEach((line, index) => {
       for (const field of OWNERSHIP_FIELDS) {
         const assigns = new RegExp(
@@ -324,6 +359,7 @@ const audit = () => [
 
 module.exports = {
   audit,
+  controllerSources,
   unscopedReads,
   requestSuppliedOwners,
   bodyIdentityWrites,

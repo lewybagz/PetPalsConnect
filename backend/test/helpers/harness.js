@@ -7,6 +7,7 @@
  * production code path.
  */
 const Module = require("node:module");
+const path = require("node:path");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 
 let mongod;
@@ -186,11 +187,37 @@ const stubStripe = () => {
   return stub;
 };
 
-/** Starts in-memory Mongo, stubs Firebase, and returns the Express app. */
-const start = async () => {
-  mongod = await MongoMemoryServer.create();
+/**
+ * A database name of this test file's own.
+ *
+ * Under `node --test` each file is its own process and its own main module, so
+ * the filename is both stable and unique. Two files sharing one server must not
+ * share a database - `clear()` between tests would then be emptying somebody
+ * else's collections.
+ */
+const databaseName = () => {
+  const entry = process.argv[1] ?? "";
+  const file = path.basename(entry, ".js").replace(/\.test$/, "");
+  return `petpals_${file.replace(/[^\w]/g, "_") || "test"}`;
+};
 
-  process.env.MONGODB_URI = mongod.getUri("petpals_test");
+/**
+ * Starts in-memory Mongo, stubs Firebase, and returns the Express app.
+ *
+ * `MONGO_TEST_URI` is set by `scripts/test.js`, which starts one server for the
+ * whole run. Without it - `node --test test/auth.test.js`, or an editor running
+ * one file - this falls back to a server of its own, so a single file is still
+ * runnable on its own.
+ */
+const start = async () => {
+  const shared = process.env.MONGO_TEST_URI;
+
+  if (shared) {
+    process.env.MONGODB_URI = new URL(databaseName(), shared).toString();
+  } else {
+    mongod = await MongoMemoryServer.create();
+    process.env.MONGODB_URI = mongod.getUri(databaseName());
+  }
   process.env.NODE_ENV = "test";
   process.env.PORT = "0";
 
@@ -211,11 +238,21 @@ const start = async () => {
   return app;
 };
 
+/**
+ * Drops this file's database and disconnects.
+ *
+ * The server itself is only stopped when this file started one. On a shared
+ * server `scripts/test.js` owns that, including on Ctrl-C - which is what keeps
+ * `mongo-mem-*` directories and stale socket files out of /tmp.
+ */
 const stop = async () => {
   const mongoose = require("mongoose");
   await mongoose.connection.dropDatabase();
   await mongoose.connection.close();
-  if (mongod) await mongod.stop();
+  if (mongod) {
+    await mongod.stop();
+    mongod = null;
+  }
 };
 
 /** Empties every collection between tests. */

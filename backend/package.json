@@ -11,7 +11,7 @@
     "start": "node Server.js",
     "dev": "node --watch Server.js",
     "lint": "eslint .",
-    "test": "node --test --test-concurrency=1 \"test/**/*.test.js\"",
+    "test": "node scripts/test.js",
     "test:watch": "node --test --watch \"test/**/*.test.js\"",
     "check:schemas": "node -e \"const p=require('./services/schemaAudit').audit();if(p.length){console.error(p.join('\\n'));process.exit(1)}console.log('Every create path can satisfy its model.')\"",
     "check:auth": "node -e \"const p=require('./services/authAudit').audit();if(p.length){console.error(p.join('\\n'));process.exit(1)}console.log('Reads are scoped and identity comes from the token.')\""

@@ -1,8 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
+const fs = require("node:fs");
+const path = require("node:path");
+
 const {
   audit,
+  controllerSources,
   unscopedReads,
   requestSuppliedOwners,
   bodyIdentityWrites,
@@ -87,34 +91,45 @@ test("every public read is a decision with a reason attached", () => {
   }
 });
 
+/**
+ * The audit is fed source text, not asked to read the tree.
+ *
+ * These used to write a deliberately broken controller to disk, run the audit,
+ * and restore it in a `finally`. That works right up until a run is
+ * interrupted between the two - Ctrl-C, a crash, a cancelled CI job - and then
+ * a sabotaged controller is sitting in the working tree and every later run
+ * fails somewhere else entirely, for a reason that looks like a real bug. A
+ * test must not be able to damage the thing it is testing.
+ */
+const mutate = (name, from, to) => {
+  const original = fs.readFileSync(
+    path.resolve(__dirname, `../controllers/${name}`),
+    "utf8"
+  );
+  assert.ok(
+    original.includes(from),
+    `${name} no longer contains \`${from}\`, so this test proves nothing`
+  );
+  return { [name]: original.replace(from, to) };
+};
+
 test("an unscoped read is caught wherever it appears", () => {
   // The allowlist is by handler name, so a new unfiltered read in an
   // allowlisted controller is still reported.
-  const problems = audit();
-  assert.deepEqual(problems, []);
+  assert.deepEqual(audit(), []);
 
-  const fs = require("node:fs");
-  const path = require("node:path");
-  const file = path.resolve(__dirname, "../controllers/ReviewController.js");
-  const original = fs.readFileSync(file, "utf8");
+  const reintroduced = unscopedReads(
+    mutate(
+      "ReviewController.js",
+      "const reviews = await Review.find({ reviewer: req.userId })",
+      "const reviews = await Review.find()"
+    )
+  );
 
-  try {
-    fs.writeFileSync(
-      file,
-      original.replace(
-        "const reviews = await Review.find({ reviewer: req.userId })",
-        "const reviews = await Review.find()"
-      )
-    );
-
-    const reintroduced = unscopedReads();
-    assert.ok(
-      reintroduced.some((problem) => problem.includes("getAllReviews")),
-      "the audit did not catch a reintroduced unscoped read"
-    );
-  } finally {
-    fs.writeFileSync(file, original);
-  }
+  assert.ok(
+    reintroduced.some((problem) => problem.includes("getAllReviews")),
+    "the audit did not catch a reintroduced unscoped read"
+  );
 });
 
 /**
@@ -130,52 +145,42 @@ test("an unscoped read is caught wherever it appears", () => {
 test("a query scoped on an owner the caller named is caught", () => {
   assert.deepEqual(requestSuppliedOwners(), []);
 
-  const fs = require("node:fs");
-  const path = require("node:path");
-  const file = path.resolve(__dirname, "../controllers/PetMatchController.js");
-  const original = fs.readFileSync(file, "utf8");
+  const problems = requestSuppliedOwners(
+    mutate(
+      "PetMatchController.js",
+      "PetMatch.find({ relevantToUser: req.userId })",
+      "PetMatch.find({ relevantToUser: req.params.userId })"
+    )
+  );
 
-  try {
-    fs.writeFileSync(
-      file,
-      original.replace(
-        "PetMatch.find({ relevantToUser: req.userId })",
-        "PetMatch.find({ relevantToUser: req.params.userId })"
-      )
-    );
-
-    const problems = requestSuppliedOwners();
-    assert.ok(
-      problems.some((problem) => problem.includes("relevantToUser")),
-      "the audit did not catch a query scoped on an id from the URL"
-    );
-  } finally {
-    fs.writeFileSync(file, original);
-  }
+  assert.ok(
+    problems.some((problem) => problem.includes("relevantToUser")),
+    "the audit did not catch a query scoped on an id from the URL"
+  );
 });
 
 test("it looks at the body and the query string too, not only params", () => {
-  const fs = require("node:fs");
-  const path = require("node:path");
-  const file = path.resolve(__dirname, "../controllers/PetMatchController.js");
-  const original = fs.readFileSync(file, "utf8");
-
   for (const source of ["req.body.userId", "req.query.userId"]) {
-    try {
-      fs.writeFileSync(
-        file,
-        original.replace(
-          "PetMatch.find({ relevantToUser: req.userId })",
-          `PetMatch.find({ relevantToUser: ${source} })`
-        )
-      );
+    const problems = requestSuppliedOwners(
+      mutate(
+        "PetMatchController.js",
+        "PetMatch.find({ relevantToUser: req.userId })",
+        `PetMatch.find({ relevantToUser: ${source} })`
+      )
+    );
 
-      assert.ok(
-        requestSuppliedOwners().length > 0,
-        `the audit missed an owner taken from ${source}`
-      );
-    } finally {
-      fs.writeFileSync(file, original);
-    }
+    assert.ok(
+      problems.length > 0,
+      `the audit missed an owner taken from ${source}`
+    );
   }
+});
+
+test("an override naming a controller that does not exist is refused", () => {
+  // Otherwise a typo in one of the tests above audits the tree unchanged, finds
+  // nothing, and reports that the audit works.
+  assert.throws(
+    () => controllerSources({ "NoSuchController.js": "" }),
+    /No controller named NoSuchController.js/
+  );
 });
