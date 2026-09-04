@@ -5,7 +5,6 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from "react-native";
 import api from "../../api/axios";
 import { useSelector, useDispatch } from "react-redux";
@@ -14,9 +13,11 @@ import { getStoredToken } from "../../../utils/tokenutil";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import { clearError } from "../../redux/actions";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 const PetListScreen = ({ route, navigation }) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const { participants } = route.params || {};
@@ -33,11 +34,10 @@ const PetListScreen = ({ route, navigation }) => {
   // Handle the display and clearing of errors
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error, [
-        { text: "OK", onPress: () => dispatch(clearError()) },
-      ]);
+      toast.error(error);
+      dispatch(clearError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, toast]);
 
   useEffect(() => {
     const fetchMatchedPets = async (userId) => {
@@ -49,7 +49,7 @@ const PetListScreen = ({ route, navigation }) => {
         setMatchedPets(matchedResponse.data);
       } catch (error) {
         console.warn("[petlist]", error.message);
-        Alert.alert("Error", "Failed to load matched pets");
+        toast.error("Couldn't load your matches.");
       }
     };
 
@@ -70,7 +70,7 @@ const PetListScreen = ({ route, navigation }) => {
           }
         } catch (error) {
           console.warn("[petlist]", error.message);
-          Alert.alert("Error", "Failed to load pets");
+          toast.error("Couldn't load your pets.");
         }
       };
 
@@ -96,7 +96,7 @@ const PetListScreen = ({ route, navigation }) => {
       setPets(pets.filter((pet) => pet._id !== petId));
     } catch (error) {
       console.warn("[petlist]", error.message);
-      Alert.alert("Error", "Failed to delete pet");
+      toast.error("Couldn't remove that pet.");
     }
   };
   return (

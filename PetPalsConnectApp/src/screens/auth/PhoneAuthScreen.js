@@ -1,8 +1,19 @@
 import React, { useState } from "react";
-import { View, Button, TextInput, Alert } from "react-native";
+import { View, Button, TextInput } from "react-native";
 import { getAuth, PhoneAuthProvider } from "@react-native-firebase/auth";
+import { useToast } from "../../components/ui";
 
-const PhoneAuth = (navigation) => {
+/**
+ * Signing in with a phone number.
+ *
+ * This took `(navigation)` as its whole props object, so `navigation.navigate`
+ * was `props.navigate` - undefined - and the "You will be redirected to the
+ * login screen" alert would have thrown on OK. It does not need the prop at
+ * all: signing in changes Firebase auth state and `RootNavigator` swaps the
+ * whole tree, so navigating by hand targets a route that no longer exists.
+ */
+const PhoneAuth = () => {
+  const toast = useToast();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [code, setCode] = useState("");
   const [verificationId, setVerificationId] = useState(null);
@@ -16,9 +27,9 @@ const PhoneAuth = (navigation) => {
       // from Expo, so no verifier needs to be passed here.
       const confirmation = await auth.verifyPhoneNumber(phoneNumber);
       setVerificationId(confirmation.verificationId);
-      Alert.alert("Verification code has been sent to your phone.");
+      toast.success("Code sent to your phone.");
     } catch (err) {
-      Alert.alert("Error", err.message);
+      toast.error(err.message);
     }
   };
 
@@ -26,13 +37,9 @@ const PhoneAuth = (navigation) => {
     try {
       const credential = PhoneAuthProvider.credential(verificationId, code);
       await auth.signInWithCredential(credential);
-      Alert.alert(
-        "Phone authentication successful",
-        "You will be redirected to the login screen.",
-        [{ text: "OK", onPress: () => navigation.navigate("Login") }]
-      );
+      toast.success("Signed in.");
     } catch (err) {
-      Alert.alert("Error", err.message);
+      toast.error(err.message);
     }
   };
 

@@ -6,13 +6,14 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  Alert,
 } from "react-native";
 import { fetchFriendsPets } from "../../api/friends";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 const PetSelectionScreen = ({ navigation }) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const [pets, setPets] = useState([]);
@@ -51,7 +52,7 @@ const PetSelectionScreen = ({ navigation }) => {
 
   const navigateToGroupChatCreation = () => {
     if (selectedPets.length === 0) {
-      Alert.alert("Select Pets", "Please select at least one pet to continue.");
+      toast.show("Choose at least one pet to continue.");
       return;
     }
     navigation.navigate("GroupChatCreation", { selectedPets });

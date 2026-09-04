@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { addPetPhoto } from "../../services/photos";
 
 import { useTailwind } from "../../styles/tailwind";
-import { OnboardingProgress } from "../../components/ui";
+import { OnboardingProgress, useToast } from "../../components/ui";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { describeApiError } from "../../utils/authErrors";
 import { BREEDS } from "../../data/breeds";
@@ -40,6 +40,7 @@ import { useTokens } from "../../context/AppThemeContext";
 export default function AddFirstPetScreen() {
   const tailwind = useTailwind();
   const tokens = useTokens();
+  const toast = useToast();
   const { createPet, skipPetSetup, signOut } = useAuthSession();
 
   const [name, setName] = useState("");
@@ -89,10 +90,7 @@ export default function AddFirstPetScreen() {
       const result = await addPetPhoto({ fromCamera: false });
 
       if (result.denied) {
-        Alert.alert(
-          "Permission needed",
-          "Allow photo library access to add a picture of your pet."
-        );
+        toast.show("Allow photo access to add a picture of your pet.");
         return;
       }
       if (result.cancelled) return;
@@ -101,10 +99,7 @@ export default function AddFirstPetScreen() {
     } catch (err) {
       console.warn("[pets] Photo upload failed:", err.message);
       // A failed upload must not block onboarding - the photo is optional.
-      Alert.alert(
-        "Couldn't upload that photo",
-        "You can add one later from your pet's profile."
-      );
+      toast.error("Couldn't upload that photo - you can add one later.");
     } finally {
       setUploading(false);
     }

@@ -1,14 +1,16 @@
 // FriendRequestsScreen.js
 import React, { useState, useEffect, useMemo } from "react";
-import { View, FlatList, StyleSheet, Alert } from "react-native";
+import { View, FlatList, StyleSheet } from "react-native";
 import api from "../../api/axios";
 import FriendRequestsCard from "../../components/FriendRequestsCard";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { setError } from "../../redux/actions";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 const FriendRequestsScreen = () => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const [friendRequests, setFriendRequests] = useState([]);
@@ -49,10 +51,10 @@ const FriendRequestsScreen = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      Alert.alert(response.data.message);
+      toast.success(response.data.message);
     } catch (error) {
       console.error("Error accepting friend request:", error);
-      Alert.alert("Error", "Failed to accept friend request");
+      toast.error("Couldn't accept that request.");
     }
   };
 
@@ -65,7 +67,7 @@ const FriendRequestsScreen = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      Alert.alert(response.data.message);
+      toast.success(response.data.message);
     } catch (error) {
       console.error("Error declining friend request:", error);
     }

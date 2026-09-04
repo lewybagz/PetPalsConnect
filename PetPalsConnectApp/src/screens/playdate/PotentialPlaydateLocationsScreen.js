@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList } from "react-native";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import api from "../../api/axios";
@@ -13,9 +13,11 @@ import {
   setError,
 } from "../../redux/actions";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 const PotentialPlaydateLocationsScreen = (navigation) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const [locations, setLocations] = useState([]);
@@ -79,11 +81,10 @@ const PotentialPlaydateLocationsScreen = (navigation) => {
   // belongs inside the effect, and the loading guard after every hook.
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error, [
-        { text: "OK", onPress: () => dispatch(clearError()) },
-      ]);
+      toast.error(error);
+      dispatch(clearError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, toast]);
 
   if (isLoading) {
     return <LoadingScreen />;

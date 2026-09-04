@@ -4,7 +4,6 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from "react-native";
 import api from "../../api/axios";
 import UserPetCard from "../../components/UserPetCardComponent";
@@ -12,8 +11,10 @@ import { useSelector } from "react-redux";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { CheckBox } from "../../components/CheckBox";
 import { readCache, writeCache, CacheKeys } from "../../services/localCache";
+import { useToast } from "../../components/ui";
 
 const PlaydatePetSelectionScreen = ({ route, navigation }) => {
+  const toast = useToast();
   const [matchedPets, setMatchedPets] = useState([]);
   const [userPets, setUserPets] = useState([]);
   const { locationId } = route.params;
@@ -72,7 +73,7 @@ const PlaydatePetSelectionScreen = ({ route, navigation }) => {
         locationId,
       });
     } else {
-      Alert.alert("Select Pets", "Please select at least one pet to continue.");
+      toast.show("Choose at least one pet to continue.");
     }
   };
 

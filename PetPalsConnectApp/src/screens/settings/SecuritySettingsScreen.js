@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  
-  Alert,
   ScrollView,
   Picker,
   Button,
@@ -14,7 +12,7 @@ import { auth } from "../../../firebase/firebaseConfig";
 import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { setError } from "../../redux/actions";
-import { Toggle } from "../../components/ui";
+import { Toggle, useToast } from "../../components/ui";
 
 const SecuritySettingsScreen = () => {
   const [twoFactorAuthEnabled, setTwoFactorAuthEnabled] = useState(false);
@@ -25,6 +23,7 @@ const SecuritySettingsScreen = () => {
   const [securityAnswer, setSecurityAnswer] = useState("");
   const userId = auth.currentUser.uid;
   const tailwind = useTailwind();
+  const toast = useToast();
   const getToken = async () => {
     try {
       const token = await getStoredToken();
@@ -49,13 +48,14 @@ const SecuritySettingsScreen = () => {
       );
 
       setTwoFactorAuthEnabled(isEnabled);
-      Alert.alert(
-        "Two-Factor Authentication",
-        isEnabled ? "Enabled" : "Disabled"
+      toast.success(
+        isEnabled
+          ? "Two-factor authentication on"
+          : "Two-factor authentication off"
       );
     } catch (error) {
       console.error("Error updating 2FA setting:", error);
-      Alert.alert("Error", "Failed to update 2FA setting");
+      toast.error("Couldn't change two-factor authentication.");
     }
   };
 
@@ -66,7 +66,7 @@ const SecuritySettingsScreen = () => {
 
   const handlePasswordChange = async (token) => {
     if (newPassword !== confirmNewPassword) {
-      Alert.alert("Error", "New passwords do not match");
+      toast.show("Those two passwords don't match.");
       return;
     }
     try {
@@ -82,10 +82,10 @@ const SecuritySettingsScreen = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      Alert.alert("Success", "Password changed successfully");
+      toast.success("Password changed");
     } catch (error) {
       console.error("Error changing password:", error);
-      Alert.alert("Error", "Failed to change password");
+      toast.error("Couldn't change your password.");
     }
   };
 
@@ -103,10 +103,10 @@ const SecuritySettingsScreen = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      Alert.alert("Success", "Security question updated successfully");
+      toast.success("Security question saved");
     } catch (error) {
       console.error("Error updating security question:", error);
-      Alert.alert("Error", "Failed to update security question");
+      toast.error("Couldn't save your security question.");
     }
   };
 

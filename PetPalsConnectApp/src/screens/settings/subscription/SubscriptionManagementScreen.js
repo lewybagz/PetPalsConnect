@@ -10,6 +10,7 @@ import {
   resumeSubscription,
 } from "../../../api/subscriptions";
 import { useTokens } from "../../../context/AppThemeContext";
+import { useToast } from "../../../components/ui";
 
 /**
  * Shows and manages the current subscription.
@@ -27,6 +28,7 @@ import { useTokens } from "../../../context/AppThemeContext";
 const SubscriptionManagementScreen = ({ navigation }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
+  const toast = useToast();
 
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ const SubscriptionManagementScreen = ({ navigation }) => {
       } catch (error) {
         if (cancelled) return;
         console.warn("[subscription]", error.message);
-        Alert.alert("Error", "Could not load your subscription.");
+        toast.error("Couldn't load your subscription.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -52,15 +54,15 @@ const SubscriptionManagementScreen = ({ navigation }) => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [toast]);
 
   const run = async (action, confirmation) => {
     setBusy(true);
     try {
       setSubscription(await action());
-      Alert.alert("Done", confirmation);
+      toast.success(confirmation);
     } catch (error) {
-      Alert.alert("Error", error.response?.data?.message || error.message);
+      toast.error(error.response?.data?.message || error.message);
     } finally {
       setBusy(false);
     }

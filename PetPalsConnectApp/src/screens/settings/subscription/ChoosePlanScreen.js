@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -12,6 +11,7 @@ import { useStripe } from "@stripe/stripe-react-native";
 import { useTailwind } from "../../../styles/tailwind";
 import { createSubscription, fetchPlans } from "../../../api/subscriptions";
 import { useTokens } from "../../../context/AppThemeContext";
+import { useToast } from "../../../components/ui";
 
 /**
  * Plan picker.
@@ -31,6 +31,7 @@ import { useTokens } from "../../../context/AppThemeContext";
 const ChoosePlanScreen = ({ navigation }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
+  const toast = useToast();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [plans, setPlans] = useState([]);
@@ -86,7 +87,7 @@ const ChoosePlanScreen = ({ navigation }) => {
         if (sheetError) {
           // Closing the sheet is a normal thing to do, not an error to report.
           if (sheetError.code !== "Canceled") {
-            Alert.alert("Payment not completed", sheetError.message);
+            toast.show(sheetError.message);
           }
           return;
         }
@@ -100,12 +101,12 @@ const ChoosePlanScreen = ({ navigation }) => {
           error.response?.status === 409
             ? "You already have an active subscription."
             : error.response?.data?.message || error.message;
-        Alert.alert("Could not start the subscription", message);
+        toast.error(message);
       } finally {
         setBusyPlanId(null);
       }
     },
-    [initPaymentSheet, presentPaymentSheet, navigation]
+    [initPaymentSheet, presentPaymentSheet, navigation, toast]
   );
 
   if (loading) {

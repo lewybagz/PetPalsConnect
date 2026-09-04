@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useTailwind } from "../../styles/tailwind";
 import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useToast } from "../../components/ui";
 
 const AddPaymentMethodScreen = ({ navigation }) => {
   const [cardNumber, setCardNumber] = useState("");
@@ -10,10 +11,11 @@ const AddPaymentMethodScreen = ({ navigation }) => {
   const [cvv, setCvv] = useState("");
   const { zipCode, setZipCode } = useState("");
   const tailwind = useTailwind();
+  const toast = useToast();
 
   const handleAddPaymentMethod = async () => {
     if (!cardNumber || !expiryDate || !cvv) {
-      Alert.alert("Error", "Please fill in all fields");
+      toast.show("Fill in every field first.");
       return;
     }
 
@@ -33,11 +35,11 @@ const AddPaymentMethodScreen = ({ navigation }) => {
         }
       );
 
-      Alert.alert("Success", "Payment method added successfully");
+      toast.success("Payment method added");
       navigation.goBack();
     } catch (error) {
       console.error("Error adding payment method:", error);
-      Alert.alert("Error", "Failed to add payment method");
+      toast.error("Couldn't add that payment method.");
     }
   };
 

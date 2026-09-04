@@ -5,16 +5,18 @@ import {
   createMaterialTopTabNavigator,
   Text,
 } from "@react-navigation/material-top-tabs";
-import { StyleSheet, FlatList, TouchableOpacity, Alert } from "react-native";
+import { StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import PlaydateCardComponent from "../../components/PlaydateCardComponent";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPlaydates , clearError } from "../../redux/actions";
 
 import LoadingScreen from "../../components/LoadingScreenComponent";
+import { useToast } from "../../components/ui";
 const Tab = createMaterialTopTabNavigator();
 
 const PlaydateList = ({ type, navigation }) => {
   const dispatch = useDispatch();
+  const toast = useToast();
   const playdates = useSelector((state) => state.playdate.playdates);
   const isLoading = useSelector((state) => state.playdate.isLoading);
   const error = useSelector((state) => state.playdate.error);
@@ -29,11 +31,10 @@ const PlaydateList = ({ type, navigation }) => {
   // Handle error display
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error, [
-        { text: "OK", onPress: () => dispatch(clearError()) },
-      ]);
+      toast.error(error);
+      dispatch(clearError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, toast]);
 
   // Display a loading indicator while fetching playdates
   if (isLoading) {

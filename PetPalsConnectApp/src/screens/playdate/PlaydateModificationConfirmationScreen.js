@@ -3,11 +3,13 @@ import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { useSelector } from "react-redux";
 
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 const PlaydateModificationConfirmationScreen = ({ route, navigation }) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const userId = useSelector((state) => state.user.userId);
@@ -28,14 +30,11 @@ const PlaydateModificationConfirmationScreen = ({ route, navigation }) => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      Alert.alert(
-        "Success",
-        "Playdate updated successfully. Participants will be notified."
-      );
+      toast.success("Updated - everyone invited has been told.");
       navigation.popToTop();
     } catch (error) {
       console.error("Error confirming modifications:", error);
-      Alert.alert("Error", "Failed to confirm modifications.");
+      toast.error("Couldn't save those changes.");
     }
   };
 

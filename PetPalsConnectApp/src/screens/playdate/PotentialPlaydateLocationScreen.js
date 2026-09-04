@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  Alert,
   Text,
   Image,
   StyleSheet,
@@ -16,9 +15,11 @@ import LoadingScreen from "../../components/LoadingScreenComponent";
 import api from "../../api/axios";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 const PotentialPlaydateLocationScreen = ({ route }) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   // Every caller sends `locationId`, and both endpoints below look the record
@@ -69,7 +70,7 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     // "undefined,undefined" and opened Maps on nothing.
     const [lng, lat] = locationDetails?.geoLocation?.coordinates ?? [];
     if (lat == null || lng == null) {
-      Alert.alert("No directions", "This place has no coordinates on file.");
+      toast.show("No directions - this place has no coordinates on file.");
       return;
     }
     const destination = `${lat},${lng}`;

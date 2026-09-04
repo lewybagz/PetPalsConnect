@@ -7,10 +7,11 @@ import { useAppTheme } from "../../context/AppThemeContext";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import api from "../../api/axios";
 import { readCache, writeCache, CacheKeys } from "../../services/localCache";
-import { Toggle } from "../../components/ui";
+import { Toggle, useToast } from "../../components/ui";
 
 const SettingsScreen = ({ navigation }) => {
   const tailwind = useTailwind();
+  const toast = useToast();
   const auth = getAuth();
   const { toggleAppTheme, isDark } = useAppTheme();
   const { deleteAccount } = useAuthSession();
@@ -59,7 +60,7 @@ const SettingsScreen = ({ navigation }) => {
       await api.post("/api/users/settings", { playdateRange: value });
     } catch (error) {
       console.warn("[settings]", error.message);
-      Alert.alert("Error", "Failed to save playdate range preference.");
+      toast.error("Couldn't save your playdate range.");
     }
   };
 
@@ -72,7 +73,7 @@ const SettingsScreen = ({ navigation }) => {
     } catch (error) {
       console.warn("[settings]", error.message);
       setNotificationPreferences(notificationPreferences); // roll back
-      Alert.alert("Error", `Failed to save the setting for ${key}.`);
+      toast.error(`Couldn't save the setting for ${key}.`);
     }
   };
 
@@ -85,14 +86,14 @@ const SettingsScreen = ({ navigation }) => {
     } catch (error) {
       console.warn("[settings]", error.message);
       setLocationSharingEnabled(!next); // roll back
-      Alert.alert("Error", "Failed to save location sharing preference.");
+      toast.error("Couldn't save your location sharing setting.");
     }
   };
 
   // RootNavigator swaps to the auth stack as soon as Firebase reports a signed
   // out user, so there is no navigation call to make here.
   const handleSignOut = () => {
-    signOut(auth).catch((error) => Alert.alert("Error", error.message));
+    signOut(auth).catch((error) => toast.error(error.message));
   };
 
   /**
@@ -124,8 +125,7 @@ const SettingsScreen = ({ navigation }) => {
                     try {
                       await deleteAccount();
                     } catch (error) {
-                      Alert.alert(
-                        "Could not delete account",
+                      toast.error(
                         error.response?.data?.message ??
                           "Something went wrong. Please try again."
                       );

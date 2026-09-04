@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   ScrollView,
@@ -19,6 +18,7 @@ import api from "../../api/axios";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { addProfilePhoto } from "../../services/photos";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 const ProfileScreen = ({ navigation }) => {
   const [recentPlaydates, setRecentPlaydates] = useState([]);
@@ -27,6 +27,7 @@ const ProfileScreen = ({ navigation }) => {
   const [error, setError] = useState("");
   const tailwind = useTailwind();
   const tokens = useTokens();
+  const toast = useToast();
   const auth = getAuth();
   const { profile, userId, refresh } = useAuthSession();
   const [photo, setPhoto] = useState(profile?.userPhoto ?? null);
@@ -95,10 +96,7 @@ const ProfileScreen = ({ navigation }) => {
       const result = await addProfilePhoto();
 
       if (result.denied) {
-        Alert.alert(
-          "Photo access needed",
-          "You can turn this on in your device settings."
-        );
+        toast.show("Allow photo access in your device settings.");
         return;
       }
       if (result.cancelled) return;
@@ -108,7 +106,7 @@ const ProfileScreen = ({ navigation }) => {
       // The session holds the profile the rest of the app reads.
       await refresh();
     } catch (err) {
-      Alert.alert("Upload failed", err.response?.data?.message || err.message);
+      toast.error(err.response?.data?.message || err.message);
     } finally {
       setUploadingPhoto(false);
     }

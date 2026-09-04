@@ -7,7 +7,6 @@ import {
   FlatList,
   Image,
   StyleSheet,
-  Alert,
   Keyboard,
 } from "react-native";
 import { useTailwind } from "../../styles/tailwind";
@@ -21,9 +20,11 @@ import { useSocketMessage } from "../../hooks/useSocketEvents";
 import api from "../../api/axios";
 import { useSelector } from "react-redux";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 const GroupChatScreen = ({ route, navigation }) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const [pets, setPets] = useState([]);
@@ -64,7 +65,7 @@ const GroupChatScreen = ({ route, navigation }) => {
       setMessages(data);
     } catch (error) {
       console.warn("[groupchat] Could not load messages:", error.message);
-      Alert.alert("Error", "Failed to load messages");
+      toast.error("Couldn't load these messages.");
     }
   };
 
@@ -78,7 +79,7 @@ const GroupChatScreen = ({ route, navigation }) => {
       setPets(data);
     } catch (error) {
       console.warn("[groupchat] Could not load pets:", error.message);
-      Alert.alert("Error", "Failed to load pets data");
+      toast.error("Couldn't load the pets in this group.");
     }
   };
   const fetchGroupInfo = async () => {
@@ -106,7 +107,7 @@ const GroupChatScreen = ({ route, navigation }) => {
 
   const copyMessageToClipboard = async (messageText) => {
     await Clipboard.setStringAsync(messageText);
-    Alert.alert("Copied to Clipboard", messageText);
+    toast.success("Copied");
   };
 
   // `pet.id` is not a field on a Mongoose document serialised to JSON - it is
@@ -133,10 +134,10 @@ const GroupChatScreen = ({ route, navigation }) => {
         `/api/groupchats/${groupId}/messages/${message._id}`
       );
       setMessages((prev) => prev.filter((m) => m._id !== message._id));
-      Alert.alert("Message Deleted");
+      toast.success("Message deleted");
     } catch (error) {
       console.error("Error deleting message:", error);
-      Alert.alert("Error", "Failed to delete message");
+      toast.error("Couldn't delete that message.");
     }
   };
 
@@ -157,7 +158,7 @@ const GroupChatScreen = ({ route, navigation }) => {
       );
     } catch (error) {
       console.error("Error reacting to message:", error);
-      Alert.alert("Error", "Failed to react to message");
+      toast.error("Couldn't add that reaction.");
     }
   };
 
@@ -178,7 +179,7 @@ const GroupChatScreen = ({ route, navigation }) => {
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
-      Alert.alert("Error", "Failed to send message");
+      toast.error("Couldn't send that message.");
     } finally {
       setIsLoading(false);
     }

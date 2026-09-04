@@ -1,14 +1,16 @@
 import React, { useState } from "react";
-import { View, Text, Button, Alert } from "react-native";
+import { View, Text, Button } from "react-native";
 import { useTailwind } from "../../styles/tailwind";
 import {
   getAuth,
   onAuthStateChanged,
   sendEmailVerification,
 } from "@react-native-firebase/auth";
+import { useToast } from "../../components/ui";
 
 const EmailVerificationScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
+  const toast = useToast();
   // route.params is undefined when this screen is opened directly (deep link,
   // or restored navigation state), which used to throw on destructuring.
   const email = route.params?.email ?? getAuth().currentUser?.email ?? "";
@@ -24,7 +26,7 @@ const EmailVerificationScreen = ({ route, navigation }) => {
         navigation.navigate("Login"); // Replace with your next screen
       } else {
         setIsChecking(false);
-        Alert.alert("Verification Pending", "Please verify your email first.");
+        toast.show("Verify your email first - check your inbox.");
       }
     });
   };
@@ -33,10 +35,7 @@ const EmailVerificationScreen = ({ route, navigation }) => {
     const user = auth.currentUser;
     if (user) {
       await sendEmailVerification(user);
-      Alert.alert(
-        "Verification Email Sent",
-        "Please check your email for the verification link."
-      );
+      toast.success("Verification email sent - check your inbox.");
     }
   };
 

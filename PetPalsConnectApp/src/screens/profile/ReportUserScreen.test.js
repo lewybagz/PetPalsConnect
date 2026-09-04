@@ -1,5 +1,4 @@
 import React from "react";
-import { Alert } from "react-native";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 
 import ReportUserScreen from "./ReportUserScreen";
@@ -44,7 +43,6 @@ const tapById = async (id) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  jest.spyOn(Alert, "alert").mockImplementation(() => {});
   reportUser.mockResolvedValue({ blocked: true, report: { status: "pending" } });
 });
 
@@ -101,13 +99,12 @@ describe("ReportUserScreen", () => {
     await fireEvent.changeText(screen.getByTestId("report-content"), "Kept messaging me.");
     await tapById("report-submit");
 
+    // A toast, not a modal: somebody who has just said they feel unsafe should
+    // not have to dismiss a dialog to leave the screen.
     await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith(
-        "Thanks for telling us",
-        expect.stringContaining("blocked"),
-        expect.any(Array)
-      )
+      expect(screen.getByText(/blocked/)).toBeTruthy()
     );
+    expect(navigation.goBack).toHaveBeenCalled();
   });
 
   it("surfaces a failure instead of claiming it was filed", async () => {

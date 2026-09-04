@@ -102,7 +102,17 @@ it out.
 **Feedback goes through `useToast()`; `Alert` is for destructive
 confirmations.** `Alert.alert` was the app's way of saying anything at all, 157
 times across 48 files — a modal that stops the app and looks like an OS error,
-for "Playdate scheduled" as readily as for a failure.
+for "Playdate scheduled" as readily as for a failure. Fourteen are left and all
+fourteen offer a way out: blocking, unblocking, unfriending, leaving a group,
+deleting a photo, a payment method, an account or a subscription, discarding
+edits, and the two ways out of onboarding. `src/components/ui/alerts.test.js`
+enforces exactly that — a call needs a `style: "cancel"` button or it fails —
+because "use the toast" is a convention, and a convention with 87
+counter-examples in the tree is a suggestion.
+
+**A modal is a poor way to ask "are you finished?".** Add-a-pet asked "Add
+another pet?" after every pet, which is a question the screen can answer by
+showing what is queued and offering a second button. It now does.
 
 **A wait with predictable structure gets a skeleton, not a spinner.** Discover,
 Home and the chat list know their own shape before the response arrives, and

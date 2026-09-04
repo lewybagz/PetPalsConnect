@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -69,13 +68,14 @@ const ReportUserScreen = ({ route, navigation }) => {
         reportedContent,
       });
 
-      Alert.alert(
-        "Thanks for telling us",
+      // Somebody who has just said they feel unsafe should not have to
+      // dismiss a modal to leave the screen. Say it and go.
+      toast.success(
         result?.blocked
           ? `We're looking into it. ${name} has been blocked, so you won't see them again.`
-          : "We're looking into it.",
-        [{ text: "Done", onPress: () => navigation.goBack() }]
+          : "We're looking into it."
       );
+      navigation.goBack();
     } catch (error) {
       toast.error(error.response?.data?.message ?? "That didn't send. Please try again.");
     } finally {

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Button,
 } from "react-native";
 import { PHOTO_LIMIT, addPetPhoto } from "../../services/photos";
@@ -53,11 +52,10 @@ const AddPetScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error, [
-        { text: "OK", onPress: () => dispatch(clearError()) },
-      ]);
+      toast.error(error);
+      dispatch(clearError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, toast]);
 
   const [currentPet, setCurrentPet] = useState(EMPTY_PET);
 
@@ -126,44 +124,36 @@ const AddPetScreen = ({ navigation }) => {
     });
   };
   /**
-   * Queues this pet and asks whether there is another.
+   * Queues this pet and clears the form for the next one.
    *
-   * "Yes" was `console.log("Adding more")`, so the only thing that happened
-   * was the reset below - which spread a *three-key* object over the form
-   * state, dropping `photos`, `weight` and `favoriteActivities`. The next tap
-   * on "Add photo" then read `currentPet.photos.length` on undefined and
-   * threw, so adding a second pet crashed the screen.
+   * There was one button here, and it asked "Add another pet?" in a modal
+   * whose "Yes" was `console.log("Adding more")` - so the only thing that
+   * happened was the reset, which spread a *three-key* object over the form
+   * state and dropped `photos`, `weight` and `favoriteActivities`. The next
+   * tap on "Add photo" then read `.length` on undefined and crashed the
+   * screen.
    *
-   * `weight` is checked here too: matching compares size, and the server
-   * requires it, so leaving it out queues a pet whose save fails at the end of
-   * the flow rather than at the field.
+   * A modal is a poor way to ask "are you finished?" anyway: it stops the app
+   * to ask a question the screen can answer by showing what is queued and
+   * offering a second button. So there is no question now.
+   *
+   * `weight` is checked here because matching compares size and the server
+   * requires it: leaving it out would queue a pet whose save fails at the end
+   * of the flow rather than at the field.
    */
   const handleAddPet = () => {
     if (!currentPet.name || !currentPet.breed || !currentPet.age) {
-      Alert.alert("Error", "Please fill all the fields.");
+      toast.show("Fill in the name, breed and age first.");
       return;
     }
     if (!currentPet.weight?.value) {
-      Alert.alert("Error", "Please give a weight - matching compares size.");
+      toast.show("Add a weight - matching compares size.");
       return;
     }
 
-    const queued = [...petDetails, currentPet];
-    setPetDetails(queued);
+    setPetDetails([...petDetails, currentPet]);
     setCurrentPet(EMPTY_PET);
-
-    Alert.alert(
-      "Add another pet?",
-      `${currentPet.name} is ready to save.`,
-      [
-        {
-          text: "Add another",
-          onPress: () => toast.success(`${currentPet.name} added`),
-        },
-        { text: "Save and finish", onPress: () => submitPets(queued) },
-      ],
-      { cancelable: false }
-    );
+    toast.success(`${currentPet.name} added - save when you're done.`);
   };
 
   const handleWeightChange = (text) => {
@@ -174,10 +164,7 @@ const AddPetScreen = ({ navigation }) => {
   };
   const handleChoosePhoto = async () => {
     if (currentPet.photos.length >= PHOTO_LIMIT) {
-      Alert.alert(
-        "Limit Reached",
-        `You can add up to ${PHOTO_LIMIT} photos.`
-      );
+      toast.show(`That's the limit - ${PHOTO_LIMIT} photos per pet.`);
       return;
     }
 
@@ -191,10 +178,7 @@ const AddPetScreen = ({ navigation }) => {
       const result = await addPetPhoto({ fromCamera: false });
 
       if (result.denied) {
-        Alert.alert(
-          "Permission needed",
-          "Allow photo library access to add pictures of your pet."
-        );
+        toast.show("Allow photo access to add pictures of your pet.");
         return;
       }
       if (result.cancelled) return;
@@ -204,7 +188,7 @@ const AddPetScreen = ({ navigation }) => {
         photos: [...previous.photos, result.url],
       }));
     } catch (error) {
-      Alert.alert("Upload failed", error.message);
+      toast.error(error.message);
     } finally {
       setUploading(false);
     }
@@ -219,8 +203,9 @@ const AddPetScreen = ({ navigation }) => {
    * collected ids onto the user - client-driven linking that wrote undefined.
    */
   const submitPets = async (pets = petDetails) => {
-    // `setPetDetails` does not apply until the next render, so submitting
-    // straight after queueing saved every pet *except* the one just added.
+    // Takes the list rather than reading state, because `setPetDetails` does
+    // not apply until the next render: a caller that queues and submits in one
+    // handler would save every pet *except* the one just added.
     if (pets.length === 0) return;
 
     setSubmitting(true);
@@ -247,9 +232,8 @@ const AddPetScreen = ({ navigation }) => {
       navigation.goBack();
     } catch (error) {
       console.error("Error submitting pets:", error);
-      Alert.alert(
-        "Error",
-        error.response?.data?.message ?? "Failed to add pets. Please try again."
+      toast.error(
+        error.response?.data?.message ?? "Couldn't save that. Try again."
       );
     } finally {
       setSubmitting(false);
@@ -403,8 +387,18 @@ const AddPetScreen = ({ navigation }) => {
         ))}
       </View>
       <TouchableOpacity onPress={handleAddPet} disabled={submitting}>
-        <Text>{submitting ? "Saving..." : "Add Pet"}</Text>
+        <Text>Add Pet</Text>
       </TouchableOpacity>
+
+      {petDetails.length > 0 ? (
+        <TouchableOpacity onPress={() => submitPets()} disabled={submitting}>
+          <Text>
+            {submitting
+              ? "Saving..."
+              : `Save ${petDetails.length === 1 ? "1 pet" : `${petDetails.length} pets`}`}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </ScrollView>
   );
 };

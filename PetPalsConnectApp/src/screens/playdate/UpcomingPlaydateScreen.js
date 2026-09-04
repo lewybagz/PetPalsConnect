@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, FlatList, StyleSheet, Alert } from "react-native";
+import { View, Text, FlatList, StyleSheet } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import api from "../../api/axios";
 import { FontAwesome as Icon } from "@expo/vector-icons";
@@ -7,8 +7,10 @@ import { getStoredToken } from "../../../utils/tokenutil";
 
 import ScheduledPlaydateCardComponent from "../../components/ScheduledPlaydateCardComponent";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 const UpcomingPlaydateScreen = (navigation) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const [playdates, setPlaydates] = useState([]);
@@ -41,10 +43,7 @@ const UpcomingPlaydateScreen = (navigation) => {
         playdateId: playdate._id,
       });
     } else {
-      Alert.alert(
-        "Review Not Available",
-        "The review will be available after the playdate begins."
-      );
+      toast.show("You can leave a review once the playdate has started.");
     }
   };
 

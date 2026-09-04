@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  Alert,
   TouchableOpacity,
 } from "react-native";
 import { copilot, walkthroughable, CopilotStep } from "../../components/walkthrough";
@@ -14,6 +13,7 @@ import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent
 import CustomTooltip from "../../components/CustomTooltip";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 // Walkthroughable components
 const WalkthroughableText = walkthroughable(Text);
@@ -21,6 +21,7 @@ const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
 
 const FavoritesScreen = ({ route, start, navigation }) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const [favorites, setFavorites] = useState([]);
@@ -36,7 +37,7 @@ const FavoritesScreen = ({ route, start, navigation }) => {
         setFavorites(response.data);
       } catch (error) {
         console.error("Error fetching favorites:", error);
-        Alert.alert("Error", "Failed to load favorites");
+        toast.error("Couldn't load your favourites.");
       }
     };
 

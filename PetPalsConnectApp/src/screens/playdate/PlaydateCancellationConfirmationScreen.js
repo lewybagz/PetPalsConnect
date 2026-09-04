@@ -1,14 +1,16 @@
 // PlaydateCancellationConfirmationScreen.js
 import React, { useState } from "react";
-import { View, Text, TextInput, Alert, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import api from "../../api/axios";
 import { useTailwind } from "../../styles/tailwind";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useToast } from "../../components/ui";
 
 const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
   const [message, setMessage] = useState("");
   const { playdateId } = route.params;
   const tailwind = useTailwind();
+  const toast = useToast();
 
   const handleCancellation = async () => {
     try {
@@ -18,14 +20,11 @@ const PlaydateCancellationConfirmationScreen = ({ route, navigation }) => {
         { message },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      Alert.alert(
-        "Playdate Cancelled",
-        "Your playdate has been successfully cancelled."
-      );
+      toast.success("Playdate cancelled - everyone invited has been told.");
       navigation.navigate("Playdates");
     } catch (error) {
       console.error("Error cancelling playdate:", error);
-      Alert.alert("Error", "There was an error cancelling the playdate.");
+      toast.error("Couldn't cancel that playdate.");
     }
   };
 

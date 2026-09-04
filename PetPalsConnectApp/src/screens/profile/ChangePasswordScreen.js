@@ -1,28 +1,30 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { getAuth, updatePassword } from "@react-native-firebase/auth";
 import { useTailwind } from "../../styles/tailwind";
+import { useToast } from "../../components/ui";
 
 const ChangePasswordScreen = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const tailwind = useTailwind();
+  const toast = useToast();
   const auth = getAuth();
 
   const handleChangePassword = () => {
     if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "New passwords don't match.");
+      toast.show("Those two passwords don't match.");
       return;
     }
 
     const user = auth.currentUser;
     updatePassword(user, newPassword)
       .then(() => {
-        Alert.alert("Success", "Password changed successfully.");
+        toast.success("Password changed");
       })
       .catch((error) => {
-        Alert.alert("Error", error.message);
+        toast.error(error.message);
       });
   };
 

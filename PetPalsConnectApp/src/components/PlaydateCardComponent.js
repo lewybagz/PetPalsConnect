@@ -1,14 +1,16 @@
 import React, { useEffect, useMemo } from "react";
-import { View, Text, StyleSheet, FlatList, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList } from "react-native";
 import UserPetCardComponent from "../components/UserPetCardComponent";
 import PlayDateLocationCard from "./PlaydateLocationCardComponent";
 import { useSelector, useDispatch } from "react-redux";
 import LoadingScreen from "./LoadingScreenComponent";
 import { clearError } from "../redux/actions";
 import { useTokens } from "../context/AppThemeContext";
+import { useToast } from "../components/ui";
 
 const PlaydateCardComponent = ({ playdate, navigation }) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const dispatch = useDispatch();
@@ -21,11 +23,10 @@ const PlaydateCardComponent = ({ playdate, navigation }) => {
   // Handle the display and clearing of errors
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error, [
-        { text: "OK", onPress: () => dispatch(clearError()) },
-      ]);
+      toast.error(error);
+      dispatch(clearError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, toast]);
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString();

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Button, Alert } from "react-native";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 import { useSelector } from "react-redux";
+import { useToast } from "../../components/ui";
 
 const PlaydateModificationScreen = ({ route, navigation }) => {
+  const toast = useToast();
   const userId = useSelector((state) => state.user.userId);
   const { playdateId } = route.params;
   const [date, setDate] = useState(new Date());
@@ -43,7 +45,7 @@ const PlaydateModificationScreen = ({ route, navigation }) => {
 
   const navigateToConfirmation = () => {
     if (!userId || !userId) {
-      Alert.alert("Error", "User not authenticated.");
+      toast.error("You need to be signed in to change this.");
       return;
     }
 

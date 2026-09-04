@@ -4,13 +4,13 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from "react-native";
 import { getAuth } from "@react-native-firebase/auth";
 import { getFirestore, doc, updateDoc, getDoc } from "firebase/firestore";
 import { useTailwind } from "../../styles/tailwind";
 import { useSelector, useDispatch } from "react-redux";
 import LoadingScreen from "../../components/LoadingScreenComponent";
+import { useToast } from "../../components/ui";
 
 const AccountInformationScreen = () => {
   const dispatch = useDispatch();
@@ -18,6 +18,7 @@ const AccountInformationScreen = () => {
   const isLoading = useSelector((state) => state.user.isLoading); // Access isLoading
   const error = useSelector((state) => state.user.error); // Access error
   const tailwind = useTailwind();
+  const toast = useToast();
   const auth = getAuth();
   const db = getFirestore();
 
@@ -32,18 +33,18 @@ const AccountInformationScreen = () => {
             const fetchedUserInfo = userDocSnap.data();
             dispatch({ type: "SET_USER", payload: fetchedUserInfo });
           } else {
-            Alert.alert("Profile Error", "No such document!");
+            toast.error("We couldn't find your profile.");
           }
         } catch (error) {
           console.warn("[accountinformation]", error.message);
-          Alert.alert("Error", "An error occurred while fetching user data.");
+          toast.error("Couldn't load your account.");
         }
       } else {
-        Alert.alert("User Error", "No user logged in!");
+        toast.error("You need to be signed in.");
       }
     };
     getUserProfile();
-  }, [auth, db, dispatch]);
+  }, [auth, db, dispatch, toast]);
 
   const handleUpdate = async () => {
     try {
@@ -54,19 +55,13 @@ const AccountInformationScreen = () => {
           email: user.email,
           phone: user.phone,
         });
-        Alert.alert(
-          "Info Updated",
-          "Your account information has been updated."
-        );
+        toast.success("Saved");
       } else {
-        Alert.alert("Update Failed", "No user logged in.");
+        toast.error("You need to be signed in.");
       }
     } catch (error) {
       console.error("Error updating user information:", error);
-      Alert.alert(
-        "Update Failed",
-        "Unable to update account information. Please try again."
-      );
+      toast.error("Couldn't save that. Try again.");
     }
   };
 
@@ -75,7 +70,7 @@ const AccountInformationScreen = () => {
   }
 
   if (error) {
-    Alert.alert("Error", error);
+    toast.error(error);
   }
 
   return (

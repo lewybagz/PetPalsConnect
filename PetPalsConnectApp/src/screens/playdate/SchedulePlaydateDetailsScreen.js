@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, TextInput, Button, Alert, StyleSheet } from "react-native";
+import { View, Text, TextInput, Button, StyleSheet } from "react-native";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 import { clearError } from "../../redux/actions";
 import { useSelector, useDispatch } from "react-redux";
 import { createPlaydate } from "../../api/playdates";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 /**
  * The last step of arranging a playdate.
@@ -22,6 +23,7 @@ import { useTokens } from "../../context/AppThemeContext";
  */
 const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const dispatch = useDispatch();
@@ -34,11 +36,10 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error, [
-        { text: "OK", onPress: () => dispatch(clearError()) },
-      ]);
+      toast.error(error);
+      dispatch(clearError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, toast]);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -54,10 +55,9 @@ const SchedulePlaydateDetailsScreen = ({ route, navigation }) => {
       navigation.navigate("PlaydateCreated", { playdate });
     } catch (submitError) {
       console.warn("[playdates] Could not create:", submitError.message);
-      Alert.alert(
-        "Playdate Creation Failed",
+      toast.error(
         submitError.response?.data?.message ??
-          "Unable to create playdate. Please try again."
+          "Couldn't schedule that playdate. Try again."
       );
     } finally {
       setSubmitting(false);

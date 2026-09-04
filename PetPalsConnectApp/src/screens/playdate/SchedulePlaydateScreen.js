@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   Text,
@@ -17,6 +16,7 @@ import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 import { fetchUserPreferences } from "../../../services/UserService";
 import { createPlaydate, fetchNearbyLocations } from "../../api/playdates";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 /**
  * Arrange a playdate with another owner's pet.
@@ -41,6 +41,7 @@ const DEFAULT_RANGE_MILES = 10;
 const SchedulePlaydateScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
+  const toast = useToast();
   const { profile } = useAuthSession();
 
   const pet = route?.params?.pet ?? null;
@@ -99,11 +100,11 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
 
   const submit = async () => {
     if (!selectedLocation) {
-      Alert.alert("Pick a place", "Choose where you'd like to meet.");
+      toast.show("Choose where you'd like to meet.");
       return;
     }
     if (!myPetId || !pet?._id) {
-      Alert.alert("Missing a pet", "A playdate needs a pet from each side.");
+      toast.show("A playdate needs a pet from each side.");
       return;
     }
 
@@ -118,10 +119,7 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
       });
       navigation.navigate("PlaydateCreated", { playdate, pet });
     } catch (error) {
-      Alert.alert(
-        "Could not schedule",
-        error.response?.data?.message || error.message
-      );
+      toast.error(error.response?.data?.message || error.message);
     } finally {
       setSubmitting(false);
     }

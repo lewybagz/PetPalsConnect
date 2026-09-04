@@ -6,7 +6,6 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from "react-native";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import api from "../../api/axios";
@@ -14,9 +13,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { getStoredToken } from "../../../utils/tokenutil";
 import { fetchPlaydateDetails , setError } from "../../redux/actions";
 import { useTokens } from "../../context/AppThemeContext";
+import { useToast } from "../../components/ui";
 
 const PlaydateRequestScreen = ({ route, navigation }) => {
   const tokens = useTokens();
+  const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const { playdateId } = route.params;
@@ -50,11 +51,11 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
         }
       );
 
-      Alert.alert("Accepted", "You have accepted the playdate request.");
+      toast.success("Accepted - the organiser has been told.");
       navigation.navigate("UpcomingPlaydate");
     } catch (error) {
       console.warn("[playdaterequest]", error.message);
-      Alert.alert("Error", "Failed to accept the playdate request.");
+      toast.error("Couldn't accept that invitation.");
     } finally {
       setAccepting(false);
     }
@@ -71,11 +72,11 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      Alert.alert("Declined", "You have declined the playdate request.");
+      toast.success("Declined - the organiser has been told.");
       navigation.goBack();
     } catch (error) {
       console.warn("[playdaterequest]", error.message);
-      Alert.alert("Error", "Failed to decline the playdate request.");
+      toast.error("Couldn't decline that invitation.");
     } finally {
       setDeclining(false);
     }
