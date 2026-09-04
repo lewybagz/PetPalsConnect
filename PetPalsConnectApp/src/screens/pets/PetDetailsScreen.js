@@ -278,11 +278,13 @@ const makeStyles = (t) => StyleSheet.create({
     justifyContent: "center",
   },
   name: {
+    color: t.text,
     fontSize: 24,
     fontWeight: "bold",
     marginTop: 8,
   },
   detail: {
+    color: t.text,
     fontSize: 18,
     marginTop: 4,
   },

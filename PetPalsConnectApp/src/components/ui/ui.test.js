@@ -10,7 +10,7 @@ import Text from "./Text";
 import Skeleton, { CardSkeleton, ListSkeleton } from "./Skeleton";
 import { ToastProvider, useToast } from "./Toast";
 import { AppThemeProvider } from "../../context/AppThemeContext";
-import { dark, hit, light, type } from "../../styles/tokens";
+import { dark, hit, light, space, type } from "../../styles/tokens";
 
 /**
  * The primitives, and the specific defects they exist to make impossible.
@@ -161,12 +161,44 @@ describe("Screen", () => {
 
     // React Navigation covers the top; nothing covered the bottom, so modals
     // and the swipe deck's action row sat under the home indicator.
-    expect(flatten(screen.getByTestId("s").props.style).paddingBottom).toBe(34);
+    expect(flatten(screen.getByTestId("s").props.style).paddingBottom).toBe(
+      34 + space.lg
+    );
   });
 
-  it("leaves the top to the navigator unless asked", async () => {
+  it("keeps its own horizontal padding alongside the inset", async () => {
     await wrap(
       <Screen testID="s">
+        <RNText>Hi</RNText>
+      </Screen>
+    );
+
+    // The inset object used to set all four `padding*` keys and win over the
+    // `p-lg` class, so every screen built on this rendered flush against both
+    // edges of the phone. Both style sources are individually correct; they
+    // only conflict once React Native flattens them, which is why it took a
+    // screenshot to notice.
+    const style = flatten(screen.getByTestId("s").props.style);
+    expect(style.paddingLeft).toBe(space.lg);
+    expect(style.paddingRight).toBe(space.lg);
+    expect(style.paddingTop).toBe(space.lg);
+  });
+
+  it("adds nothing when it is not padded", async () => {
+    await wrap(
+      <Screen testID="s" padded={false} edges={[]}>
+        <RNText>Hi</RNText>
+      </Screen>
+    );
+
+    const style = flatten(screen.getByTestId("s").props.style);
+    expect(style.paddingLeft).toBe(0);
+    expect(style.paddingTop).toBe(0);
+  });
+
+  it("leaves the top inset to the navigator unless asked", async () => {
+    await wrap(
+      <Screen testID="s" padded={false}>
         <RNText>Hi</RNText>
       </Screen>
     );
@@ -176,7 +208,7 @@ describe("Screen", () => {
 
   it("applies the top inset when a screen asks for it", async () => {
     await wrap(
-      <Screen testID="s" edges={["top", "bottom"]}>
+      <Screen testID="s" padded={false} edges={["top", "bottom"]}>
         <RNText>Hi</RNText>
       </Screen>
     );

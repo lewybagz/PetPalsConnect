@@ -28,5 +28,6 @@ module.exports = {
     // The static checks live beside the scripts they cover, in the same spirit
     // as the backend's audits: the guard and its proof in one place.
     "<rootDir>/scripts/**/*.test.js",
+    "<rootDir>/tools/**/*.test.js",
   ],
 };

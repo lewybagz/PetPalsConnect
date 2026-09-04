@@ -37,8 +37,11 @@ const OnboardingProgress = ({ step, testID = "onboarding-progress" }) => {
           <View
             key={label}
             testID={`${testID}-bar-${index + 1}`}
+            // `surfaceAlt` is nearly the background in dark, so the steps you
+            // have not reached vanished and the bar looked like it had two
+            // segments. The unfilled track is a line, so it uses the line token.
             style={tailwind(
-              `flex-1 h-1 rounded-pill ${index + 1 <= current ? "bg-primary" : "bg-surfaceAlt"} ${
+              `flex-1 h-1 rounded-pill ${index + 1 <= current ? "bg-primary" : "bg-border"} ${
                 index === 0 ? "" : "ml-xs"
               }`
             )}

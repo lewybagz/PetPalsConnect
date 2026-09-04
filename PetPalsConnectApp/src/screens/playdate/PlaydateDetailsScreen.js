@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Text, ScrollView, StyleSheet } from "react-native";
 import api from "../../api/axios";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import UserPetCard from "../../components/UserPetCardComponent";
 import ReviewComponent from "../../components/ReviewComponent";
 import { getStoredToken } from "../../../utils/tokenutil";
+import { useTokens } from "../../context/AppThemeContext";
 
 const PlaydateDetailsScreen = ({ route, navigation }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [playdateDetails, setPlaydateDetails] = useState(null);
 
   useEffect(() => {
@@ -60,17 +64,19 @@ const PlaydateDetailsScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
   },
   title: {
+    color: t.text,
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 10,
   },
   subtitle: {
+    color: t.text,
     fontSize: 20,
     fontWeight: "bold",
     marginTop: 15,

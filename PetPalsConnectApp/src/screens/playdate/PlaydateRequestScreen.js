@@ -153,6 +153,7 @@ const makeStyles = (t) => StyleSheet.create({
     marginBottom: 20,
   },
   petName: {
+    color: t.text,
     fontSize: 24,
     fontWeight: "bold",
   },
@@ -162,10 +163,12 @@ const makeStyles = (t) => StyleSheet.create({
     marginBottom: 10,
   },
   location: {
+    color: t.text,
     fontSize: 18,
     marginBottom: 5,
   },
   dateTime: {
+    color: t.text,
     fontSize: 18,
     marginBottom: 20,
   },

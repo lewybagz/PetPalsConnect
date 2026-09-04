@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const { audit, count, scanned, readBaseline } = require("./checkTokens");
+const { audit, colourlessText, count, scanned, readBaseline } = require("./checkTokens");
 
 /**
  * A guard that passes vacuously is worse than none: it reads like the codebase
@@ -71,6 +71,35 @@ describe("the colour ban", () => {
     withScratchFile('export const NAME = "white";\n', (problems, name) => {
       expect(problems.some((problem) => problem.includes(name))).toBe(false);
     });
+  });
+
+  it("catches a text style that names no colour at all", () => {
+    // The blind spot the colour count cannot see: a style with a `fontSize` and
+    // no `color` inherits black, which is correct on white and invisible on a
+    // dark surface. 44 of them across 28 files, and only a screenshot found the
+    // first.
+    withScratchFile(
+      "export const q = StyleSheet.create({ title: { fontSize: 18 } });\n",
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(true);
+      }
+    );
+  });
+
+  it("accepts a text style that names one", () => {
+    withScratchFile(
+      "export const q = StyleSheet.create({ title: { fontSize: 18, color: t.text } });\n",
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(false);
+      }
+    );
+  });
+
+  it("says which keys are at fault, not just which file", () => {
+    const keys = colourlessText(
+      "StyleSheet.create({ a: { fontSize: 12 }, b: { padding: 4 } })"
+    );
+    expect(keys).toEqual(["a"]);
   });
 
   it("does not count a colour quoted in a comment", () => {

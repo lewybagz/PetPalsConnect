@@ -95,6 +95,7 @@ const makeStyles = (t) => StyleSheet.create({
     borderRadius: 5,
   },
   title: {
+    color: t.text,
     fontSize: 24,
   },
 });

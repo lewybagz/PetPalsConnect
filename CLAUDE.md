@@ -141,6 +141,32 @@ compares two pets and there is only one. Both paths share
 `reachableCandidates` on purpose: the filtering is where blocking, suspension
 and range live, and a second code path is a second place to forget one.
 
+#### Seeing it
+
+**`npm run gallery && npm run screenshots` renders the real screens to PNGs.**
+The gallery (`tools/gallery/`) mounts the actual screen components against
+fixture API responses, one board per page load, light and dark; `shoot.mjs`
+drives a headless Chromium over the static web export. It is a review tool, not
+a test — nothing asserts — and it exists because the design system is the one
+part of the app that cannot be checked by reading, and there is no Android SDK,
+no KVM and no macOS here.
+
+**The web build is for looking at the app, not for shipping it.** `metro.config.js`
+swaps `tools/web-stubs/*` in only when `platform === "web"`, and `index.js`
+reaches the gallery only behind `EXPO_PUBLIC_GALLERY`, which Metro inlines away.
+`tools/gallery/tooling.test.js` checks both routes stay closed; verified once
+against a real Android source map — 2241 modules, none from `tools/`, no
+react-native-web. The Firebase stub deliberately cannot sign anybody in.
+
+**Look at the pictures when you change the design.** The first run found three
+things nothing else could: `Screen` set all four `padding*` keys from its inset
+and overwrote its own padding, so every screen built on it sat flush against
+both edges of the phone; `ChatCard` read five fields a Chat document does not
+have and rendered a Message object as a child, which crashes the inbox; and 44
+text styles across 28 files set a `fontSize` and no `color`, which is correct on
+white and invisible on a dark surface. `check:colours` catches that last class
+now.
+
 #### TypeScript
 
 The app is mixed JS and TS, converting a module at a time. `allowJs` is on and
@@ -377,8 +403,11 @@ missing key must never stop the app from opening.
 # so they need no database, no service-account key and no network.
 cd backend && npm run lint && npm run check:schemas && npm run check:auth && npm test
 
-# App: lint, types, the colour ratchet, tests, then both bundles
+# App: lint, types, the colour ban, tests, then both bundles
 cd PetPalsConnectApp && npm run lint && npm run typecheck && npm run check:colours && npm test
+
+# And look at it. Renders the real screens to screenshots/, light and dark.
+cd PetPalsConnectApp && npm run gallery && npm run screenshots
 npx expo export --platform android
 npx expo export --platform ios
 npx expo-doctor@latest

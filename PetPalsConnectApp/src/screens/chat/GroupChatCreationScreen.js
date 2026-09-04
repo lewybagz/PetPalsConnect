@@ -102,15 +102,18 @@ const makeStyles = (t) => StyleSheet.create({
     padding: 10,
   },
   header: {
+    color: t.text,
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 10,
   },
   label: {
+    color: t.text,
     fontWeight: "bold",
     marginTop: 10,
   },
   petName: {
+    color: t.text,
     fontSize: 16,
     marginVertical: 2,
   },

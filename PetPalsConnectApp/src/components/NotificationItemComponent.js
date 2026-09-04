@@ -125,6 +125,7 @@ const makeStyles = (t) => StyleSheet.create({
     borderBottomColor: t.border,
   },
   optionText: {
+    color: t.text,
     fontSize: 16,
   },
 });

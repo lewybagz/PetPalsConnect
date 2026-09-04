@@ -58,6 +58,7 @@ const makeStyles = (t) => StyleSheet.create({
     padding: 10,
   },
   title: {
+    color: t.text,
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 10,
@@ -68,6 +69,7 @@ const makeStyles = (t) => StyleSheet.create({
     marginBottom: 10,
   },
   content: {
+    color: t.text,
     fontSize: 16,
     lineHeight: 24,
     // other styles for the content

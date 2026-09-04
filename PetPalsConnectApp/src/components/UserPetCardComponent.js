@@ -250,6 +250,7 @@ const makeStyles = (t) => StyleSheet.create({
     borderRadius: 50,
   },
   name: {
+    color: t.text,
     fontSize: 16,
     fontWeight: "bold",
     marginTop: 8,

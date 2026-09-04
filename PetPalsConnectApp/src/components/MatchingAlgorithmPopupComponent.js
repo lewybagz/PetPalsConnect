@@ -66,6 +66,7 @@ const MatchingAlgorithmPopup = ({ visible, onClose, navigation }) => {
 
 const makeStyles = (t) => StyleSheet.create({
   featureTitle: {
+    color: t.text,
     fontWeight: "bold",
   },
   centeredView: {

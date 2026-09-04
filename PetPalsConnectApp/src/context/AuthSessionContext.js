@@ -257,3 +257,10 @@ export const useAuthSession = () => {
 };
 
 export { STATUS as AuthStatus };
+
+/**
+ * The raw context, so the screenshot gallery can supply a session without
+ * standing up Firebase. Nothing in the app imports it - screens use
+ * `useAuthSession`, which is what enforces the provider.
+ */
+export { AuthSessionContext };

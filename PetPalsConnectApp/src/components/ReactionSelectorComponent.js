@@ -42,6 +42,7 @@ const makeStyles = (t) => StyleSheet.create({
     padding: 5,
   },
   emoji: {
+    color: t.text,
     fontSize: 24,
   },
 });

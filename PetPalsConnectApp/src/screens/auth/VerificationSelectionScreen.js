@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,12 @@ import {
   Animated,
 } from "react-native";
 import { useTailwind } from "../../styles/tailwind";
+import { useTokens } from "../../context/AppThemeContext";
 
 const VerificationSelectionScreen = ({ navigation, route }) => {
+  const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const tailwind = useTailwind();
   // Guarded: route.params is undefined when opened without navigation params.
   const email = route.params?.email ?? "";
@@ -62,11 +66,12 @@ const VerificationSelectionScreen = ({ navigation, route }) => {
 const AnimatedTouchableOpacity =
   Animated.createAnimatedComponent(TouchableOpacity);
 
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
   },
   title: {
+    color: t.text,
     fontSize: 24,
     fontWeight: "bold",
   },
@@ -77,6 +82,7 @@ const styles = StyleSheet.create({
     elevation: 3, // Only for Android shadow effect
   },
   buttonText: {
+    color: t.onPrimary,
     textAlign: "center",
     fontSize: 18,
     fontWeight: "500",

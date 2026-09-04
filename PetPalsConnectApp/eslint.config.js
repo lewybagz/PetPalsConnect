@@ -3,7 +3,17 @@ const expoConfig = require("eslint-config-expo/flat");
 module.exports = [
   ...expoConfig,
   {
-    ignores: ["node_modules/", ".expo/", "dist/", "ios/", "android/", "functions/"],
+    ignores: [
+      "node_modules/",
+      ".expo/",
+      "dist/",
+      // The gallery's web build, and the images it produces.
+      "dist-gallery/",
+      "screenshots/",
+      "ios/",
+      "android/",
+      "functions/",
+    ],
   },
   {
     // Build-time checks that run under Node, not the app runtime or Metro.

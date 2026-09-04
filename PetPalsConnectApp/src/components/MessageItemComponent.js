@@ -144,6 +144,7 @@ const makeStyles = (t) => StyleSheet.create({
     alignSelf: "flex-start",
   },
   messageText: {
+    color: t.text,
     fontSize: 16,
   },
   timestamp: {

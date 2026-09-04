@@ -7,40 +7,77 @@ import {
   TouchableOpacity,
   Modal,
 } from "react-native";
+import { useSelector } from "react-redux";
+
 import { useTailwind } from "../styles/tailwind";
-import { getStoredToken } from "../../utils/tokenutil";
 import api from "../api/axios";
 import { useTokens } from "../context/AppThemeContext";
+import { hit } from "../styles/tokens";
 
+/**
+ * One row in the inbox.
+ *
+ * It read five fields a Chat document does not have. `chat.lastMessage` is a
+ * populated *Message*, and rendering an object as a child throws - so the inbox
+ * crashed the moment it had a conversation in it, which is why no test caught
+ * it: the suites all render an empty or mocked list. `chat.name`,
+ * `chat.picture`, `chat.lastMessageTimestamp` and `chat.unreadCount` do not
+ * exist either, so the row showed a blank title, no photo and "Invalid Date".
+ *
+ * The real shape: `participants` (populated with username and userPhoto),
+ * `petId` (populated with name and photos), `lastMessage.contentText`, and
+ * `updatedAt`. The other participant is whoever is not you.
+ *
+ * Every id is `_id`; `chat.id` is undefined on a Mongo document, so archive,
+ * delete, pin and details all posted to `/api/chats/undefined/...`.
+ */
 const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
   const tokens = useTokens();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const tailwind = useTailwind();
+  const userId = useSelector((state) => state.user.userId);
   const [modalVisible, setModalVisible] = useState(false);
+
+  const chatId = chat?._id;
+
+  // The conversation is with whoever is not you. A group chat has its own name.
+  const other = (chat?.participants ?? []).find(
+    (participant) => String(participant?._id ?? participant) !== String(userId)
+  );
+
+  const title =
+    (isGroupChat ? chat?.name : other?.username) ??
+    chat?.petId?.name ??
+    "Conversation";
+
+  const photo =
+    other?.userPhoto ??
+    (Array.isArray(chat?.petId?.photos) ? chat.petId.photos[0] : null) ??
+    null;
+
+  const preview = chat?.lastMessage?.contentText ?? "No messages yet";
+
+  const stamp = chat?.lastMessage?.timestamp ?? chat?.updatedAt;
+  const when = stamp
+    ? new Date(stamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : "";
 
   const handleLongPress = () => setModalVisible(true);
   const handleCloseModal = () => setModalVisible(false);
 
   const handleArchiveChat = async () => {
     try {
-      const token = await getStoredToken(); // Retrieve the stored token
       const endpoint = isGroupChat
-        ? `/api/groupchats/${chat.id}/archive`
-        : `/api/chats/${chat.id}/archive`;
+        ? `/api/groupchats/${chatId}/archive`
+        : `/api/chats/${chatId}/archive`;
 
-      const response = await api.post(
-        endpoint,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.post(endpoint, {});
       const updatedChat = response.data;
 
       // Update local chats state
       setChats((prevChats) =>
-        prevChats.map((c) => (c.id === chat.id ? updatedChat : c))
+        prevChats.map((c) => (c._id === chatId ? updatedChat : c))
       );
     } catch (error) {
       console.error("Failed to archive chat:", error);
@@ -51,17 +88,14 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
 
   const handleDeleteChat = async () => {
     try {
-      const token = await getStoredToken();
       const endpoint = isGroupChat
-        ? `/api/groupchats/${chat.id}`
-        : `/api/chats/${chat.id}`;
+        ? `/api/groupchats/${chatId}`
+        : `/api/chats/${chatId}`;
 
-      const response = await api.delete(endpoint, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.delete(endpoint);
       const updatedChat = response.data;
       setChats((prevChats) =>
-        prevChats.map((c) => (c.id === chat.id ? updatedChat : c))
+        prevChats.map((c) => (c._id === chatId ? updatedChat : c))
       );
     } catch (error) {
       console.error("Failed to delete chat:", error);
@@ -73,8 +107,8 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
   const handleViewDetails = () => {
     // Assuming you have navigation passed as a prop to this component
     navigation.navigate("ChatDetails", {
-      chatId: chat.id,
-      isGroupChat: isGroupChat,
+      chatId,
+      isGroupChat,
     });
 
     handleCloseModal();
@@ -82,43 +116,36 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
 
   const handlePinChat = async () => {
     try {
-      const token = await getStoredToken();
-      await api.post(
-        `/api/chats/${chat.id}/pin`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await api.post(`/api/chats/${chatId}/pin`, {});
     } catch (error) {
       console.error("Failed to pin chat:", error);
       // Handle error
     }
     handleCloseModal();
   };
-  const formattedTimestamp = new Date(
-    chat.lastMessageTimestamp
-  ).toLocaleTimeString();
-
   return (
     <TouchableOpacity
+      testID={`chat-${chatId}`}
+      accessibilityRole="button"
+      accessibilityLabel={`Conversation with ${title}`}
       onPress={() => onPress(chat)}
       onLongPress={handleLongPress}
     >
       <View style={styles.card}>
-        {chat.picture && (
-          <Image source={{ uri: chat.picture }} style={styles.chatImage} />
+        {photo ? (
+          <Image source={{ uri: photo }} style={styles.chatImage} />
+        ) : (
+          <View style={[styles.chatImage, styles.placeholder]} />
         )}
         <View style={styles.details}>
-          <Text style={styles.title}>{chat.name}</Text>
-          <Text style={styles.messagePreview}>{chat.lastMessage}</Text>
-          <Text style={styles.timestamp}>{formattedTimestamp}</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
+          <Text style={styles.messagePreview} numberOfLines={1}>
+            {preview}
+          </Text>
         </View>
-        {chat.unreadCount > 0 && (
-          <View style={styles.unreadBadge}>
-            <Text style={styles.unreadCount}>{chat.unreadCount}</Text>
-          </View>
-        )}
+        {when ? <Text style={styles.timestamp}>{when}</Text> : null}
       </View>
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={tailwind("flex-1 justify-end bg-scrim")}>
@@ -160,21 +187,28 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
 const makeStyles = (t) => StyleSheet.create({
   card: {
     flexDirection: "row",
-    padding: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: t.textFaint,
+    borderBottomColor: t.border,
     alignItems: "center",
+    // A whole row is the tap target; 10pt of padding round one line was not.
+    minHeight: hit.min + 16,
   },
   chatImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  placeholder: {
+    backgroundColor: t.surfaceAlt,
   },
   details: {
     flex: 1,
   },
   title: {
+    color: t.text,
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -183,9 +217,9 @@ const makeStyles = (t) => StyleSheet.create({
     color: t.textMuted,
   },
   timestamp: {
-    fontSize: 12,
+    fontSize: 13,
     color: t.textMuted,
-    marginTop: 5,
+    marginLeft: 8,
   },
   unreadBadge: {
     backgroundColor: t.danger,

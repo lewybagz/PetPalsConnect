@@ -93,7 +93,14 @@ const Button = ({
             fullWidth ? "w-full" : ""
           }`
         ),
-        { minHeight: scale.minHeight, opacity: inert ? 0.5 : pressed ? 0.85 : 1 },
+        {
+          minHeight: scale.minHeight,
+          // Dimming is the *disabled* treatment: it says "not available". A
+          // button that is working is available - it just is not finished - so
+          // it stays at full strength, or the screenshot of a busy form looks
+          // like a screenshot of a broken one.
+          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
+        },
         style,
       ]}
     >

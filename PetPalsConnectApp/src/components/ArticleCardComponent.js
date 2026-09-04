@@ -65,6 +65,7 @@ const makeStyles = (t) => StyleSheet.create({
     padding: 10,
   },
   title: {
+    color: t.text,
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 5,

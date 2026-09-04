@@ -30,12 +30,21 @@ const AppThemeContext = createContext({
   palette: palettes.light,
 });
 
-export const AppThemeProvider = ({ children }) => {
+/**
+ * `initialPreference` pins the theme instead of reading the stored one. Only
+ * the screenshot gallery passes it, so that one page can show both palettes
+ * side by side; the app itself always starts from "system" and the saved value.
+ */
+export const AppThemeProvider = ({ children, initialPreference }) => {
   const systemScheme = useColorScheme();
-  const [preference, setPreferenceState] = useState("system");
-  const [hydrated, setHydrated] = useState(false);
+  const [preference, setPreferenceState] = useState(initialPreference ?? "system");
+  // Nothing to read when the theme is pinned, so it starts hydrated rather
+  // than setting state from inside the effect below.
+  const [hydrated, setHydrated] = useState(Boolean(initialPreference));
 
   useEffect(() => {
+    if (initialPreference) return undefined;
+
     let cancelled = false;
     AsyncStorage.getItem(STORAGE_KEY)
       .then((stored) => {
@@ -48,7 +57,7 @@ export const AppThemeProvider = ({ children }) => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialPreference]);
 
   const setPreference = useCallback((next) => {
     setPreferenceState(next);

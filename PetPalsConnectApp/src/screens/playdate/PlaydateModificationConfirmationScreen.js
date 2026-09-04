@@ -82,6 +82,7 @@ const makeStyles = (t) => StyleSheet.create({
     padding: 20,
   },
   title: {
+    color: t.text,
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 20,
@@ -93,10 +94,12 @@ const makeStyles = (t) => StyleSheet.create({
     marginBottom: 10,
   },
   label: {
+    color: t.text,
     fontWeight: "bold",
     fontSize: 18,
   },
   detail: {
+    color: t.text,
     fontSize: 18,
   },
   button: {

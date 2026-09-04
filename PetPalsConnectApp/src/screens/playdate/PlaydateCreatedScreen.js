@@ -75,6 +75,7 @@ const makeStyles = (t) => StyleSheet.create({
     padding: 20,
   },
   header: {
+    color: t.text,
     fontSize: 22,
     fontWeight: "bold",
     textAlign: "center",
@@ -97,11 +98,13 @@ const makeStyles = (t) => StyleSheet.create({
     shadowRadius: 3,
   },
   label: {
+    color: t.text,
     fontSize: 18,
     fontWeight: "bold",
     marginTop: 10,
   },
   detail: {
+    color: t.text,
     fontSize: 16,
     marginBottom: 10,
   },

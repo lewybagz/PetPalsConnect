@@ -204,12 +204,14 @@ const makeStyles = (t) => StyleSheet.create({
     padding: 10,
   },
   header: {
+    color: t.text,
     fontSize: 22,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 20,
   },
   label: {
+    color: t.text,
     fontSize: 18,
     fontWeight: "bold",
     marginTop: 10,
@@ -232,6 +234,7 @@ const makeStyles = (t) => StyleSheet.create({
     borderRadius: 50,
   },
   petName: {
+    color: t.text,
     fontSize: 20,
     fontWeight: "bold",
     marginLeft: 10,

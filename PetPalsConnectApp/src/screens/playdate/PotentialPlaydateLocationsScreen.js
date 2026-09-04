@@ -111,6 +111,7 @@ const makeStyles = (t) => StyleSheet.create({
     padding: 10,
   },
   header: {
+    color: t.text,
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 10,

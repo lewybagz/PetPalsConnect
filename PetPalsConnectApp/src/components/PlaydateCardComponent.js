@@ -84,11 +84,13 @@ const makeStyles = (t) => StyleSheet.create({
     borderWidth: 1,
   },
   sectionTitle: {
+    color: t.text,
     fontSize: 16,
     fontWeight: "bold",
     marginTop: 10,
   },
   title: {
+    color: t.text,
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 5,

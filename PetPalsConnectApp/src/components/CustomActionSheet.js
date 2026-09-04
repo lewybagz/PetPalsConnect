@@ -48,6 +48,7 @@ const makeStyles = (t) => StyleSheet.create({
     alignItems: "center",
   },
   actionText: {
+    color: t.text,
     fontSize: 18,
   },
 });

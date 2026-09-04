@@ -36,7 +36,7 @@ describe("OnboardingProgress", () => {
 
     expect(filled(1)).toBe(light.primary);
     expect(filled(2)).toBe(light.primary);
-    expect(filled(3)).toBe(light.surfaceAlt);
+    expect(filled(3)).toBe(light.border);
   });
 
   it("announces itself as progress, with a value a screen reader can read", async () => {

@@ -143,6 +143,7 @@ const makeStyles = (t) => StyleSheet.create({
     padding: 10,
   },
   title: {
+    color: t.text,
     fontSize: 24,
     fontWeight: "bold",
   },
@@ -153,6 +154,7 @@ const makeStyles = (t) => StyleSheet.create({
     marginTop: 10,
   },
   address: {
+    color: t.text,
     fontSize: 16,
     marginTop: 10,
   },

@@ -60,6 +60,33 @@ const walk = (dir, found = []) => {
   return found;
 };
 
+/**
+ * Style objects that set type but never a colour.
+ *
+ * The blind spot the colour ban cannot see. A `Text` style with a `fontSize`
+ * and no `color` inherits React Native's default, which is black - invisible
+ * the moment it lands on a dark surface. It was correct while every surface in
+ * the app was white, so nothing flagged it, and dark mode turned 44 of them
+ * across 28 files into black-on-black. A screenshot found the first one.
+ */
+const ENTRY = /(\w+):\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g;
+
+const colourlessText = (source) => {
+  const start = source.indexOf("StyleSheet.create({");
+  if (start === -1) return [];
+
+  const block = stripComments(source.slice(start));
+  const found = [];
+
+  for (const [, key, body] of block.matchAll(ENTRY)) {
+    const setsType = /\bfontSize\s*:|\bfontWeight\s*:/.test(body);
+    const setsColour = /\bcolor\s*:/.test(body);
+    if (setsType && !setsColour) found.push(key);
+  }
+
+  return found;
+};
+
 /** How many raw colour values each file still holds. */
 const count = () => {
   const counts = {};
@@ -86,6 +113,19 @@ const audit = () => {
   const current = count();
   const problems = [];
 
+  for (const file of walk(SRC)) {
+    const relative = path.relative(ROOT, file);
+    if (ALLOWED.has(relative)) continue;
+
+    const keys = colourlessText(fs.readFileSync(file, "utf8"));
+    if (keys.length > 0) {
+      problems.push(
+        `${relative}: ${keys.join(", ")} set type but no colour, so they ` +
+          `inherit black and vanish on a dark surface. Add \`color: t.text\`.`
+      );
+    }
+  }
+
   for (const [file, total] of Object.entries(current)) {
     const allowed = baseline[file] ?? 0;
     if (total > allowed) {
@@ -103,7 +143,7 @@ const audit = () => {
 /** Every file the check looks at, so a pass cannot mean "found no files". */
 const scanned = () => walk(SRC).map((file) => path.relative(ROOT, file));
 
-module.exports = { audit, count, scanned, readBaseline, BASELINE };
+module.exports = { audit, count, colourlessText, scanned, readBaseline, BASELINE };
 
 if (require.main === module) {
   const flag = process.argv[2];
@@ -130,7 +170,8 @@ if (require.main === module) {
 
   console.log(
     remaining === 0 && permitted === 0
-      ? `Colour lives only in src/styles/tokens.ts (${scanned().length} files checked).`
+      ? `Colour lives only in src/styles/tokens.ts, and every text style names ` +
+        `one (${scanned().length} files checked).`
       : `No new hardcoded colours. ${remaining} left across ` +
           `${Object.keys(current).length} files.`
   );

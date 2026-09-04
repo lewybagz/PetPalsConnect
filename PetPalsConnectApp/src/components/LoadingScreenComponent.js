@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ActivityIndicator, View, Text, StyleSheet } from "react-native";
 import * as Progress from "react-native-progress";
 import { useTokens } from "../context/AppThemeContext";
@@ -18,6 +18,8 @@ const petCareTips = [
 
 const LoadingScreen = () => {
   const tokens = useTokens();
+  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -53,7 +55,7 @@ const LoadingScreen = () => {
     </View>
   );
 };
-const styles = StyleSheet.create({
+const makeStyles = (t) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
@@ -65,6 +67,7 @@ const styles = StyleSheet.create({
     height: 200,
   },
   tip: {
+    color: t.text,
     fontSize: 16,
     textAlign: "center",
     margin: 20,

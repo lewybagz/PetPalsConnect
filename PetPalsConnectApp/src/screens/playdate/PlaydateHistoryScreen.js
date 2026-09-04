@@ -85,6 +85,7 @@ const makeStyles = (t) => StyleSheet.create({
     borderColor: t.border,
   },
   title: {
+    color: t.text,
     fontSize: 18,
     fontWeight: "bold",
   },

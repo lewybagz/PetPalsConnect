@@ -102,6 +102,7 @@ const makeStyles = (t) => StyleSheet.create({
     margin: 4,
   },
   selectedText: {
+    color: t.text,
     fontWeight: "bold",
   },
   doneButton: {
