@@ -28,12 +28,10 @@ import PlaydateDetailsScreen from "../playdate/PlaydateDetailsScreen";
 import PlaydateHistoryScreen from "../playdate/PlaydateHistoryScreen";
 import PlaydateModificationConfirmationScreen from "../playdate/PlaydateModificationConfirmationScreen";
 import PlaydateModificationScreen from "../playdate/PlaydateModificationScreen";
-import PlaydatePetSelectionScreen from "../playdate/PlaydatePetSelectionScreen";
 import PlaydateRequestScreen from "../playdate/PlaydateRequestScreen";
 import PostPlaydateReviewScreen from "../playdate/PostPlaydateReviewScreen";
 import PotentialPlaydateLocationScreen from "../playdate/PotentialPlaydateLocationScreen";
 import PotentialPlaydateLocationsScreen from "../playdate/PotentialPlaydateLocationsScreen";
-import SchedulePlaydateDetailsScreen from "../playdate/SchedulePlaydateDetailsScreen";
 import SchedulePlaydateScreen from "../playdate/SchedulePlaydateScreen";
 import UpcomingPlaydateScreen from "../playdate/UpcomingPlaydateScreen";
 
@@ -94,10 +92,6 @@ const PetSelectionWithPet = withRequiredPet(PetSelectionScreen, {
   title: "Add a pet to start chatting",
   message: "Chats in PetPals happen between pets, so you'll need one first.",
 });
-const PlaydatePetSelectionWithPet = withRequiredPet(PlaydatePetSelectionScreen, {
-  title: "Add a pet to join a playdate",
-  message: "Pick which of your pets is coming - so you'll need at least one.",
-});
 const SchedulePlaydateWithPet = withRequiredPet(SchedulePlaydateScreen, {
   title: "Add a pet to plan a playdate",
   message: "Playdates are arranged between pets, so add yours to get started.",
@@ -137,12 +131,10 @@ export default function AppStack() {
       <Stack.Screen name="PlaydateModification" component={PlaydateModificationScreen} options={{ title: "Modify" }} />
       <Stack.Screen name="PlaydateModificationConfirmation" component={PlaydateModificationConfirmationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlaydateCancellationConfirmation" component={PlaydateCancellationConfirmationScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="PlaydatePetSelection" component={PlaydatePetSelectionWithPet} options={{ title: "Choose Pets" }} />
       <Stack.Screen name="PostPlaydateReview" component={PostPlaydateReviewScreen} options={{ title: "Leave a Review" }} />
       <Stack.Screen name="PotentialPlaydateLocation" component={PotentialPlaydateLocationScreen} options={{ title: "Location" }} />
       <Stack.Screen name="PotentialPlaydateLocations" component={PotentialPlaydateLocationsScreen} options={{ title: "Locations" }} />
       <Stack.Screen name="SchedulePlaydate" component={SchedulePlaydateWithPet} options={{ title: "Schedule" }} />
-      <Stack.Screen name="SchedulePlaydateDetails" component={SchedulePlaydateDetailsScreen} options={{ title: "Details" }} />
       <Stack.Screen name="UpcomingPlaydate" component={UpcomingPlaydateScreen} options={{ title: "Upcoming" }} />
 
       {/* Profile */}

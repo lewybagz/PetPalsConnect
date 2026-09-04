@@ -548,6 +548,36 @@ had already been given.
 **`startTime` is required.** It is separate from `date` because the form has
 two pickers. The app combines them; sending only `date` loses the time.
 
+**`SchedulePlaydateScreen` is the only way to arrange one, from either
+direction.** There were two flows: `PetDetails -> SchedulePlaydate` (one screen,
+which worked) and `LocationCard -> PlaydatePetSelection ->
+SchedulePlaydateDetails` (three screens, which could not create a playdate at
+all — it rendered PetMatch rows as pets so the picker was blank cards, called
+`BottomSheet.show`, a static method `@gorhom/bottom-sheet` does not have, went
+nowhere when you had exactly one pet, passed `petIds` to a screen destructuring
+`petId`, and never included the other owner's pet, so nobody would have been
+invited even had the rest worked). The two entry points differ only in what they
+already know, so the screen takes `pet`/`petId` **and** `locationId` and asks
+only the questions it cannot answer. The three-screen flow is deleted, not
+repaired.
+
+**A pet is not a match.** `/api/petmatches/matched-pets` returns PetMatch
+documents, and the other side is `pet2` — `relevantToUser` is the owner of
+`pet1`. `fetchMatchedPets()` in `src/api/playdates.js` is the one place that
+unwraps and dedupes them; a row whose pet has since been deleted has `pet2:
+null`, so it uses `hasOwn` rather than `??`, or the fallback puts a PetMatch
+back in the list.
+
+**Whose pet is coming is a question, once there is more than one.** The screen
+sent `profile.pets[0]` regardless. The owner picks now; with a single pet there
+is no question and none is asked.
+
+**The confirmation takes the pet off the playdate, not off the caller.**
+`PlaydateCreated` read `pet.photos[0]` from a param only one of the two flows
+passed, so it crashed at the end of a playdate that had already been created.
+The create response populates `petsInvolved`, which is what the server actually
+recorded.
+
 ### Subscriptions
 
 **Stripe is the source of truth for billing; Mongo mirrors it.** The only

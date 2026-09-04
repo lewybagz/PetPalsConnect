@@ -6,6 +6,8 @@ import {
   createPlaydate,
   declinePlaydate,
   describePlaydateStatus,
+  fetchLocation,
+  fetchMatchedPets,
   fetchNearbyLocations,
   fetchUpcomingPlaydates,
 } from "./playdates";
@@ -121,5 +123,62 @@ describe("status wording", () => {
 
   it("falls back to the raw status for anything unrecognised", () => {
     expect(describePlaydateStatus("rescheduled")).toBe("rescheduled");
+  });
+});
+
+describe("the pets you can invite", () => {
+  const bo = { _id: "bo", name: "Bo", photos: ["bo.jpg"] };
+  const sky = { _id: "sky", name: "Sky" };
+
+  it("returns the other side of each match, not the match row", async () => {
+    // `/matched-pets` returns PetMatch documents. Rendering one as a pet is
+    // why the picker was a column of cards with no name and no photo.
+    api.get.mockResolvedValue({
+      data: [
+        { _id: "m1", matchScore: 88, pet1: "mine", pet2: bo },
+        { _id: "m2", matchScore: 71, pet1: "mine", pet2: sky },
+      ],
+    });
+
+    expect(await fetchMatchedPets()).toEqual([bo, sky]);
+  });
+
+  it("shows a pet once, however many of your pets it matched", async () => {
+    api.get.mockResolvedValue({
+      data: [
+        { _id: "m1", pet1: "mine", pet2: bo },
+        { _id: "m2", pet1: "my-other", pet2: bo },
+      ],
+    });
+
+    expect(await fetchMatchedPets()).toEqual([bo]);
+  });
+
+  it("skips a match whose pet has been deleted since", async () => {
+    api.get.mockResolvedValue({ data: [{ _id: "m1", pet2: null }, { _id: "m2", pet2: bo }] });
+
+    expect(await fetchMatchedPets()).toEqual([bo]);
+  });
+
+  it("returns nothing rather than throwing on an unexpected body", async () => {
+    api.get.mockResolvedValue({ data: { message: "nope" } });
+
+    expect(await fetchMatchedPets()).toEqual([]);
+  });
+});
+
+describe("one place by id", () => {
+  it("asks for the place the caller already chose", async () => {
+    const park = { _id: "loc-9", name: "Far Away Field" };
+    api.get.mockResolvedValue({ data: park });
+
+    expect(await fetchLocation("loc-9")).toEqual(park);
+    expect(api.get).toHaveBeenCalledWith("/api/locations/loc-9");
+  });
+
+  it("gives back null rather than undefined when there is no body", async () => {
+    api.get.mockResolvedValue({});
+
+    expect(await fetchLocation("loc-9")).toBeNull();
   });
 });

@@ -12,6 +12,7 @@ import NotificationPreferencesScreen from "../../src/screens/settings/Notificati
 import HelpSupportScreen from "../../src/screens/settings/HelpSupportScreen";
 import PostPlaydateReviewScreen from "../../src/screens/playdate/PostPlaydateReviewScreen";
 import MapScreen from "../../src/screens/swipe/MapScreen";
+import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateScreen";
 import { CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
 
 /**
@@ -147,6 +148,31 @@ export const BOARDS = [
         navigation={navigation}
         route={{ params: {} }}
         walkthroughAutoStart={false}
+      />
+    ),
+  },
+  {
+    id: "schedule-playdate",
+    label: "Schedule - arriving from a pet",
+    routes: ROUTES,
+    // The pet is known, so the screen asks only where and when. The other
+    // entry point is the same screen with the opposite half filled in, which
+    // is the whole point of consolidating the two flows.
+    render: () => (
+      <SchedulePlaydateScreen
+        navigation={navigation}
+        route={{ params: { pet: CANDIDATES[0].pet } }}
+      />
+    ),
+  },
+  {
+    id: "schedule-playdate-from-place",
+    label: "Schedule - arriving from a place",
+    routes: ROUTES,
+    render: () => (
+      <SchedulePlaydateScreen
+        navigation={navigation}
+        route={{ params: { locationId: "loc-1" } }}
       />
     ),
   },

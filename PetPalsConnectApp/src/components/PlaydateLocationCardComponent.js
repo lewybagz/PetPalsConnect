@@ -40,9 +40,10 @@ const PlayDateLocationCard = ({ locationData, navigation }) => {
   }, [locationData]);
 
   const handleSchedulePlaydate = () => {
-    // "PetSelection" picks a *friend's* pet and wants a userPetId. Scheduling
-    // from a location goes to PlaydatePetSelection, which takes a locationId.
-    navigation.navigate("PlaydatePetSelection", { locationId: locationData._id });
+    // One scheduling screen, told what is already decided. This used to open
+    // `PlaydatePetSelection` -> `SchedulePlaydateDetails`, three screens for
+    // the same five fields, which could not create a playdate at all.
+    navigation.navigate("SchedulePlaydate", { locationId: locationData._id });
   };
   return (
     <View style={styles.card}>

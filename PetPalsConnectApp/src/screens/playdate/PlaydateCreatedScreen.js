@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, ScrollView, Image, Button } from "react-native";
-import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent"; // Assuming this component displays location details
 import messaging from "@react-native-firebase/messaging";
 import { useTokens } from "../../context/AppThemeContext";
 
@@ -8,7 +7,19 @@ const PlaydateCreatedScreen = ({ route, navigation }) => {
   const tokens = useTokens();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
-  const { playdate, pet } = route.params;
+  /**
+   * The pet comes off the playdate, not the caller.
+   *
+   * This read `pet.photos[0]` on a param the location-first flow never passed,
+   * so the confirmation crashed at the end of a playdate that had already been
+   * created. The create response populates `petsInvolved`, which is a better
+   * source anyway: it is what the server actually recorded.
+   */
+  const { playdate = {}, pet: passedPet } = route.params ?? {};
+  const pet =
+    passedPet ??
+    (Array.isArray(playdate.petsInvolved) ? playdate.petsInvolved.at(-1) : null);
+  const photo = pet?.photos?.[0] ?? null;
 
   useEffect(() => {
     const unsubscribe = messaging().onNotificationOpenedApp((remoteMessage) => {
@@ -42,17 +53,25 @@ const PlaydateCreatedScreen = ({ route, navigation }) => {
 
   return (
     <ScrollView style={styles.container}>
-      <Image source={{ uri: pet.photos[0] }} style={styles.petImage} />
+      {photo ? (
+        <Image source={{ uri: photo }} style={styles.petImage} />
+      ) : null}
       <Text style={styles.header}>Playdate Scheduled Successfully!</Text>
       <View style={styles.detailsContainer}>
         <Text style={styles.label}>Date & Time:</Text>
         <Text style={styles.detail}>{formatDate(playdate.date)}</Text>
 
         <Text style={styles.label}>Location:</Text>
-        <PlayDateLocationCard
-          locationData={playdate.location}
-          navigation={navigation}
-        />
+        {/* A summary, not a location card: the card carries a "Schedule a
+            Playdate Here" button, which is a strange thing to offer on the
+            screen confirming the playdate you have just scheduled there - and
+            it dereferenced `locationData._id` on a playdate whose location
+            failed to populate. */}
+        <Text style={styles.detail}>
+          {playdate.location?.name ??
+            playdate.location?.address ??
+            "The place you chose"}
+        </Text>
 
         {playdate.notes && (
           <>

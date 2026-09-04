@@ -22,7 +22,7 @@ import {
 import OnboardingProgress from "../../src/components/ui/OnboardingProgress";
 import { useAppFonts } from "../../src/styles/fonts";
 import { BOARDS, boardById } from "./boards";
-import { pending } from "./fixtures";
+import { MY_PET, SECOND_PET, pending } from "./fixtures";
 
 /**
  * The real screens, on a page, so they can be looked at.
@@ -187,7 +187,9 @@ const SESSION = {
     _id: "user-me",
     username: "sam",
     email: "sam@example.test",
-    pets: ["pet-mine"],
+    // Populated, the way /api/users/me returns them - a screen that offers a
+    // choice of your pets needs their names.
+    pets: [MY_PET, SECOND_PET],
   },
   refresh: async () => {},
   signOut: async () => {},

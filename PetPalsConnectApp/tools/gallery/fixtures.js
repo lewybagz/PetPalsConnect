@@ -36,6 +36,17 @@ export const MY_PET = {
   owner: "user-me",
 };
 
+/** A second pet of the caller's, so "which of yours is coming" has a choice. */
+export const SECOND_PET = {
+  _id: "pet-mine-2",
+  name: "Pepper",
+  breed: "Cocker Spaniel",
+  age: 2,
+  weight: 28,
+  photos: [PHOTOS.me],
+  owner: "user-me",
+};
+
 export const CANDIDATES = [
   {
     pet: {
@@ -229,6 +240,28 @@ export const ROUTES = {
       { key: "appUpdates", label: "Everything else" },
     ],
   },
+  // Longer than "/api/locations", so the interceptor's longest-prefix match
+  // picks this one for the scheduling screen.
+  "/api/locations/playdate-locations": [
+    {
+      _id: "loc-1",
+      name: "Dolores Park",
+      address: "19th St & Dolores St",
+      distanceMiles: 1.9,
+    },
+    {
+      _id: "loc-2",
+      name: "Duboce Park",
+      address: "Duboce Ave & Scott St",
+      distanceMiles: 1.4,
+    },
+  ],
+  // PetMatch rows, which is what the endpoint really returns - the pet is on
+  // `pet2`. Rendering the row as a pet is the bug the pet picker used to have.
+  "/api/petmatches/matched-pets": [
+    { _id: "match-1", matchScore: 82, pet1: MY_PET._id, pet2: CANDIDATES[0].pet },
+    { _id: "match-2", matchScore: 61, pet1: MY_PET._id, pet2: CANDIDATES[1].pet },
+  ],
   "/api/locations/loc-1": {
     _id: "loc-1",
     name: "Dolores Park",
