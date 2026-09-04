@@ -14,8 +14,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
-import storage from "@react-native-firebase/storage";
+import { addPetPhoto } from "../../services/photos";
 
 import { useTailwind } from "../../styles/tailwind";
 import { useAuthSession } from "../../context/AuthSessionContext";
@@ -78,34 +77,24 @@ export default function AddFirstPetScreen() {
     weightIsValid;
 
   const onChoosePhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(
-        "Permission needed",
-        "Allow photo library access to add a picture of your pet."
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (result.canceled) return;
-
-    const asset = result.assets?.[0];
-    if (!asset) return;
-
+    // Picking, compressing and uploading live in services/photos - this screen
+    // and AddPetScreen each had their own copy, writing to different paths,
+    // neither compressing, and neither with an owner in the path for the
+    // Storage rules to check.
     setUploading(true);
     try {
-      const filename = `pets/${profile?._id ?? "unknown"}-${Date.now()}.jpg`;
-      const reference = storage().ref(filename);
-      await reference.putFile(
-        Platform.OS === "ios" ? asset.uri.replace("file://", "") : asset.uri
-      );
-      setPhoto(await reference.getDownloadURL());
+      const result = await addPetPhoto({ fromCamera: false });
+
+      if (result.denied) {
+        Alert.alert(
+          "Permission needed",
+          "Allow photo library access to add a picture of your pet."
+        );
+        return;
+      }
+      if (result.cancelled) return;
+
+      setPhoto(result.url);
     } catch (err) {
       console.warn("[pets] Photo upload failed:", err.message);
       // A failed upload must not block onboarding - the photo is optional.

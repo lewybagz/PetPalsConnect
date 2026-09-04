@@ -101,6 +101,8 @@ Both stores use the bundle identifier `com.petpalsconnect.app`.
 - [ ] Register `com.petpalsconnect.app` in App Store Connect and Play Console
 - [ ] Create an EAS project (`eas init`) and set the real `extra.eas.projectId`
 - [ ] Add the two Firebase config files as EAS secrets
+- [ ] Deploy the Storage rules: `firebase deploy --only storage` (they live in
+      `storage.rules` and are wired in `PetPalsConnectApp/firebase.json`)
 - [ ] Restrict the Google Maps API key by platform and API
 - [ ] Fill in Apple privacy nutrition labels and Play data-safety declarations
 - [ ] Create the two recurring prices in Stripe and set `STRIPE_PRICE_MONTHLY`

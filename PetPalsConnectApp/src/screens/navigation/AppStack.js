@@ -17,6 +17,7 @@ import PetSelectionScreen from "../chat/PetSelectionScreen";
 // Pets
 import AddPetScreen from "../pets/AddPetScreen";
 import PetDetailsScreen from "../pets/PetDetailsScreen";
+import PetPhotosScreen from "../pets/PetPhotosScreen";
 import PetListScreen from "../pets/PetListScreen";
 
 // Playdates
@@ -122,6 +123,7 @@ export default function AppStack() {
       {/* Pets */}
       <Stack.Screen name="AddPet" component={AddPetScreen} options={{ title: "Add Pet" }} />
       <Stack.Screen name="PetDetails" component={PetDetailsScreen} options={{ title: "Pet" }} />
+      <Stack.Screen name="PetPhotos" component={PetPhotosScreen} options={{ title: "Photos" }} />
       <Stack.Screen name="PetList" component={PetListScreen} options={{ title: "Pets" }} />
       <Stack.Screen name="UsersPets" component={UsersPetsScreen} options={{ title: "Their Pets" }} />
 

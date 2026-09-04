@@ -1,0 +1,60 @@
+rules_version = '2';
+
+// Firebase Storage rules for PetPalsConnect.
+//
+// There were none in this repository, which in practice means whatever was
+// clicked into the console once - and the app uploaded to `uploads/<the
+// device's filename>`, a flat namespace with no owner in the path. Two people
+// photographing `IMG_0042.jpg` overwrote each other, and no rule could tell
+// whose file was whose.
+//
+// Every path now starts with the uploader's Firebase uid, so ownership is
+// something the rules can actually check.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // A pet's photos: pets/<uid>/<petId>/<file>.
+    //
+    // Readable by any signed-in user, because browsing other people's pets is
+    // the entire app. Writable only under your own uid.
+    match /pets/{userId}/{petId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if isOwner(userId) && isReasonableImage();
+      allow delete: if isOwner(userId);
+    }
+
+    // A person's profile photo: profiles/<uid>/<file>.
+    match /profiles/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if isOwner(userId) && isReasonableImage();
+      allow delete: if isOwner(userId);
+    }
+
+    // Media shared in a chat: chat/<uid>/<file>. Same ownership rule; who may
+    // *see* a conversation is enforced by the API, which is the only thing
+    // that knows the participants.
+    match /chat/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if isOwner(userId) && isReasonableImage();
+      allow delete: if isOwner(userId);
+    }
+
+    // Anything else is closed. A new feature should add its own rule rather
+    // than inherit a permissive default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // The app compresses before uploading, so anything large is either a bug
+    // or somebody bypassing the app. 8MB leaves room for a big panorama while
+    // still capping what one request can cost.
+    function isReasonableImage() {
+      return request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

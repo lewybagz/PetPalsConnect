@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Text, TouchableOpacity, ScrollView, FlatList } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { getAuth } from "@react-native-firebase/auth";
 import { useTailwind } from "../../styles/tailwind";
 import { getStoredToken } from "../../../utils/tokenutil";
 import PlaydateCardComponent from "../../components/PlaydateCardComponent";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import api from "../../api/axios";
+import { useAuthSession } from "../../context/AuthSessionContext";
+import { addProfilePhoto } from "../../services/photos";
 
 const ProfileScreen = ({ navigation }) => {
   const [recentPlaydates, setRecentPlaydates] = useState([]);
@@ -14,6 +26,9 @@ const ProfileScreen = ({ navigation }) => {
   const [error, setError] = useState("");
   const tailwind = useTailwind();
   const auth = getAuth();
+  const { profile, userId, refresh } = useAuthSession();
+  const [photo, setPhoto] = useState(profile?.userPhoto ?? null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     // Fetch user information
@@ -67,6 +82,36 @@ const ProfileScreen = ({ navigation }) => {
     navigation.navigate("PetList");
   };
 
+  /**
+   * There was no way to set a profile photo anywhere in the app. `userPhoto`
+   * has always been on the schema and rendered in chats, friend lists and
+   * search results - and nothing could ever fill it in.
+   */
+  const changePhoto = async () => {
+    setUploadingPhoto(true);
+    try {
+      const result = await addProfilePhoto();
+
+      if (result.denied) {
+        Alert.alert(
+          "Photo access needed",
+          "You can turn this on in your device settings."
+        );
+        return;
+      }
+      if (result.cancelled) return;
+
+      await api.patch(`/api/users/${userId}`, { userPhoto: result.url });
+      setPhoto(result.url);
+      // The session holds the profile the rest of the app reads.
+      await refresh();
+    } catch (err) {
+      Alert.alert("Upload failed", err.response?.data?.message || err.message);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   if (loading) {
     return <LoadingScreen />;
   }
@@ -78,6 +123,33 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <ScrollView style={tailwind("p-4")}>
       <Text style={tailwind("text-xl font-bold mb-4")}>Profile</Text>
+
+      <TouchableOpacity
+        testID="profile-photo"
+        onPress={changePhoto}
+        disabled={uploadingPhoto}
+        style={tailwind("items-center mb-4")}
+      >
+        {photo ? (
+          <Image source={{ uri: photo }} style={tailwind("h-24 w-24 rounded-full")} />
+        ) : (
+          <View
+            style={tailwind(
+              "h-24 w-24 rounded-full bg-gray-100 items-center justify-center"
+            )}
+          >
+            <Ionicons name="person-outline" size={36} color="#9ca3af" />
+          </View>
+        )}
+        {uploadingPhoto ? (
+          <ActivityIndicator style={tailwind("mt-2")} />
+        ) : (
+          <Text style={tailwind("text-blue-600 mt-2")}>
+            {photo ? "Change photo" : "Add a photo"}
+          </Text>
+        )}
+      </TouchableOpacity>
+
       {/* User Info */}
       <Text style={tailwind("text-lg mb-2")}>{userInfo.name}</Text>
       <Text style={tailwind("text-sm mb-2")}>{userInfo.email}</Text>

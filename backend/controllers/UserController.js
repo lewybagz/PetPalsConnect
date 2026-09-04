@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const { toCoordinates, rangeToMiles } = require("../services/matching/distance");
+const { sanitisePhoto } = require("../services/photos");
 const firebase = require("../config/firebase");
 const usernames = require("../services/usernames");
 const { scrypt, randomBytes, timingSafeEqual } = require("node:crypto");
@@ -224,7 +225,9 @@ const UserController = {
         firebaseUid: uid,
         email: email ?? req.body.email,
         username: String(req.body.username).trim(),
-        userPhoto: req.body.userPhoto,
+        // A profile photo is shown to everyone who sees this account, so it
+        // has to be a file we stored, not any URL a client sends.
+        userPhoto: sanitisePhoto(req.body.userPhoto),
         location: req.body.location,
         pets: [],
         friendsList: [],
@@ -339,7 +342,11 @@ const UserController = {
       res.user.location = req.body.location;
     }
     if (req.body.userPhoto != null) {
-      res.user.userPhoto = req.body.userPhoto;
+      const photo = sanitisePhoto(req.body.userPhoto);
+      if (!photo) {
+        return res.status(400).json({ message: "That photo is not one of ours" });
+      }
+      res.user.userPhoto = photo;
     }
     if (req.body.subscribed != null) {
       res.user.subscribed = req.body.subscribed;

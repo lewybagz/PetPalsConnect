@@ -14,6 +14,7 @@ module.exports = [
         console: "readonly",
         __dirname: "readonly",
         Buffer: "readonly",
+        URL: "readonly",
         setTimeout: "readonly",
         clearTimeout: "readonly",
         setInterval: "readonly",

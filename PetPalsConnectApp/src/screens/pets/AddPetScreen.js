@@ -6,11 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Platform,
   Button,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import storage from "@react-native-firebase/storage";
+import { PHOTO_LIMIT, addPetPhoto } from "../../services/photos";
 import { Picker } from "@react-native-picker/picker";
 import DropDownPicker from "react-native-dropdown-picker";
 import { useSelector, useDispatch } from "react-redux";
@@ -21,10 +19,11 @@ import { BREEDS } from "../../data/breeds";
 import { clearError } from "../../redux/actions";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 const AddPetScreen = ({ navigation }) => {
-  const MAX_PHOTOS = 5;
+
   const [petDetails, setPetDetails] = useState([]);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const dispatch = useDispatch();
   const { refresh } = useAuthSession();
 
@@ -139,57 +138,40 @@ const AddPetScreen = ({ navigation }) => {
     });
   };
   const handleChoosePhoto = async () => {
-    if (currentPet.photos.length >= MAX_PHOTOS) {
+    if (currentPet.photos.length >= PHOTO_LIMIT) {
       Alert.alert(
         "Limit Reached",
-        "You can only upload up to " + MAX_PHOTOS + " photos."
+        `You can add up to ${PHOTO_LIMIT} photos.`
       );
       return;
     }
 
-    // expo-image-picker replaces react-native-image-picker. It is
-    // promise-based and requests permission itself, rather than taking a
-    // callback and assuming permission was already granted.
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(
-        "Permission needed",
-        "Allow photo library access to add pictures of your pet."
-      );
-      return;
-    }
+    // Picking, compressing and uploading all live in services/photos, which
+    // is also where the storage path is decided. This screen wrote to
+    // `uploads/<the device's filename>` and the onboarding screen wrote
+    // somewhere else entirely, neither compressed, and neither path had an
+    // owner in it for the Storage rules to check.
+    setUploading(true);
+    try {
+      const result = await addPetPhoto({ fromCamera: false });
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-    });
+      if (result.denied) {
+        Alert.alert(
+          "Permission needed",
+          "Allow photo library access to add pictures of your pet."
+        );
+        return;
+      }
+      if (result.cancelled) return;
 
-    if (result.canceled) return;
-
-    const asset = result.assets?.[0];
-    if (!asset) return;
-
-    const uploadedUrl = await uploadImageToFirebase(asset.uri);
-    if (uploadedUrl) {
       setCurrentPet((previous) => ({
         ...previous,
-        photos: [...previous.photos, uploadedUrl],
+        photos: [...previous.photos, result.url],
       }));
-    }
-  };
-
-  const uploadImageToFirebase = async (uri) => {
-    const filename = uri.substring(uri.lastIndexOf("/") + 1);
-    const uploadUri = Platform.OS === "ios" ? uri.replace("file://", "") : uri;
-    const storageRef = storage().ref(`uploads/${filename}`);
-
-    try {
-      await storageRef.putFile(uploadUri);
-      const url = await storageRef.getDownloadURL();
-      return url;
-    } catch (e) {
-      console.error(e);
-      return null;
+    } catch (error) {
+      Alert.alert("Upload failed", error.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -271,7 +253,11 @@ const AddPetScreen = ({ navigation }) => {
         Note: The first image you upload will be your pet&rsquo;s profile
         picture. The rest can be seen from your pet&rsquo;s profile page.
       </Text>
-      <Button title="Upload Photo" onPress={handleChoosePhoto} />
+      <Button
+        title={uploading ? "Uploading…" : "Upload Photo"}
+        onPress={handleChoosePhoto}
+        disabled={uploading}
+      />
 
       <TextInput
         placeholder="Special Needs"

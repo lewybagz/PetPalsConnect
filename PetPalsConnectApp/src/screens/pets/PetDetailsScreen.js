@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
+  ScrollView as HorizontalScrollView,
   View,
   Text,
   Image,
@@ -11,6 +13,8 @@ import {
 } from "react-native";
 import { FontAwesome as Icon } from "@expo/vector-icons";
 import { useDispatch } from "react-redux";
+
+import { useAuthSession } from "../../context/AuthSessionContext";
 
 import api from "../../api/axios";
 import { setChatId } from "../../redux/actions";
@@ -31,6 +35,8 @@ import { setChatId } from "../../redux/actions";
  */
 const PetDetailsScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
+  const { userId } = useAuthSession();
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   const passedPet = route?.params?.pet ?? null;
   const petId = route?.params?.petId ?? passedPet?._id;
@@ -104,13 +110,52 @@ const PetDetailsScreen = ({ route, navigation }) => {
     );
   }
 
+  const photos = Array.isArray(pet.photos) ? pet.photos : [];
+  const isMine = String(pet.owner?._id ?? pet.owner) === String(userId);
+
   return (
     <ScrollView testID="pet-details" style={styles.container}>
-      {pet.photos?.[0] ? (
-        <Image source={{ uri: pet.photos[0] }} style={styles.image} />
+      {photos.length > 0 ? (
+        <View>
+          <HorizontalScrollView
+            testID="pet-photo-carousel"
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(event) =>
+              setPhotoIndex(
+                Math.round(event.nativeEvent.contentOffset.x / screenWidth)
+              )
+            }
+          >
+            {photos.map((url) => (
+              <Image
+                key={url}
+                source={{ uri: url }}
+                style={[styles.image, { width: screenWidth - 20 }]}
+              />
+            ))}
+          </HorizontalScrollView>
+
+          {photos.length > 1 ? (
+            <View style={styles.dots}>
+              {photos.map((url, index) => (
+                <View
+                  key={url}
+                  style={[styles.dot, index === photoIndex && styles.dotActive]}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
       ) : (
         <View style={[styles.image, styles.placeholder]}>
           <Icon name="paw" size={32} color="#9ca3af" />
+          {isMine ? (
+            <Text style={styles.placeholderText}>
+              Add a photo so people can find {pet.name}
+            </Text>
+          ) : null}
         </View>
       )}
       <Text style={styles.name}>{pet.name}</Text>
@@ -146,11 +191,62 @@ const PetDetailsScreen = ({ route, navigation }) => {
           <Text style={styles.buttonText}>Schedule Playdate</Text>
         </TouchableOpacity>
       </View>
+
+      {isMine ? (
+        <TouchableOpacity
+          testID="pet-manage-photos"
+          onPress={() => navigation.navigate("PetPhotos", { pet })}
+          style={styles.secondaryButton}
+        >
+          <Icon name="camera" size={16} color="#2563eb" />
+          <Text style={styles.secondaryButtonText}>
+            {photos.length > 0 ? "Manage photos" : "Add photos"}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </ScrollView>
   );
 };
 
+const screenWidth = Dimensions.get("window").width;
+
 const styles = StyleSheet.create({
+  dots: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  dot: {
+    height: 6,
+    width: 6,
+    borderRadius: 3,
+    backgroundColor: "#d1d5db",
+    marginHorizontal: 3,
+  },
+  dotActive: {
+    backgroundColor: "#2563eb",
+  },
+  placeholderText: {
+    color: "#6b7280",
+    marginTop: 8,
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  secondaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#2563eb",
+    borderRadius: 5,
+    padding: 10,
+    margin: 5,
+  },
+  secondaryButtonText: {
+    color: "#2563eb",
+    fontSize: 14,
+    marginLeft: 6,
+  },
   container: {
     flex: 1,
     padding: 10,

@@ -1,4 +1,5 @@
 const Pet = require("../models/Pet");
+const { sanitisePhotos } = require("../services/photos");
 const User = require("../models/User");
 const SubscriptionController = require("./SubscriptionController");
 const PetMatchController = require("./PetMatchController");
@@ -57,6 +58,11 @@ const PetController = {
       }
       if (String(pet.owner) !== String(req.userId)) {
         return res.status(403).json({ message: "That isn't your pet" });
+      }
+
+      // Same validation on the way in as on create.
+      if (req.body.photos !== undefined) {
+        req.body.photos = sanitisePhotos(req.body.photos);
       }
 
       for (const field of EDITABLE) {
@@ -152,7 +158,9 @@ const PetController = {
         breed,
         age,
         weight,
-        photos: photos ?? [],
+        // Only URLs from our own storage bucket: `photos` is rendered on every
+        // other user's device, and nothing validated it.
+        photos: sanitisePhotos(photos),
         specialNeeds,
         temperament,
         activityLevel,

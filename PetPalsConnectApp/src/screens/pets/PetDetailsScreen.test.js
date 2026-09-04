@@ -5,8 +5,10 @@ import { Provider } from "react-redux";
 import PetDetailsScreen from "./PetDetailsScreen";
 import store from "../../redux/store";
 import api from "../../api/axios";
+import { useAuthSession } from "../../context/AuthSessionContext";
 
 jest.mock("../../api/axios", () => ({ get: jest.fn(), post: jest.fn() }));
+jest.mock("../../context/AuthSessionContext", () => ({ useAuthSession: jest.fn() }));
 
 /**
  * The junction screen: Discover and Home reach it from a card, and it is where
@@ -29,6 +31,7 @@ const renderScreen = (params) =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  useAuthSession.mockReturnValue({ userId: "someone-else" });
   api.get.mockResolvedValue({ data: pet });
   api.post.mockResolvedValue({ data: { _id: "chat-1" } });
 });
@@ -91,5 +94,30 @@ describe("PetDetailsScreen", () => {
     renderScreen({ pet: { ...pet, photos: undefined } });
 
     await waitFor(() => expect(screen.getByTestId("pet-details")).toBeTruthy());
+  });
+});
+
+describe("owning the pet", () => {
+  const mine = { ...pet, owner: "me" };
+
+  it("offers photo management to the owner", async () => {
+    useAuthSession.mockReturnValue({ userId: "me" });
+    renderScreen({ pet: mine });
+
+    await waitFor(() => expect(screen.getByTestId("pet-manage-photos")).toBeTruthy());
+  });
+
+  it("does not offer it to anyone else", async () => {
+    useAuthSession.mockReturnValue({ userId: "someone-else" });
+    renderScreen({ pet: mine });
+
+    await waitFor(() => expect(screen.getByTestId("pet-details")).toBeTruthy());
+    expect(screen.queryByTestId("pet-manage-photos")).toBeNull();
+  });
+
+  it("shows a carousel when the pet has photos", async () => {
+    renderScreen({ pet: { ...pet, photos: ["https://a/1.jpg", "https://a/2.jpg"] } });
+
+    await waitFor(() => expect(screen.getByTestId("pet-photo-carousel")).toBeTruthy());
   });
 });

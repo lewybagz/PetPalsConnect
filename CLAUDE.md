@@ -140,6 +140,28 @@ converted file silently drops out of the check.
   check:schemas` compares every create site to its model; it also runs as a
   test and warns at boot outside production.
 
+### Photos
+
+**One path in: `src/services/photos.js`.** It picks, compresses (longest edge
+1280, JPEG q0.7) and uploads. It lived twice inline in the two add-a-pet
+screens, writing to two different places, neither compressing — a phone photo
+is 3–8MB, and this app's whole browse experience is photographs.
+
+**Every storage path starts with the uploader's Firebase uid** —
+`pets/<uid>/<petId>/…`, `profiles/<uid>/…`. The old `uploads/<device filename>`
+had no owner in it, so two people photographing `IMG_0042.jpg` overwrote each
+other and no rule could tell whose file was whose. `storage.rules` (repo root,
+wired in `firebase.json`) enforces it.
+
+**A stored photo URL must be one of ours.** `photos` is written from the
+request body and rendered on every other user's device; `services/photos.js` on
+the backend keeps only `https` URLs on Firebase's storage hosts, deduped and
+capped at `PHOTO_LIMIT` (6, the same both sides).
+
+**The first photo is the pet's face** everywhere — cards, lists, chat headers.
+`PetPhotosScreen` is where an owner adds, reorders and removes; it saves after
+every change so closing mid-edit cannot lose an upload already paid for.
+
 ### Realtime
 
 **One socket, joined to the user's room.** `src/services/socket.js` owns the

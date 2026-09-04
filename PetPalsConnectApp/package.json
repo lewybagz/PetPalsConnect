@@ -45,6 +45,7 @@
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.17",
     "expo-font": "~57.0.3",
+    "expo-image-manipulator": "~57.0.15",
     "expo-image-picker": "~57.0.15",
     "expo-linking": "~57.0.9",
     "expo-location": "~57.0.15",
