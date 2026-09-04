@@ -198,7 +198,10 @@ test("the recipient gets a notification they can actually read", async () => {
 
   const notification = await Notification.findOne({ recipient: bob.user._id }).lean();
   assert.ok(notification, "no notification reached the recipient");
-  assert.match(notification.content, /new message/i);
+  assert.match(notification.content, /sent you a message/i);
+  // The type is what decides where tapping it goes, so it has to be one the
+  // app knows - not a free string invented at the call site.
+  assert.equal(notification.type, "message");
 });
 
 test("the chat shows up for both people", async () => {
@@ -214,4 +217,83 @@ test("the chat shows up for both people", async () => {
   const bobsChats = await request(app).get("/api/chats").set(...auth("list-bob")).expect(200);
 
   assert.equal(bobsChats.body.length, 1);
+});
+
+// --- Reading a conversation you are not in ---------------------------------
+
+/**
+ * `getChat`, `getChatDetails`, `fetchChatMedia`, `archiveChat` and `deleteChat`
+ * all looked a chat up by the id in the URL and returned it, so any signed-in
+ * account could read anybody's private messages given an id - and the
+ * authorisation audit passed them, because it counted `req.params.chatId` as
+ * evidence the query was scoped to the caller. A resource id names a row; it
+ * does not say who is asking.
+ */
+const aThirdPartyChat = async () => {
+  const alice = await makeOwnerWithPet(`scope-a-${Date.now()}`);
+  const bob = await makeOwnerWithPet(`scope-b-${Date.now()}`);
+  await makeOwnerWithPet("scope-nosy");
+
+  const chat = await request(app)
+    .post("/api/chats/findOrCreate")
+    .set("Authorization", `Bearer ${harness.issueToken(alice.user.firebaseUid)}`)
+    .send({ petId: String(bob.pet._id) })
+    .expect(200);
+
+  return chat.body._id;
+};
+
+test("an outsider cannot read somebody else's conversation", async () => {
+  const chatId = await aThirdPartyChat();
+
+  await request(app)
+    .get(`/api/chats/${chatId}`)
+    .set(...auth("scope-nosy"))
+    .expect(404);
+});
+
+test("an outsider cannot read its details or its media", async () => {
+  const chatId = await aThirdPartyChat();
+
+  await request(app)
+    .get(`/api/chats/${chatId}/details`)
+    .set(...auth("scope-nosy"))
+    .expect(404);
+
+  await request(app)
+    .get(`/api/chats/${chatId}/media`)
+    .set(...auth("scope-nosy"))
+    .expect(404);
+});
+
+test("an outsider cannot archive or delete it", async () => {
+  const chatId = await aThirdPartyChat();
+
+  await request(app)
+    .post(`/api/chats/${chatId}/archive`)
+    .set(...auth("scope-nosy"))
+    .expect(404);
+
+  await request(app)
+    .delete(`/api/chats/${chatId}`)
+    .set(...auth("scope-nosy"))
+    .expect(404);
+});
+
+test("a participant can delete their own conversation", async () => {
+  await makeOwnerWithPet("del-chat-alice");
+  const bob = await makeOwnerWithPet("del-chat-bob");
+
+  const chat = await request(app)
+    .post("/api/chats/findOrCreate")
+    .set(...auth("del-chat-alice"))
+    .send({ petId: String(bob.pet._id) })
+    .expect(200);
+
+  // `chat.remove()` was removed from Mongoose in v7, so this threw a
+  // TypeError and every delete came back a 500.
+  await request(app)
+    .delete(`/api/chats/${chat.body._id}`)
+    .set(...auth("del-chat-alice"))
+    .expect(200);
 });

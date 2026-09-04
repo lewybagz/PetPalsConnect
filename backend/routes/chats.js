@@ -16,6 +16,7 @@ router.get("/:chatId/details", ChatController.getChatDetails);
 router.get("/:chatId/media", ChatController.fetchChatMedia);
 router.post("/:chatId/archive", ChatController.archiveChat);
 router.post("/:chatId/pin", ChatController.togglePinChat);
+router.post("/:chatId/mute", ChatController.toggleMute);
 router.get("/:chatId", ChatController.getChat);
 router.delete("/:chatId", ChatController.deleteChat);
 

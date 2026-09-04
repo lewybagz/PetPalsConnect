@@ -1,15 +1,25 @@
 const GroupChat = require("../models/GroupChat");
 const Media = require("../models/Media");
 const Message = require("../models/Message");
-const { sendPushNotification } = require("./NotificationController");
 const {
-  createNotification,
+  notify,
   fetchGroupParticipants,
 } = require("../services/NotificationService");
 const { createHash } = require("node:crypto");
 
 // Node's built-in crypto replaces the crypto-js dependency.
 const SHA256 = (value) => createHash("sha256").update(String(value)).digest("hex");
+
+/**
+ * The group, if the caller is in it.
+ *
+ * Naming a group id was enough to read its whole message history, archive it,
+ * mute it, post media into it, or remove somebody from it: every one of those
+ * handlers looked the chat up by id and stopped there. `authenticate` proves
+ * you have an account, not that the conversation is yours.
+ */
+const memberChat = (chatId, userId) =>
+  GroupChat.findOne({ _id: chatId, participants: userId });
 
 const GroupChatController = {
   async getAllGroupChats(req, res) {
@@ -29,9 +39,12 @@ const GroupChatController = {
   async getGroupChatDetails(req, res) {
     const { chatId } = req.params;
     try {
-      const chat = await GroupChat.findById(chatId)
+      // The projection asked for pet fields - `name breed photo ownerId` - on
+      // documents that are users, so every participant came back with an id
+      // and nothing else.
+      const chat = await memberChat(chatId, req.userId)
         .populate("messages")
-        .populate("participants", "name breed photo ownerId")
+        .populate("participants", "username userPhoto")
         .populate("media");
 
       if (!chat) {
@@ -47,8 +60,8 @@ const GroupChatController = {
   async archiveGroupChat(req, res) {
     const groupChatId = req.params.chatId;
     try {
-      const updatedGroupChat = await GroupChat.findByIdAndUpdate(
-        groupChatId,
+      const updatedGroupChat = await GroupChat.findOneAndUpdate(
+        { _id: groupChatId, participants: req.userId },
         { isArchived: true },
         { new: true }
       );
@@ -101,22 +114,21 @@ const GroupChatController = {
       const members = await fetchGroupParticipants(groupId, req.userId);
 
       const io = req.app.get("io");
+      const muted = new Set((groupChat.mutedBy ?? []).map(String));
+
       await Promise.all(
         members.map((member) => {
           io?.to(String(member.id)).emit("message", message);
-          return Promise.all([
-            createNotification({
-              content: `New message in your group chat from ${senderName}.`,
-              recipientId: member.id,
-              type: "GroupMessage",
-              creatorId: req.userId,
-            }),
-            sendPushNotification(member.id, {
-              title: `New Message in ${groupChat.name}`,
-              body: `${senderName} posted in the group.`,
-              data: { type: "message", chatId: String(groupChat._id) },
-            }),
-          ]);
+          // The push said `type: "message"`, which routes to the one-to-one
+          // Chat screen; a group message opened the wrong conversation.
+          return notify({
+            content: `${senderName} posted in ${groupChat.groupName ?? "your group"}.`,
+            recipientId: member.id,
+            type: "groupMessage",
+            creatorId: req.userId,
+            data: { chatId: groupChat._id },
+            push: !muted.has(String(member.id)),
+          });
         })
       ).catch((error) => console.warn("[groupchat] notify failed:", error.message));
 
@@ -168,15 +180,18 @@ const GroupChatController = {
   },
 
   async reactToMessage(req, res) {
-    const { groupId, messageId, reactorId, reaction } = req.body;
+    const { groupId, messageId, reaction } = req.body;
+    // Who reacted comes from the token: `reactorId` was read from the body, so
+    // anyone could attribute a reaction to anyone.
+    const reactorId = req.userId;
     // Adding a pet is optional, so a user may legitimately have none. This read
     // was unguarded and threw for those accounts.
     const senderPetName = req.user?.pets?.[0]?.name ?? req.user?.username ?? "Someone";
 
     try {
-      const groupChat = await GroupChat.findById(groupId)
-        .populate("participants")
-        .populate("name");
+      // `.populate("name")` names a String path, not a reference; `name` is not
+      // a path on this schema at all - the group's name is `groupName`.
+      const groupChat = await GroupChat.findById(groupId).populate("participants");
       const message = await Message.findById(messageId);
 
       if (!groupChat || !message) {
@@ -185,36 +200,33 @@ const GroupChatController = {
           .json({ message: "Group chat or message not found" });
       }
 
+      // Naming a group id is not membership in it.
+      if (
+        !groupChat.participants.some(
+          (participant) => String(participant._id) === String(reactorId)
+        )
+      ) {
+        return res.status(403).json({ message: "You are not in this group" });
+      }
+
       const recipients = groupChat.participants.filter(
-        (participant) => participant._id.toString() !== reactorId
+        (participant) => String(participant._id) !== String(reactorId)
       );
 
-      const notificationPromises = recipients.map((member) => {
-        const notificationData = {
-          recipientUserId: member._id,
-          title: `Someone reacted to a message in ${groupChat.name}.`,
-          message: `${senderPetName} reacted with ${reaction}.`,
-          data: {
-            groupId,
-            messageId,
-            reactorId,
-            reaction,
-          },
-        };
-
-        return Promise.all([
-          createNotification({
-            content: notificationData.message,
+      await Promise.all(
+        recipients.map((member) =>
+          notify({
+            content: `${senderPetName} reacted with ${reaction} in ${
+              groupChat.groupName ?? "your group"
+            }.`,
             recipientId: member._id,
-            type: "MessageReaction",
+            type: "messageReaction",
             creatorId: reactorId,
             petName: senderPetName,
-          }),
-          sendPushNotification(member._id, notificationData),
-        ]);
-      });
-
-      await Promise.all(notificationPromises.flat());
+            data: { chatId: groupId, messageId },
+          })
+        )
+      );
 
       res
         .status(200)
@@ -228,10 +240,10 @@ const GroupChatController = {
   async getGroupChatById(req, res, next) {
     let groupChat;
     try {
-      groupChat = await GroupChat.findById(req.params.id)
+      groupChat = await memberChat(req.params.id, req.userId)
         .populate("messages")
-        .populate("participants")
-        .populate("creator");
+        .populate("participants", "username userPhoto")
+        .populate("creator", "username userPhoto");
       if (groupChat == null) {
         return res.status(404).json({ message: "Cannot find GroupChat" });
       }
@@ -243,38 +255,50 @@ const GroupChatController = {
     next();
   },
 
-  // Example method in GroupChatController
+  /**
+   * Mutes or unmutes this group, for the caller only.
+   *
+   * `chat.UserSettings` is not a path on this schema, so reading `.find` on it
+   * threw a TypeError into the catch below and muting a group has always been
+   * a 400. `isMuted` was a single boolean on the chat besides, so getting it to
+   * work would have muted the group for everybody in it.
+   */
   async toggleMute(req, res) {
-    const { userId, chatId, mute } = req.body;
+    const { chatId, mute } = req.body;
+
     try {
-      const chat = await GroupChat.findById(chatId);
-      const userSetting = chat.UserSettings.find(
-        (setting) => setting.user.toString() === userId
-      );
-      if (userSetting) {
-        userSetting.isMuted = mute;
-      } else {
-        chat.UserSettings.push({ user: userId, isMuted: mute });
+      const chat = await memberChat(chatId, req.userId);
+      if (!chat) {
+        return res.status(404).json({ message: "GroupChat not found" });
       }
+
+      if (mute === false) chat.mutedBy.pull(req.userId);
+      else chat.mutedBy.addToSet(req.userId);
+
       await chat.save();
-      res.status(200).json({ message: "Notification settings updated" });
+      res.status(200).json({ muted: mute !== false });
     } catch (err) {
       res.status(400).json({ message: err.message });
     }
   },
 
   async handleSendMedia(req, res) {
-    const { chatId, mediaUrl, mediaType, userId } = req.body;
+    const { chatId, mediaUrl, mediaType } = req.body;
 
     try {
-      const newMedia = new Media({
+      const chat = await memberChat(chatId, req.userId);
+      if (!chat) {
+        return res.status(404).json({ message: "GroupChat not found" });
+      }
+
+      const newMedia = await Media.create({
         url: mediaUrl,
         type: mediaType,
-        createdBy: userId,
+        // Was `createdBy: userId` straight off the body, so a client could
+        // attribute an upload to anybody.
+        createdBy: req.userId,
       });
-      await newMedia.save();
 
-      const chat = await GroupChat.findById(chatId);
       chat.media.push(newMedia);
       await chat.save();
       res.status(200).json({ message: "Media sent successfully" });
@@ -287,7 +311,10 @@ const GroupChatController = {
   async fetchChatMedia(req, res) {
     const chatId = req.params.chatId;
     try {
-      const chat = await GroupChat.findById(chatId).populate("media");
+      const chat = await memberChat(chatId, req.userId).populate("media");
+      if (!chat) {
+        return res.status(404).json({ message: "GroupChat not found" });
+      }
       res.json({ media: chat.media });
     } catch (error) {
       console.error("Error fetching media:", error);
@@ -295,11 +322,22 @@ const GroupChatController = {
     }
   },
 
+  /**
+   * Leaves a group.
+   *
+   * `userId` came from the body and nothing checked it against the caller, so
+   * this was "remove anybody from any group chat" to any signed-in account.
+   */
   async leaveGroup(req, res) {
-    const { userId, chatId } = req.body;
+    const { chatId } = req.body;
     try {
-      const chat = await GroupChat.findById(chatId);
-      chat.participants.pull(userId); // This removes the user from the participants array
+      const chat = await memberChat(chatId, req.userId);
+      if (!chat) {
+        return res.status(404).json({ message: "GroupChat not found" });
+      }
+
+      chat.participants.pull(req.userId);
+      chat.mutedBy.pull(req.userId);
       await chat.save();
       res.status(200).json({ message: "Successfully left the group chat" });
     } catch (err) {
@@ -310,7 +348,7 @@ const GroupChatController = {
   async getGroupChatPets(req, res) {
     try {
       const groupId = req.params.groupId;
-      const groupChat = await GroupChat.findById(groupId).populate({
+      const groupChat = await memberChat(groupId, req.userId).populate({
         path: "participants",
         populate: {
           path: "pets",
@@ -334,35 +372,51 @@ const GroupChatController = {
       res.status(500).json({ message: err.message });
     }
   },
+  /**
+   * The group for this exact set of people, created on demand.
+   *
+   * This could not run. `this.isEqualParticipants` is undefined the moment
+   * Express takes the handler by reference; the loop then called `.findOne` on
+   * a *document* and `new chat(...)` on one; and both helpers were `async`, so
+   * `!this.isEqualParticipants(...)` negated a Promise and was always false
+   * anyway. The payload was PascalCase - `Participants`, `GroupName`,
+   * `Creator` - against a lowercase schema, and `Creator` was a Firebase uid
+   * taken from the body where a Mongo user id was wanted.
+   *
+   * The key is the sorted participant set, the same idea as a 1:1 chat, so the
+   * same group is found whoever asks for it and in whatever order.
+   */
   async findOrCreateGroupChat(req, res) {
-    const { Participants, GroupName, Creator } = req.body;
+    const participants = Array.isArray(req.body.participants)
+      ? req.body.participants
+      : [];
+    const groupName = req.body.groupName;
 
-    let baseId = Participants.map((id) => id.substring(0, 3)).join("");
-    baseId = baseId.length > 50 ? baseId.substring(0, 50) : baseId;
-    let chatId = SHA256(baseId);
+    // The creator is always in their own group. Without this the group did not
+    // appear in their list at all - `getAllGroupChats` filters on participants.
+    const ids = [...new Set([...participants.map(String), String(req.userId)])];
+
+    if (ids.length < 2) {
+      return res
+        .status(400)
+        .json({ message: "A group needs somebody else in it" });
+    }
+    if (!groupName) {
+      return res.status(400).json({ message: "groupName is required" });
+    }
+
+    const chatId = SHA256([...ids].sort().join("-"));
 
     try {
-      // Same self-referential bug: the model is `GroupChat`.
       let chat = await GroupChat.findOne({ chatId });
 
-      while (
-        chat &&
-        !this.isEqualParticipants(chat.participants, Participants)
-      ) {
-        baseId = this.scrambleId(baseId);
-        chatId = SHA256(baseId);
-        chat = await chat.findOne({ chatId });
-      }
-
       if (!chat) {
-        chat = new chat({
+        chat = await GroupChat.create({
           chatId,
-          participants: Participants,
-          groupName: GroupName,
-          creator: Creator,
-          // other chat properties
+          groupName,
+          participants: ids,
+          creator: req.userId,
         });
-        await chat.save();
       }
 
       res.status(200).json(chat);
@@ -371,31 +425,17 @@ const GroupChatController = {
     }
   },
 
-  async isEqualParticipants(existingParticipants, newParticipants) {
-    // Create sets for easy comparison
-    const setExisting = new Set(existingParticipants);
-    const setNew = new Set(newParticipants);
-
-    if (setExisting.size !== setNew.size) return false;
-
-    for (const id of setExisting) {
-      if (!setNew.has(id)) return false;
-    }
-
-    return true;
-  },
-
-  async scrambleId(id) {
-    // Append a random character or string to the ID
-    const randomString = Math.random().toString(36).substring(2, 7);
-    return id + randomString;
-  },
-
   async createGroupChat(req, res) {
+    const participants = Array.isArray(req.body.participants)
+      ? req.body.participants.map(String)
+      : [];
+
     const groupChat = new GroupChat({
       groupName: req.body.groupName,
       messages: [],
-      participants: req.body.participants,
+      // The creator was left out of their own group, so it never showed up in
+      // their list - `getAllGroupChats` filters on participants.
+      participants: [...new Set([...participants, String(req.userId)])],
       // Identity comes from the token, never the body.
       creator: req.userId,
       media: req.body.media || [],
@@ -412,15 +452,19 @@ const GroupChatController = {
   async deleteGroupChat(req, res) {
     const { chatId } = req.params;
     try {
-      const groupChat = await GroupChat.findById(chatId);
+      // Only the person who made the group may delete it; everybody else
+      // leaves it. This deleted any group by id, from any account.
+      const groupChat = await GroupChat.findOne({
+        _id: chatId,
+        creator: req.userId,
+      });
       if (!groupChat) {
         return res.status(404).json({ message: "Group Chat not found" });
       }
 
-      // Optionally, remove associated messages or other related data
-      // ...
-
-      await groupChat.remove();
+      // `.remove()` was removed from Mongoose in v7, so this threw.
+      await Message.deleteMany({ _id: { $in: groupChat.messages } });
+      await groupChat.deleteOne();
       res.status(200).json({ message: "Group Chat deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: error.message });

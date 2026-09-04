@@ -125,6 +125,34 @@ jest.mock("react-native-safe-area-context", () => {
   };
 });
 
+// A socket that never opens a connection.
+//
+// `useSocketEvents` reaches `services/socket`, which creates a real socket.io
+// client on first use. Any suite that renders a screen with a live-update hook
+// therefore opened a network handle and Jest hung after the run with "Jest did
+// not exit one second after the test run has completed" - a green suite that
+// never returns, which in CI is a timeout rather than a failure. `socket.test.js`
+// declares its own mock, which takes precedence for that file.
+jest.mock("socket.io-client", () => {
+  const listeners = new Map();
+  const socket = {
+    connected: true,
+    id: "test-socket",
+    emit: jest.fn(),
+    on: jest.fn((event, handler) => {
+      listeners.set(event, handler);
+      return socket;
+    }),
+    off: jest.fn((event) => {
+      listeners.delete(event);
+      return socket;
+    }),
+    disconnect: jest.fn(),
+    close: jest.fn(),
+  };
+  return { io: jest.fn(() => socket), __socket: socket };
+});
+
 // Quieten the expected console noise from error-path tests.
 global.__DEV__ = true;
 

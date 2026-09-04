@@ -233,3 +233,68 @@ test("the app's copy of the matching weights matches the algorithm", () => {
 
   assert.deepEqual(appWeights, WEIGHTS);
 });
+
+test("the app's notification types match the server's, entry for entry", () => {
+  const backend = require("../services/notificationTypes");
+  const appSource = fs.readFileSync(
+    path.resolve(__dirname, "../../PetPalsConnectApp/src/api/notifications.js"),
+    "utf8"
+  );
+
+  // The table decides which screen a tap opens. Two copies that drift produce
+  // exactly the bug this replaced: the same event routing one way from a lock
+  // screen and somewhere else - or nowhere - from the list.
+  const table = appSource.slice(
+    appSource.indexOf("export const TYPES"),
+    appSource.indexOf("};", appSource.indexOf("export const TYPES"))
+  );
+
+  const appEntries = new Map(
+    [...table.matchAll(/(\w+):\s*\{\s*screen:\s*"(\w+)",\s*param:\s*(?:"(\w+)"|null)/g)].map(
+      (match) => [match[1], { screen: match[2], param: match[3] ?? null }]
+    )
+  );
+
+  assert.deepEqual(
+    [...appEntries.keys()].sort(),
+    Object.keys(backend.TYPES).sort(),
+    "the app and the server disagree about which notification types exist"
+  );
+
+  for (const [name, entry] of Object.entries(backend.TYPES)) {
+    assert.deepEqual(
+      appEntries.get(name),
+      { screen: entry.screen, param: entry.param },
+      `notification type "${name}" routes differently on the two sides`
+    );
+  }
+
+  // The legacy table exists so rows written before this one keep routing; it
+  // has to hold on both sides or an upgrade empties somebody's list.
+  for (const [legacy, canonical] of Object.entries(backend.LEGACY)) {
+    assert.ok(
+      appSource.includes(`"${legacy}": "${canonical}"`) ||
+        appSource.includes(`${legacy}: "${canonical}"`),
+      `the app does not map the stored value "${legacy}" to "${canonical}"`
+    );
+  }
+});
+
+test("every notification destination is a screen the app registers", () => {
+  const backend = require("../services/notificationTypes");
+  const stack = fs.readFileSync(
+    path.resolve(__dirname, "../../PetPalsConnectApp/src/screens/navigation/AppStack.js"),
+    "utf8"
+  );
+  const tabs = fs.readFileSync(
+    path.resolve(__dirname, "../../PetPalsConnectApp/src/screens/navigation/BottomTab.js"),
+    "utf8"
+  );
+
+  for (const [name, entry] of Object.entries(backend.TYPES)) {
+    assert.ok(
+      stack.includes(`name="${entry.screen}"`) || tabs.includes(`name="${entry.screen}"`),
+      `notification "${name}" routes to "${entry.screen}", which is not registered`
+    );
+  }
+});

@@ -109,9 +109,12 @@ const GroupChatScreen = ({ route, navigation }) => {
     Alert.alert("Copied to Clipboard", messageText);
   };
 
+  // `pet.id` is not a field on a Mongoose document serialised to JSON - it is
+  // `_id` - so tapping a pet in the group header navigated with an undefined
+  // id and PetDetails rendered nothing.
   const handlePetSelect = (pet) => {
-    console.log("Selected Pet:", pet.name);
-    navigation.navigate("PetDetails", { petId: pet.id });
+    const petId = pet?._id ?? pet?.id;
+    if (petId) navigation.navigate("PetDetails", { petId: String(petId) });
   };
 
   const toggleSearch = () => {

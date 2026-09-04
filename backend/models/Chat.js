@@ -26,10 +26,14 @@ const chatSchema = new Schema({
       ref: "Message",
     },
   ],
-  isMuted: {
-    type: Boolean,
-    default: false,
-  },
+  // Per person, not per conversation: a shared boolean would let one side
+  // silence the other's notifications.
+  mutedBy: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
   petId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Pet",

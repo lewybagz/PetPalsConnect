@@ -36,9 +36,14 @@ const ChatScreen = ({ route, navigation }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [isModalVisible, setModalVisible] = useState(false);
-  const [chatId, setChatId] = useState(null);
+  // A message notification carries a chat id and nothing else - it is raised by
+  // the server, which has no pet in scope. This read `route.params.pet`
+  // unguarded, so opening a chat from a push landed on a screen that asked the
+  // API to find-or-create a conversation with `petId: undefined` and then said
+  // "Could not open this conversation."
+  const [chatId, setChatId] = useState(route?.params?.chatId ?? null);
   const [otherUserId, setOtherUserId] = useState(null);
-  const petInfo = route.params.pet;
+  const [petInfo, setPetInfo] = useState(route?.params?.pet ?? null);
   const petId = petInfo?._id;
   const flatListRef = useRef(null);
   const dispatch = useDispatch();
@@ -78,8 +83,14 @@ const ChatScreen = ({ route, navigation }) => {
    */
   const initiateChat = useCallback(async () => {
     try {
-      const { data } = await api.post("/api/chats/findOrCreate", { petId });
+      // Arriving from a notification we already have the conversation; ask for
+      // it rather than trying to derive it from a pet we were not given.
+      const { data } = petId
+        ? await api.post("/api/chats/findOrCreate", { petId })
+        : await api.get(`/api/chats/${chatId}`);
+
       setChatId(data._id);
+      if (!petInfo && data.petId) setPetInfo(data.petId);
 
       // The person on the other end, for the block-and-report menu. Taken from
       // the chat rather than the pet, because a pet reached through the match
@@ -238,6 +249,9 @@ const ChatScreen = ({ route, navigation }) => {
           isVisible={isModalVisible}
           onClose={toggleModal}
           navigation={navigation}
+          // The sheet read the id out of the store, where nothing set it for a
+          // one-to-one chat, so both of its actions ran against `undefined`.
+          chatId={chatId}
         />
       </View>
       <FlatList

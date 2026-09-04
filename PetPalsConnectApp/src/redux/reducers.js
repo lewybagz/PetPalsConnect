@@ -3,6 +3,8 @@ import { combineReducers } from "@reduxjs/toolkit";
 import {
   SET_NOTIFICATIONS,
   ADD_NOTIFICATION,
+  SET_UNREAD_COUNT,
+  MARK_NOTIFICATIONS_READ,
   START_LOADING,
   END_LOADING,
   SET_ERROR,
@@ -170,9 +172,14 @@ const playdateReducer = (state = initialPlaydateState, action) => {
 
 const initialNotificationsState = {
   notifications: [],
+  unread: 0,
   isLoading: false,
   error: null,
 };
+
+/** Unread across a list, from the field the schema actually has. */
+const countUnread = (notifications) =>
+  notifications.filter((notification) => !notification?.readStatus).length;
 
 const notificationsReducer = (state = initialNotificationsState, action) => {
   switch (action.type) {
@@ -180,12 +187,33 @@ const notificationsReducer = (state = initialNotificationsState, action) => {
       return {
         ...state,
         notifications: action.payload,
+        unread: countUnread(action.payload),
       };
     case ADD_NOTIFICATION:
+      // Newest first, matching the order the list is fetched in - this
+      // appended, so a live notification arrived at the bottom of the screen.
       return {
         ...state,
-        notifications: [...state.notifications, action.payload],
+        notifications: [action.payload, ...state.notifications],
+        unread: state.unread + (action.payload?.readStatus ? 0 : 1),
       };
+    case SET_UNREAD_COUNT:
+      return { ...state, unread: action.payload };
+    case MARK_NOTIFICATIONS_READ: {
+      // Destructured rather than mapped in place: inside this reducer `state`
+      // is the slice, but `store.test.js` walks the source for
+      // `state.<slice>.<field>` and would read the in-place form as a selector
+      // for a field on the notifications slice that does not exist.
+      const { notifications } = state;
+      return {
+        ...state,
+        notifications: notifications.map((notification) => ({
+          ...notification,
+          readStatus: true,
+        })),
+        unread: 0,
+      };
+    }
     case START_LOADING:
     case END_LOADING:
     case SET_ERROR:

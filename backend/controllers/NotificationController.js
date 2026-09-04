@@ -1,8 +1,9 @@
 const Notification = require("../models/Notification");
 const User = require("../models/User");
 const Playdate = require("../models/Playdate");
-const firebase = require("../config/firebase");
 const scheduler = require("../services/scheduler");
+const { notify, sendPush } = require("../services/NotificationService");
+const { normalise } = require("../services/notificationTypes");
 
 const findTokenByUserId = async (userId) => {
   const user = await User.findById(userId).select("fcmToken");
@@ -11,45 +12,28 @@ const findTokenByUserId = async (userId) => {
 
 const findPlaydateById = (playdateId) => Playdate.findById(playdateId);
 
-/** Send a push to a single user. No-ops safely when the user has no token. */
-const sendPushNotification = async (userId, notificationData) => {
-  const token = await findTokenByUserId(userId);
-  if (!token) {
-    console.warn(`[notifications] No FCM token for user ${userId}; skipping push`);
-    return null;
-  }
-
-  return firebase.sendMessage({
-    token,
-    notification: {
-      title: notificationData.title,
-      body: notificationData.body,
-    },
-    // FCM requires every data value to be a string.
-    data: Object.fromEntries(
-      Object.entries(notificationData.data || {}).map(([k, v]) => [k, String(v)])
-    ),
-  });
-};
-
-const sendPlaydateNotification = async (req, res, next) => {
-  try {
-    const { to, title, body, data } = req.body;
-    await sendPushNotification(to, { title, body, data });
-    res.json({ message: "Notification sent successfully" });
-  } catch (error) {
-    next(error);
-  }
-};
+/**
+ * Send a push to a single user. No-ops safely when the user has no token.
+ *
+ * The implementation moved to `services/NotificationService` - five other
+ * controllers were importing a controller to reach it. This name stays as the
+ * way a request handler sends a bare push with no stored row behind it.
+ */
+const sendPushNotification = (userId, notificationData) =>
+  sendPush(userId, notificationData);
 
 const REVIEW_REMINDER_JOB = "playdate:review-reminder";
 
 // Registered once at module load; the scheduler drains due jobs every minute.
+//
+// This sent a push and stored nothing, so a reminder that arrived while the
+// phone was off was gone for good - there was no row for the list to show.
 scheduler.registerHandler(REVIEW_REMINDER_JOB, async ({ userId, playdateId }) => {
-  await sendPushNotification(userId, {
-    title: "Playdate Review",
-    body: "How was your playdate? Leave a review!",
-    data: { type: "reviewReminder", screen: "PostPlaydateReview", playdateId },
+  await notify({
+    content: "How was your playdate? Leave a review.",
+    recipientId: userId,
+    type: "reviewReminder",
+    data: { playdateId },
   });
 });
 
@@ -77,23 +61,88 @@ const NotificationController = {
     }
   },
 
+  /**
+   * One user's notifications - which can only be the caller's own.
+   *
+   * The id came from the URL and was used unchecked, so any signed-in user
+   * could read anybody's notifications by putting their id in the path. Being
+   * able to name a row is not permission to read it. The sort was `Timestamp`
+   * with a capital T, which is not a path either, so the list came back in
+   * insertion order however old it was.
+   */
   async getUserNotifications(req, res) {
     const { userId } = req.params;
+
+    if (String(userId) !== String(req.userId)) {
+      return res.status(403).json({ message: "Not your notifications" });
+    }
+
     try {
-      // `Recipient` is not a path - the schema has `recipient` - and
-      // `strictQuery` is off, so this filtered on a field that does not exist
-      // and returned nothing. The notifications screen has always been empty.
-      const userNotifications = await Notification.find({ recipient: userId })
-        .populate("recipient", "name") // Assuming you only need the name
-        .populate("creator", "name") // Same here
-        .sort({ Timestamp: -1 });
+      const userNotifications = await Notification.find({ recipient: req.userId })
+        .populate("creator", "username")
+        .sort({ timestamp: -1 })
+        .limit(200);
 
       res.json(userNotifications);
     } catch (err) {
       console.error("Failed to fetch notifications for user:", userId, err);
-      res
-        .status(500)
-        .json({ message: "Failed to fetch notifications", error: err });
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  },
+
+  /**
+   * How many are unread, for the tab badge.
+   *
+   * A count rather than the list: the badge is on the tab bar, which is mounted
+   * for the whole session, and it must not pull 200 documents to draw a dot.
+   */
+  async getUnreadCount(req, res) {
+    try {
+      const unread = await Notification.countDocuments({
+        recipient: req.userId,
+        readStatus: false,
+      });
+      res.json({ unread });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  /**
+   * Marks everything read.
+   *
+   * `readStatus` has been on the schema from the start with a default of false
+   * and nothing has ever set it to true, so the badge - had it worked - could
+   * only ever count up.
+   */
+  async markAllRead(req, res) {
+    try {
+      const result = await Notification.updateMany(
+        { recipient: req.userId, readStatus: false },
+        { $set: { readStatus: true, modifiedDate: new Date() } }
+      );
+      res.json({ updated: result.modifiedCount ?? 0, unread: 0 });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  /** Marks one read, scoped to the caller so an id alone is not enough. */
+  async markRead(req, res) {
+    try {
+      const notification = await Notification.findOneAndUpdate(
+        { _id: req.params.id, recipient: req.userId },
+        { $set: { readStatus: true, modifiedDate: new Date() } },
+        { new: true }
+      );
+
+      if (!notification) {
+        return res.status(404).json({ message: "Cannot find notification" });
+      }
+
+      res.json(notification);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
     }
   },
 
@@ -138,66 +187,27 @@ const NotificationController = {
     }
   },
 
-  async handleSendNotification(req, res) {
-    const { userId, notificationData } = req.body;
-    try {
-      await sendPushNotification(userId, notificationData);
-      res.status(200).json({ message: "Notification sent successfully" });
-    } catch (error) {
-      console.error("Error in sending notification:", error);
-      res.status(500).json({ error: error.message });
-    }
-  },
-
-  async sendFriendRequestNotification(req, res) {
-    try {
-      const { userId, requesterId } = req.body;
-
-      const token = await findTokenByUserId(userId);
-      if (!token) throw new Error("FCM token not found for user");
-
-      const requester = await User.findById(requesterId).populate("pets", "name");
-      if (!requester) throw new Error("Requester not found");
-      const requesterName = requester.username;
-      const firstPetName = requester.pets[0]?.name || "No pet name";
-
-      const message = {
-        token: token,
-        notification: {
-          title: "New Friend Request",
-          body: `${requesterName} has sent you a friend request! Pet: ${firstPetName}`,
-        },
-        // Optionally, add data field if you want to send additional data along with the notification
-        data: {
-          type: "friendRequest",
-          requesterId: requester._id.toString(),
-          petName: firstPetName,
-          // Add other data as needed
-        },
-      };
-
-      await firebase.sendMessage(message);
-      res.json({ message: "Friend request notification sent successfully" });
-    } catch (error) {
-      console.log("Error sending friend request notification:", error);
-      res.status(500).json({ message: error.message });
-    }
-  },
-
+  /**
+   * The last three days.
+   *
+   * `user` and `createdAt` are not paths on this schema - they are `recipient`
+   * and `createdDate` - and `strictQuery` is off, so this asked Mongo for
+   * documents with a field that does not exist and got an empty array every
+   * time, on a route whose whole purpose is "anything new?".
+   */
   async fetchRecentNotifications(req, res) {
     try {
-      const userId = req.userId;
-      const threshold = new Date(new Date().getTime() - 73 * 60 * 60 * 1000);
+      const threshold = new Date(Date.now() - 72 * 60 * 60 * 1000);
 
       const notifications = await Notification.find({
-        user: userId,
-        createdAt: { $gte: threshold },
-      }).sort({ createdAt: -1 });
+        recipient: req.userId,
+        timestamp: { $gte: threshold },
+      }).sort({ timestamp: -1 });
 
       res.status(200).json(notifications);
     } catch (error) {
       console.error("Error fetching recent notifications:", error);
-      res.status(500).json({ message: "Error fetching notifications", error });
+      res.status(500).json({ message: "Error fetching notifications" });
     }
   },
 
@@ -206,7 +216,7 @@ const NotificationController = {
       content: req.body.content,
       readStatus: req.body.readStatus || false,
       recipient: req.body.recipient,
-      type: req.body.type,
+      type: normalise(req.body.type),
       // Identity comes from the token, never the body.
       creator: req.userId,
       petName: req.body.petName,
@@ -224,7 +234,6 @@ const NotificationController = {
 
 module.exports = NotificationController;
 module.exports.sendPushNotification = sendPushNotification;
-module.exports.sendPlaydateNotification = sendPlaydateNotification;
 module.exports.pushPlaydateReviewReminderNotification =
   pushPlaydateReviewReminderNotification;
 module.exports.findTokenByUserId = findTokenByUserId;

@@ -1,19 +1,32 @@
 const FriendRequest = require("../models/FriendRequest");
 const User = require("../models/User");
-const Friend = require("../models/Friend");
-const { sendPushNotification } = require("./NotificationController");
-const { createNotification } = require("../services/NotificationService");
+const FriendController = require("./FriendController");
+const { notify } = require("../services/NotificationService");
 const { emitToUser } = require("../services/realtime");
 
+/**
+ * The two parties as plain ids.
+ *
+ * The loader populates both, so `friendRequest.sender` is a User *document*
+ * downstream and a raw ObjectId elsewhere. Anything that compares or stores
+ * them has to go through this, or it compares a document to an id.
+ */
+const idOf = (party) => String(party?._id ?? party);
+const senderId = (friendRequest) => idOf(friendRequest.sender);
+const receiverId = (friendRequest) => idOf(friendRequest.receiver);
+
+/**
+ * Records that these two are now friends.
+ *
+ * This looked for `{ sender, receiver }` - neither of which is a path on the
+ * Friend schema, which has `user1`/`user2` - so it found nothing, logged
+ * "Friend relationship not found." and returned. Nothing else ever wrote a
+ * Friend row either, so accepting a friend request has never made two people
+ * friends: the request went to "accepted" and the friends list stayed empty.
+ */
 async function updateFriendStatus(sender, receiver) {
   try {
-    const friend = await Friend.findOne({ sender, receiver });
-    if (friend) {
-      friend.status = true;
-      await friend.save();
-    } else {
-      console.log("Friend relationship not found.");
-    }
+    await FriendController.linkFriends(sender, receiver);
   } catch (err) {
     console.error("Failed to update friend status:", err);
   }
@@ -62,6 +75,14 @@ const FriendRequestController = {
     if (!res.friendRequest) {
       return res.status(404).json({ message: "No friend request loaded" });
     }
+    // The loader lets either party through, which is right for reading it and
+    // wrong for this: without the check, the sender could accept their own
+    // request and make somebody their friend unilaterally.
+    if (String(receiverId(res.friendRequest)) !== String(req.userId)) {
+      return res
+        .status(403)
+        .json({ message: "Only the person invited can accept" });
+    }
     if (res.friendRequest.status !== "pending") {
       return res
         .status(400)
@@ -69,7 +90,7 @@ const FriendRequestController = {
     }
 
     try {
-      const requester = await User.findById(res.friendRequest.sender).populate(
+      const requester = await User.findById(senderId(res.friendRequest)).populate(
         "pets"
       );
       if (!requester) {
@@ -78,14 +99,6 @@ const FriendRequestController = {
       }
 
       const petName = requester.pets[0]?.name || "Unknown Pet";
-      const notificationData = {
-        title: "Friend Request Accepted",
-        body: `${petName} accepted your friend request!`,
-        data: {
-          type: "acceptance",
-          petName: petName,
-        },
-      };
 
       res.friendRequest.status = "accepted";
       res.friendRequest.modifiedDate = Date.now();
@@ -93,19 +106,19 @@ const FriendRequestController = {
 
       // `createNotification` takes one options object, not (id, data): the
       // positional call destructured `content`/`recipientId` off an ObjectId,
-      // so every field came out undefined.
+      // so every field came out undefined. `data.type` said "acceptance",
+      // which is not a type the app routes on, so the push went nowhere.
       await Promise.all([
-        sendPushNotification(requester._id, notificationData),
-        createNotification({
-          content: notificationData.body,
+        notify({
+          content: `${petName} accepted your friend request!`,
           recipientId: requester._id,
-          type: "FriendRequestAccepted",
+          type: "friendAccepted",
           creatorId: req.userId,
           petName,
         }),
         updateFriendStatus(
-          res.friendRequest.sender,
-          res.friendRequest.receiver
+          senderId(res.friendRequest),
+          receiverId(res.friendRequest)
         ),
       ]);
 
@@ -121,6 +134,13 @@ const FriendRequestController = {
     try {
       if (!res.friendRequest) {
         return res.status(404).json({ message: "No friend request loaded" });
+      }
+      // As with accepting: the loader admits either party, but only the person
+      // invited gets to answer.
+      if (String(receiverId(res.friendRequest)) !== String(req.userId)) {
+        return res
+          .status(403)
+          .json({ message: "Only the person invited can decline" });
       }
       if (res.friendRequest.status !== "pending") {
         return res
@@ -138,7 +158,20 @@ const FriendRequestController = {
   },
 
   async createFriendRequest(req, res) {
-    const { sender, receiver } = req.body;
+    // `sender` came from the body, so a client could send a friend request as
+    // somebody else - and the receiver would see their name on it. The audit
+    // missed it because the field was destructured first and then written in
+    // shorthand, which is why it now checks the destructure too.
+    const sender = req.userId;
+    const { receiver } = req.body;
+
+    if (!receiver) {
+      return res.status(400).json({ message: "receiver is required" });
+    }
+    if (String(receiver) === String(sender)) {
+      return res.status(400).json({ message: "You cannot befriend yourself" });
+    }
+
     const newFriendRequest = new FriendRequest({
       sender,
       receiver,
@@ -153,27 +186,18 @@ const FriendRequestController = {
       const senderPetName = senderUser.pets[0]?.name || "Your pet";
       const receiverPetName = receiverUser.pets[0]?.name || "Your pet";
 
-      const notificationData = {
-        recipientUserId: receiver,
-        title: "New Friend Request",
-        message: `${senderPetName} wants to be friends with ${receiverPetName}! How pawesome is that?!`,
-        data: {
-          requestId: savedFriendRequest._id,
-          senderId: sender,
-          PetName: senderPetName,
-        },
-      };
-
-      await Promise.all([
-        sendPushNotification(notificationData),
-        createNotification({
-          content: notificationData.message,
-          recipientId: receiver,
-          type: "FriendRequest",
-          creatorId: sender,
-          petName: senderPetName,
-        }),
-      ]);
+      // `sendPushNotification(notificationData)` put the payload where the
+      // recipient goes, so Mongoose was handed an object to cast to an
+      // ObjectId and threw - inside the `Promise.all` of the create path,
+      // which turned every friend request into a 400.
+      await notify({
+        content: `${senderPetName} wants to be friends with ${receiverPetName}!`,
+        recipientId: receiver,
+        type: "friendRequest",
+        creatorId: sender,
+        petName: senderPetName,
+        data: { requesterId: sender },
+      });
 
       // Let the recipient's friends list update without a refetch.
       emitToUser(receiver, "friendRequest", savedFriendRequest);

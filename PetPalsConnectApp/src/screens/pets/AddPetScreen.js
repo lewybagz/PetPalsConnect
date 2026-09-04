@@ -18,7 +18,28 @@ import { useAuthSession } from "../../context/AuthSessionContext";
 import { BREEDS } from "../../data/breeds";
 import { clearError } from "../../redux/actions";
 import LoadingScreen from "../../components/LoadingScreenComponent";
+import { useToast } from "../../components/ui";
+
+/**
+ * A blank form.
+ *
+ * Resetting used to spread `{ name, breed, age }` over the state, which
+ * dropped `photos`, `weight` and `favoriteActivities` - so the next photo tap
+ * read `.length` on undefined and crashed the screen.
+ */
+const EMPTY_PET = {
+  name: "",
+  breed: "",
+  age: "",
+  photos: [],
+  specialNeeds: "",
+  temperament: "",
+  weight: { value: 0, unit: "lbs" },
+  favoriteActivities: [],
+};
+
 const AddPetScreen = ({ navigation }) => {
+  const toast = useToast();
 
   const [petDetails, setPetDetails] = useState([]);
   const [open, setOpen] = useState(false);
@@ -38,16 +59,7 @@ const AddPetScreen = ({ navigation }) => {
     }
   }, [error, dispatch]);
 
-  const [currentPet, setCurrentPet] = useState({
-    name: "",
-    breed: "",
-    age: "",
-    photos: [],
-    specialNeeds: "",
-    temperament: "",
-    weight: { value: 0, unit: "lbs" },
-    favoriteActivities: [],
-  });
+  const [currentPet, setCurrentPet] = useState(EMPTY_PET);
 
   const [activities, setActivities] = useState([
     { label: "Walking", value: "walking" },
@@ -113,19 +125,42 @@ const AddPetScreen = ({ navigation }) => {
       ),
     });
   };
+  /**
+   * Queues this pet and asks whether there is another.
+   *
+   * "Yes" was `console.log("Adding more")`, so the only thing that happened
+   * was the reset below - which spread a *three-key* object over the form
+   * state, dropping `photos`, `weight` and `favoriteActivities`. The next tap
+   * on "Add photo" then read `currentPet.photos.length` on undefined and
+   * threw, so adding a second pet crashed the screen.
+   *
+   * `weight` is checked here too: matching compares size, and the server
+   * requires it, so leaving it out queues a pet whose save fails at the end of
+   * the flow rather than at the field.
+   */
   const handleAddPet = () => {
     if (!currentPet.name || !currentPet.breed || !currentPet.age) {
       Alert.alert("Error", "Please fill all the fields.");
       return;
     }
-    setPetDetails([...petDetails, currentPet]);
-    setCurrentPet({ name: "", breed: "", age: "" });
+    if (!currentPet.weight?.value) {
+      Alert.alert("Error", "Please give a weight - matching compares size.");
+      return;
+    }
+
+    const queued = [...petDetails, currentPet];
+    setPetDetails(queued);
+    setCurrentPet(EMPTY_PET);
+
     Alert.alert(
-      "Add Another Pet?",
-      "",
+      "Add another pet?",
+      `${currentPet.name} is ready to save.`,
       [
-        { text: "Yes", onPress: () => console.log("Adding more") },
-        { text: "No", onPress: () => submitPets() },
+        {
+          text: "Add another",
+          onPress: () => toast.success(`${currentPet.name} added`),
+        },
+        { text: "Save and finish", onPress: () => submitPets(queued) },
       ],
       { cancelable: false }
     );
@@ -183,12 +218,14 @@ const AddPetScreen = ({ navigation }) => {
    * `{ pet, matches }`, so that was always undefined) and then PATCH the
    * collected ids onto the user - client-driven linking that wrote undefined.
    */
-  const submitPets = async () => {
-    if (petDetails.length === 0) return;
+  const submitPets = async (pets = petDetails) => {
+    // `setPetDetails` does not apply until the next render, so submitting
+    // straight after queueing saved every pet *except* the one just added.
+    if (pets.length === 0) return;
 
     setSubmitting(true);
     try {
-      for (const pet of petDetails) {
+      for (const pet of pets) {
         await api.post("/api/pets", {
           name: pet.name,
           breed: pet.breed,
@@ -206,7 +243,7 @@ const AddPetScreen = ({ navigation }) => {
       await refresh();
 
       setPetDetails([]);
-      Alert.alert("Success", "Pets added successfully!");
+      toast.success(pets.length === 1 ? "Pet added" : `${pets.length} pets added`);
       navigation.goBack();
     } catch (error) {
       console.error("Error submitting pets:", error);

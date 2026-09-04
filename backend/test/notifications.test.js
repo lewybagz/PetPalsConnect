@@ -56,7 +56,9 @@ test("a notification is stored with fields that can be read back", async () => {
 
   assert.ok(stored, "the notification must be findable by its recipient");
   assert.equal(stored.content, "You have a new message from Ada.");
-  assert.equal(stored.type, "DirectMessage");
+  // Written as the old free-string "DirectMessage" and stored canonically, so
+  // rows already in the database keep routing after the upgrade.
+  assert.equal(stored.type, "message");
   assert.equal(String(stored.creator), String(creator._id));
 });
 

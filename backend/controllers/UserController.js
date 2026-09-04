@@ -424,7 +424,10 @@ const UserController = {
   },
 
   async updateTwoFactorAuthentication(req, res) {
-    const { userId, enable2FA } = req.body;
+    // The account came from the body, so this turned two-factor authentication
+    // on or off for anybody whose id you had.
+    const userId = req.userId;
+    const { enable2FA } = req.body;
     try {
       // Assuming there is a field in your User model for 2FA settings
       const updatedUser = await User.findByIdAndUpdate(
@@ -464,7 +467,11 @@ const UserController = {
   },
 
   async updateSecurityQuestion(req, res) {
-    const { userId, question, answer } = req.body;
+    // Worse than the rest: with the id in the body, anybody could overwrite
+    // anybody else's security question *and* its answer - which is to say, set
+    // themselves a recovery route into that account.
+    const userId = req.userId;
+    const { question, answer } = req.body;
 
     try {
       const user = await User.findById(userId);

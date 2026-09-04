@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Alert } from "react-native";
+import { useDispatch } from "react-redux";
 import {
   getMessaging,
   getToken,
@@ -12,33 +12,25 @@ import {
 
 import { navigate } from "../navigation/navigationRef";
 import api from "../api/axios";
+import { useToast } from "../components/ui";
+import { destinationFor, fetchUnreadCount } from "../api/notifications";
+import { setUnreadCount } from "../redux/actions";
 
 /**
  * Maps a notification payload to a destination screen.
- * Route names must match the screens registered in AppStack.
+ *
+ * This was a second, private table written against the push payloads, so a
+ * `petMatch` - the one push in the app both people are waiting on - fell
+ * through to `default` and did nothing, and a stored notification tapped in the
+ * list routed by different rules or not at all. `src/api/notifications.js`
+ * holds the one table now, mirrored from the server's.
  */
-const routeForNotification = (remoteMessage) => {
-  const data = remoteMessage?.data ?? {};
-
-  switch (data.type) {
-    case "friendRequest":
-      return ["FriendRequests", { requesterId: data.requesterId }];
-    case "message":
-      return ["Chat", { chatId: data.chatId }];
-    case "playdate":
-      return ["PlaydateDetails", { playdateId: data.playdateId }];
-    case "reviewReminder":
-      return ["PostPlaydateReview", { playdateId: data.playdateId }];
-    case "general":
-      return ["Notifications", { notificationId: data.notificationId }];
-    default:
-      return null;
-  }
-};
+const routeForNotification = (remoteMessage) =>
+  destinationFor(remoteMessage?.data ?? {});
 
 const openNotification = (remoteMessage) => {
-  const target = routeForNotification(remoteMessage);
-  if (target) navigate(target[0], target[1]);
+  const [screen, params] = routeForNotification(remoteMessage);
+  navigate(screen, params);
 };
 
 /**
@@ -49,6 +41,9 @@ const openNotification = (remoteMessage) => {
  * app start regardless of auth state.
  */
 export default function usePushNotifications(enabled) {
+  const toast = useToast();
+  const dispatch = useDispatch();
+
   useEffect(() => {
     if (!enabled) return undefined;
 
@@ -80,13 +75,23 @@ export default function usePushNotifications(enabled) {
     register();
 
     // Foreground message: surface it rather than silently dropping it.
+    //
+    // This was `Alert.alert` - a modal that stops the app and looks like an OS
+    // error, for "you matched!". A toast says it and gets out of the way, and
+    // tapping it goes where the notification points.
     const unsubscribeOnMessage = onMessage(instance, async (remoteMessage) => {
       const { title, body } = remoteMessage.notification ?? {};
+
+      // The badge has to move whether or not the person taps anything.
+      fetchUnreadCount()
+        .then((unread) => dispatch(setUnreadCount(unread)))
+        .catch(() => {});
+
       if (title || body) {
-        Alert.alert(title ?? "Notification", body ?? "", [
-          { text: "Dismiss", style: "cancel" },
-          { text: "View", onPress: () => openNotification(remoteMessage) },
-        ]);
+        toast.show(body || title, {
+          actionLabel: "View",
+          onAction: () => openNotification(remoteMessage),
+        });
       }
     });
 
@@ -103,7 +108,7 @@ export default function usePushNotifications(enabled) {
       unsubscribeOnMessage();
       unsubscribeOnOpen();
     };
-  }, [enabled]);
+  }, [enabled, dispatch, toast]);
 }
 
 export { routeForNotification };

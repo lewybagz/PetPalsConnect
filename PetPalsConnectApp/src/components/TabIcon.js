@@ -1,56 +1,62 @@
-// React component for the Tab Icon
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
-import { View, Text } from "react-native";
-import { useTokens } from "../context/AppThemeContext";
+import { View } from "react-native";
 
+import { Text } from "./ui";
+import { useTokens } from "../context/AppThemeContext";
+import { useTailwind } from "../styles/tailwind";
+
+/**
+ * The notifications tab, with its unread badge.
+ *
+ * Three things were wrong with this at once, and the first of them took the
+ * whole tab bar down: it read `useSelector((state) => state.notifications)`,
+ * which is the slice object `{ notifications: [] }`, and then called `.some` on
+ * it - a TypeError on the first render of every signed-in screen. Had that
+ * worked, it filtered on `notification.read` and `notification.createdAt`,
+ * neither of which is a field on the schema (`readStatus` and `timestamp`), so
+ * the badge could never have appeared. And `ios-notifications` was removed in
+ * react-native-vector-icons v10, so the icon itself rendered blank.
+ *
+ * The count now comes from the store, which the screen and the push handler
+ * both keep current, so the badge does not need its own fetch.
+ */
 const NotificationTabIcon = ({ focused }) => {
   const tokens = useTokens();
-  const [hasRecentUnreadNotifications, setHasRecentUnreadNotifications] =
-    useState(false);
-  const notifications = useSelector((state) => state.notifications);
-
-  useEffect(() => {
-    const checkForRecentUnreadNotifications = () => {
-      const recentUnread = notifications.some(
-        (notification) =>
-          !notification.read &&
-          new Date() - new Date(notification.createdAt) < 72 * 60 * 60 * 1000
-      );
-      setHasRecentUnreadNotifications(recentUnread);
-    };
-
-    checkForRecentUnreadNotifications();
-  }, [notifications]);
-
-  const iconName = focused ? "ios-notifications" : "ios-notifications-outline";
+  const tailwind = useTailwind();
+  const unread = useSelector((state) => state.notifications.unread);
 
   return (
-    <View style={{ width: 24, height: 24, position: "relative" }}>
-      <Ionicons name={iconName} size={24} color={tokens.text} />
-      {hasRecentUnreadNotifications && (
+    <View
+      accessibilityLabel={
+        unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
+      }
+      style={{ width: 24, height: 24 }}
+    >
+      <Ionicons
+        name={focused ? "notifications" : "notifications-outline"}
+        size={24}
+        color={focused ? tokens.primary : tokens.textMuted}
+      />
+      {unread > 0 && (
         <View
-          style={{
-            position: "absolute",
-            right: -6,
-            top: -3,
-            backgroundColor: tokens.danger,
-            borderRadius: 6,
-            width: 12,
-            height: 12,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
+          testID="notification-badge"
+          style={[
+            tailwind("bg-danger items-center justify-center"),
+            {
+              position: "absolute",
+              right: -6,
+              top: -3,
+              minWidth: 16,
+              height: 16,
+              borderRadius: 8,
+              paddingHorizontal: 3,
+            },
+          ]}
         >
-          <Text
-            style={{
-              color: tokens.onPrimary,
-              fontSize: 10,
-              fontWeight: "700",
-            }}
-          >
-            {/* You can add text here if needed, like a number for notification count */}
+          <Text variant="caption" tone="onPrimary" style={{ fontSize: 10 }}>
+            {unread > 9 ? "9+" : unread}
           </Text>
         </View>
       )}

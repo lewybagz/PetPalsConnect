@@ -224,6 +224,19 @@ converted file silently drops out of the check.
   private message, notification, user record and report in the database.
   `npm run check:auth` enforces this; genuinely public catalogue reads go in
   `PUBLIC_READS` in `services/authAudit.js` with a reason.
+- **A resource id is not an identity.** `req.params.chatId`, `groupId` and
+  `locationId` used to count as scope markers in the audit, which is how ten
+  more handlers passed it while looking a conversation up by the id in the URL
+  and returning it: reading anybody's private messages, archiving or deleting
+  their chats, muting a group, posting media into one, and — worst —
+  `chat.participants.pull(userId)` with the id from the body, which is "remove
+  anybody from any group". Look a conversation up with `memberChat(id,
+  req.userId)`, which finds nothing when the caller is not in it.
+- **Identity taken from the body hides in a destructure.** The audit matched
+  `creator: req.body.creator` and missed `const { sender } = req.body` followed
+  by `new FriendRequest({ sender })`. It checks both now — that one let a client
+  send a friend request under somebody else's name, and there were five more
+  like it, including "set anybody's security question and its answer".
 - Delayed work goes through `services/scheduler` (MongoDB-backed), not a queue
   service. Register a handler, then `scheduler.schedule(type, payload, runAt)`.
 - Express error handlers need all four arguments (`err, req, res, next`) or
@@ -320,6 +333,43 @@ failed push can never take down the write that caused it.
 the only place the app subscribes. Unsubscribe with the function
 `onSocketEvent` returns — `socket.off("message")` removes *every* listener for
 that event, so two mounted screens unsubscribe each other.
+
+### Notifications
+
+**Telling somebody something is one call: `notify()` in
+`services/NotificationService`.** It writes the row, emits the socket event and
+sends the push. Every call site used to do those separately, as
+`Promise.all([createNotification(...), sendPushNotification(...)])` with the
+wording typed twice — and two of them passed the payload where the recipient
+goes, so Mongoose was asked to cast an object to an ObjectId and threw *inside
+a create path*: sending a friend request and cancelling a playdate were both
+500s on a line whose only job was to be best-effort. The push is wrapped in its
+own try/catch: a device that has gone away must never fail the write that
+caused the notification. The row is the durable part.
+
+**`services/notificationTypes.js` is the one table of what a notification is
+and where tapping it goes**, mirrored in `src/api/notifications.js` and checked
+by `backend/test/types.test.js` — including that every destination is a screen
+`AppStack` actually registers. There were two vocabularies before: a stored
+`type` invented at each call site (`DirectMessage`, `Playdate Cancelled`) and a
+different `data.type` in the pushes, so the same event routed one way from a
+lock screen and nowhere at all from the list. `LEGACY` maps the old strings so
+rows already written keep working.
+
+**A mutual match sends a push.** It is the one event both people have already
+said yes to, and it stored a row and emitted a socket event and pushed nothing
+— so unless you had the app open you found out whenever you next looked.
+
+**`readStatus` is the unread state and something sets it now.** It had been on
+the schema from the start, defaulting to false, with no endpoint to clear it.
+`GET /api/notifications/unread-count`, `POST /api/notifications/read` and
+`POST /api/notifications/:id/read` are the three; the badge reads the count out
+of the store, which the screen and the push handler both keep current.
+
+**Muting silences the push, not the record.** `mutedBy` on `Chat` and
+`GroupChat` is per person — a single `isMuted` boolean would let one side
+silence the other — and `notify({ push: false })` is how a muted conversation
+skips the push while the message still appears in the list.
 
 ### Matching and discovery
 
@@ -471,7 +521,10 @@ the backend boots, and nothing works.
 `backend/test/types.test.js` — payloads: every field in the app's
 `src/types/api.ts` exists on the matching Mongoose schema, nothing is typed as
 required that the schema does not guarantee, and the subscription-status and
-session-state unions match their sources exactly.
+session-state unions match their sources exactly. It also compares the two
+copies of the notification type table entry for entry, and checks every
+destination in it is a screen `AppStack` registers — the whole point of that
+table is that a tap lands somewhere, and neither half can prove that alone.
 
 `backend/test/types.test.js` also fails on any app read of a PascalCase version
 of a real schema field (`item.ContentText`, `playdate.Date`, `article.Title`).
@@ -486,17 +539,21 @@ nobody watched. `services/schemaAudit.js` holds the analysis, and it
 understands shorthand keys, conditional `required`, and fields a hook derives.
 
 `backend/test/authAudit.test.js` — access: no handler reads a whole collection
-unscoped, and no create path takes `creator`/`sender`/`reporter`/`user` from the
-request body. `backend/test/authorisation.test.js` proves the behaviour with two
-accounts, since a query scoped to the wrong field would still pass the static
-check.
+unscoped, no create path takes `creator`/`sender`/`reporter`/`user` from the
+request body — in an assignment *or* a destructure — and a resource id from the
+URL does not count as having scoped the query.
+`backend/test/authorisation.test.js`, `chat.test.js`, `groupchat.test.js` and
+`friends.test.js` prove the behaviour with two accounts and an outsider, since a
+query scoped to the wrong field would still pass the static check.
 
 `PetPalsConnectApp/src/screens/navigation/navigation.test.js` — navigation:
 every `navigate()` names a route that exists and sends a param its target
 reads.
 
 `PetPalsConnectApp/src/redux/store.test.js` — state: every `state.<slice>.<field>`
-the app reads resolves against the real store.
+the app reads resolves against the real store. Like the colour ban, it strips
+comments first: prose about a selector is not a read, and documenting one used
+to fail the build.
 
 Add a route, a field or a selector, and one of these tells you if the other side
 disagrees.

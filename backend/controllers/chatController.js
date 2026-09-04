@@ -6,13 +6,25 @@ const { createHash } = require("node:crypto");
 // Node's built-in crypto replaces the crypto-js dependency.
 const SHA256 = (value) => createHash("sha256").update(String(value)).digest("hex");
 const Pet = require("../models/Pet");
-const { createNotification } = require("../services/NotificationService");
-// `sendPushNotification` lives in NotificationController, not the service. The
-// service does not export it, so this was `undefined` and every push threw a
-// TypeError into the catch below - silently, since the catch only warns.
-const { sendPushNotification } = require("./NotificationController");
+// One call for the stored row, the socket event and the push. `sendPush` used
+// to live in NotificationController and the service did not export it, so a
+// controller imported a controller to reach it.
+const { notify } = require("../services/NotificationService");
 const { emitToUser } = require("../services/realtime");
 const blocking = require("../services/blocking");
+
+/**
+ * The conversation, if the caller is in it.
+ *
+ * `getChat`, `getChatDetails`, `fetchChatMedia`, `archiveChat` and `deleteChat`
+ * all looked a chat up by the id in the URL and stopped there, so any signed-in
+ * account could read anybody's private messages, or archive and delete their
+ * conversations, given an id. The authorisation audit passed them because it
+ * counted `req.params.chatId` as evidence the query was scoped to the caller -
+ * which it is not: a resource id is not an identity.
+ */
+const memberChat = (chatId, userId) =>
+  Chat.findOne({ _id: chatId, participants: userId });
 
 const ChatController = {
   /** Every chat the caller participates in, most recently active first. */
@@ -32,6 +44,35 @@ const ChatController = {
         .sort({ isPinned: -1, updatedAt: -1 });
 
       res.json(chats);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  /**
+   * Mutes or unmutes this conversation, for the caller only.
+   *
+   * `ChatOptionsModal` had a "Mute Notifications" item that called the *group*
+   * mute endpoint with the one-to-one chat's id, so it silently did nothing.
+   * `isMuted` was a single boolean on the chat besides, which would have let
+   * one person mute the conversation for the other.
+   */
+  async toggleMute(req, res) {
+    try {
+      const chat = await Chat.findOne({
+        _id: req.params.chatId,
+        participants: req.userId,
+      });
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+
+      const muted = req.body.mute !== false;
+      if (muted) chat.mutedBy.addToSet(req.userId);
+      else chat.mutedBy.pull(req.userId);
+
+      await chat.save();
+      res.json({ chatId: chat._id, muted });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -173,19 +214,17 @@ const ChatController = {
 
       if (recipient) {
         const senderName = req.user?.username ?? "Someone";
-        await Promise.all([
-          createNotification({
-            content: `You have a new message from ${senderName}.`,
-            recipientId: recipient._id,
-            type: "DirectMessage",
-            creatorId: req.userId,
-          }),
-          sendPushNotification(recipient._id, {
-            title: "New Message",
-            body: `${senderName} sent you a message.`,
-            data: { type: "message", chatId: String(chat._id) },
-          }),
-        ]).catch((error) => console.warn("[chat] notify failed:", error.message));
+        await notify({
+          content: `${senderName} sent you a message.`,
+          recipientId: recipient._id,
+          type: "message",
+          creatorId: req.userId,
+          data: { chatId: chat._id },
+          // Muting silences the push, not the record.
+          push: !(chat.mutedBy ?? []).some(
+            (muter) => String(muter) === String(recipient._id)
+          ),
+        }).catch((error) => console.warn("[chat] notify failed:", error.message));
       }
 
       res.status(201).json(message);
@@ -266,7 +305,7 @@ const ChatController = {
   async getChat(req, res) {
     const { chatId } = req.params;
     try {
-      const chat = await Chat.findById(chatId).populate("messages");
+      const chat = await memberChat(chatId, req.userId).populate("messages");
       if (!chat) {
         return res.status(404).json({ message: "Chat not found" });
       }
@@ -279,7 +318,10 @@ const ChatController = {
   async fetchChatMedia(req, res) {
     const chatId = req.params.chatId;
     try {
-      const chat = await Chat.findById(chatId).populate("media");
+      const chat = await memberChat(chatId, req.userId).populate("media");
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
       res.json({ media: chat.media });
     } catch (error) {
       console.error("Error fetching media:", error);
@@ -290,9 +332,9 @@ const ChatController = {
   async getChatDetails(req, res) {
     const { chatId } = req.params;
     try {
-      const chat = await Chat.findById(chatId)
+      const chat = await memberChat(chatId, req.userId)
         .populate("messages")
-        .populate("participants");
+        .populate("participants", "username userPhoto");
 
       if (!chat) {
         return res.status(404).json({ message: "Chat not found" });
@@ -305,17 +347,23 @@ const ChatController = {
   },
 
   async handleSendMedia(req, res) {
-    const { chatId, mediaUrl, mediaType, userId } = req.body;
+    const { chatId, mediaUrl, mediaType } = req.body;
 
     try {
-      const newMedia = new Media({
+      // Was `Chat.findById(chatId)` with no participant check and
+      // `createdBy: userId` off the body: anyone could push media into any
+      // conversation and sign it with somebody else's name.
+      const chat = await Chat.findOne({ _id: chatId, participants: req.userId });
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+
+      const newMedia = await Media.create({
         url: mediaUrl,
         type: mediaType,
-        createdBy: userId,
+        createdBy: req.userId,
       });
-      await newMedia.save();
 
-      const chat = await Chat.findById(chatId);
       chat.media.push(newMedia);
       await chat.save();
       res.status(200).json({ message: "Media sent successfully" });
@@ -328,8 +376,8 @@ const ChatController = {
   async archiveChat(req, res) {
     const chatId = req.params.chatId;
     try {
-      const updatedChat = await Chat.findByIdAndUpdate(
-        chatId,
+      const updatedChat = await Chat.findOneAndUpdate(
+        { _id: chatId, participants: req.userId },
         { isArchived: true },
         { new: true }
       );
@@ -347,16 +395,15 @@ const ChatController = {
   async deleteChat(req, res) {
     const { chatId } = req.params;
     try {
-      const chat = await Chat.findById(chatId);
+      const chat = await memberChat(chatId, req.userId);
       if (!chat) {
         return res.status(404).json({ message: "Chat not found" });
       }
 
-      // Optionally, remove associated messages
-      // This depends on your application's data retention policy
-      // await Message.deleteMany({ _id: { $in: chat.messages } });
-
-      await chat.remove();
+      // `chat.remove()` was removed from Mongoose in v7, so this threw a
+      // TypeError on every delete.
+      await Message.deleteMany({ _id: { $in: chat.messages } });
+      await chat.deleteOne();
       res.status(200).json({ message: "Chat deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: error.message });

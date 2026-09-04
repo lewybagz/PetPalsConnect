@@ -112,6 +112,58 @@ export const pending = Symbol("pending");
  * Keyed by path prefix, matched longest-first, so `/api/pets/latest` wins over
  * `/api/pets`.
  */
+/**
+ * A notifications list with each kind in it, unread and read.
+ *
+ * The point of looking at this one is the icon column and the unread weight:
+ * every row used to be the same line of grey text with a three-dot menu.
+ */
+const hoursAgo = (hours) =>
+  new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+
+export const NOTIFICATIONS = [
+  {
+    _id: "notif-1",
+    type: "petMatch",
+    content: "Bo liked Ada back - you matched!",
+    petId: "pet-2",
+    readStatus: false,
+    timestamp: hoursAgo(0.2),
+  },
+  {
+    _id: "notif-2",
+    type: "message",
+    content: "sam sent you a message.",
+    chatId: "chat-1",
+    readStatus: false,
+    timestamp: hoursAgo(2),
+  },
+  {
+    _id: "notif-3",
+    type: "playdate",
+    content: "Ada wants a playdate with Bo.",
+    playdateId: "playdate-1",
+    readStatus: false,
+    timestamp: hoursAgo(20),
+  },
+  {
+    _id: "notif-4",
+    type: "friendRequest",
+    content: "Rex wants to be friends with Ada!",
+    requesterId: "user-3",
+    readStatus: true,
+    timestamp: hoursAgo(50),
+  },
+  {
+    _id: "notif-5",
+    type: "reviewReminder",
+    content: "How was your playdate? Leave a review.",
+    playdateId: "playdate-0",
+    readStatus: true,
+    timestamp: hoursAgo(96),
+  },
+];
+
 export const ROUTES = {
   "/api/petmatches/discover": {
     pet: MY_PET,
@@ -167,4 +219,5 @@ export const ROUTES = {
       distanceMiles: 1.4,
     },
   ],
+  "/api/notifications": NOTIFICATIONS,
 };

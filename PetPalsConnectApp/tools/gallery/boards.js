@@ -7,6 +7,7 @@ import ReportUserScreen from "../../src/screens/profile/ReportUserScreen";
 import BlockedAccountsScreen from "../../src/screens/settings/BlockedAccountsScreen";
 import PetPhotosScreen from "../../src/screens/pets/PetPhotosScreen";
 import SettingsScreen from "../../src/screens/settings/SettingsScreen";
+import NotificationsScreen from "../../src/screens/bottomTab/NotificationsScreen";
 import MapScreen from "../../src/screens/swipe/MapScreen";
 import { CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
 
@@ -160,6 +161,24 @@ export const BOARDS = [
     // in: the pins and the sheet render, the tiles do not. It is the layer the
     // gallery cannot show, and the one thing a device is genuinely needed for.
     render: () => <MapScreen navigation={navigation} />,
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    routes: ROUTES,
+    render: () => <NotificationsScreen navigation={navigation} />,
+  },
+  {
+    id: "notifications-empty",
+    label: "Notifications - empty",
+    routes: { ...ROUTES, "/api/notifications": [] },
+    render: () => <NotificationsScreen navigation={navigation} />,
+  },
+  {
+    id: "notifications-loading",
+    label: "Notifications - skeleton",
+    routes: { ...ROUTES, "/api/notifications": pending },
+    render: () => <NotificationsScreen navigation={navigation} />,
   },
   {
     id: "settings",

@@ -9,7 +9,7 @@ const {
   formatMiles,
   milesBetween,
 } = require("../services/matching/distance");
-const { createNotification } = require("../services/NotificationService");
+const { notify } = require("../services/NotificationService");
 const { emitToUser } = require("../services/realtime");
 const blocking = require("../services/blocking");
 
@@ -538,18 +538,26 @@ const PetMatchController = {
         )
       );
 
+      // A match is the one event in the app that has to reach somebody who is
+      // not looking at their phone: it is mutual, so both people have already
+      // said yes and are waiting on each other. This stored a row and emitted a
+      // socket event and sent no push at all, so unless you happened to have
+      // the app open you found out the next time you opened it - if you
+      // scrolled far enough down a list nothing marked as unread.
       await Promise.all([
-        createNotification({
+        notify({
           content: `${toPet.name} liked ${fromPet.name} back - you matched!`,
           recipientId: fromPet.owner,
-          type: "PetMatch",
+          type: "petMatch",
           petName: toPet.name,
+          data: { petId: toPet._id },
         }),
-        createNotification({
+        notify({
           content: `${fromPet.name} liked ${toPet.name} back - you matched!`,
           recipientId: toPet.owner,
-          type: "PetMatch",
+          type: "petMatch",
           petName: fromPet.name,
+          data: { petId: fromPet._id },
         }),
       ]);
 

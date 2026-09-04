@@ -8,32 +8,33 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import api from "../../api/axios";
-import { getStoredToken } from "../../../utils/tokenutil";
+import { fetchFriendsPets } from "../../api/friends";
 import { useTokens } from "../../context/AppThemeContext";
 
-const PetSelectionScreen = ({ navigation, route }) => {
+const PetSelectionScreen = ({ navigation }) => {
   const tokens = useTokens();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const [pets, setPets] = useState([]);
   const [selectedPets, setSelectedPets] = useState([]);
-  const { userPetId } = route.params;
 
   useEffect(() => {
-    const fetchPetFriends = async () => {
-      try {
-        const token = await getStoredToken();
-        const response = await api.get(`/api/friends/${userPetId}/pets`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setPets(response.data);
-      } catch (error) {
-        console.error("Error fetching pet friends:", error);
-      }
-    };
+    // Was `GET /api/friends/${userPetId}/pets` - a *pet* id in a slot the
+    // server matched against user ids - with a manually attached token the
+    // shared client already sets. It returned an empty list every time, so
+    // this screen has never offered a pet to pick.
+    let cancelled = false;
+    fetchFriendsPets()
+      .then((friendsPets) => {
+        if (!cancelled) setPets(friendsPets);
+      })
+      .catch((error) =>
+        console.warn("[friends] Could not load friends' pets:", error.message)
+      );
 
-    fetchPetFriends();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handlePetSelect = (pet) => {

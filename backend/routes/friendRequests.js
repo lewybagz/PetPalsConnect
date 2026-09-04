@@ -7,8 +7,19 @@ const FriendRequestController = require("../controllers/FriendRequestController"
 router.get("/", FriendRequestController.getAllFriendRequests);
 router.post("/", FriendRequestController.createFriendRequest);
 
-router.put("/:id/accept", FriendRequestController.acceptFriendRequest);
-router.put("/:id/decline", FriendRequestController.declineFriendRequest);
+// Both handlers open with `if (!res.friendRequest)` and there was no loader in
+// front of them, so accepting or declining a friend request answered "No
+// friend request loaded" with a 404, every time, for everybody.
+router.put(
+  "/:id/accept",
+  FriendRequestController.getFriendRequestById,
+  FriendRequestController.acceptFriendRequest
+);
+router.put(
+  "/:id/decline",
+  FriendRequestController.getFriendRequestById,
+  FriendRequestController.declineFriendRequest
+);
 
 router.get("/:id", FriendRequestController.getFriendRequestById, (req, res) => {
   res.json(res.friendRequest);

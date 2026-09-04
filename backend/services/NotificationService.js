@@ -1,7 +1,9 @@
 const Notification = require("../models/Notification");
 const GroupChat = require("../models/GroupChat");
 const User = require("../models/User");
+const firebase = require("../config/firebase");
 const { emitToUser } = require("./realtime");
+const { normalise, titleFor } = require("./notificationTypes");
 
 /**
  * Creates a notification and pushes it to the recipient if they are connected.
@@ -40,13 +42,94 @@ const createNotification = async ({
   const notification = await Notification.create({
     content,
     recipient: recipientId,
-    type,
+    type: normalise(type),
     creator: creatorId,
     petName,
   });
 
   // Deliver it now if they are connected; the list endpoint covers the rest.
   emitToUser(recipientId, "notification", notification);
+
+  return notification;
+};
+
+/**
+ * Sends one push, to whatever device this user last registered.
+ *
+ * This lived in `NotificationController`, so five *other* controllers imported
+ * a controller to get at it - and two of them then called it as
+ * `sendPushNotification(notificationData)` with the recipient missing, which
+ * casts an object to an ObjectId and throws. Both were inside the `Promise.all`
+ * of a create path, so sending a friend request and cancelling a playdate both
+ * failed outright on a line whose only job was to be best-effort.
+ */
+const sendPush = async (userId, { title, body, data } = {}) => {
+  if (!userId) return null;
+
+  const user = await User.findById(userId).select("fcmToken");
+  if (!user?.fcmToken) {
+    // Nobody has opened the app on a device yet, or they declined the prompt.
+    // The stored notification is still there when they next look.
+    return null;
+  }
+
+  return firebase.sendMessage({
+    token: user.fcmToken,
+    notification: { title, body },
+    // FCM requires every data value to be a string.
+    data: Object.fromEntries(
+      Object.entries(data ?? {})
+        .filter(([, value]) => value != null)
+        .map(([key, value]) => [key, String(value)])
+    ),
+  });
+};
+
+/**
+ * Tells somebody something: the stored row, the live socket event, and the push.
+ *
+ * Every call site did these separately - `Promise.all([createNotification(...),
+ * sendPushNotification(...)])` with the wording typed out twice and the two
+ * type vocabularies drifting apart. `decide` did not do the push at all, so the
+ * only way to learn you had matched was to already be looking at the app.
+ *
+ * The push is best-effort by construction: a device that has gone away, or a
+ * Firebase that is not configured, must never fail the write that caused the
+ * notification. The row is the durable part.
+ */
+const notify = async ({
+  content,
+  recipientId,
+  type,
+  creatorId,
+  petName,
+  title,
+  data,
+  // Muting a conversation silences the *push*, not the record: the message is
+  // still in the list when you next look, which is what people expect from
+  // muting rather than blocking.
+  push = true,
+}) => {
+  const canonical = normalise(type);
+  const notification = await createNotification({
+    content,
+    recipientId,
+    type: canonical,
+    creatorId,
+    petName,
+  });
+
+  if (!push) return notification;
+
+  try {
+    await sendPush(recipientId, {
+      title: title ?? titleFor(canonical),
+      body: content,
+      data: { ...data, type: canonical, notificationId: String(notification._id) },
+    });
+  } catch (error) {
+    console.warn("[notifications] Push failed:", error.message);
+  }
 
   return notification;
 };
@@ -72,4 +155,9 @@ const fetchGroupParticipants = async (groupId, senderId) => {
   return User.find({ _id: { $in: participantIds } });
 };
 
-module.exports = { createNotification, fetchGroupParticipants };
+module.exports = {
+  createNotification,
+  sendPush,
+  notify,
+  fetchGroupParticipants,
+};

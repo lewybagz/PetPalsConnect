@@ -1,160 +1,75 @@
-import React, { useEffect, useMemo } from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-} from "react-native";
-import { useTailwind } from "../styles/tailwind";
-import api from "../api/axios";
-import { useSelector, useDispatch } from "react-redux";
-import { getStoredToken } from "../../utils/tokenutil";
-import LoadingScreen from "./LoadingScreenComponent";
-import { clearError, setError } from "../redux/actions";
-import { useTokens } from "../context/AppThemeContext";
+import React, { useCallback, useState } from "react";
 
-const ChatOptionsModal = ({ isVisible, onClose, navigation }) => {
-  const tokens = useTokens();
-  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+import { ActionSheet, useToast } from "./ui";
+import { fetchChatMedia, muteChat } from "../api/chats";
 
-  const tailwind = useTailwind();
-  const dispatch = useDispatch();
-  const userId = useSelector((state) => state.user.userId);
-  const chatId = useSelector((state) => state.chat.singleChatId);
-  const isLoading = useSelector((state) => state.chat.isLoading);
-  const error = useSelector((state) => state.chat.error);
-  const getToken = async () => {
+/**
+ * The "..." menu on a one-to-one conversation.
+ *
+ * Both items were broken in ways nothing showed. "Mute Notifications" called
+ * `/api/groupchats/toggle-mute` - the *group* endpoint - with a one-to-one
+ * chat's id, and passed `userId` from the client, which the server does not
+ * accept; the handler it reached read `chat.UserSettings`, which is not a path
+ * on that schema, and threw. "View Media" logged "No media available for this
+ * chat" to a console nobody is reading when the list came back empty.
+ *
+ * Both also called `getStoredToken()` without awaiting it and passed the
+ * result as an Authorization header - which the shared client already sets -
+ * and were wired as `onPress={handler}`, so the first argument was the press
+ * event where a token was expected.
+ */
+const ChatOptionsModal = ({ isVisible, onClose, navigation, chatId }) => {
+  const toast = useToast();
+  const [muted, setMuted] = useState(false);
+
+  const onMute = useCallback(async () => {
     try {
-      const token = await getStoredToken();
-      return token;
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleMuteNotifications = async (token) => {
-    console.log("Mute Tapped");
-    try {
-      getToken();
-      const response = await api.put(
-        "/api/groupchats/toggle-mute",
-        {
-          userId: userId,
-          chatId: chatId,
-          mute: true,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      console.log(response.data.message);
+      const next = await muteChat(chatId, !muted);
+      setMuted(next);
+      toast.success(next ? "Muted this conversation" : "Notifications back on");
     } catch (error) {
-      console.error("Error updating mute settings:", error);
+      console.warn("[chat] Could not change mute:", error.message);
+      toast.error("Couldn't change notifications for this chat.");
     }
-    onClose();
-  };
+  }, [chatId, muted, toast]);
 
-  const handleViewMedia = async (token) => {
-    console.log("View Media Tapped");
+  const onViewMedia = useCallback(async () => {
     try {
-      getToken();
-      const response = await api.get(`/api/chats/${chatId}/media`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const mediaArray = response.data.media;
-      if (mediaArray.length > 0) {
-        navigation.navigate("MediaView", { media: mediaArray });
-      } else {
-        console.log("No media available for this chat.");
+      const media = await fetchChatMedia(chatId);
+      if (media.length === 0) {
+        toast.show("Nothing has been shared in this chat yet.");
+        return;
       }
+      navigation.navigate("MediaView", { media });
     } catch (error) {
-      console.error("Error fetching media:", error);
+      console.warn("[chat] Could not load media:", error.message);
+      toast.error("Couldn't load this chat's media.");
     }
-    onClose();
-  };
-
-  useEffect(() => {
-    if (error) {
-      Alert.alert("Error", error, [
-        { text: "OK", onPress: () => dispatch(clearError()) },
-      ]);
-    }
-  }, [error, dispatch]);
-
-  // Declared after every hook so hook order stays stable across renders.
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
+  }, [chatId, navigation, toast]);
 
   return (
-    <Modal visible={isVisible} animationType="slide" transparent>
-      <View style={tailwind("flex-1 justify-end bg-scrim")}>
-        <View style={tailwind("bg-surface p-4 rounded-t-3xl")}>
-          {/* Mute Notifications */}
-          <TouchableOpacity
-            style={styles.option}
-            onPress={handleMuteNotifications}
-          >
-            <Text style={tailwind("text-lg text-center")}>
-              Mute Notifications
-            </Text>
-          </TouchableOpacity>
-
-          {/* View Media */}
-          <TouchableOpacity style={styles.option} onPress={handleViewMedia}>
-            <Text style={tailwind("text-lg text-center")}>View Media</Text>
-          </TouchableOpacity>
-
-          {/* Cancel */}
-          <TouchableOpacity style={styles.cancelOption} onPress={onClose}>
-            <Text style={tailwind("text-lg text-center")}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+    <ActionSheet
+      testID="chat-options-sheet"
+      visible={isVisible}
+      onClose={onClose}
+      items={[
+        {
+          label: muted ? "Unmute notifications" : "Mute notifications",
+          icon: muted ? "notifications-outline" : "notifications-off-outline",
+          testID: "chat-option-mute",
+          onPress: onMute,
+          disabled: !chatId,
+        },
+        {
+          label: "View media",
+          icon: "images-outline",
+          testID: "chat-option-media",
+          onPress: onViewMedia,
+          disabled: !chatId,
+        },
+      ]}
+    />
   );
 };
-
-const makeStyles = (t) => StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: t.scrim, // Semi-transparent background
-  },
-  modalContent: {
-    backgroundColor: t.surface,
-    padding: 16,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    shadowColor: t.text,
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  option: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: t.border,
-  },
-  optionText: {
-    fontSize: 18,
-    textAlign: "center",
-    color: t.text,
-  },
-  leaveGroup: {
-    borderBottomWidth: 0, // Remove border for the last option
-  },
-  leaveGroupText: {
-    color: t.danger, // Red color for critical actions
-  },
-  cancelOption: {
-    paddingVertical: 12,
-  },
-});
 
 export default ChatOptionsModal;

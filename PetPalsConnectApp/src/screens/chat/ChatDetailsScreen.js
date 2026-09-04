@@ -88,12 +88,10 @@ const ChatDetailsScreen = ({ route, navigation }) => {
           <FlatList
             data={chatDetails.participants?.slice(0, 5)}
             horizontal
+            // Participants are people, not pets: `type="pet"` sent a user down
+            // the pet branch, where `breed` and `photos` do not exist.
             renderItem={({ item }) => (
-              <UserPetCard
-                data={item}
-                type="pet"
-                reviews={item.reviews || []}
-              />
+              <UserPetCard data={item} type="user" navigation={navigation} />
             )}
             keyExtractor={(item, index) => item._id || index.toString()}
           />

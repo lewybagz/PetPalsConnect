@@ -11,6 +11,7 @@
  * These exist so the accessible, on-token thing is also the easy thing to
  * reach for.
  */
+export { default as ActionSheet } from "./ActionSheet";
 export { default as Button } from "./Button";
 export { default as Card } from "./Card";
 export { default as EmptyState } from "./EmptyState";

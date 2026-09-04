@@ -56,18 +56,27 @@ const GUARDED_READS = {
   "ReportController.updateReportStatus": "requireModerator",
 };
 
-/** Ways a handler can prove it scoped the query to the caller. */
+/**
+ * Ways a handler can prove it scoped the query to the caller.
+ *
+ * `req.params.chatId`, `groupId` and `locationId` used to be on this list, and
+ * that was the hole: a *resource* id names a row, it does not identify who is
+ * asking for it. Five chat handlers and five group-chat handlers looked a
+ * conversation up by the id in the URL and returned it, so any signed-in
+ * account could read anybody's private messages - and the audit called them
+ * scoped, which is worse than not having checked.
+ *
+ * What stays are the caller's own identity, and the params a route can only be
+ * reached with after an ownership check in the same handler.
+ */
 const SCOPE_MARKERS = [
   "req.userId",
   "req.user._id",
   "req.user?._id",
   "req.params.userId",
   "req.params.id",
-  "req.params.chatId",
   "req.params.petId",
   "req.params.playdateId",
-  "req.params.groupId",
-  "req.params.locationId",
   "req.params.otherPetId",
   "req.query.petId",
   "res.locals",
@@ -180,6 +189,26 @@ const bodyIdentityWrites = () => {
         );
       }
     });
+
+    // The same thing spelled differently: `const { sender } = req.body` and
+    // then `new FriendRequest({ sender, ... })`. Shorthand hides the read, so
+    // the line above matched nothing and a client could post as anybody. It
+    // survived every review of that file for exactly that reason.
+    for (const match of source.matchAll(/(?:const|let)\s*\{([^}]*)\}\s*=\s*req\.body/g)) {
+      const line = source.slice(0, match.index).split("\n").length;
+      const names = match[1]
+        .split(",")
+        .map((part) => part.trim().split(":")[0].split("=")[0].trim())
+        .filter(Boolean);
+
+      for (const name of names) {
+        if (!IDENTITY_FIELDS.includes(name)) continue;
+        problems.push(
+          `${path.relative(ROOT, file)}:${line} destructures \`${name}\` out of ` +
+            `the request body. Identity comes from the token - use \`req.userId\`.`
+        );
+      }
+    }
   }
 
   return problems;

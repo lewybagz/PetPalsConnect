@@ -1,193 +1,108 @@
-import React, { useEffect, useMemo } from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-} from "react-native";
-import { useTailwind } from "../styles/tailwind";
-import api from "../api/axios";
-import { getStoredToken } from "../../utils/tokenutil";
-import { useSelector, useDispatch } from "react-redux";
-import { clearError, setError } from "../redux/actions";
-import LoadingScreen from "./LoadingScreenComponent";
-import { useTokens } from "../context/AppThemeContext";
+import React, { useCallback, useState } from "react";
+import { Alert } from "react-native";
 
-const GroupOptionsModal = ({ isVisible, onClose, navigation }) => {
-  const tokens = useTokens();
-  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+import { ActionSheet, useToast } from "./ui";
+import { fetchChatMedia, leaveGroup, muteGroup } from "../api/chats";
 
-  const tailwind = useTailwind();
-  const dispatch = useDispatch();
-  // Access user ID and chat ID from Redux store
-  const userId = useSelector((state) => state.user.userId);
-  const chatId = useSelector((state) => state.chat.singleChatId);
-  const error = useSelector((state) => state.chat.error);
-  const isLoading = useSelector((state) => state.chat.isLoading);
-  const getToken = async () => {
+/**
+ * The "..." menu on a group conversation.
+ *
+ * The same three failures as the one-to-one sheet - an unawaited token, a
+ * press event passed where a token was expected, errors that only reached a
+ * console - plus one of its own: "Leave Group" sent `userId` from the client
+ * to a handler that pulled *that* id out of the participants, so it was
+ * "remove anybody from any group" rather than "leave". The server takes the
+ * caller from the token now and this sends only the chat.
+ *
+ * Leaving is the one item here that cannot be undone from this screen, so it
+ * asks first. That is what `Alert` is for; everything else reports through a
+ * toast.
+ */
+const GroupOptionsModal = ({ isVisible, onClose, navigation, groupId }) => {
+  const toast = useToast();
+  const [muted, setMuted] = useState(false);
+
+  const onMute = useCallback(async () => {
     try {
-      const token = await getStoredToken();
-      return token;
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-  // Handle error alert
-  useEffect(() => {
-    if (error) {
-      Alert.alert("Error", error, [
-        { text: "OK", onPress: () => dispatch(clearError()) },
-      ]);
-    }
-  }, [error, dispatch]);
-
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-  const handleMuteNotifications = async (token) => {
-    console.log("Mute Tapped");
-    try {
-      getToken();
-      const response = await api.put(
-        "/api/groupchats/toggle-mute",
-        {
-          userId: userId,
-          chatId: chatId,
-          mute: true,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      console.log(response.data.message);
+      const next = await muteGroup(groupId, !muted);
+      setMuted(next);
+      toast.success(next ? "Muted this group" : "Notifications back on");
     } catch (error) {
-      console.error("Error updating mute settings:", error);
+      console.warn("[groupchat] Could not change mute:", error.message);
+      toast.error("Couldn't change notifications for this group.");
     }
-    onClose();
-  };
+  }, [groupId, muted, toast]);
 
-  const handleViewMedia = async (token) => {
-    console.log("View Media Tapped");
+  const onViewMedia = useCallback(async () => {
     try {
-      getToken();
-      const response = await api.get(`/api/groupchats/${chatId}/media`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const mediaArray = response.data.media;
-      if (mediaArray.length > 0) {
-        navigation.navigate("MediaView", { media: mediaArray });
-      } else {
-        console.log("No media available for this chat.");
+      const media = await fetchChatMedia(groupId, { group: true });
+      if (media.length === 0) {
+        toast.show("Nothing has been shared in this group yet.");
+        return;
       }
+      navigation.navigate("MediaView", { media });
     } catch (error) {
-      console.error("Error fetching media:", error);
+      console.warn("[groupchat] Could not load media:", error.message);
+      toast.error("Couldn't load this group's media.");
     }
-    onClose();
-  };
+  }, [groupId, navigation, toast]);
 
-  const handleLeaveGroup = async (token) => {
-    console.log("Leave Group Tapped");
-    try {
-      getToken();
-      await api.post(
-        "/api/groupchats/leave",
+  const onLeave = useCallback(() => {
+    Alert.alert(
+      "Leave this group?",
+      "You'll stop receiving its messages. Somebody in the group can add you back.",
+      [
+        { text: "Cancel", style: "cancel" },
         {
-          userId: userId,
-          chatId: chatId,
+          text: "Leave",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await leaveGroup(groupId);
+              // "ChatsList" is not a registered route; leaving returns to the
+              // Chats tab.
+              navigation.navigate("Chats");
+            } catch (error) {
+              console.warn("[groupchat] Could not leave:", error.message);
+              toast.error("Couldn't leave this group.");
+            }
+          },
         },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      // "ChatsList" is not a registered route; leaving a group returns to the
-      // Chats tab.
-      navigation.navigate("Chats");
-    } catch (error) {
-      console.error("Error leaving group chat:", error);
-    }
-    onClose();
-  };
+      ]
+    );
+  }, [groupId, navigation, toast]);
 
   return (
-    <Modal visible={isVisible} animationType="slide" transparent>
-      <View style={tailwind("flex-1 justify-end bg-scrim")}>
-        <View style={tailwind("bg-surface p-4 rounded-t-3xl")}>
-          {/* Mute Notifications */}
-          <TouchableOpacity
-            style={styles.option}
-            onPress={handleMuteNotifications}
-          >
-            <Text style={tailwind("text-lg text-center")}>
-              Mute Notifications
-            </Text>
-          </TouchableOpacity>
-
-          {/* View Media */}
-          <TouchableOpacity style={styles.option} onPress={handleViewMedia}>
-            <Text style={tailwind("text-lg text-center")}>View Media</Text>
-          </TouchableOpacity>
-
-          {/* Leave Group */}
-          <TouchableOpacity
-            style={[styles.option, styles.leaveGroup]}
-            onPress={handleLeaveGroup}
-          >
-            <Text style={tailwind("text-lg text-center text-danger")}>
-              Leave Group
-            </Text>
-          </TouchableOpacity>
-
-          {/* Cancel */}
-          <TouchableOpacity style={styles.cancelOption} onPress={onClose}>
-            <Text style={tailwind("text-lg text-center")}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+    <ActionSheet
+      testID="group-options-sheet"
+      visible={isVisible}
+      onClose={onClose}
+      items={[
+        {
+          label: muted ? "Unmute notifications" : "Mute notifications",
+          icon: muted ? "notifications-outline" : "notifications-off-outline",
+          testID: "group-option-mute",
+          onPress: onMute,
+          disabled: !groupId,
+        },
+        {
+          label: "View media",
+          icon: "images-outline",
+          testID: "group-option-media",
+          onPress: onViewMedia,
+          disabled: !groupId,
+        },
+        {
+          label: "Leave group",
+          icon: "exit-outline",
+          tone: "danger",
+          testID: "group-option-leave",
+          onPress: onLeave,
+          disabled: !groupId,
+        },
+      ]}
+    />
   );
 };
-
-const makeStyles = (t) => StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: t.scrim, // Semi-transparent background
-  },
-  modalContent: {
-    backgroundColor: t.surface,
-    padding: 16,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    shadowColor: t.text,
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  option: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: t.border,
-  },
-  optionText: {
-    fontSize: 18,
-    textAlign: "center",
-    color: t.text,
-  },
-  leaveGroup: {
-    borderBottomWidth: 0, // Remove border for the last option
-  },
-  leaveGroupText: {
-    color: t.danger, // Red color for critical actions
-  },
-  cancelOption: {
-    paddingVertical: 12,
-  },
-});
 
 export default GroupOptionsModal;

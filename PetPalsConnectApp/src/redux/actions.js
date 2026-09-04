@@ -125,6 +125,8 @@ export const fetchPlaydateDetails = (playdateId) => async (dispatch) => {
 
 export const SET_NOTIFICATIONS = "SET_NOTIFICATIONS";
 export const ADD_NOTIFICATION = "ADD_NOTIFICATION";
+export const SET_UNREAD_COUNT = "SET_UNREAD_COUNT";
+export const MARK_NOTIFICATIONS_READ = "MARK_NOTIFICATIONS_READ";
 
 export const setNotifications = (notifications) => ({
   type: SET_NOTIFICATIONS,
@@ -134,4 +136,22 @@ export const setNotifications = (notifications) => ({
 export const addNotification = (notification) => ({
   type: ADD_NOTIFICATION,
   payload: notification,
+});
+
+/**
+ * The badge count, kept in the store rather than in the tab icon.
+ *
+ * The icon derived it from `state.notifications` - the whole slice object, not
+ * the array inside it - and called `.some` on it, so the tab bar threw as soon
+ * as it rendered. It also read `notification.read` and `createdAt`, neither of
+ * which is a field: the schema has `readStatus` and `timestamp`.
+ */
+export const setUnreadCount = (unread) => ({
+  type: SET_UNREAD_COUNT,
+  payload: unread,
+});
+
+/** Marks everything read locally, so the badge clears without a refetch. */
+export const markNotificationsRead = () => ({
+  type: MARK_NOTIFICATIONS_READ,
 });

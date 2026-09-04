@@ -1,14 +1,11 @@
 const Playdate = require("../models/Playdate");
 const Location = require("../models/Location");
 const {
-  sendPlaydateNotification,
   pushPlaydateReviewReminderNotification,
 } = require("./NotificationController");
-const { createNotification } = require("../services/NotificationService");
-const { emitToUser } = require("../services/realtime");
+const { notify } = require("../services/NotificationService");
 const Pet = require("../models/Pet");
 const User = require("../models/User");
-const { sendPushNotification } = require("./NotificationController");
 
 const PlaydateController = {
   async getAllPlaydates(req, res) {
@@ -141,16 +138,7 @@ const PlaydateController = {
       const requestSenderFirstPetName =
         playdate.creator.pets[0]?.name || "Unknown Pet";
 
-      const notificationData = {
-        recipientId: playdate.creator._id,
-        title: "Playdate Request Accepted",
-        message: `Hey ${requestSenderFirstPetName}! Your playdate with ${acceptersFirstPetName} has been confirmed.`,
-        data: {
-          playdateId,
-          acceptersFirstPetName,
-          requestSenderFirstPetName,
-        },
-      };
+      const content = `Hey ${requestSenderFirstPetName}! Your playdate with ${acceptersFirstPetName} has been confirmed.`;
 
       // `sendPlaydateNotification` is Express middleware (req, res, next). Called
       // with a plain object it threw "next is not a function" on every accept,
@@ -158,24 +146,15 @@ const PlaydateController = {
       // always failed even once the record was right.
       await playdate.save();
 
-      await Promise.all([
-        createNotification({
-          content: notificationData.message,
-          recipientId: playdate.creator._id,
-          type: "Playdate",
-          creatorId: userId,
-          petName: acceptersFirstPetName,
-        }),
-        sendPushNotification(playdate.creator._id, {
-          title: notificationData.title,
-          body: notificationData.message,
-          data: { type: "playdate", playdateId: String(playdateId) },
-        }),
-      ]);
-
-      emitToUser(playdate.creator._id, "notification", {
-        playdateId,
-        content: notificationData.message,
+      // `notify` stores the row, emits the socket event and sends the push, so
+      // the three cannot come apart and the wording is written once.
+      await notify({
+        content,
+        recipientId: playdate.creator._id,
+        type: "playdateAccepted",
+        creatorId: userId,
+        petName: acceptersFirstPetName,
+        data: { playdateId },
       });
 
       return res.status(200).json({ message: "Playdate accepted" });
@@ -222,57 +201,37 @@ const PlaydateController = {
           const cancellingUserPetName =
             playdate.creator.pets[0]?.name || "Unknown Pet";
 
-          const notificationData = {
-            recipientUserId: participant._id,
-            title: "Playdate Cancelled",
-            message: `${participantPetName}, a playdate with ${cancellingUserPetName} has been cancelled. Reason: ${
-              message || "No specific reason"
+          // `sendPushNotification(notificationData)` passed the payload where
+          // the recipient goes, so Mongoose was asked to cast an object to an
+          // ObjectId and threw - inside the `Promise.all` of the cancel path,
+          // which made every cancellation a 500.
+          return notify({
+            content: `${participantPetName}, a playdate with ${cancellingUserPetName} has been cancelled. Reason: ${
+              message || "no reason given"
             }`,
-            data: {
-              playdateId,
-              cancelledBy: userId,
-              reason: message || "No specific reason provided",
-            },
-          };
-          return Promise.all([
-            sendPushNotification(notificationData),
-            createNotification({
-              content: notificationData.message,
-              recipientId: participant._id,
-              type: "Playdate Cancelled",
-              creatorId: userId,
-              petName: cancellingUserPetName,
-            }),
-          ]);
+            recipientId: participant._id,
+            type: "playdateCancelled",
+            creatorId: userId,
+            petName: cancellingUserPetName,
+            data: { playdateId },
+          });
         });
 
       // Notify the creator if not the one cancelling
       if (playdate.creator._id.toString() !== userId) {
         const cancellingUserPetName =
           playdate.creator.pets[0]?.name || "Unknown Pet";
-        const notificationData = {
-          recipientUserId: playdate.creator._id,
-          title: "Playdate Cancelled",
-          message: `Your playdate involving ${cancellingUserPetName} has been cancelled. Reason: ${
-            message || "No specific reason"
-          }`,
-          data: {
-            playdateId,
-            cancelledBy: userId,
-            reason: message || "No specific reason provided",
-          },
-        };
         notifications.push(
-          Promise.all([
-            sendPlaydateNotification(notificationData),
-            createNotification({
-              content: notificationData.message,
-              recipientId: playdate.creator._id,
-              type: "Playdate Cancelled",
-              creatorId: userId,
-              petName: cancellingUserPetName,
-            }),
-          ])
+          notify({
+            content: `Your playdate involving ${cancellingUserPetName} has been cancelled. Reason: ${
+              message || "no reason given"
+            }`,
+            recipientId: playdate.creator._id,
+            type: "playdateCancelled",
+            creatorId: userId,
+            petName: cancellingUserPetName,
+            data: { playdateId },
+          })
         );
       }
 
@@ -310,13 +269,13 @@ const PlaydateController = {
 
       // Declining silently left the organiser waiting on an answer that had
       // already been given.
-      await createNotification({
+      await notify({
         content: "Your playdate request was declined.",
         recipientId: playdate.creator,
-        type: "Playdate",
+        type: "playdateDeclined",
         creatorId: req.userId,
+        data: { playdateId: playdate._id },
       });
-      emitToUser(playdate.creator, "notification", { playdateId: playdate._id });
 
       return res.status(200).json({ message: "Playdate declined" });
     } catch (error) {
@@ -403,21 +362,14 @@ const PlaydateController = {
             theirPet?.name ?? "your pet"
           }.`;
 
-          await createNotification({
+          await notify({
             content,
             recipientId: userId,
-            type: "Playdate",
+            type: "playdate",
             creatorId: req.userId,
             petName: organiserPetName,
+            data: { playdateId: playdate._id },
           });
-
-          await sendPushNotification(userId, {
-            title: "Playdate Request",
-            body: content,
-            data: { type: "playdate", playdateId: String(playdate._id) },
-          });
-
-          emitToUser(userId, "notification", { playdateId: playdate._id, content });
         })
       );
 
@@ -479,33 +431,21 @@ const PlaydateController = {
             .map((pet) => pet.name)
             .join(", ");
 
-          const message = `The details for the playdate on ${new Date(
+          const content = `The details for the playdate on ${new Date(
             date
-          ).toLocaleDateString()} with ${petNames} have been updated. Check out the new details!`;
-          const notificationData = {
-            recipientUserId: participant._id,
-            title: "Playdate Updated",
-            message: message,
-            data: {
-              playdateId,
-              updatedDate: date,
-              updatedTime: time,
-              updatedLocation: location,
-              petsInvolved: petNames,
-            },
-          };
+          ).toLocaleDateString()} with ${petNames} have changed.`;
 
-          // Send notifications and create database entries simultaneously
-          return Promise.all([
-            sendPlaydateNotification(notificationData),
-            createNotification({
-              content: message,
-              recipientId: participant._id,
-              type: "Playdate Updated",
-              creatorId: userId,
-              petName: petNames,
-            }),
-          ]);
+          // Same missing-recipient bug as the cancel path: this called Express
+          // middleware with a plain object, so it threw on `req.body` being
+          // undefined and turned every detail edit into a 500.
+          return notify({
+            content,
+            recipientId: participant._id,
+            type: "playdate",
+            creatorId: userId,
+            petName: petNames,
+            data: { playdateId },
+          });
         });
 
       await Promise.all(notificationPromises);

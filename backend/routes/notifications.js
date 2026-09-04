@@ -8,15 +8,20 @@ const NotificationController = require("../controllers/NotificationController");
 
 router.get("/", NotificationController.getAllNotifications);
 router.get("/recent", NotificationController.fetchRecentNotifications);
+router.get("/unread-count", NotificationController.getUnreadCount);
 router.get("/user/:userId", NotificationController.getUserNotifications);
 
 router.post("/", NotificationController.createNotification);
 router.post("/device-token", NotificationController.saveDeviceToken);
-router.post("/sendNotification", NotificationController.handleSendNotification);
-router.post("/send-playdate", NotificationController.sendPlaydateNotification);
+router.post("/read", NotificationController.markAllRead);
 
-router.get("/:id", NotificationController.getNotificationById, (req, res) => {
-  res.json(res.notification);
-});
+// `POST /sendNotification`, `/send-playdate` and the friend-request push were
+// "send a push with this title and body to this user id", callable by any
+// signed-in account. Nothing in the app used them, and the server raises its
+// own pushes at the points that matter, so they were a way to put arbitrary
+// text on a stranger's lock screen and nothing else.
+
+router.post("/:id/read", NotificationController.markRead);
+router.get("/:id", NotificationController.getNotificationById);
 
 module.exports = router;

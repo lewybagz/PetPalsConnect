@@ -1,301 +1,183 @@
-import React, { useState, useMemo } from "react";
-import {
-  Alert,
-  Modal,
-  TouchableOpacity,
-  View,
-  Text,
-  Image,
-  StyleSheet,
-} from "react-native";
+import React, { useState } from "react";
+import { Image, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
-import api from "../api/axios";
-import { useSelector } from "react-redux";
-import { getStoredToken } from "../../utils/tokenutil";
-import { setError } from "../redux/actions";
+
+import { ActionSheet, Card, Text, useToast } from "./ui";
 import { blockUser } from "../api/safety";
+import { sendFriendRequest } from "../api/friends";
+import { addFavorite } from "../api/favorites";
+import { useTailwind } from "../styles/tailwind";
 import { useTokens } from "../context/AppThemeContext";
+import { radius } from "../styles/tokens";
 
-const UserPetCard = ({ data, type, reviews, onPress, navigation }) => {
+/**
+ * A pet or a person, on a card.
+ *
+ * Nine screens render this and they disagree about how: seven pass
+ * `data`+`type`, `UsersPetsScreen` passes `data` with no `type` at all - which
+ * fell through the switch to a literal `<Text>No data</Text>` - and
+ * `PlaydateCardComponent` passes `petData`, a prop this never read, so it
+ * rendered an empty card. The pet branch also read `petData.photo` (the field
+ * is `photos`, an array) and `petData.ownerId` (it is `owner`), and mapped
+ * `reviews.map` over a prop no caller passes, which throws.
+ *
+ * The kebab menu read `data.user._id` and `data.pet._id` on documents that are
+ * a pet or a user, never a wrapper around both, so its three actions all ran
+ * against `undefined` - and "Add to Favorites" sent `user` and `creator` from
+ * the client, which the server takes from the token.
+ *
+ * It works out what it was handed now, rather than being told, and accepts
+ * either prop name.
+ */
+const UserPetCard = ({ data, petData, type, onPress, navigation }) => {
+  const tailwind = useTailwind();
   const tokens = useTokens();
-  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+  const toast = useToast();
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const currentUser = useSelector((state) => state.user.user);
+  const item = data ?? petData ?? null;
 
-  const getToken = async () => {
+  // A pet has a breed; a user has a username. Either beats a `type` prop two
+  // of the nine callers forget to pass.
+  const isPet =
+    type === "pet" || (type !== "user" && Boolean(item?.breed || item?.weight));
+
+  const pet = isPet ? item : null;
+  const owner = isPet ? item?.owner : item;
+  const ownerId = owner?._id ? String(owner._id) : owner ? String(owner) : null;
+
+  const photo = isPet ? item?.photos?.[0] : item?.userPhoto;
+  const title = isPet ? item?.name : item?.username;
+  const subtitle = isPet ? item?.breed : item?.location;
+
+  if (!item) return null;
+
+  const handleBlock = async () => {
+    if (!ownerId) return;
     try {
-      const token = await getStoredToken();
-      return token;
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-  /**
-   * `{ BlockedUser, Owner }` against a lowercase schema: strict mode dropped
-   * both keys and the save failed on the required ones, so this never blocked
-   * anybody. `Owner` also came from the card's data rather than the caller -
-   * the server takes it from the token now and ignores the body.
-   */
-  const handleBlockUser = async (userIdToBlock) => {
-    try {
-      await blockUser(userIdToBlock);
-      Alert.alert("User Blocked", "The user has been successfully blocked.");
-      setModalVisible(false);
+      await blockUser(ownerId);
+      toast.success("Blocked");
     } catch (error) {
-      console.error("Error blocking user:", error);
-      Alert.alert("Error", "Failed to block user.");
+      console.warn("[safety] Could not block:", error.message);
+      toast.error("Couldn't block that account.");
     }
   };
 
-  const navigateToReportUser = (userIdToReport) => {
-    navigation.navigate("ReportUser", { userId: userIdToReport });
-    setModalVisible(false);
-  };
-
-  const handleAddToFavorites = async (petId, token) => {
+  const handleFavourite = async () => {
+    if (!pet?._id) return;
     try {
-      getToken();
-      const response = await api.post(
-        "/api/favorites",
-        {
-          content: petId,
-          user: data.user._id,
-          creator: data.user._id,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (response.status === 201) {
-        Alert.alert("Favorite Added", "The pet has been added to favorites.");
-        setModalVisible(false);
-      }
+      await addFavorite(String(pet._id));
+      toast.success("Added to favourites");
     } catch (error) {
-      console.error("Error adding to favorites:", error);
-      Alert.alert("Error adding to favorites:", error);
+      console.warn("[favorites] Could not add:", error.message);
+      toast.error("Couldn't add that to favourites.");
     }
   };
 
-  const handleAddFriend = async (userId, token) => {
-    if (!currentUser) {
-      console.error("Current user not found");
+  const handleAddFriend = async () => {
+    if (!ownerId) {
+      toast.error("This pet has no owner to add.");
       return;
     }
     try {
-      const response = await api.post(
-        "/api/friends",
-        {
-          senderId: currentUser._id,
-          recipientId: userId,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (response.status === 201) {
-        Alert.alert("Friend Request Sent", "A friend request has been sent.");
-        setModalVisible(false);
-      } else {
-        Alert.alert(
-          "Friend Request Failed",
-          "Unable to send a friend request at this time."
-        );
-      }
+      await sendFriendRequest(ownerId);
+      toast.success("Friend request sent");
     } catch (error) {
-      console.error("Error:", error);
-      Alert.alert(
-        "Error",
-        "There was an error when attempting to send a friend request."
+      console.warn("[friends] Could not send request:", error.message);
+      toast.error(
+        error.response?.status === 400
+          ? "You've already asked, or you can't add this account."
+          : "Couldn't send that friend request."
       );
     }
   };
-  const renderContent = () => {
-    switch (type) {
-      case "user":
-        return renderUserCard(data);
-      case "pet":
-        return renderPetCard(data);
-      default:
-        return <Text>No data</Text>;
-    }
-  };
 
-  const renderUserCard = (userData) => {
-    return (
-      <View style={styles.UserPetCard}>
-        <Image style={styles.image} source={{ uri: userData.profileImage }} />
-        <Text style={styles.name}>{userData.name}</Text>
-        <Text style={styles.details}>{userData.location}</Text>
-      </View>
-    );
-  };
-
-  const navigateToLocation = (locationId) => {
-    navigation.navigate("PotentialPlaydateLocation", { locationId });
-  };
-
-  const renderPetCard = (petData, isFriend) => {
-    return (
-      <TouchableOpacity style={styles.UserPetCard} onPress={onPress}>
-        <Image style={styles.image} source={{ uri: petData.photo }} />
-        <Text style={styles.name}>{petData.name}</Text>
-        <Text style={styles.details}>Breed: {petData.breed}</Text>
-        {isFriend ? null : (
-          <TouchableOpacity
-            style={styles.addFriendIcon}
-            onPress={() => handleAddFriend(petData.ownerId)}
+  return (
+    <>
+      <Card
+        testID={`card-${item._id}`}
+        onPress={onPress}
+        style={tailwind("mb-sm flex-row items-center")}
+      >
+        {photo ? (
+          <Image
+            source={{ uri: photo }}
+            style={{ width: 56, height: 56, borderRadius: radius.pill }}
+          />
+        ) : (
+          <View
+            style={[
+              tailwind("bg-surfaceAlt items-center justify-center"),
+              { width: 56, height: 56, borderRadius: radius.pill },
+            ]}
           >
-            <Icon name="account-plus" size={24} color={tokens.success} />
-          </TouchableOpacity>
+            <Icon
+              name={isPet ? "paw" : "account"}
+              size={28}
+              color={tokens.textFaint}
+            />
+          </View>
         )}
-        {reviews.map((review) => (
-          <View key={review._id}>
-            <Text>{review.comment}</Text>
-            <TouchableOpacity
-              onPress={() =>
-                navigateToLocation(review.RelatedPlaydate.location)
-              }
-            >
-              <Text>See Playdate Location</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-        {renderKebabMenu()}
-      </TouchableOpacity>
-    );
-  };
 
-  const renderKebabMenu = () => {
-    return (
-      <>
+        <View style={tailwind("flex-1 ml-md")}>
+          <Text variant="label">{title ?? (isPet ? "A pet" : "Someone")}</Text>
+          {subtitle ? (
+            <Text variant="caption" tone="muted">
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+
         <TouchableOpacity
-          onPress={() => setModalVisible(true)}
-          style={styles.kebabIcon}
+          testID={`card-menu-${item._id}`}
+          accessibilityRole="button"
+          accessibilityLabel="More options"
+          onPress={() => setMenuOpen(true)}
+          style={tailwind("p-sm")}
         >
-          <Icon name="dots-vertical" size={20} />
+          <Icon name="dots-vertical" size={20} color={tokens.textMuted} />
         </TouchableOpacity>
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => {
-            setModalVisible(!modalVisible);
-          }}
-        >
-          <View style={styles.centeredView}>
-            <View style={styles.modalView}>
-              <TouchableOpacity
-                onPress={() => handleBlockUser(data.user._id)}
-                style={styles.optionButton}
-              >
-                <Text style={styles.optionText}>Block</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => navigateToReportUser(data.user._id)}
-                style={styles.optionButton}
-              >
-                <Text style={styles.optionText}>Report</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleAddToFavorites(data.pet._id)}
-                style={styles.optionButton}
-              >
-                <Text style={styles.optionText}>Add to Favorites</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setModalVisible(false)}
-                style={styles.optionButton}
-              >
-                <Text style={styles.optionText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      </>
-    );
-  };
+      </Card>
 
-  return <View>{renderContent()}</View>;
+      <ActionSheet
+        testID="card-options-sheet"
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={title}
+        items={[
+          {
+            label: "Add to favourites",
+            icon: "star-outline",
+            testID: "card-option-favourite",
+            onPress: handleFavourite,
+            disabled: !pet?._id,
+          },
+          {
+            label: "Add friend",
+            icon: "person-add-outline",
+            testID: "card-option-friend",
+            onPress: handleAddFriend,
+            disabled: !ownerId,
+          },
+          {
+            label: "Report",
+            icon: "flag-outline",
+            testID: "card-option-report",
+            onPress: () => navigation?.navigate("ReportUser", { userId: ownerId }),
+            disabled: !ownerId || !navigation,
+          },
+          {
+            label: "Block",
+            icon: "ban-outline",
+            tone: "danger",
+            testID: "card-option-block",
+            onPress: handleBlock,
+            disabled: !ownerId,
+          },
+        ]}
+      />
+    </>
+  );
 };
-const makeStyles = (t) => StyleSheet.create({
-  UserPetCard: {
-    backgroundColor: t.surface,
-    borderRadius: 8,
-    padding: 10,
-    alignItems: "center",
-    shadowColor: t.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  petCard: {
-    // ... existing styling for the card
-    flexDirection: "row", // Adjust the layout accordingly
-    alignItems: "center", // Align items in the center
-  },
-  infoContainer: {
-    flex: 1, // Take up remaining space
-    // ... other styling for the container of text
-  },
-  addFriendIcon: {
-    // Style the add friend button
-    padding: 10, // Add padding for touchable area
-    marginRight: 10, // Optional spacing from the edge of the card
-  },
-  image: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  name: {
-    color: t.text,
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 8,
-  },
-  details: {
-    fontSize: 14,
-    color: t.textMuted,
-    marginTop: 4,
-  },
-  kebabIcon: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    padding: 8,
-  },
-  centeredView: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 22,
-  },
-  modalView: {
-    margin: 20,
-    backgroundColor: t.surface,
-    borderRadius: 20,
-    padding: 35,
-    alignItems: "center",
-    shadowColor: t.text,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  optionButton: {
-    padding: 10,
-    elevation: 2,
-  },
-  optionText: {
-    color: t.text,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-});
 
 export default UserPetCard;

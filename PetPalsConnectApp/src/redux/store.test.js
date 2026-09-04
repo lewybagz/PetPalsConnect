@@ -31,11 +31,22 @@ const sourceFiles = () => {
   return out;
 };
 
+/**
+ * Source with its comments removed.
+ *
+ * A comment naming a selector is prose, not a read. Documenting *why* a
+ * reducer avoids writing `state.notifications.map(...)` in place used to fail
+ * this check by writing it in the explanation - the same trap the colour ban
+ * hit, and the same fix.
+ */
+const withoutComments = (source) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+
 /** Every `state.<slice>.<field>` the app reads, with where it appears. */
 const selectorPaths = () => {
   const found = new Map();
   for (const file of sourceFiles()) {
-    const src = fs.readFileSync(file, "utf8");
+    const src = withoutComments(fs.readFileSync(file, "utf8"));
     for (const match of src.matchAll(/\bstate\.([a-zA-Z_$][\w$]*)\.([a-zA-Z_$][\w$]*)/g)) {
       const key = `${match[1]}.${match[2]}`;
       if (!found.has(key)) found.set(key, []);
