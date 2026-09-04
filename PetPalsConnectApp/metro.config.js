@@ -26,6 +26,7 @@ const WEB_STUBS = {
   "react-native-maps": "tools/web-stubs/maps.js",
   "@stripe/stripe-react-native": "tools/web-stubs/stripe.js",
   "@gorhom/bottom-sheet": "tools/web-stubs/bottom-sheet.js",
+  "expo-location": "tools/web-stubs/location.js",
 };
 
 const defaultResolveRequest = config.resolver.resolveRequest;

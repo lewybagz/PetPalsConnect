@@ -127,4 +127,44 @@ export const ROUTES = {
   "/api/chats": CHATS,
   "/api/blocklists": BLOCKED,
   "/api/reports/options": { reasons: [], targets: [] },
+  "/api/petmatches/map": {
+    origin: { latitude: 37.78825, longitude: -122.4324 },
+    range: 25,
+    pets: [
+      {
+        _id: "pet-1",
+        name: "Bo",
+        breed: "Beagle",
+        photos: [PHOTOS.bo],
+        latitude: 37.7925,
+        longitude: -122.4382,
+        distanceMiles: 0.6,
+      },
+      {
+        _id: "pet-2",
+        name: "Sky",
+        breed: "Whippet",
+        photos: [PHOTOS.sky],
+        latitude: 37.7842,
+        longitude: -122.4201,
+        distanceMiles: 1.1,
+      },
+    ],
+  },
+  "/api/locations": [
+    {
+      _id: "loc-1",
+      name: "Dolores Park",
+      address: "19th St & Dolores St",
+      geoLocation: { type: "Point", coordinates: [-122.4269, 37.7596] },
+      distanceMiles: 1.9,
+    },
+    {
+      _id: "loc-2",
+      name: "Duboce Park",
+      address: "Duboce Ave & Scott St",
+      geoLocation: { type: "Point", coordinates: [-122.4353, 37.7692] },
+      distanceMiles: 1.4,
+    },
+  ],
 };

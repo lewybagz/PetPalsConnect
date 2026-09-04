@@ -1,103 +1,62 @@
-require("dotenv").config();
-const axios = require("axios");
 const Location = require("../models/Location");
-const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+const places = require("../services/places");
+const { milesBetween, formatMiles } = require("../services/matching/distance");
+
+/**
+ * Places to meet.
+ *
+ * The near-query wrote a PascalCase `GeoLocation` key against a schema with a
+ * lowercase `geoLocation`; `strictQuery` is off, so it went to Mongo as-is and
+ * `$nearSphere` ran against a field that does not exist. "Places near you"
+ * returned nothing, on every request, and looked exactly like an empty
+ * database - which it also was, since nothing ever created a row.
+ */
 const LocationController = {
+  /**
+   * Places, nearest first when a position is given.
+   *
+   * A public catalogue read: the same parks for everybody, holding nothing
+   * personal. Listed as such in `services/authAudit.js`.
+   */
   async getAllLocations(req, res) {
+    const { lat, lng, range, userLat, userLng } = req.query;
+
+    // `userLat`/`userLng` are what the older screens send.
+    const latitude = lat ?? userLat;
+    const longitude = lng ?? userLng;
+
     try {
-      const { range, userLat, userLng } = req.query;
-      let query = {};
+      const locations = await places.nearby({
+        latitude,
+        longitude,
+        radiusMiles: range,
+      });
 
-      if (range && userLat && userLng) {
-        const userCoords = [parseFloat(userLng), parseFloat(userLat)];
-        const rangeInMeters = parseFloat(range) * 1609.34;
+      const origin =
+        Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude))
+          ? [Number(longitude), Number(latitude)]
+          : null;
 
-        // The schema path is `geoLocation`. `strictQuery` is off, so this
-        // PascalCase key went to Mongo as-is: a $nearSphere against a field
-        // that does not exist and has no 2dsphere index, so the "places near
-        // you" step never returned anything.
-        query = {
-          geoLocation: {
-            $nearSphere: {
-              $geometry: {
-                type: "Point",
-                coordinates: userCoords,
-              },
-              $maxDistance: rangeInMeters,
-            },
-          },
-        };
-      }
-
-      // `Creator` was populated here; the Location schema has no such path
-      // (nor a lowercase one), so the populate was a no-op at best.
-      const locations = await Location.find(query);
-      res.json(locations);
+      res.json(
+        locations.map((location) => ({
+          ...location,
+          // In miles, for a screen that has to say "2 miles away" without
+          // knowing that the stored order is [longitude, latitude].
+          distanceMiles:
+            origin && location.geoLocation?.coordinates
+              ? formatMiles(milesBetween(origin, location.geoLocation.coordinates))
+              : null,
+        }))
+      );
     } catch (err) {
       res.status(500).json({ message: err.message });
-    }
-  },
-
-  async updateLocations() {
-    const placesApiUrl =
-      "https://maps.googleapis.com/maps/api/place/details/json";
-    const storedLocations = await Location.find({}, "placeId");
-    try {
-      // Here you should have an array of place IDs to update, fetched from your database or other source
-      const placeIds = storedLocations.map((location) => location.placeId);
-
-      // Fetch and update each place by its ID
-      for (const placeId of placeIds) {
-        const response = await axios.get(placesApiUrl, {
-          params: {
-            place_id: placeId,
-            fields: "name,formatted_address,geometry", // Specify other fields you need
-            key: GOOGLE_API_KEY,
-          },
-        });
-
-        const placeDetails = response.data.result;
-
-        // Convert the place details to your Location schema
-        const locationData = {
-          address: placeDetails.formatted_address,
-          description: "", // Add any additional fields from placeDetails
-          photo: "", // If available in the placeDetails
-          rating: placeDetails.rating, // If available
-          reviews: [], // If available
-          creator: "", // Set the appropriate creator
-          geoLocation: {
-            type: "Point",
-            coordinates: [
-              // Ensure the order is [longitude, latitude]
-              placeDetails.geometry.location.lng,
-              placeDetails.geometry.location.lat,
-            ],
-          },
-        };
-
-        // Insert or update the location in your database
-        const existingLocation = await Location.findOne({
-          "geoLocation.coordinates": locationData.geoLocation.coordinates,
-        });
-        if (existingLocation) {
-          await Location.findByIdAndUpdate(existingLocation._id, locationData);
-        } else {
-          await new Location(locationData).save();
-        }
-      }
-
-      console.log("Locations updated successfully");
-    } catch (err) {
-      console.error("Error updating locations:", err);
-      throw err; // Or handle this error appropriately
     }
   },
 
   async getLocationById(req, res, next) {
     let location;
     try {
-      location = await Location.findById(req.params.id).populate("Creator");
+      location = await Location.findById(req.params.id);
       if (location == null) {
         return res.status(404).json({ message: "Cannot find location" });
       }
@@ -109,30 +68,80 @@ const LocationController = {
     next();
   },
 
+  /**
+   * Adds a place by hand.
+   *
+   * `placeId` is required - it is how a place is matched against Google's
+   * catalogue and how the importer refreshes it - and was never set, so
+   * creating a location always failed validation. `name` is new and required
+   * for the same reason every screen renders one. `creator` is not a path on
+   * this schema, so that key was silently dropped.
+   */
   async createLocation(req, res) {
-    // `placeId` is required - it is how a place is matched against Google's
-    // catalogue and how `updateLocations` refreshes it - and was never set, so
-    // creating a location always failed validation. `creator` is not a path on
-    // this schema at all, so that key was dropped.
-    if (!req.body.placeId) {
-      return res.status(400).json({ message: "placeId is required" });
+    const { name, address, placeId } = req.body;
+
+    if (!name || !address || !placeId) {
+      return res
+        .status(400)
+        .json({ message: "name, address and placeId are required" });
     }
 
+    const coordinates = Array.isArray(req.body.coordinates)
+      ? req.body.coordinates.map(Number)
+      : null;
+
     const location = new Location({
-      address: req.body.address,
+      name,
+      address,
       description: req.body.description,
       photo: req.body.photo,
       rating: req.body.rating,
-      reviews: req.body.reviews,
-      placeId: req.body.placeId,
+      placeId,
       slug: req.body.slug,
+      geoLocation:
+        coordinates && coordinates.length === 2 && coordinates.every(Number.isFinite)
+          ? { type: "Point", coordinates }
+          : undefined,
     });
 
     try {
       const newLocation = await location.save();
       res.status(201).json(newLocation);
     } catch (err) {
+      // The unique index on `placeId` is what stops an import filling the map
+      // with the same park five times; a duplicate is not an error worth 400.
+      if (err?.code === 11000) {
+        const existing = await Location.findOne({ placeId });
+        return res.status(200).json(existing);
+      }
       res.status(400).json({ message: err.message });
+    }
+  },
+
+  /**
+   * Pulls nearby places from Google into the collection.
+   *
+   * Without this the map is empty on every fresh deployment, and an empty map
+   * is indistinguishable from a broken one. Optional: no key and it reports 503
+   * rather than failing the request in a way that looks like a bug.
+   */
+  async importNearby(req, res) {
+    const { lat, lng, range } = req.query;
+
+    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
+      return res.status(400).json({ message: "lat and lng are required" });
+    }
+
+    try {
+      const imported = await places.importNear({
+        latitude: Number(lat),
+        longitude: Number(lng),
+        radiusMiles: Number(range) || 5,
+      });
+
+      res.json({ imported: imported.length });
+    } catch (err) {
+      res.status(err.status ?? 500).json({ message: err.message });
     }
   },
 };

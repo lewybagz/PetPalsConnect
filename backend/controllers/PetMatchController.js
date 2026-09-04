@@ -7,6 +7,7 @@ const {
   rangeToMiles,
   withinRange,
   formatMiles,
+  milesBetween,
 } = require("../services/matching/distance");
 const { createNotification } = require("../services/NotificationService");
 const { emitToUser } = require("../services/realtime");
@@ -359,6 +360,89 @@ const PetMatchController = {
       });
     } catch (error) {
       console.error("[matching] Discover failed:", error.message);
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  /**
+   * Everything the map can plot: matched pets, positioned by their owner.
+   *
+   * `matched-pets` returns PetMatch rows, and a pet has no coordinates - the
+   * position lives on the owner's `geoLocation`. The map screen read
+   * `pet.location.lat` on those rows, which is undefined twice over, so it has
+   * never rendered a single marker.
+   *
+   * Blocking and suspension are applied here too. A map is a list of people who
+   * are near you; forgetting the filter on it would be worse than forgetting it
+   * in the deck, because it also says where they are.
+   */
+  async mapPets(req, res) {
+    try {
+      const owner = await User.findById(req.userId)
+        .select("geoLocation playdateRange")
+        .lean();
+      if (!owner) {
+        return res.status(404).json({ message: "No profile for this account yet" });
+      }
+
+      const matches = await PetMatch.find({ relevantToUser: req.userId })
+        .populate("pet2")
+        .sort({ matchScore: -1 })
+        .limit(100)
+        .lean();
+
+      const pets = matches.map((match) => match.pet2).filter(Boolean);
+      const ownerIds = [...new Set(pets.map((pet) => String(pet.owner)))];
+
+      const [blockedIds, owners] = await Promise.all([
+        blocking.blockedIdsFor(req.userId),
+        User.find({ _id: { $in: ownerIds }, suspended: { $ne: true } })
+          .select("geoLocation username")
+          .lean(),
+      ]);
+
+      const blocked = new Set(blockedIds.map(String));
+      const byOwner = new Map(owners.map((row) => [String(row._id), row]));
+      const origin = owner.geoLocation?.coordinates ?? null;
+
+      const plotted = [];
+      const seen = new Set();
+
+      for (const pet of pets) {
+        const ownerId = String(pet.owner);
+        if (blocked.has(ownerId)) continue;
+
+        const candidateOwner = byOwner.get(ownerId);
+        const coordinates = candidateOwner?.geoLocation?.coordinates;
+        // A pet whose owner has never shared a position cannot be a pin. It
+        // still appears in the deck; it just has nowhere to go on a map.
+        if (!Array.isArray(coordinates) || coordinates.length !== 2) continue;
+
+        if (seen.has(String(pet._id))) continue;
+        seen.add(String(pet._id));
+
+        plotted.push({
+          _id: pet._id,
+          name: pet.name,
+          breed: pet.breed,
+          photos: pet.photos ?? [],
+          // Latitude and longitude by name, so the screen never has to know
+          // which way round the stored pair is.
+          latitude: coordinates[1],
+          longitude: coordinates[0],
+          distanceMiles: origin
+            ? formatMiles(milesBetween(origin, coordinates))
+            : null,
+        });
+      }
+
+      res.json({
+        pets: plotted,
+        origin: origin ? { latitude: origin[1], longitude: origin[0] } : null,
+        range: rangeToMiles(owner.playdateRange),
+      });
+    } catch (error) {
+      console.error("[matching] Map failed:", error.message);
       res.status(500).json({ message: error.message });
     }
   },

@@ -348,6 +348,40 @@ breakdown it returns is in *weighted points*, not ratios — divide by the
 dimension's weight before comparing dimensions. The app mirrors those weights
 in `src/api/discovery.js`, and `types.test.js` checks the two agree.
 
+### Maps
+
+**A pet has no coordinates; its owner does.** `GET /api/petmatches/map` joins
+matched pets to their owners' `geoLocation` and returns `latitude`/`longitude`
+by name, so no screen has to remember that the stored pair is GeoJSON
+`[longitude, latitude]` - the order that puts a park in the sea. It applies the
+same block and suspension filters as discovery: a map says where somebody is,
+so forgetting the filter there is worse than forgetting it in the deck.
+
+**`Location` is the only place model, and `name` is required.** There was a
+second, `PotentialPlaydateLocation`, with the same fields, its own controller
+and routes that repeated their own mount prefix; nothing referenced it.
+`Location` had no `name` at all, so every screen that renders one showed
+`undefined`.
+
+**A GeoJSON point is a sub-schema with `default: undefined`.** Written inline,
+the `type: "Point"` default materialises on every document, so a row with no
+coordinates is stored as `{ type: "Point" }` - which a 2dsphere index rejects
+outright, and the save fails talking about geo keys on a document nobody meant
+to put on a map.
+
+**Google Places is optional, like Stripe.** `services/places.js` imports nearby
+parks and pet shops so a fresh deployment is not an empty map; without
+`GOOGLE_MAPS_API_KEY` the import reports 503 and everything else still works.
+The importer upserts on `placeId`, which is also uniquely indexed, so two users
+in one city cannot double the markers.
+
+**The map keys are prebuild-time, not runtime.** `GOOGLE_MAPS_ANDROID_KEY` and
+`GOOGLE_MAPS_IOS_KEY` are read by the `react-native-maps` config plugin in
+`app.json`, so changing one means rebuilding rather than restarting Metro.
+Android needs a key or it renders a blank grey grid with no error; iOS uses
+Apple Maps (`PROVIDER_DEFAULT`) and needs none. Forcing `PROVIDER_GOOGLE` on
+both is why the map was blank on iOS.
+
 ### Playdates
 
 **Participants come from the pets, not the client.** `createPlaydate` derives

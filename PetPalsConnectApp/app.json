@@ -71,6 +71,13 @@
         }
       ],
       [
+        "react-native-maps",
+        {
+          "androidApiKey": "$GOOGLE_MAPS_ANDROID_KEY",
+          "iosApiKey": "$GOOGLE_MAPS_IOS_KEY"
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "This app uses your Photos so you can upload images of you and your pet.",

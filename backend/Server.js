@@ -87,7 +87,6 @@ const routes = {
   petmatches: "petMatches",
   pets: "pets",
   playdates: "playdates",
-  potentialplaydatelocations: "potentialPlaydateLocation",
   reports: "reports",
   reviews: "reviews",
   services: "services",

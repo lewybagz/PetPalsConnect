@@ -7,6 +7,7 @@ import ReportUserScreen from "../../src/screens/profile/ReportUserScreen";
 import BlockedAccountsScreen from "../../src/screens/settings/BlockedAccountsScreen";
 import PetPhotosScreen from "../../src/screens/pets/PetPhotosScreen";
 import SettingsScreen from "../../src/screens/settings/SettingsScreen";
+import MapScreen from "../../src/screens/swipe/MapScreen";
 import { CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
 
 /**
@@ -150,6 +151,15 @@ export const BOARDS = [
     render: () => (
       <PetPhotosScreen navigation={navigation} route={{ params: { pet: MY_PET } }} />
     ),
+  },
+  {
+    id: "map",
+    label: "Map",
+    routes: ROUTES,
+    // react-native-maps has no web build, so `tools/web-stubs/maps.js` stands
+    // in: the pins and the sheet render, the tiles do not. It is the layer the
+    // gallery cannot show, and the one thing a device is genuinely needed for.
+    render: () => <MapScreen navigation={navigation} />,
   },
   {
     id: "settings",

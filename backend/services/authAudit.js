@@ -34,8 +34,6 @@ const PUBLIC_READS = {
   "ArticleController.getLatestArticles": "the articles list screen",
   "ArticleController.getLatestArticle": "the home screen's article shelf",
   "LocationController.getAllLocations": "the shared catalogue of parks and meeting places",
-  "PotentialPlaydateLocationController.getAllLocations":
-    "suggested meeting places, no personal data",
   "ServiceController.getAllServices": "a directory of vets and groomers",
   "PetController.getAllPets": "pets are the browsable content of the app",
   "PetController.getLatestPets": "the home screen's new-pets shelf",

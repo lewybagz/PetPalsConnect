@@ -1,325 +1,360 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useMemo,
-  useCallback,
-} from "react";
-import {
-  Dimensions,
-  StyleSheet,
-  View,
-  TouchableOpacity,
-  Alert,
-  Text,
-} from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import api from "../../api/axios";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
+import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
-import { copilot, walkthroughable, CopilotStep } from "../../components/walkthrough";
-import { useTailwind } from "../../styles/tailwind";
 import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
-import BottomSheet from "@gorhom/bottom-sheet";
-import CustomTooltip from "../../components/CustomTooltip";
-import { getStoredToken } from "../../../utils/tokenutil";
-import { useTokens } from "../../context/AppThemeContext";
 
-const WalkthroughableMapView = walkthroughable(MapView);
-const WalkthroughableText = walkthroughable(Text);
-const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
+import { useTailwind } from "../../styles/tailwind";
+import { useAppTheme, useTokens } from "../../context/AppThemeContext";
+import { darkMapStyle } from "../../styles/mapStyle";
+import { hit, radius, space } from "../../styles/tokens";
+import { Button, Card, EmptyState, Screen, Text, useToast } from "../../components/ui";
+import { fetchMapPets, fetchPlaces, importPlaces } from "../../api/maps";
 
-const MapScreen = ({ start, route, navigation }) => {
-  const tokens = useTokens();
-  const [location, setLocation] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [matchedPets, setMatchedPets] = useState([]);
-  const [showMatchedPets, setShowMatchedPets] = useState(true);
-  const [showPlaydateLocations, setShowPlaydateLocations] = useState(true);
-  const [playdateLocations, setPlaydateLocations] = useState([]);
-  const [selectedMarker, setSelectedMarker] = useState(null);
-  const [mapTheme, setMapTheme] = useState("standard");
+/**
+ * Everyone near you, on a map.
+ *
+ * This screen has never worked. It read `pet.location.lat` off rows from
+ * `/api/petmatches/matched-pets` - PetMatch documents, and a pet has no
+ * coordinates in the first place - so every marker was undefined twice over. It
+ * called its own places fetch with no arguments, so the position and range went
+ * as `undefined`. It drove a bottom sheet through `.show()` and
+ * `initialSnapIndex`, neither of which the library has, with snap points
+ * `[300, 0]`, which must ascend and cannot contain zero. It switched `mapType`
+ * to `"night"`, which is not a value react-native-maps accepts. And it started
+ * the walkthrough from a second effect on every mount, whether or not anybody
+ * asked for it.
+ *
+ * The sheet is a card now rather than a gesture-driven panel. A map with two
+ * kinds of pin needs somewhere to put the tapped one; it does not need a
+ * dependency with its own gesture handler for that.
+ */
+
+/** Zoomed to roughly a few miles across, which is what "near me" means here. */
+const SPAN = { latitudeDelta: 0.08, longitudeDelta: 0.08 };
+
+/**
+ * Apple Maps on iOS, Google on Android.
+ *
+ * `PROVIDER_GOOGLE` on iOS needs the Google SDK *and* a separate iOS API key;
+ * Apple Maps needs neither and is the platform default. Forcing Google on both
+ * is why the map was blank on iOS even after the key was configured.
+ */
+const provider = Platform.select({
+  android: PROVIDER_GOOGLE,
+  default: PROVIDER_DEFAULT,
+});
+
+const MapScreen = ({ navigation }) => {
   const tailwind = useTailwind();
-  const bottomSheetRef = useRef(null);
+  const tokens = useTokens();
+  const { isDark } = useAppTheme();
+  const toast = useToast();
+  const mapRef = useRef(null);
 
-  const fetchMatchedPets = async () => {
+  const [permission, setPermission] = useState("pending");
+  const [origin, setOrigin] = useState(null);
+  const [pets, setPets] = useState([]);
+  const [places, setPlaces] = useState([]);
+  const [showPets, setShowPets] = useState(true);
+  const [showPlaces, setShowPlaces] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  /**
+   * Asks for the position, then loads both layers.
+   *
+   * A refused permission is not an error state: the server knows where the
+   * caller said they were the last time they shared it, so the map still has an
+   * origin and still has pins. Only the blue dot goes away.
+   */
+  const load = useCallback(async () => {
+    let coords = null;
+
     try {
-      const token = await getStoredToken();
-      const response = await api.get("/api/petmatches/matched-pets", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMatchedPets(response.data);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setPermission(status);
+
+      if (status === "granted") {
+        const position = await Location.getCurrentPositionAsync({});
+        coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+      }
     } catch (error) {
-      console.error("Error fetching matched pets:", error);
+      console.warn("[map] location:", error.message);
+      setPermission("error");
     }
-  };
-  const fetchPlaydateLocations = async (latitude, longitude, range) => {
+
     try {
-      const token = await getStoredToken();
-      // Mounted at /api/locations, not /api/playdates. Sent to the wrong mount
-      // this matched `/api/playdates/:id` and asked for a playdate whose id is
-      // the string "playdate-locations" - a CastError and a 500.
-      const response = await api.get("/api/locations/playdate-locations", {
-        params: {
-          userLat: latitude,
-          userLng: longitude,
-          range: range,
-        },
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPlaydateLocations(response.data);
+      const [map, nearby] = await Promise.all([
+        fetchMapPets(),
+        fetchPlaces(
+          coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}
+        ),
+      ]);
+
+      const here = coords ?? map.origin;
+      setOrigin(here);
+      setPets(map.pets);
+      setPlaces(nearby);
+
+      // An empty collection and a broken query look identical on a map, so say
+      // which it is rather than showing bare ground.
+      if (nearby.length === 0 && here) {
+        const result = await importPlaces({
+          latitude: here.latitude,
+          longitude: here.longitude,
+        });
+        if (result.configured && result.imported > 0) {
+          setPlaces(await fetchPlaces(here));
+        }
+      }
     } catch (error) {
-      console.error("Error fetching playdate locations:", error);
+      console.warn("[map]", error.message);
+      toast.error("Could not load the map.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setErrorMsg("Permission to access location was denied");
-        Alert.alert(
-          "Location Permission Denied",
-          "Please enable location services to use the map."
-        );
-        return;
-      }
+    load();
+  }, [load]);
 
-      try {
-        let location = await Location.getCurrentPositionAsync({});
-        setLocation(location);
-      } catch (error) {
-        console.warn("[map]", error.message);
-        setErrorMsg("Error getting current location");
-        Alert.alert(
-          "Location Error",
-          "There was an error getting your current location."
-        );
-      }
+  const region = useMemo(
+    () =>
+      origin
+        ? { ...origin, ...SPAN }
+        : // Nothing to centre on yet. A world view beats a arbitrary city.
+          { latitude: 0, longitude: 0, latitudeDelta: 100, longitudeDelta: 100 },
+    [origin]
+  );
 
-      // Fetch matched pets and playdate locations from the backend
-      fetchMatchedPets();
-      fetchPlaydateLocations();
-    })();
-    if (route.params?.showTutorial) {
-      start(); // Start copilot tutorial
+  const recentre = () => {
+    if (origin && mapRef.current) {
+      mapRef.current.animateToRegion({ ...origin, ...SPAN }, 400);
     }
-  }, [route.params?.showTutorial]);
-
-  const toggleMatchedPets = () => setShowMatchedPets(!showMatchedPets);
-  const togglePlaydateLocations = () =>
-    setShowPlaydateLocations(!showPlaydateLocations);
-
-
-
-  const handleMarkerPress = (marker, type) => {
-    setSelectedMarker({ ...marker, type });
-    bottomSheetRef.current.show();
   };
 
-  const toggleMapTheme = () => {
-    setMapTheme(mapTheme === "standard" ? "night" : "standard");
+  const openSelected = () => {
+    if (!selected) return;
+    const { kind, id } = selected;
+    setSelected(null);
+
+    if (kind === "pet") navigation.navigate("PetDetails", { petId: id });
+    else navigation.navigate("PotentialPlaydateLocation", { locationId: id });
   };
 
-  const defaultRegion = {
-    latitude: 37.78825, // Example coordinates (e.g., a central location in your area)
-    longitude: -122.4324,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  };
+  if (loading) {
+    return (
+      <Screen testID="map-loading">
+        <Text tone="muted">Finding what&apos;s near you…</Text>
+      </Screen>
+    );
+  }
 
-  // Use user location or default if location is null
-  const initialRegion = location
-    ? {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      }
-    : defaultRegion;
+  const nothingToShow = pets.length === 0 && places.length === 0;
 
-  const snapPoints = useMemo(() => [300, 0], []);
-
-  useEffect(() => {
-    start(); // Start the copilot tutorial
-  }, [start]);
-
-  const handleSheetChanges = useCallback((index) => {
-    console.log("handleSheetChanges", index);
-  }, []);
   return (
-    <View style={styles.container}>
-      {errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
-      <CopilotStep
-        text="This is your map where you can see all the matched pets and playdate spots."
-        order={1}
-        name="mapView"
+    <View testID="map" style={tailwind("flex-1 bg-bg")}>
+      <MapView
+        ref={mapRef}
+        testID="map-view"
+        style={StyleSheet.absoluteFill}
+        provider={provider}
+        initialRegion={region}
+        showsUserLocation={permission === "granted"}
+        showsMyLocationButton={false}
+        // `mapType="night"` is not a thing; a styled Google map is.
+        customMapStyle={isDark ? darkMapStyle : []}
+        userInterfaceStyle={isDark ? "dark" : "light"}
+        onPress={() => setSelected(null)}
       >
-        <WalkthroughableMapView
-          style={styles.map}
-          initialRegion={initialRegion}
-          provider={PROVIDER_GOOGLE}
-          mapType={mapTheme}
-        >
-          {showMatchedPets &&
-            matchedPets.map((pet) => (
+        {showPets &&
+          pets.map((pet) => (
+            <Marker
+              key={`pet-${pet._id}`}
+              testID={`map-pin-pet-${pet._id}`}
+              identifier={`pet-${pet._id}`}
+              coordinate={{ latitude: pet.latitude, longitude: pet.longitude }}
+              title={pet.name}
+              description={pet.breed}
+              onPress={() =>
+                setSelected({
+                  kind: "pet",
+                  id: pet._id,
+                  title: pet.name,
+                  subtitle: pet.breed,
+                  distanceMiles: pet.distanceMiles,
+                })
+              }
+            >
+              <View style={[styles.pin, { backgroundColor: tokens.primary }]}>
+                <Icon name="dog" size={18} color={tokens.onPrimary} />
+              </View>
+            </Marker>
+          ))}
+
+        {showPlaces &&
+          places
+            .filter((place) => place.geoLocation?.coordinates?.length === 2)
+            .map((place) => (
               <Marker
-                key={pet._id}
+                key={`place-${place._id}`}
+                testID={`map-pin-place-${place._id}`}
+                identifier={`place-${place._id}`}
                 coordinate={{
-                  latitude: pet.location.lat,
-                  longitude: pet.location.lng,
+                  // Stored as GeoJSON, which is [longitude, latitude].
+                  latitude: place.geoLocation.coordinates[1],
+                  longitude: place.geoLocation.coordinates[0],
                 }}
-                title={pet.name}
-                description={"Matched Pet"}
-                onPress={() => handleMarkerPress(pet, "pet")}
+                title={place.name}
+                description={place.address}
+                onPress={() =>
+                  setSelected({
+                    kind: "place",
+                    id: place._id,
+                    title: place.name,
+                    subtitle: place.address,
+                    distanceMiles: place.distanceMiles,
+                  })
+                }
               >
-                <Icon name="dog" size={30} color={tokens.success} />
+                <View style={[styles.pin, { backgroundColor: tokens.success }]}>
+                  <Icon name="tree" size={18} color={tokens.onPrimary} />
+                </View>
               </Marker>
             ))}
-          {showPlaydateLocations &&
-            playdateLocations.map((playdate) => (
-              <Marker
-                key={playdate._id}
-                coordinate={{
-                  latitude: playdate.location?.lat,
-                  longitude: playdate.location?.lng,
-                }}
-                title={playdate.name}
-                description={"Playdate Spot"}
-                onPress={() => handleMarkerPress(playdate, "playdate")}
-              >
-                <Icon name="paw" size={30} color={tokens.danger} />
-              </Marker>
-            ))}
-        </WalkthroughableMapView>
-      </CopilotStep>
-      <CopilotStep
-        text="Tap here to switch between dark and light map modes."
-        order={2}
-        name="toggleTheme"
-      ></CopilotStep>
-      <WalkthroughableTouchableOpacity
-        style={tailwind("absolute bottom-4 right-4 bg-surface rounded-full p-2")}
-        onPress={toggleMapTheme}
-      >
-        <Icon
-          name={
-            mapTheme === "standard"
-              ? "moon-waning-crescent"
-              : "white-balance-sunny"
-          }
-          size={24}
-        />
-      </WalkthroughableTouchableOpacity>
-      {/* Toggle Buttons for Filters */}
-      <View style={styles.filterContainer}>
-        <CopilotStep
-          text="Tap here to show or hide matched pets on the map."
-          order={1}
-          name="matchedPetsToggle"
-        >
-          <WalkthroughableTouchableOpacity
-            style={tailwind("m-2 p-2 bg-primary rounded")}
-            onPress={toggleMatchedPets}
-          >
-            <WalkthroughableText style={tailwind("text-onPrimary")}>
-              {showMatchedPets ? "Hide Matched Pets" : "Show Matched Pets"}
-            </WalkthroughableText>
-          </WalkthroughableTouchableOpacity>
-        </CopilotStep>
+      </MapView>
 
-        <CopilotStep
-          text="Tap here to show or hide locations for playdates."
-          order={2}
-          name="playdatesToggle"
-        >
-          <WalkthroughableTouchableOpacity
-            style={tailwind("m-2 p-2 bg-success rounded")}
-            onPress={togglePlaydateLocations}
-          >
-            <WalkthroughableText style={tailwind("text-onPrimary")}>
-              {showPlaydateLocations ? "Hide Playdates" : "Show Playdates"}
-            </WalkthroughableText>
-          </WalkthroughableTouchableOpacity>
-        </CopilotStep>
-      </View>
-
-      <BottomSheet
-        ref={bottomSheetRef}
-        snapPoints={snapPoints}
-        onChange={handleSheetChanges}
-        enableContentPanningGesture={true}
-        initialSnapIndex={1}
-      >
-        <View style={tailwind("p-4")}>
-          {selectedMarker && (
-            <>
-              <CopilotStep
-                text="Here are the details of your selection."
-                order={3}
-                name="markerDetails"
-              >
-                <WalkthroughableText style={tailwind("text-lg font-bold mb-2")}>
-                  {selectedMarker.title}
-                </WalkthroughableText>
-              </CopilotStep>
-              <WalkthroughableText style={tailwind("mb-4")}>
-                {selectedMarker.description}
-              </WalkthroughableText>
-              <CopilotStep
-                text="Tap here to view more details and take action."
-                order={4}
-                name="viewDetails"
-              >
-                <WalkthroughableTouchableOpacity
-                  style={tailwind("bg-primary py-2 px-4 rounded")}
-                  onPress={() => {
-                    if (selectedMarker.type === "pet") {
-                      navigation.navigate("PetDetails", {
-                        petId: selectedMarker._id,
-                      });
-                    } else if (selectedMarker.type === "playdate") {
-                      // These markers are Location documents, so this is a
-                      // location id; the screen looks it up as one.
-                      navigation.navigate("PotentialPlaydateLocation", {
-                        locationId: selectedMarker._id,
-                      });
-                    }
-                    bottomSheetRef.current.close();
-                  }}
-                >
-                  <WalkthroughableText
-                    style={tailwind("text-onPrimary text-center")}
-                  >
-                    View Details
-                  </WalkthroughableText>
-                </WalkthroughableTouchableOpacity>
-              </CopilotStep>
-            </>
-          )}
+      {/* Layer switches. Icon-only would announce as nothing, so they carry
+          their own labels. */}
+      <Screen padded={false} edges={["top"]} background="bg-transparent" pointerEvents="box-none">
+        <View style={tailwind("flex-row p-lg")} pointerEvents="box-none">
+          <Toggle
+            testID="map-toggle-pets"
+            tailwind={tailwind}
+            active={showPets}
+            label="Matches"
+            onPress={() => setShowPets((value) => !value)}
+          />
+          <View style={{ width: space.sm }} />
+          <Toggle
+            testID="map-toggle-places"
+            tailwind={tailwind}
+            active={showPlaces}
+            label="Places"
+            onPress={() => setShowPlaces((value) => !value)}
+          />
         </View>
-      </BottomSheet>
+      </Screen>
+
+      {origin ? (
+        <Pressable
+          testID="map-recentre"
+          accessibilityRole="button"
+          accessibilityLabel="Centre the map on me"
+          onPress={recentre}
+          style={[
+            tailwind("absolute right-lg bg-surface border border-border items-center justify-center"),
+            styles.recentre,
+          ]}
+        >
+          <Icon name="crosshairs-gps" size={22} color={tokens.text} />
+        </Pressable>
+      ) : null}
+
+      {selected ? (
+        <View testID="map-selection" style={[tailwind("absolute left-lg right-lg"), styles.sheet]}>
+          <Card>
+            <Text variant="title" numberOfLines={1}>
+              {selected.title}
+            </Text>
+            {selected.subtitle ? (
+              <Text tone="muted" numberOfLines={2} style={tailwind("mt-xs")}>
+                {selected.subtitle}
+              </Text>
+            ) : null}
+            {selected.distanceMiles != null ? (
+              <Text variant="caption" tone="faint" style={tailwind("mt-xs")}>
+                {selected.distanceMiles < 1
+                  ? "Less than a mile away"
+                  : `${Math.round(selected.distanceMiles)} miles away`}
+              </Text>
+            ) : null}
+
+            <Button
+              testID="map-open"
+              title={selected.kind === "pet" ? "See this pet" : "See this place"}
+              onPress={openSelected}
+              style={tailwind("mt-lg")}
+            />
+          </Card>
+        </View>
+      ) : null}
+
+      {nothingToShow ? (
+        <View testID="map-empty" style={[tailwind("absolute left-lg right-lg"), styles.sheet]}>
+          <Card>
+            <EmptyState
+              testID="map-empty-state"
+              icon="map-outline"
+              title="Nothing here yet"
+              message={
+                permission === "granted"
+                  ? "No matches or meeting places near you. Match with a pet and they'll appear here."
+                  : "Sharing your location lets the map show what's near you."
+              }
+            />
+          </Card>
+        </View>
+      ) : null}
     </View>
   );
 };
 
+/** A labelled pill, because an icon-only layer switch announces as nothing. */
+const Toggle = ({ tailwind, active, label, onPress, testID }) => (
+  <Pressable
+    testID={testID}
+    accessibilityRole="switch"
+    accessibilityState={{ checked: active }}
+    accessibilityLabel={`Show ${label.toLowerCase()}`}
+    onPress={onPress}
+    style={[
+      tailwind(
+        `rounded-pill px-lg justify-center border ${
+          active ? "bg-primary border-primary" : "bg-surface border-border"
+        }`
+      ),
+      { minHeight: hit.min },
+    ]}
+  >
+    <Text variant="label" tone={active ? "onPrimary" : "muted"}>
+      {label}
+    </Text>
+  </Pressable>
+);
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  pin: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  map: {
-    width: Dimensions.get("window").width,
-    height: Dimensions.get("window").height,
+  recentre: {
+    bottom: 180,
+    width: hit.min,
+    height: hit.min,
+    borderRadius: radius.pill,
   },
-  filterContainer: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    right: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
+  sheet: {
+    bottom: space.xl,
   },
 });
 
-export default copilot({
-  tooltipComponent: CustomTooltip,
-})(MapScreen);
+export default MapScreen;

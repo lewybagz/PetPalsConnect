@@ -67,9 +67,14 @@ const makeOwnerWithPet = async (uid) => {
 let parkSeq = 0;
 const makePark = () =>
   Location.create({
+    // `name` is what every screen renders; the schema did not have it, so the
+    // map marker, the location list and the playdate summary all showed
+    // `undefined` where the park's name goes.
+    name: `Green Lane Park ${parkSeq + 1}`,
     address: "12 Green Lane",
     description: "Dog park",
     placeId: `place-${(parkSeq += 1)}`,
+    geoLocation: { type: "Point", coordinates: [-122.4324, 37.78825] },
   });
 
 const tomorrow = () => new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
