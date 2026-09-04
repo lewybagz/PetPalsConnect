@@ -1,71 +1,77 @@
-// CustomTooltip.js
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import AnimatedButton from "./AnimatedButton";
-import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
-import { useTokens } from "../context/AppThemeContext";
+import React from "react";
+import { View } from "react-native";
 
-const CustomTooltip = ({ handleNext, handlePrev, handleStop, currentStep }) => {
-  const tokens = useTokens();
-  const styles = useMemo(() => makeStyles(tokens), [tokens]);
+import { Button, Card, Text } from "./ui";
+import { useTailwind } from "../styles/tailwind";
+
+/**
+ * What the walkthrough says at each step.
+ *
+ * Rebuilt on the design system. The old one used `AnimatedButton` - which had
+ * padding on an outer `Animated.View` and `onPress` on a child with none, so
+ * taps in the visible area did nothing - and passed `color="white"` to its
+ * icons, a literal that follows no theme and would be invisible on the light
+ * surface it sits on. It also offered "Prev", "Next" and "Skip" as three
+ * equally-weighted buttons, which is three decisions where there is one.
+ *
+ * There is one primary action now, and it says what it does: "Next" while
+ * there are steps left, "Got it" on the last one.
+ */
+const CustomTooltip = ({
+  currentStep,
+  stepNumber,
+  stepCount,
+  handleNext,
+  handlePrev,
+  handleStop,
+  isLast,
+}) => {
+  const tailwind = useTailwind();
 
   return (
-    <View style={styles.tooltipContainer}>
-      <Text style={styles.tooltipText}>{currentStep.text}</Text>
-
-      {handlePrev ? (
-        <AnimatedButton
-          onPress={handlePrev}
-          buttonStyle={styles.navButton}
-          icon={<Icon name="arrow-left" size={20} color="white" />} // Example icon
-          text="Prev"
-          textStyle={styles.buttonText}
-        />
-      ) : null}
-      {handleNext ? (
-        <AnimatedButton
-          onPress={handleNext}
-          buttonStyle={styles.navButton}
-          icon={<Icon name="arrow-right" size={20} color="white" />} // Example icon
-          text="Next"
-          textStyle={styles.buttonText}
-        />
+    <Card testID="walkthrough-tooltip-card">
+      {stepCount > 1 ? (
+        <Text variant="caption" tone="muted" style={tailwind("mb-xs")}>
+          {`Step ${stepNumber} of ${stepCount}`}
+        </Text>
       ) : null}
 
-      {/* Skip button */}
-      <AnimatedButton
-        onPress={handleStop}
-        buttonStyle={styles.skipButton}
-        text="Skip"
-        textStyle={styles.buttonText}
-      />
-    </View>
+      <Text variant="body">{currentStep?.text}</Text>
+
+      <View style={tailwind("flex-row items-center mt-lg")}>
+        {handlePrev ? (
+          <Button
+            testID="walkthrough-prev"
+            title="Back"
+            variant="ghost"
+            fullWidth={false}
+            onPress={handlePrev}
+            style={tailwind("mr-sm")}
+          />
+        ) : null}
+
+        <View style={tailwind("flex-1")} />
+
+        <Button
+          testID="walkthrough-skip"
+          // "Skip" on the last step would be a lie: there is nothing left to
+          // skip, and the tour is over either way.
+          title={isLast ? "" : "Skip"}
+          variant="ghost"
+          fullWidth={false}
+          onPress={handleStop}
+          style={[tailwind("mr-sm"), isLast ? { display: "none" } : null]}
+        />
+
+        <Button
+          testID="walkthrough-next"
+          title={isLast ? "Got it" : "Next"}
+          fullWidth={false}
+          onPress={isLast ? handleStop : handleNext}
+        />
+      </View>
+    </Card>
   );
 };
-
-const makeStyles = (t) => StyleSheet.create({
-  tooltipContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 10,
-    backgroundColor: t.surface,
-    borderRadius: 5,
-  },
-  tooltipText: {
-    marginBottom: 5,
-  },
-  navButton: {
-    padding: 5,
-    marginHorizontal: 5,
-  },
-  skipButton: {
-    padding: 5,
-    marginTop: 5,
-  },
-  buttonText: {
-    color: t.primary,
-  },
-});
 
 export default CustomTooltip;

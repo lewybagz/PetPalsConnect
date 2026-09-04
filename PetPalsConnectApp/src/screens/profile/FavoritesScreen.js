@@ -6,7 +6,12 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
-import { copilot, walkthroughable, CopilotStep } from "../../components/walkthrough";
+import {
+  copilot,
+  walkthroughable,
+  CopilotStep,
+  TOURS,
+} from "../../components/walkthrough";
 import api from "../../api/axios";
 import UserPetCard from "../../components/UserPetCardComponent";
 import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
@@ -118,6 +123,9 @@ const FavoritesScreen = ({ route, start, navigation }) => {
         text="All your favorites are listed here. Tap on one for more details."
         order={4}
         name="favoritesList"
+        // The step's measuring view is a real node. Without a height to fill,
+        // the list inside it has nothing to scroll in.
+        style={styles.list}
       >
         <FlatList
           data={favorites}
@@ -150,6 +158,9 @@ const makeStyles = (t) => StyleSheet.create({
   tabText: {
     color: t.textMuted,
   },
+  list: {
+    flex: 1,
+  },
   noFavoritesText: {
     textAlign: "center",
     marginTop: 20,
@@ -160,4 +171,5 @@ const makeStyles = (t) => StyleSheet.create({
 
 export default copilot({
   tooltipComponent: CustomTooltip,
+  name: TOURS.favorites,
 })(FavoritesScreen);

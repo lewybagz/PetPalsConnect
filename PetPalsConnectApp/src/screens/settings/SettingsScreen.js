@@ -8,6 +8,7 @@ import { useAuthSession } from "../../context/AuthSessionContext";
 import api from "../../api/axios";
 import { readCache, writeCache, CacheKeys } from "../../services/localCache";
 import { Toggle, useToast } from "../../components/ui";
+import { resetAllWalkthroughs } from "../../components/walkthrough";
 
 const SettingsScreen = ({ navigation }) => {
   const tailwind = useTailwind();
@@ -245,6 +246,21 @@ const SettingsScreen = ({ navigation }) => {
         style={tailwind("my-2 p-2 border rounded border-border")}
       >
         <Text>About PetPalsConnect</Text>
+      </TouchableOpacity>
+
+      {/* The tours play once, on a first visit, and are then remembered as
+          seen. Without this there is no way back to them - and the person most
+          likely to want one is somebody who skipped it in a hurry. */}
+      <TouchableOpacity
+        testID="settings-replay-tour"
+        accessibilityRole="button"
+        onPress={async () => {
+          await resetAllWalkthroughs();
+          toast.success("The app tour will play again on your next visit.");
+        }}
+        style={tailwind("my-2 p-2 border rounded border-border")}
+      >
+        <Text>Show the App Tour Again</Text>
       </TouchableOpacity>
 
       {Object.entries(notificationPreferences).map(([key, value]) => (

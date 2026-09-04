@@ -179,6 +179,47 @@ compares two pets and there is only one. Both paths share
 `reachableCandidates` on purpose: the filtering is where blocking, suspension
 and range live, and a second code path is a second place to forget one.
 
+#### The walkthrough
+
+**`src/components/walkthrough.js` is the tour, and it is written here rather
+than taken from a library.** The tour markup on Home, More and Favourites is
+original to the app; what it had was three inert shims, because
+`react-native-copilot` 3.x predates the New Architecture. Both maintained
+alternatives were last released in 2024, before React Native 0.86, and copilot
+also wants `react-native-svg` — a native dependency whose behaviour cannot be
+verified from here. What a tour needs is a `Modal`, `measureInWindow` and four
+rectangles round a hole, all of which the app already has and all of which can
+be tested and screenshotted.
+
+**A tour is triggered by a first visit, not by a route param.** Every screen
+gated `start()` on `route.params.showTutorial`, and nothing in the app has ever
+passed it — so even a working library would have shown nobody anything.
+`copilot()` greets a first-time visitor itself and writes `seen` on the way out
+however the tour ended, including a skip: somebody who dismissed a tour has
+said something, and the answer was no.
+
+**`TOURS` is the one list of tour names, and `resetAllWalkthroughs()` is what
+Settings' "Show the App Tour Again" calls.** The name is what `seen` is stored
+under, so it cannot be `Component.name` — a minifier is entitled to change
+that. A tour missing from `TOURS` is a tour nobody can ever replay, and nothing
+at runtime would say so, so `walkthrough.test.js` reads the screens and checks
+each `copilot({...})` names one, uniquely.
+
+**The placement arithmetic is a pure function (`tooltipPlacement`) because jest
+has no layout engine.** `measureInWindow` resolves to nothing under jest, so
+every step there falls back to a plain scrim — which is also the right
+behaviour for a step whose target is conditionally rendered away, as two of
+Favourites' are. That means the highlight itself is only ever seen in the
+gallery: `home-walkthrough` is the board for it, and `walkthroughAutoStart` is
+the prop that lets "Home" and "Home, being introduced" be two boards instead of
+a race with a cache read.
+
+**`CopilotStep` renders a real view, so it takes a `style`.** The old shim was
+a fragment; a measurable node has to be a `View` with `collapsable={false}`, or
+Android flattens it and `measureInWindow` reports zeroes. That view changes
+layout: `FavoritesScreen` wraps its `FlatList` in a step, and a list inside an
+auto-height view has no height to scroll in.
+
 #### Seeing it
 
 **`npm run gallery && npm run screenshots` renders the real screens to PNGs.**
@@ -623,9 +664,6 @@ disagrees.
 
 ## Things deliberately left out
 
-- **Onboarding walkthrough** — `react-native-copilot` predates the New
-  Architecture. `src/components/walkthrough.js` provides inert shims so the tour
-  markup survives; swap in a maintained library to re-enable it.
 - **Facebook login** — removed. Google and email/phone remain.
 - **Four React Compiler lint rules are warnings, not errors**
   (`set-state-in-effect`, `immutability`, `refs`, `static-components`). There is

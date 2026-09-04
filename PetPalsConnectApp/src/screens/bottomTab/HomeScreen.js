@@ -13,7 +13,12 @@ import { useTailwind } from "../../styles/tailwind";
 import { useTokens } from "../../context/AppThemeContext";
 import { space } from "../../styles/tokens";
 import { Button, Screen, Skeleton, Text } from "../../components/ui";
-import { copilot, walkthroughable, CopilotStep } from "../../components/walkthrough";
+import {
+  copilot,
+  walkthroughable,
+  CopilotStep,
+  TOURS,
+} from "../../components/walkthrough";
 import CustomTooltip from "../../components/CustomTooltip";
 import ArticleCard from "../../components/ArticleCardComponent";
 import MatchingAlgorithmPopup from "../../components/MatchingAlgorithmPopupComponent";
@@ -320,4 +325,7 @@ const HomeScreen = ({ navigation, route, start }) => {
   );
 };
 
-export default copilot({ tooltipComponent: CustomTooltip })(HomeScreen);
+export default copilot({
+  tooltipComponent: CustomTooltip,
+  name: TOURS.home,
+})(HomeScreen);

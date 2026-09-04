@@ -1,7 +1,12 @@
 // MoreScreen.js
 import React, { useEffect, useMemo } from "react";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
-import { copilot, walkthroughable, CopilotStep } from "../../components/walkthrough";
+import {
+  copilot,
+  walkthroughable,
+  CopilotStep,
+  TOURS,
+} from "../../components/walkthrough";
 import CustomTooltip from "../../components/CustomTooltip";
 import { useTokens } from "../../context/AppThemeContext";
 
@@ -122,4 +127,5 @@ const makeStyles = (t) => StyleSheet.create({
 
 export default copilot({
   tooltipComponent: CustomTooltip,
+  name: TOURS.more,
 })(MoreScreen);

@@ -172,12 +172,17 @@ starting a chat) are wrapped in `withRequiredPet` where they are registered,
 which shows one consistent "add a pet" prompt rather than each screen growing
 its own empty state.
 
+Once the app tree mounts, Home, More and Favourites each introduce themselves
+once with a short guided tour — a dimmed screen, a ring around the thing being
+described, and a sentence about it. Each is remembered separately, so a tour
+plays on a first visit to its own screen and never again unless Settings ->
+**Show the App Tour Again** forgets them.
+
 Accounts can be deleted from Settings, which removes the Mongo profile and the
 Firebase credential. Apple requires this of any app offering account creation.
 
 ## Known gaps
 
-- Onboarding walkthrough is disabled (`src/components/walkthrough.js` explains why)
 - Facebook login was removed; Google and email/phone remain
 - Apple Pay and Google Pay are off; subscriptions take a card through Stripe's
   PaymentSheet. Turning Apple Pay on needs a registered merchant ID (see

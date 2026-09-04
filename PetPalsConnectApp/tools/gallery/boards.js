@@ -107,7 +107,31 @@ export const BOARDS = [
     label: "Home",
     routes: ROUTES,
     render: () => (
-      <HomeScreen navigation={navigation} route={{ params: {} }} start={() => {}} />
+      <HomeScreen
+        navigation={navigation}
+        route={{ params: {} }}
+        // Home is the first screen a new account sees, so its tour opens over
+        // it unasked. That is the point of the tour and the wrong thing for a
+        // board about the screen underneath.
+        walkthroughAutoStart={false}
+      />
+    ),
+  },
+  {
+    id: "home-walkthrough",
+    label: "Home - the first-run tour",
+    routes: ROUTES,
+    // The overlay is the one part of the walkthrough that cannot be checked by
+    // reading or by a jest render: there is no layout engine under jest, so
+    // `measureInWindow` reports nothing and every step falls back to a plain
+    // scrim. In a browser it measures for real, so this is where the ring
+    // around the target and the tooltip beside it actually get looked at.
+    render: () => (
+      <HomeScreen
+        navigation={navigation}
+        route={{ params: {} }}
+        walkthroughAutoStart
+      />
     ),
   },
   {
@@ -119,7 +143,11 @@ export const BOARDS = [
       "/api/articles/latest": pending,
     },
     render: () => (
-      <HomeScreen navigation={navigation} route={{ params: {} }} start={() => {}} />
+      <HomeScreen
+        navigation={navigation}
+        route={{ params: {} }}
+        walkthroughAutoStart={false}
+      />
     ),
   },
   {
