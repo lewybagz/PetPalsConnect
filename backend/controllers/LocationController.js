@@ -12,8 +12,12 @@ const LocationController = {
         const userCoords = [parseFloat(userLng), parseFloat(userLat)];
         const rangeInMeters = parseFloat(range) * 1609.34;
 
+        // The schema path is `geoLocation`. `strictQuery` is off, so this
+        // PascalCase key went to Mongo as-is: a $nearSphere against a field
+        // that does not exist and has no 2dsphere index, so the "places near
+        // you" step never returned anything.
         query = {
-          GeoLocation: {
+          geoLocation: {
             $nearSphere: {
               $geometry: {
                 type: "Point",
@@ -25,7 +29,9 @@ const LocationController = {
         };
       }
 
-      const locations = await Location.find(query).populate("Creator");
+      // `Creator` was populated here; the Location schema has no such path
+      // (nor a lowercase one), so the populate was a no-op at best.
+      const locations = await Location.find(query);
       res.json(locations);
     } catch (err) {
       res.status(500).json({ message: err.message });

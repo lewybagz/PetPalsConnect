@@ -5,6 +5,7 @@ const {
   pushPlaydateReviewReminderNotification,
 } = require("./NotificationController");
 const { createNotification } = require("../services/NotificationService");
+const { emitToUser } = require("../services/realtime");
 const Pet = require("../models/Pet");
 const User = require("../models/User");
 const { sendPushNotification } = require("./NotificationController");
@@ -62,9 +63,12 @@ const PlaydateController = {
   async getUpcomingPlaydates(req, res) {
     try {
       const now = new Date();
+      // Was every accepted playdate in the database, everyone's participants
+      // populated - the "upcoming" tab showed strangers' plans.
       const playdates = await Playdate.find({
         date: { $gte: now },
         status: "accepted",
+        participants: req.userId,
       })
         .populate("participants")
         .populate("petsInvolved")
@@ -110,14 +114,25 @@ const PlaydateController = {
         return res.status(404).json({ message: "Playdate not found" });
       }
 
-      if (
-        !playdate.participants.some((participant) =>
-          participant._id.equals(userId)
-        )
-      ) {
-        playdate.participants.push(userId);
-        playdate.status = "accepted";
+      // Anyone with a playdate id could accept somebody else's invitation, and
+      // doing so added them to it.
+      const isInvited = playdate.participants.some((participant) =>
+        participant._id.equals(userId)
+      );
+      if (!isInvited) {
+        return res.status(403).json({ message: "You were not invited to this" });
       }
+      if (String(playdate.creator._id) === String(userId)) {
+        return res.status(400).json({ message: "You organised this one" });
+      }
+      if (playdate.status !== "pending") {
+        return res
+          .status(409)
+          .json({ message: `This playdate is already ${playdate.status}` });
+      }
+
+      playdate.status = "accepted";
+      playdate.modifiedDate = new Date();
 
       const acceptersFirstPetName =
         (await User.findById(userId).populate("pets")).pets[0]?.name ||
@@ -136,18 +151,31 @@ const PlaydateController = {
         },
       };
 
-      // Using Promise.all to handle concurrent tasks
+      // `sendPlaydateNotification` is Express middleware (req, res, next). Called
+      // with a plain object it threw "next is not a function" on every accept,
+      // which the catch below turned into a 500 - so accepting a playdate
+      // always failed even once the record was right.
+      await playdate.save();
+
       await Promise.all([
-        playdate.save(),
         createNotification({
           content: notificationData.message,
           recipientId: playdate.creator._id,
-          type: "Playdate Request Accepted",
+          type: "Playdate",
           creatorId: userId,
           petName: acceptersFirstPetName,
         }),
-        sendPlaydateNotification(notificationData),
+        sendPushNotification(playdate.creator._id, {
+          title: notificationData.title,
+          body: notificationData.message,
+          data: { type: "playdate", playdateId: String(playdateId) },
+        }),
       ]);
+
+      emitToUser(playdate.creator._id, "notification", {
+        playdateId,
+        content: notificationData.message,
+      });
 
       return res.status(200).json({ message: "Playdate accepted" });
     } catch (error) {
@@ -266,9 +294,28 @@ const PlaydateController = {
         return res.status(404).json({ message: "Playdate not found" });
       }
 
-      // Update playdate status to 'declined'
+      if (!playdate.participants.some((participant) => String(participant) === String(req.userId))) {
+        return res.status(403).json({ message: "You were not invited to this" });
+      }
+      if (playdate.status !== "pending") {
+        return res
+          .status(409)
+          .json({ message: `This playdate is already ${playdate.status}` });
+      }
+
       playdate.status = "declined";
+      playdate.modifiedDate = new Date();
       await playdate.save();
+
+      // Declining silently left the organiser waiting on an answer that had
+      // already been given.
+      await createNotification({
+        content: "Your playdate request was declined.",
+        recipientId: playdate.creator,
+        type: "Playdate",
+        creatorId: req.userId,
+      });
+      emitToUser(playdate.creator, "notification", { playdateId: playdate._id });
 
       return res.status(200).json({ message: "Playdate declined" });
     } catch (error) {
@@ -277,55 +324,116 @@ const PlaydateController = {
         .json({ message: "Error declining playdate", error });
     }
   },
+  /**
+   * Schedules a playdate.
+   *
+   * This has never once succeeded. `startTime` is required by the schema and
+   * was never set, so every create failed validation with a 400 - and the app
+   * sent `Date`/`Location`/`Creator` in PascalCase, which strict mode drops,
+   * so `date`, `location` and `creator` were missing too.
+   *
+   * `creator` also came from the request body, and `participants` was whatever
+   * the client passed - in practice just the sender, which is the same
+   * one-participant bug direct messages had: the person being invited was
+   * never in the record, so it never appeared in their list and they could not
+   * accept it. Participants are now derived from the owners of the pets
+   * involved.
+   */
   async createPlaydate(req, res) {
-    const { date, location, notes, participants, petsInvolved, creator } =
-      req.body;
+    const { date, startTime, location, notes, petsInvolved } = req.body;
+
+    if (!date || !location) {
+      return res.status(400).json({ message: "date and location are required" });
+    }
+    if (!Array.isArray(petsInvolved) || petsInvolved.length === 0) {
+      return res.status(400).json({ message: "petsInvolved is required" });
+    }
 
     try {
-      const playdate = new Playdate({
-        date,
-        location,
+      const place = await Location.findById(location).select("_id");
+      if (!place) {
+        return res.status(404).json({ message: "Cannot find that location" });
+      }
+
+      const pets = await Pet.find({ _id: { $in: petsInvolved } })
+        .select("name owner")
+        .lean();
+
+      if (pets.length !== petsInvolved.length) {
+        return res.status(404).json({ message: "Cannot find every pet" });
+      }
+      if (!pets.some((pet) => String(pet.owner) === String(req.userId))) {
+        return res
+          .status(403)
+          .json({ message: "One of the pets has to be yours" });
+      }
+
+      // Everyone whose pet is coming, the organiser included. Without the other
+      // owners here the invitation is invisible to them.
+      const participants = [
+        ...new Set([String(req.userId), ...pets.map((pet) => String(pet.owner))]),
+      ];
+
+      const when = new Date(date);
+      const playdate = await Playdate.create({
+        date: when,
+        // Separate on the form (a date picker and a time picker) but the same
+        // moment unless the client says otherwise.
+        startTime: startTime ? new Date(startTime) : when,
+        location: place._id,
         notes,
         participants,
         petsInvolved,
-        creator,
+        status: "pending",
+        creator: req.userId,
       });
 
-      const newPlaydate = await playdate.save();
+      const organiser = await User.findById(req.userId).populate("pets");
+      const organiserPetName = organiser?.pets?.[0]?.name ?? "A pet";
 
-      // Fetch the creator's first pet
-      const creatorUser = await User.findById(creator).populate("pets");
-      const creatorFirstPetName = creatorUser.pets[0]?.name || "Creator's Pet";
-
-      const petOwnersPromises = petsInvolved.map((petId) =>
-        Pet.findById(petId).populate("owner").exec()
+      const invitees = participants.filter(
+        (participant) => participant !== String(req.userId)
       );
-      const pets = await Promise.all(petOwnersPromises);
 
-      pets.forEach(async (pet) => {
-        if (pet.owner._id.toString() !== creator) {
-          const notificationData = {
-            recipientUserId: pet.owner._id,
+      await Promise.all(
+        invitees.map(async (userId) => {
+          const theirPet = pets.find((pet) => String(pet.owner) === userId);
+          const content = `${organiserPetName} wants a playdate with ${
+            theirPet?.name ?? "your pet"
+          }.`;
+
+          await createNotification({
+            content,
+            recipientId: userId,
+            type: "Playdate",
+            creatorId: req.userId,
+            petName: organiserPetName,
+          });
+
+          await sendPushNotification(userId, {
             title: "Playdate Request",
-            message: `${creatorFirstPetName} wants to schedule a playdate with ${pet.name}.`,
-            data: {
-              playdateId: newPlaydate._id,
-              petName: creatorFirstPetName,
-            },
-          };
-          await Promise.all([
-            sendPlaydateNotification(notificationData),
-            createNotification(notificationData),
-          ]);
-        }
-      });
+            body: content,
+            data: { type: "playdate", playdateId: String(playdate._id) },
+          });
 
-      await pushPlaydateReviewReminderNotification(
-        newPlaydate._id,
-        req.body.creator
+          emitToUser(userId, "notification", { playdateId: playdate._id, content });
+        })
       );
 
-      res.status(201).json(newPlaydate);
+      // Best-effort: a reminder that cannot be scheduled must not fail the
+      // playdate that was just created.
+      try {
+        await pushPlaydateReviewReminderNotification(playdate._id, req.userId);
+      } catch (error) {
+        console.warn("[playdates] Review reminder not scheduled:", error.message);
+      }
+
+      const populated = await Playdate.findById(playdate._id)
+        .populate("location")
+        .populate("petsInvolved", "name photos owner")
+        .populate("participants", "username userPhoto");
+
+      res.status(201).json(populated);
     } catch (err) {
       console.error("Error creating playdate:", err);
       res.status(400).json({ message: err.message });

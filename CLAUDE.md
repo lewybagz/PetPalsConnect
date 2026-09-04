@@ -162,6 +162,21 @@ breakdown it returns is in *weighted points*, not ratios — divide by the
 dimension's weight before comparing dimensions. The app mirrors those weights
 in `src/api/discovery.js`, and `types.test.js` checks the two agree.
 
+### Playdates
+
+**Participants come from the pets, not the client.** `createPlaydate` derives
+them from the owners of `petsInvolved` plus the caller. The invitee has to be a
+participant or the request is invisible to them - `getUserPlaydates` filters on
+that array, and accepting checks it.
+
+**Only an invitee can accept, once.** Accepting used to push the caller onto
+the participants, so anyone with an id could join somebody else's plans.
+Declining notifies the organiser; silence left them waiting for an answer that
+had already been given.
+
+**`startTime` is required.** It is separate from `date` because the form has
+two pickers. The app combines them; sending only `date` loses the time.
+
 ### Subscriptions
 
 **Stripe is the source of truth for billing; Mongo mirrors it.** The only

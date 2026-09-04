@@ -1,251 +1,215 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
   Text,
   TextInput,
-  StyleSheet,
-  Button,
-  ScrollView,
   TouchableOpacity,
-  Alert,
-  FlatList,
- Image } from "react-native";
-import api from "../../api/axios"; // Assuming axios is used for API calls
-import { useSelector, useDispatch } from "react-redux";
+} from "react-native";
+import * as Location from "expo-location";
 import { FontAwesome as Icon } from "@expo/vector-icons";
-import { fetchUserPreferences } from "../../../services/UserService";
-import PlayDateLocationCard from "../../components/PlaydateLocationCardComponent";
+
+import { useTailwind } from "../../styles/tailwind";
+import { useAuthSession } from "../../context/AuthSessionContext";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
-import { getStoredToken } from "../../../utils/tokenutil";
+import { fetchUserPreferences } from "../../../services/UserService";
+import { createPlaydate, fetchNearbyLocations } from "../../api/playdates";
+
+/**
+ * Arrange a playdate with another owner's pet.
+ *
+ * Nothing on this screen worked. The submit built a PascalCase payload
+ * (`Date`, `Location`, `Creator`) that Mongoose drops in strict mode, never
+ * sent `startTime` - which the schema requires - and named the organiser from
+ * the client. The handler took a `token` parameter that the wrapper filled
+ * with `dispatch`, and threw away the token it did fetch.
+ *
+ * The location list came from `navigator.geolocation`, a browser API that does
+ * not exist in React Native, so the "Geolocation is not supported" branch ran
+ * every time: the list stayed empty and `selectedLocation._id` threw on submit.
+ * expo-location is the platform API, and it is already a dependency.
+ *
+ * Both pickers are read now, too. The time picker's value was collected and
+ * then dropped, so a playdate arranged for 4pm was stored at whatever time the
+ * date picker carried.
+ */
+const DEFAULT_RANGE_MILES = 10;
 
 const SchedulePlaydateScreen = ({ route, navigation }) => {
-  const dispatch = useDispatch();
-  const userId = useSelector((state) => state.user.userId);
-  const userName = useSelector((state) => state.user.name);
-  const { pet } = route.params;
-  const [time, setTime] = useState(new Date());
+  const tailwind = useTailwind();
+  const { profile } = useAuthSession();
+
+  const pet = route?.params?.pet ?? null;
+  const myPetId = profile?.pets?.[0]?._id ?? profile?.pets?.[0];
+
   const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
   const [notes, setNotes] = useState("");
   const [locations, setLocations] = useState([]);
-  const [error, setError] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const getToken = async () => {
-    try {
-      const token = await getStoredToken();
-      return token;
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+  const [loadingLocations, setLoadingLocations] = useState(true);
+  const [locationError, setLocationError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const fetchLocations = async (latitude, longitude, playdateRange, token) => {
-    try {
-      getToken();
-      const response = await api.get("/api/locations/playdate-locations", {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          userLat: latitude,
-          userLng: longitude,
-          range: playdateRange,
-        },
-      });
-      setLocations(response.data);
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-      setError(error.message);
-    }
-  };
   useEffect(() => {
-    const initialize = async () => {
+    let cancelled = false;
+
+    (async () => {
       try {
-        const userPrefs = await fetchUserPreferences(userId);
-        const playdateRange = userPrefs.playdateRange;
+        const preferences = await fetchUserPreferences(profile?._id);
+        const range = preferences?.playdateRange ?? DEFAULT_RANGE_MILES;
 
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              const { latitude, longitude } = position.coords;
-              await fetchLocations(latitude, longitude, playdateRange);
-            },
-            (err) => {
-              console.error(err);
-              setError(err.message);
-            }
-          );
-        } else {
-          setError("Geolocation is not supported by this browser");
+        const { status } = await Location.requestForegroundPermissionsAsync();
+
+        // Without permission we can still list places, just not nearest-first.
+        let coords = {};
+        if (status === "granted") {
+          const position = await Location.getCurrentPositionAsync({});
+          coords = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
         }
-      } catch (err) {
-        console.error("Error initializing:", err);
-        setError("Initialization failed");
+
+        const nearby = await fetchNearbyLocations({ ...coords, range });
+        if (cancelled) return;
+
+        setLocations(nearby);
+        if (nearby.length === 0) {
+          setLocationError("No places found nearby yet.");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("[playdate] locations:", error.message);
+          setLocationError("Could not load places near you.");
+        }
+      } finally {
+        if (!cancelled) setLoadingLocations(false);
       }
+    })();
+
+    return () => {
+      cancelled = true;
     };
+  }, [profile?._id]);
 
-    initialize();
-  }, []);
+  const submit = async () => {
+    if (!selectedLocation) {
+      Alert.alert("Pick a place", "Choose where you'd like to meet.");
+      return;
+    }
+    if (!myPetId || !pet?._id) {
+      Alert.alert("Missing a pet", "A playdate needs a pet from each side.");
+      return;
+    }
 
-
-  const handleSubmit = async (token) => {
-    // Prepare playdate data
-    const playdateData = {
-      Date: date,
-      Location: selectedLocation._id,
-      Notes: notes,
-      Participants: [userId],
-      PetsInvolved: [pet._id],
-      Creator: userId,
-    };
-
+    setSubmitting(true);
     try {
-      getToken();
-      const response = await api.post("/api/playdates", playdateData, {
-        headers: { Authorization: `Bearer ${token}` },
+      const playdate = await createPlaydate({
+        date,
+        time,
+        locationId: selectedLocation._id,
+        petIds: [myPetId, pet._id],
+        notes,
       });
-
-      if (response.data) {
-        Alert.alert(
-          "Playdate Created",
-          `Your playdate with ${pet.name} created successfully.`,
-          [
-            {
-              text: "OK",
-              onPress: () =>
-                navigation.navigate("PlaydateCreated", {
-                  playdate: response.data,
-                }),
-            },
-          ]
-        );
-      } else {
-        Alert.alert(
-          "Playdate Creation Failed",
-          "No playdate data returned from the server. Please try again.",
-          [
-            {
-              text: "OK",
-            },
-          ]
-        );
-      }
+      navigation.navigate("PlaydateCreated", { playdate, pet });
     } catch (error) {
-      console.error("Error creating playdate:", error);
       Alert.alert(
-        "Playdate Creation Failed",
-        "Unable to create playdate. Please try again."
+        "Could not schedule",
+        error.response?.data?.message || error.message
       );
+    } finally {
+      setSubmitting(false);
     }
   };
-
-  const handleSubmitWrapper = () => handleSubmit(dispatch, userId, userName);
-
-  const renderLocationItem = ({ item }) => (
-    <TouchableOpacity onPress={() => setSelectedLocation(item)}>
-      <PlayDateLocationCard locationData={item} navigation={navigation} />
-    </TouchableOpacity>
-  );
 
   return (
-    <ScrollView style={styles.container}>
-      {error && <Text style={styles.errorText}>Error: {error}</Text>}
-      <Image source={{ uri: pet.photos[0] }} style={styles.petImage} />
-      <Text style={styles.header}>
-        <Icon name="calendar" size={20} color="#007bff" /> Schedule a Playdate
-        with {pet.name}
+    <ScrollView
+      testID="schedule-playdate"
+      style={tailwind("flex-1")}
+      contentContainerStyle={tailwind("p-4")}
+      keyboardShouldPersistTaps="handled"
+    >
+      {pet?.photos?.[0] ? (
+        <Image
+          source={{ uri: pet.photos[0] }}
+          style={tailwind("h-24 w-24 rounded-full self-center")}
+        />
+      ) : null}
+
+      <Text style={tailwind("text-xl font-bold text-center my-4")}>
+        Schedule a playdate with {pet?.name ?? "a friend"}
       </Text>
 
-      <Text style={styles.label}>
-        <Icon name="map-marker" size={20} color="#007bff" /> Select Location
+      <Text style={tailwind("text-base font-semibold mb-2")}>
+        <Icon name="map-marker" size={16} color="#2563eb" /> Where
       </Text>
-      <FlatList
-        data={locations}
-        keyExtractor={(item) => item._id}
-        renderItem={renderLocationItem}
-      />
 
-      <DateTimePickerComponent
-        mode="date"
-        date={date}
-        onDateChange={setDate}
-        style={styles.datePicker}
-      />
+      {loadingLocations ? <ActivityIndicator /> : null}
+      {locationError ? (
+        <Text testID="location-error" style={tailwind("text-gray-500 mb-2")}>
+          {locationError}
+        </Text>
+      ) : null}
 
-      {/* Time Picker */}
-      <DateTimePickerComponent
-        mode="time"
-        date={time}
-        onDateChange={setTime}
-        style={styles.timePicker}
-      />
+      {locations.map((place) => {
+        const chosen = selectedLocation?._id === place._id;
+        return (
+          <TouchableOpacity
+            key={place._id}
+            testID={`location-${place._id}`}
+            onPress={() => setSelectedLocation(place)}
+            style={tailwind(
+              `border rounded-2xl p-4 mb-2 ${
+                chosen ? "border-blue-600 bg-blue-50" : "border-gray-200"
+              }`
+            )}
+          >
+            <Text style={tailwind("text-base font-semibold")}>{place.address}</Text>
+            {place.description ? (
+              <Text style={tailwind("text-sm text-gray-500")}>{place.description}</Text>
+            ) : null}
+          </TouchableOpacity>
+        );
+      })}
+
+      <Text style={tailwind("text-base font-semibold mb-2 mt-4")}>
+        <Icon name="calendar" size={16} color="#2563eb" /> When
+      </Text>
+      <DateTimePickerComponent mode="date" date={date} onDateChange={setDate} />
+      <DateTimePickerComponent mode="time" date={time} onDateChange={setTime} />
 
       <TextInput
-        style={styles.input}
-        placeholder="Notes for the playdate"
+        testID="playdate-notes"
+        style={tailwind("border border-gray-300 rounded-xl p-3 mt-3 h-24")}
+        placeholder="Anything they should know?"
         multiline
-        numberOfLines={4}
         onChangeText={setNotes}
         value={notes}
       />
 
-      <Button title="Schedule Playdate" onPress={handleSubmitWrapper} />
+      <TouchableOpacity
+        testID="playdate-submit"
+        disabled={submitting}
+        onPress={submit}
+        style={tailwind(
+          `rounded-xl py-3 items-center mt-4 ${
+            submitting ? "bg-blue-300" : "bg-blue-600"
+          }`
+        )}
+      >
+        {submitting ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text style={tailwind("text-white font-semibold")}>
+            Send playdate request
+          </Text>
+        )}
+      </TouchableOpacity>
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-  },
-  label: {
-    fontSize: 18,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  petImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignSelf: "center",
-    marginTop: 10,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: "gray",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 20,
-    height: 100,
-    textAlignVertical: "top",
-  },
-  header: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  input: {
-    borderColor: "gray",
-    borderWidth: 1,
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
-  },
-  datePicker: {
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 5,
-  },
-  timePicker: {
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 5,
-  },
-  dateText: {
-    fontSize: 16,
-  },
-  timeText: {
-    fontSize: 16,
-  },
-});
 
 export default SchedulePlaydateScreen;
