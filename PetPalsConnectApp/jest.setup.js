@@ -113,8 +113,9 @@ const { cleanup, configure } = require("@testing-library/react-native");
 // jest's test timeout. On a cold cache the first `render()` in a run triggers
 // the Babel transform of a large dependency tree lazily, which blows that
 // budget and fails with "`render` function has not been called" - a suite that
-// passes on every warm re-run and fails the first time CI sees it.
-configure({ asyncUtilTimeout: 5000 });
+// passes on every warm re-run and fails the first time CI sees it. It is a
+// ceiling, not a delay: a passing assertion still resolves immediately.
+configure({ asyncUtilTimeout: 10000 });
 afterEach(() => {
   cleanup();
 });

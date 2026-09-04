@@ -9,6 +9,7 @@ import AddFirstPetScreen from "../pets/AddFirstPetScreen";
 import usePushNotifications from "../../hooks/usePushNotifications";
 import { useSocketSession } from "../../hooks/useSocketEvents";
 import useSessionStore from "../../hooks/useSessionStore";
+import useLocationSync from "../../hooks/useLocationSync";
 import { useAuthSession, AuthStatus } from "../../context/AuthSessionContext";
 
 const Root = createNativeStackNavigator();
@@ -47,6 +48,8 @@ export default function RootNavigator() {
   // Fifteen screens read `state.user.userId` from Redux and nothing ever set
   // it. The session is the source of truth; this keeps the store in step.
   useSessionStore();
+  // Discovery filters by distance, so the server has to know where we are.
+  useLocationSync(status === AuthStatus.ready);
 
   if (status === AuthStatus.loading) {
     return (

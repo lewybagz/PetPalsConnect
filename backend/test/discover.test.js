@@ -261,3 +261,146 @@ test("a pet cannot decide on itself", async () => {
 
   assert.equal(res.status, 400);
 });
+
+// --- Distance ---------------------------------------------------------------
+
+const LONDON = { latitude: 51.5072, longitude: -0.1276 };
+const BRIGHTON = { latitude: 50.8225, longitude: -0.1372 }; // ~47 miles
+const NEW_YORK = { latitude: 40.7128, longitude: -74.006 };
+
+const shareLocation = (uid, position) =>
+  request(app)
+    .put("/api/users/me/location")
+    .set(...auth(uid))
+    .send(position);
+
+test("a position is stored as GeoJSON, longitude first", async () => {
+  const me = await makeOwnerWithPet("geo-me");
+
+  await shareLocation("geo-me", LONDON).expect(200);
+
+  const stored = await User.findById(me.user._id).lean();
+  // Getting this order wrong puts London in Antarctica.
+  assert.deepEqual(stored.geoLocation.coordinates, [-0.1276, 51.5072]);
+  assert.ok(stored.locationUpdatedAt);
+});
+
+test("a position without both numbers is refused", async () => {
+  await makeOwnerWithPet("geo-bad");
+
+  await shareLocation("geo-bad", { latitude: 51.5 }).expect(400);
+  await shareLocation("geo-bad", { latitude: 200, longitude: 0 }).expect(400);
+});
+
+test("someone with location sharing off is not stored anyway", async () => {
+  const me = await makeOwnerWithPet("geo-private");
+  await User.updateOne({ _id: me.user._id }, { locationSharingEnabled: false });
+
+  const res = await shareLocation("geo-private", LONDON).expect(200);
+
+  assert.equal(res.body.stored, false);
+  const stored = await User.findById(me.user._id).lean();
+  assert.equal(stored.geoLocation?.coordinates, undefined);
+});
+
+test("candidates beyond the range are not offered", async () => {
+  const me = await makeOwnerWithPet("range-me");
+  await makeOwnerWithPet("range-near");
+  await makeOwnerWithPet("range-far");
+
+  await User.updateOne({ _id: me.user._id }, { playdateRange: 20 });
+  await shareLocation("range-me", LONDON).expect(200);
+  await shareLocation("range-near", LONDON).expect(200);
+  await shareLocation("range-far", NEW_YORK).expect(200);
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("range-me"))
+    .expect(200);
+
+  const names = res.body.candidates.map((candidate) => candidate.pet.name);
+  assert.deepEqual(names, ["range-near-pet"]);
+});
+
+test("a wider range reaches further", async () => {
+  const me = await makeOwnerWithPet("wide-me");
+  await makeOwnerWithPet("wide-them");
+
+  await User.updateOne({ _id: me.user._id }, { playdateRange: 50 });
+  await shareLocation("wide-me", LONDON).expect(200);
+  await shareLocation("wide-them", BRIGHTON).expect(200);
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("wide-me"))
+    .expect(200);
+
+  assert.equal(res.body.candidates.length, 1);
+  // Brighton is about 47 miles from London.
+  assert.ok(res.body.candidates[0].distanceMiles > 40);
+  assert.ok(res.body.candidates[0].distanceMiles < 55);
+});
+
+test("a range of 0 keeps everyone, however far", async () => {
+  const me = await makeOwnerWithPet("all-me");
+  await makeOwnerWithPet("all-them");
+  await User.updateOne({ _id: me.user._id }, { playdateRange: 0 });
+
+  await shareLocation("all-me", LONDON).expect(200);
+  await shareLocation("all-them", NEW_YORK).expect(200);
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("all-me"))
+    .expect(200);
+
+  assert.equal(res.body.candidates.length, 1);
+  assert.ok(res.body.candidates[0].distanceMiles > 3000);
+});
+
+test("someone who has not shared a position is still shown", async () => {
+  const me = await makeOwnerWithPet("unknown-me");
+  await makeOwnerWithPet("unknown-them");
+
+  await User.updateOne({ _id: me.user._id }, { playdateRange: 10 });
+  await shareLocation("unknown-me", LONDON).expect(200);
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("unknown-me"))
+    .expect(200);
+
+  // Dropping them empties the deck early on, when almost nobody has shared.
+  assert.equal(res.body.candidates.length, 1);
+  assert.equal(res.body.candidates[0].distanceMiles, null);
+});
+
+test("without a position of your own, everyone stays in", async () => {
+  const me = await makeOwnerWithPet("nowhere-me");
+  await makeOwnerWithPet("nowhere-them");
+
+  await User.updateOne({ _id: me.user._id }, { playdateRange: 10 });
+  await shareLocation("nowhere-them", NEW_YORK).expect(200);
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("nowhere-me"))
+    .expect(200);
+
+  assert.equal(res.body.locationKnown, false);
+  assert.equal(res.body.candidates.length, 1);
+});
+
+test("the deck reports the range it applied", async () => {
+  const me = await makeOwnerWithPet("report-me");
+  await User.updateOne({ _id: me.user._id }, { playdateRange: 20 });
+  await shareLocation("report-me", LONDON).expect(200);
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("report-me"))
+    .expect(200);
+
+  assert.equal(res.body.range, 20);
+  assert.equal(res.body.locationKnown, true);
+});

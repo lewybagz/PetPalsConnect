@@ -14,6 +14,7 @@ import { useTailwind } from "../../styles/tailwind";
 import { RequiresPet } from "../../components/RequiresPet";
 import {
   decide,
+  describeDistance,
   describeScore,
   fetchCandidates,
   topReasons,
@@ -49,6 +50,8 @@ const DiscoverContent = ({ navigation }) => {
   const [myPet, setMyPet] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [threshold, setThreshold] = useState(0);
+  const [range, setRange] = useState(null);
+  const [locationKnown, setLocationKnown] = useState(false);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [deciding, setDeciding] = useState(false);
@@ -60,6 +63,8 @@ const DiscoverContent = ({ navigation }) => {
       setMyPet(result.pet);
       setCandidates(result.candidates);
       setThreshold(result.threshold);
+      setRange(result.range);
+      setLocationKnown(result.locationKnown);
       setIndex(0);
     } catch (error) {
       console.warn("[discover]", error.message);
@@ -178,8 +183,18 @@ const DiscoverContent = ({ navigation }) => {
           That&apos;s everyone for now
         </Text>
         <Text style={tailwind("text-base text-gray-500 mt-2 text-center")}>
-          New pets join all the time. Check back soon.
+          {range == null
+            ? "New pets join all the time. Check back soon."
+            : `Nobody new within ${range} miles. Widen your range in Settings, or check back soon.`}
         </Text>
+        {!locationKnown ? (
+          <Text
+            testID="discover-location-hint"
+            style={tailwind("text-sm text-gray-400 mt-3 text-center")}
+          >
+            Sharing your location lets us show pets you could actually meet.
+          </Text>
+        ) : null}
         <TouchableOpacity
           testID="discover-refresh"
           onPress={load}
@@ -234,6 +249,15 @@ const DiscoverContent = ({ navigation }) => {
               </Text>
             </View>
           </View>
+
+          {describeDistance(current.distanceMiles) ? (
+            <Text
+              testID="discover-distance"
+              style={tailwind("text-sm text-gray-500 mt-1")}
+            >
+              {describeDistance(current.distanceMiles)}
+            </Text>
+          ) : null}
 
           <View style={tailwind("flex-row mt-4")}>
             <Stat tailwind={tailwind} label="Breed" value={current.pet.breed} />

@@ -25,10 +25,22 @@ const UserSchema = new Schema({
     ref: "Location",
     required: false, // Set to false if you allow users to not share their location
   },
+  /**
+   * How far this person will travel for a playdate, in miles.
+   *
+   * Was an enum of strings ("Within 10 miles"). The settings screen has a
+   * slider and sent a number, which failed enum validation every time, so the
+   * preference has never once saved - and nothing read it anyway. Miles is
+   * also what `/api/locations/playdate-locations` already takes, so the whole
+   * app now speaks one unit.
+   *
+   * 0 means no limit.
+   */
   playdateRange: {
-    type: String,
-    enum: ["All", "Within 10 miles", "Within 20 miles", "Within 50 miles"],
-    default: "All",
+    type: Number,
+    min: 0,
+    max: 500,
+    default: 25,
   },
   notificationsEnabled: {
     type: Boolean,
@@ -50,6 +62,31 @@ const UserSchema = new Schema({
   locationSharingEnabled: {
     type: Boolean,
     default: true,
+  },
+  /**
+   * Where this person is, as GeoJSON [longitude, latitude].
+   *
+   * `location` above is a reference to a *place* - a park they saved. It has
+   * never been where the user is, so matching had no idea how far apart two
+   * pets were and `playdateRange` enforced nothing. A playdate is a thing you
+   * travel to; distance is not a detail.
+   *
+   * Sparse, because sharing a position is optional and a null Point would
+   * otherwise put everyone who declined at [0,0], in the Atlantic.
+   */
+  geoLocation: {
+    type: {
+      type: String,
+      enum: ["Point"],
+      default: "Point",
+    },
+    coordinates: {
+      type: [Number],
+      index: "2dsphere",
+    },
+  },
+  locationUpdatedAt: {
+    type: Date,
   },
   // `required: false` was previously listed here as if it were a field, which
   // Mongoose 9 rejects as an invalid schema type. Subdocument arrays are

@@ -117,12 +117,12 @@ test("settings updates apply to the caller's own profile", async () => {
   const res = await request(app)
     .post("/api/users/settings")
     .set(...auth("settings-user"))
-    .send({ playdateRange: "Within 20 miles", locationSharingEnabled: false });
+    .send({ playdateRange: 20, locationSharingEnabled: false });
 
   assert.equal(res.status, 200);
 
   const updated = await User.findById(user._id).lean();
-  assert.equal(updated.playdateRange, "Within 20 miles");
+  assert.equal(updated.playdateRange, 20);
   assert.equal(updated.locationSharingEnabled, false);
 });
 
@@ -329,4 +329,24 @@ test("deletion frees the username for someone else", async () => {
     .send({ username: "recycled" });
 
   assert.equal(res.status, 201);
+});
+
+test("a range from an older client is converted, not rejected", async () => {
+  const user = await User.create({
+    firebaseUid: "legacy-range",
+    username: "legacyrange",
+    email: "legacyrange@example.test",
+  });
+
+  // `playdateRange` was an enum of strings, and the settings slider sent a
+  // number - so every save failed validation and the preference never stuck.
+  // Now it is miles, and a cached string still resolves.
+  await request(app)
+    .post("/api/users/settings")
+    .set(...auth("legacy-range"))
+    .send({ playdateRange: "Within 20 miles" })
+    .expect(200);
+
+  const updated = await User.findById(user._id).lean();
+  assert.equal(updated.playdateRange, 20);
 });

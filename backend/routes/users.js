@@ -28,6 +28,7 @@ router.post("/", UserController.createUser); // Firebase account -> Mongo profil
 router.get("/username-available", UserController.checkUsernameAvailability);
 
 // --- Settings (all act on the caller) -------------------------------------
+router.put("/me/location", requireProfile, UserController.updateMyLocation);
 router.post("/settings", requireProfile, UserController.updateUserSettings);
 router.post(
   "/settings/2fa",

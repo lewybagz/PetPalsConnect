@@ -15,7 +15,7 @@ const SettingsScreen = ({ navigation }) => {
   const { deleteAccount } = useAuthSession();
 
   const [locationSharingEnabled, setLocationSharingEnabled] = useState(true);
-  const [playdateRange, setPlaydateRange] = useState(5);
+  const [playdateRange, setPlaydateRange] = useState(25);
   const [notificationPreferences, setNotificationPreferences] = useState({
     petPalsMapUpdates: false,
     playdateReminders: false,
@@ -33,7 +33,7 @@ const SettingsScreen = ({ navigation }) => {
     readCache(CacheKeys.settings).then((settings) => {
       if (cancelled || !settings) return;
       setLocationSharingEnabled(settings.locationSharingEnabled ?? true);
-      setPlaydateRange(settings.playdateRange ?? 5);
+      setPlaydateRange(settings.playdateRange ?? 25);
       if (settings.notificationPreferences) {
         setNotificationPreferences(settings.notificationPreferences);
       }
@@ -160,18 +160,17 @@ const SettingsScreen = ({ navigation }) => {
         />
       </View>
 
-      <Text style={tailwind("my-2")}>
+      <Text testID="playdate-range" style={tailwind("my-2")}>
         PetPalsConnect Location Range: {playdateRange} miles
       </Text>
       <Text style={tailwind("text-center text-gray-600 mb-2")}>
-        This range sets the stage for all your pet adventures, including
-        matching with pals, setting up playdates, and more exciting features to
-        come!
+        Discovery only shows you pets within this range - a playdate is
+        something you have to travel to.
       </Text>
       <Slider
         style={{ width: "100%", height: 40 }}
         minimumValue={5}
-        maximumValue={20}
+        maximumValue={100}
         step={5}
         value={playdateRange}
         onValueChange={handlePlaydateRangeChange}

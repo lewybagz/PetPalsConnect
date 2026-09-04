@@ -2,6 +2,7 @@ import api from "./axios";
 import {
   MATCH_WEIGHTS,
   decide,
+  describeDistance,
   describeScore,
   fetchCandidates,
   fetchMatches,
@@ -106,5 +107,40 @@ describe("reasons", () => {
 
   it("handles a missing breakdown", () => {
     expect(topReasons(undefined)).toEqual([]);
+  });
+});
+
+describe("distance", () => {
+  it("says how far away in words a person would use", () => {
+    expect(describeDistance(0.4)).toBe("Less than a mile away");
+    expect(describeDistance(1.2)).toBe("About a mile away");
+    expect(describeDistance(12.4)).toBe("12 miles away");
+  });
+
+  it("says nothing when nobody knows", () => {
+    // Either they have not shared a position or we have not. "0 miles away"
+    // would be a lie, and a strange one.
+    expect(describeDistance(null)).toBeNull();
+    expect(describeDistance(undefined)).toBeNull();
+  });
+
+  it("carries the range in miles and whether the server knew where we are", async () => {
+    api.get.mockResolvedValue({
+      data: { pet: null, candidates: [], threshold: 45, range: 20, locationKnown: true },
+    });
+
+    const result = await fetchCandidates();
+
+    expect(result.range).toBe(20);
+    expect(result.locationKnown).toBe(true);
+  });
+
+  it("treats a missing range as no limit", async () => {
+    api.get.mockResolvedValue({ data: { candidates: [] } });
+
+    const result = await fetchCandidates();
+
+    expect(result.range).toBeNull();
+    expect(result.locationKnown).toBe(false);
   });
 });

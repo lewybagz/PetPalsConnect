@@ -170,6 +170,17 @@ one direction; only a like in both directions creates the PetMatch rows, the
 notifications and the `petMatch` event. One-sided interest is invisible to the
 other person.
 
+**Distance filters, it does not score.** `services/matching/distance.js` drops
+candidates outside the owner's `playdateRange` and attaches `distanceMiles`.
+Scoring stays about the pets: you want the best fit among pets you can reach,
+not whichever is nearest. Someone who has not shared a position stays in the
+deck with a null distance — excluding them empties it for everyone early on.
+
+**`playdateRange` is a number of miles, 0 meaning no limit.** It was an enum of
+strings while the settings slider sent a number, so the preference failed
+validation on every save and nothing read it anyway. `rangeToMiles` still
+resolves the old strings.
+
 **Scoring stays in `services/matching/score.js`** as pure functions. The
 breakdown it returns is in *weighted points*, not ratios — divide by the
 dimension's weight before comparing dimensions. The app mirrors those weights

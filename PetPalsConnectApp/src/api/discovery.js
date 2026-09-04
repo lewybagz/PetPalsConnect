@@ -21,7 +21,24 @@ export const fetchCandidates = async (petId) => {
     pet: data?.pet ?? null,
     candidates: Array.isArray(data?.candidates) ? data.candidates : [],
     threshold: data?.threshold ?? 0,
+    // How far the server was willing to look, in miles - null means it did not
+    // limit at all. The empty state needs this to say something useful.
+    range: typeof data?.range === "number" ? data.range : null,
+    locationKnown: Boolean(data?.locationKnown),
   };
+};
+
+/**
+ * How far away a candidate is, in words.
+ *
+ * Null means nobody knows: either they have not shared a position or we have
+ * not. Saying "0 miles away" there would be a lie, and a strange one.
+ */
+export const describeDistance = (miles) => {
+  if (miles == null) return null;
+  if (miles < 1) return "Less than a mile away";
+  if (miles < 1.5) return "About a mile away";
+  return `${Math.round(miles)} miles away`;
 };
 
 /**

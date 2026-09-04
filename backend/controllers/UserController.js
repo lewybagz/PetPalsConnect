@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const { toCoordinates, rangeToMiles } = require("../services/matching/distance");
 const firebase = require("../config/firebase");
 const usernames = require("../services/usernames");
 const { scrypt, randomBytes, timingSafeEqual } = require("node:crypto");
@@ -96,6 +97,55 @@ const UserController = {
       }
 
       res.json(user.pets);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  /**
+   * Records where the caller is, so discovery can filter by distance.
+   *
+   * Nothing stored a user's position before: `location` on the schema is a
+   * reference to a *place* they saved, so matching had no idea whether two
+   * pets were a mile or a continent apart, and `playdateRange` enforced
+   * nothing at all.
+   *
+   * Sharing is opt-out. Someone who has turned location sharing off is not
+   * quietly tracked anyway - the position is cleared instead, and they simply
+   * see everyone.
+   */
+  async updateMyLocation(req, res) {
+    const coordinates = toCoordinates(req.body);
+
+    if (!coordinates) {
+      return res
+        .status(400)
+        .json({ message: "latitude and longitude are required, as numbers" });
+    }
+
+    try {
+      const user = await User.findById(req.userId).select("locationSharingEnabled");
+      if (!user) {
+        return res.status(404).json({ message: "No profile for this account yet" });
+      }
+
+      if (user.locationSharingEnabled === false) {
+        await User.updateOne(
+          { _id: req.userId },
+          { $unset: { geoLocation: "", locationUpdatedAt: "" } }
+        );
+        return res.json({ stored: false, reason: "location sharing is off" });
+      }
+
+      await User.updateOne(
+        { _id: req.userId },
+        {
+          geoLocation: { type: "Point", coordinates },
+          locationUpdatedAt: new Date(),
+        }
+      );
+
+      res.json({ stored: true });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -425,10 +475,19 @@ const UserController = {
 
     try {
       // Assuming these are the names of the fields in your User model
+      // `playdateRange` is a number of miles now. An older client (or a value
+      // cached on the device) may still send "Within 20 miles"; convert rather
+      // than fail validation, which is what the enum did to every save the
+      // settings slider ever made.
+      const rangeMiles =
+        typeof playdateRange === "string"
+          ? (rangeToMiles(playdateRange) ?? 0)
+          : playdateRange;
+
       const updatedUser = await User.findByIdAndUpdate(
         userId,
         {
-          playdateRange,
+          playdateRange: rangeMiles,
           notificationsEnabled,
           locationSharingEnabled,
         },

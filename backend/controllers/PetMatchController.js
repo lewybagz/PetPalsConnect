@@ -3,6 +3,11 @@ const PetDecision = require("../models/PetDecision");
 const Pet = require("../models/Pet");
 const User = require("../models/User");
 const { rankMatches, scorePair, MATCH_THRESHOLD } = require("../services/matching/score");
+const {
+  rangeToMiles,
+  withinRange,
+  formatMiles,
+} = require("../services/matching/distance");
 const { createNotification } = require("../services/NotificationService");
 const { emitToUser } = require("../services/realtime");
 
@@ -198,7 +203,9 @@ const PetMatchController = {
    */
   async discover(req, res) {
     try {
-      const owner = await User.findById(req.userId).select("pets subscribed").lean();
+      const owner = await User.findById(req.userId)
+        .select("pets subscribed playdateRange geoLocation")
+        .lean();
       if (!owner) {
         return res.status(404).json({ message: "No profile for this account yet" });
       }
@@ -232,20 +239,60 @@ const PetMatchController = {
         .limit(CANDIDATE_LIMIT)
         .lean();
 
-      const ranked = rankMatches(actingPet, candidates, {
-        limit: Number(req.query.limit) || 20,
-      });
+      // A playdate is a thing you travel to, so a pet you could never meet is
+      // not a match. Distance filters the deck; it deliberately does not score
+      // - you want the best fit among pets you can reach, not the nearest one.
+      const maxMiles = rangeToMiles(owner.playdateRange);
+      const origin = owner.geoLocation?.coordinates ?? null;
+
+      const ownerIds = [...new Set(candidates.map((pet) => String(pet.owner)))];
+      const owners = await User.find({ _id: { $in: ownerIds } })
+        .select("geoLocation")
+        .lean();
+      const coordsByOwner = new Map(
+        owners.map((candidateOwner) => [
+          String(candidateOwner._id),
+          candidateOwner.geoLocation?.coordinates ?? null,
+        ])
+      );
+
+      // Without a position of our own we cannot measure anything, so everyone
+      // stays in rather than nobody.
+      const reachable = origin
+        ? withinRange(
+            origin,
+            candidates.map((pet) => ({
+              pet,
+              coordinates: coordsByOwner.get(String(pet.owner)),
+            })),
+            maxMiles
+          )
+        : candidates.map((pet) => ({ pet, distanceMiles: null }));
+
+      const distanceByPet = new Map(
+        reachable.map((entry) => [String(entry.pet._id), entry.distanceMiles])
+      );
+
+      const ranked = rankMatches(
+        actingPet,
+        reachable.map((entry) => entry.pet),
+        { limit: Number(req.query.limit) || 20 }
+      );
 
       const byId = new Map(candidates.map((pet) => [String(pet._id), pet]));
 
       res.json({
         pet: actingPet,
         threshold: MATCH_THRESHOLD,
+        // In miles; 0 or null means no limit.
+        range: rangeToMiles(owner.playdateRange),
+        locationKnown: Boolean(origin),
         candidates: ranked
           .map((match) => ({
             pet: byId.get(String(match.petId)),
             score: match.score,
             breakdown: match.breakdown,
+            distanceMiles: formatMiles(distanceByPet.get(String(match.petId))),
           }))
           .filter((candidate) => candidate.pet),
       });

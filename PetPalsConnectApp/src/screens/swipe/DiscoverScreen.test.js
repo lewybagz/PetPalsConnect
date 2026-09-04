@@ -27,8 +27,10 @@ const candidate = (id, name, extra = {}) => ({
   ...extra,
 });
 
-const respondWith = (candidates, pet = { _id: "mine", name: "Rex" }) => {
-  api.get.mockResolvedValue({ data: { pet, candidates, threshold: 45 } });
+const respondWith = (candidates, pet = { _id: "mine", name: "Rex" }, extra = {}) => {
+  api.get.mockResolvedValue({
+    data: { pet, candidates, threshold: 45, range: null, locationKnown: true, ...extra },
+  });
 };
 
 beforeEach(() => {
@@ -130,6 +132,28 @@ describe("DiscoverScreen", () => {
 
     await waitFor(() => expect(screen.getByTestId("discover-empty")).toBeTruthy());
     expect(screen.queryByTestId("discover-match")).toBeNull();
+  });
+
+  it("says how far away a candidate is", async () => {
+    respondWith([candidate("pet-1", "Bo", { distanceMiles: 2.4 })]);
+    render(<DiscoverScreen navigation={navigation} />);
+
+    await waitFor(() => expect(screen.getByTestId("discover-distance")).toBeTruthy());
+  });
+
+  it("says nothing about distance when nobody knows", async () => {
+    respondWith([candidate("pet-1", "Bo", { distanceMiles: null })]);
+    render(<DiscoverScreen navigation={navigation} />);
+
+    await waitFor(() => expect(screen.getByTestId("discover-card")).toBeTruthy());
+    expect(screen.queryByTestId("discover-distance")).toBeNull();
+  });
+
+  it("nudges about location when the deck is empty and we do not know where they are", async () => {
+    respondWith([], { _id: "mine", name: "Rex" }, { locationKnown: false });
+    render(<DiscoverScreen navigation={navigation} />);
+
+    await waitFor(() => expect(screen.getByTestId("discover-location-hint")).toBeTruthy());
   });
 
   it("puts a card back when saving the decision fails", async () => {
