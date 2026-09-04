@@ -64,6 +64,10 @@ clients call Firebase's `updatePassword()`.
 - Styling uses `const tailwind = useTailwind()` from `src/styles/tailwind`, then
   `style={tailwind("flex-1 p-lg")}`. Swapping the styling library means editing
   that one file.
+- All non-tab screens are registered flat on `AppStack`, so any screen can
+  `navigate()` to any other by name. Add new screens there.
+- Offline caching goes through `src/services/localCache` (AsyncStorage), not a
+  native database. Realm was removed — MongoDB ended support in September 2025.
 
 #### The design system
 
@@ -110,10 +114,6 @@ hardcoded colour. Converting a screen lowers its number; nothing raises one.
 Run it with `-- --update` only to record a reduction. A lint rule banning hex
 outright would have to be disabled in 67 files, which is the same as not
 having one.
-- All non-tab screens are registered flat on `AppStack`, so any screen can
-  `navigate()` to any other by name. Add new screens there.
-- Offline caching goes through `src/services/localCache` (AsyncStorage), not a
-  native database. Realm was removed — MongoDB ended support in September 2025.
 
 #### TypeScript
 
@@ -124,7 +124,8 @@ act on. `strict` and `noUncheckedIndexedAccess` are on for what is converted.
 
 Converted so far: `src/types/api.ts`, `src/config/env.ts`, `src/api/axios.ts`,
 `src/api/subscriptions.ts`, `src/utils/authErrors.ts`,
-`src/utils/passwordStrength.ts`, `src/services/localCache.ts`.
+`src/utils/passwordStrength.ts`, `src/services/localCache.ts`,
+`src/styles/tokens.ts`.
 
 Convert leaves before branches — a pure module with no React and no native
 dependency costs nothing to convert and immediately types every caller.
