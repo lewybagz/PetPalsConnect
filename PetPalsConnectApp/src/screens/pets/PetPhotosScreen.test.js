@@ -5,6 +5,8 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react-nativ
 import PetPhotosScreen from "./PetPhotosScreen";
 import api from "../../api/axios";
 import { addPetPhoto, deleteStoredPhoto } from "../../services/photos";
+import { AppThemeProvider } from "../../context/AppThemeContext";
+import { ToastProvider } from "../../components/ui";
 
 jest.mock("../../api/axios", () => ({ get: jest.fn(), put: jest.fn() }));
 jest.mock("../../services/photos", () => ({
@@ -25,8 +27,19 @@ const navigation = { goBack: jest.fn(), navigate: jest.fn() };
 const A = "https://firebasestorage.googleapis.com/v0/b/p/o/a.jpg";
 const B = "https://firebasestorage.googleapis.com/v0/b/p/o/b.jpg";
 
+/**
+ * Mounted with the toast host, because the screen reports through it now:
+ * a modal alert for "that is enough photos" stopped the app to say something
+ * nobody needed to acknowledge.
+ */
 const renderScreen = (params) =>
-  render(<PetPhotosScreen route={{ params }} navigation={navigation} />);
+  render(
+    <AppThemeProvider>
+      <ToastProvider>
+        <PetPhotosScreen route={{ params }} navigation={navigation} />
+      </ToastProvider>
+    </AppThemeProvider>
+  );
 
 const tapById = async (testID) => {
   const element = await waitFor(() => screen.getByTestId(testID));
@@ -97,7 +110,8 @@ describe("PetPhotosScreen", () => {
 
     await tapById("add-from-library");
 
-    await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId("toast")).toBeTruthy());
+    expect(screen.getByText(/Photo access is off/)).toBeTruthy();
     expect(api.put).not.toHaveBeenCalled();
   });
 
@@ -132,7 +146,7 @@ describe("PetPhotosScreen", () => {
     await tapById("add-from-library");
 
     expect(addPetPhoto).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText(/up to 6 photos/)).toBeTruthy());
   });
 
   it("removes a photo from the record before deleting the file", async () => {

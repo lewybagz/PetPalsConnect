@@ -9,7 +9,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { FontAwesome as Icon } from "@expo/vector-icons";
 import { useDispatch } from "react-redux";
@@ -17,6 +16,7 @@ import { useDispatch } from "react-redux";
 import { useAuthSession } from "../../context/AuthSessionContext";
 
 import api from "../../api/axios";
+import { useToast } from "../../components/ui";
 import { setChatId } from "../../redux/actions";
 
 /**
@@ -35,6 +35,7 @@ import { setChatId } from "../../redux/actions";
  */
 const PetDetailsScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
+  const toast = useToast();
   const { userId } = useAuthSession();
   const [photoIndex, setPhotoIndex] = useState(0);
 
@@ -55,7 +56,7 @@ const PetDetailsScreen = ({ route, navigation }) => {
       } catch (error) {
         if (cancelled) return;
         console.warn("[pet]", error.message);
-        Alert.alert("Error", "Could not load this pet.");
+        toast.error("Could not load this pet.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -64,7 +65,7 @@ const PetDetailsScreen = ({ route, navigation }) => {
     return () => {
       cancelled = true;
     };
-  }, [petId, passedPet]);
+  }, [petId, passedPet, toast]);
 
   const handleChat = async () => {
     try {
@@ -76,17 +77,23 @@ const PetDetailsScreen = ({ route, navigation }) => {
       navigation.navigate("Chat", { pet, chatId: data._id });
     } catch (error) {
       console.warn("[pet] chat failed:", error.message);
-      Alert.alert("Error", "Could not open a chat about this pet.");
+      toast.error(
+        error.response?.status === 403
+          ? "This conversation isn't available."
+          : "Could not open a chat about this pet."
+      );
     }
   };
 
   const handleFavorite = async () => {
     try {
       await api.post("/api/favorites", { content: pet._id });
-      Alert.alert("Favorite Added", `${pet.name} has been added to your favorites.`);
+      // A success confirmation is the clearest case for not using a modal:
+      // there is nothing to decide and nothing went wrong.
+      toast.success(`${pet.name} is in your favourites.`);
     } catch (error) {
       console.warn("[pet] favourite failed:", error.message);
-      Alert.alert("Error", "Failed to add to favorites");
+      toast.error("Could not add to favourites.");
     }
   };
 

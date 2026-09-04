@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
+import { useToast } from "../../components/ui";
 import { REPORT_REASONS, reportUser } from "../../api/safety";
 
 /**
@@ -31,6 +32,7 @@ import { REPORT_REASONS, reportUser } from "../../api/safety";
  */
 const ReportUserScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
+  const toast = useToast();
 
   const userId = route?.params?.userId;
   const name = route?.params?.name ?? "this person";
@@ -44,15 +46,14 @@ const ReportUserScreen = ({ route, navigation }) => {
   const submit = async () => {
     const description = content.trim();
 
+    // Nudges, not errors: a modal to say "pick one of the six things on the
+    // screen in front of you" is an interruption, not help.
     if (!reason) {
-      Alert.alert("Pick a reason", "Tell us what kind of problem this is.");
+      toast.warning("Pick a reason so we know what kind of problem this is.");
       return;
     }
     if (description.length < 5) {
-      Alert.alert(
-        "Tell us what happened",
-        "A sentence is enough, but we need something to go on."
-      );
+      toast.warning("Tell us what happened - a sentence is plenty.");
       return;
     }
 
@@ -74,10 +75,7 @@ const ReportUserScreen = ({ route, navigation }) => {
         [{ text: "Done", onPress: () => navigation.goBack() }]
       );
     } catch (error) {
-      Alert.alert(
-        "That didn't send",
-        error.response?.data?.message ?? "Please try again."
-      );
+      toast.error(error.response?.data?.message ?? "That didn't send. Please try again.");
     } finally {
       setSubmitting(false);
     }

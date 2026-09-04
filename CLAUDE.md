@@ -62,8 +62,54 @@ clients call Firebase's `updatePassword()`.
 - Import the shared API client (`src/api/axios`), not bare `axios`. It attaches
   the Firebase ID token and retries once on a 401.
 - Styling uses `const tailwind = useTailwind()` from `src/styles/tailwind`, then
-  `style={tailwind("flex-1 p-4")}`. Swapping the styling library means editing
+  `style={tailwind("flex-1 p-lg")}`. Swapping the styling library means editing
   that one file.
+
+#### The design system
+
+**`src/styles/tokens.ts` is the one description of the app's surface** —
+colours, a 4-point spacing scale, three radii, six text roles, and the 44pt tap
+floor. It is a pure leaf module, so it is TypeScript. Nothing else defines a
+colour: the app held 185 hex literals across 55 files, `10` was used as a
+padding 98 times, and two unrelated blues both acted as "primary".
+
+**Colour pairings are asserted, not claimed.** `tokens.test.js` computes every
+ratio with the WCAG formula. Seven of the greys this replaced failed AA for
+body text, and white on the old `#007bff` primary sat at 3.98:1 — below AA for
+the label on the app's most-pressed control. A prettier grey that fails now
+fails the suite.
+
+**`useTailwind()` is bound to the tokens through two configured twrnc
+instances** — same class names, different palettes — so `bg-surface` means the
+right thing in both themes and a screen never mentions light or dark. That is
+also what makes the dark-mode switch real: it shipped changing nothing but its
+own thumb, because with 185 literals there was nothing for a theme to switch.
+`useTokens()` gives the raw palette for the few things that take a colour prop
+rather than a class (an icon, an `ActivityIndicator`).
+
+**Reach for `src/components/ui` before writing a `View` and a `Text`.**
+`Button` keeps padding, background, press handler and the 44pt minimum on one
+node — `AnimatedButton` had padding on an outer `Animated.View` and `onPress`
+on a child with none, so taps in the visible blue did nothing. `Text` has six
+roles with a per-role Dynamic Type cap. `Screen` applies the safe-area insets,
+which no screen was doing. `Card`, `EmptyState`, `Skeleton` and `Toast` round
+it out.
+
+**Feedback goes through `useToast()`; `Alert` is for destructive
+confirmations.** `Alert.alert` was the app's way of saying anything at all, 157
+times across 48 files — a modal that stops the app and looks like an OS error,
+for "Playdate scheduled" as readily as for a failure.
+
+**A wait with predictable structure gets a skeleton, not a spinner.** Discover,
+Home and the chat list know their own shape before the response arrives, and
+they are the three screens a new user waits on first.
+
+**`npm run check:colours` is a ratchet, not a ban.** It records a per-file
+count in `scripts/colour-baseline.json` and fails if any file gains a
+hardcoded colour. Converting a screen lowers its number; nothing raises one.
+Run it with `-- --update` only to record a reduction. A lint rule banning hex
+outright would have to be disabled in 67 files, which is the same as not
+having one.
 - All non-tab screens are registered flat on `AppStack`, so any screen can
   `navigate()` to any other by name. Add new screens there.
 - Offline caching goes through `src/services/localCache` (AsyncStorage), not a
@@ -304,8 +350,8 @@ missing key must never stop the app from opening.
 # so they need no database, no service-account key and no network.
 cd backend && npm run lint && npm run check:schemas && npm run check:auth && npm test
 
-# App: lint, types, tests, then both bundles — the real build gate
-cd PetPalsConnectApp && npm run lint && npm run typecheck && npm test
+# App: lint, types, the colour ratchet, tests, then both bundles
+cd PetPalsConnectApp && npm run lint && npm run typecheck && npm run check:colours && npm test
 npx expo export --platform android
 npx expo export --platform ios
 npx expo-doctor@latest

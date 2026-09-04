@@ -6,6 +6,20 @@ module.exports = [
     ignores: ["node_modules/", ".expo/", "dist/", "ios/", "android/", "functions/"],
   },
   {
+    // Build-time checks that run under Node, not the app runtime or Metro.
+    files: ["scripts/**/*.js"],
+    languageOptions: {
+      globals: {
+        require: "readonly",
+        module: "writable",
+        process: "readonly",
+        console: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+      },
+    },
+  },
+  {
     // Test files and the jest setup run under jest, not the app runtime.
     files: ["**/*.test.{js,jsx,ts,tsx}", "jest.setup.js", "jest.config.js"],
     languageOptions: {

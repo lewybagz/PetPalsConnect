@@ -3,6 +3,7 @@ import { Alert, Modal, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../styles/tailwind";
+import { useToast } from "./ui";
 import { blockUser } from "../api/safety";
 
 /**
@@ -26,6 +27,7 @@ const SafetyMenu = ({
   extraOptions = [],
 }) => {
   const tailwind = useTailwind();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -47,10 +49,7 @@ const SafetyMenu = ({
               await blockUser(userId);
               onBlocked?.(userId);
             } catch (error) {
-              Alert.alert(
-                "Error",
-                error.response?.data?.message ?? "Could not block them."
-              );
+              toast.error(error.response?.data?.message ?? "Could not block them.");
             } finally {
               setBusy(false);
             }

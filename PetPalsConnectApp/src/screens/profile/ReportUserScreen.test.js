@@ -4,6 +4,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react-nativ
 
 import ReportUserScreen from "./ReportUserScreen";
 import { reportUser } from "../../api/safety";
+import { AppThemeProvider } from "../../context/AppThemeContext";
+import { ToastProvider } from "../../components/ui";
 
 jest.mock("../../api/safety", () => ({
   reportUser: jest.fn(),
@@ -27,7 +29,13 @@ const navigation = { goBack: jest.fn(), navigate: jest.fn() };
 const DEFAULT_PARAMS = { userId: "u1", name: "Bo's owner" };
 
 const renderScreen = (params = DEFAULT_PARAMS) =>
-  render(<ReportUserScreen route={{ params }} navigation={navigation} />);
+  render(
+    <AppThemeProvider>
+      <ToastProvider>
+        <ReportUserScreen route={{ params }} navigation={navigation} />
+      </ToastProvider>
+    </AppThemeProvider>
+  );
 
 const tapById = async (id) => {
   const element = await waitFor(() => screen.getByTestId(id));
@@ -55,10 +63,8 @@ describe("ReportUserScreen", () => {
     await tapById("report-submit");
 
     expect(reportUser).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith(
-      "Pick a reason",
-      expect.any(String)
-    );
+    // A nudge, not a modal: the six reasons are on the screen already.
+    await waitFor(() => expect(screen.getByText(/Pick a reason/)).toBeTruthy());
   });
 
   it("needs a description before it will send", async () => {
@@ -112,9 +118,7 @@ describe("ReportUserScreen", () => {
     await fireEvent.changeText(screen.getByTestId("report-content"), "Kept messaging me.");
     await tapById("report-submit");
 
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith("That didn't send", "Try later")
-    );
+    await waitFor(() => expect(screen.getByText("Try later")).toBeTruthy());
   });
 
   it("passes through what is being reported when it is not the person", async () => {

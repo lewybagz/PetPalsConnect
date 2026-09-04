@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import api from "../../api/axios";
 import { useTailwind } from "../../styles/tailwind";
+import { useToast } from "../../components/ui";
 import {
   PHOTO_LIMIT,
   addPetPhoto,
@@ -29,6 +30,7 @@ import {
  */
 const PetPhotosScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
+  const toast = useToast();
   const petId = route?.params?.petId ?? route?.params?.pet?._id;
 
   const [pet, setPet] = useState(route?.params?.pet ?? null);
@@ -50,7 +52,7 @@ const PetPhotosScreen = ({ route, navigation }) => {
       } catch (error) {
         if (!cancelled) {
           console.warn("[photos]", error.message);
-          Alert.alert("Error", "Could not load this pet.");
+          toast.error("Could not load this pet.");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -60,7 +62,7 @@ const PetPhotosScreen = ({ route, navigation }) => {
     return () => {
       cancelled = true;
     };
-  }, [petId, pet]);
+  }, [petId, pet, toast]);
 
   /**
    * The server is the record. Saving after every change means closing the
@@ -74,13 +76,14 @@ const PetPhotosScreen = ({ route, navigation }) => {
       await api.put(`/api/pets/${petId}`, { photos: next });
     } catch (error) {
       setPhotos(previous);
-      Alert.alert("Error", error.response?.data?.message || error.message);
+      toast.error(error.response?.data?.message || error.message);
     }
   };
 
   const add = async (fromCamera) => {
     if (photos.length >= PHOTO_LIMIT) {
-      Alert.alert("That's plenty", `A pet can have up to ${PHOTO_LIMIT} photos.`);
+      // Reaching the limit is not an error and does not need a modal in the way.
+      toast.show(`A pet can have up to ${PHOTO_LIMIT} photos.`);
       return;
     }
 
@@ -90,9 +93,10 @@ const PetPhotosScreen = ({ route, navigation }) => {
       const result = await addPetPhoto({ petId, fromCamera, onProgress: setProgress });
 
       if (result.denied) {
-        Alert.alert(
-          fromCamera ? "Camera access needed" : "Photo access needed",
-          "You can turn this on in your device settings."
+        toast.warning(
+          fromCamera
+            ? "Camera access is off. You can turn it on in Settings."
+            : "Photo access is off. You can turn it on in Settings."
         );
         return;
       }
@@ -100,7 +104,7 @@ const PetPhotosScreen = ({ route, navigation }) => {
 
       await save([...photos, result.url]);
     } catch (error) {
-      Alert.alert("Upload failed", error.message);
+      toast.error(`Upload failed: ${error.message}`);
     } finally {
       setBusy(false);
       setProgress(0);

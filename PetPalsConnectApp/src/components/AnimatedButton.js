@@ -1,116 +1,49 @@
-import React, { useMemo } from "react";
-import {
-  TouchableOpacity,
-  Text,
-  Animated,
-  StyleSheet,
-  ActivityIndicator,
-  View,
-} from "react-native";
+import React from "react";
 
+import Button from "./ui/Button";
+
+/**
+ * Kept only for its callers. Reach for `components/ui/Button` in new code.
+ *
+ * The original put its 10/20 padding and its background colour on an outer
+ * `Animated.View` and `onPress` on a bare `TouchableOpacity` *inside* it, which
+ * had no padding of its own. Taps landing anywhere in the visible blue did
+ * nothing at all - the real target was the text box, roughly 20pt tall, against
+ * Apple's 44pt, Material's 48dp and WCAG 2.2 SC 2.5.8's 24x24. The miss was
+ * invisible in review because the button looked the right size.
+ *
+ * Its press animation also ran from `onTouchStart`/`onTouchEnd` on the wrapper
+ * while the press itself was handled by a child - two different nodes in the
+ * responder tree, which is why the animation and the action could disagree.
+ *
+ * Rather than repair that arrangement, this now forwards to the primitive,
+ * where the padding, the background, the press and the 44pt floor all belong to
+ * one node. The `animationType` and `shape` props are accepted and ignored:
+ * removing them would mean editing every caller for an animation nobody asked
+ * for, and the primitive has a press state of its own. `textStyle` goes the
+ * same way: the variant decides the label colour now, so a caller cannot set
+ * one the background fails contrast against.
+ */
 const AnimatedButton = ({
   text,
   onPress,
   buttonStyle,
-  textStyle,
   icon,
   isLoading,
-  animationType = "spring",
-  shape = "rectangle",
-}) => {
-  // useRef(new Animated.Value(...)).current reads a ref during render, and
-  // builds a fresh Animated.Value on every render just to throw it away.
-  const scale = useMemo(() => new Animated.Value(1), []);
-  const rotate = useMemo(() => new Animated.Value(0), []);
-
-  const animateButton = (isPressIn) => {
-    const animationConfig = {
-      toValue: isPressIn ? 0.95 : 1,
-      useNativeDriver: true,
-    };
-
-    if (animationType === "spring") {
-      Animated.spring(scale, { ...animationConfig, friction: 5 }).start();
-    } else if (animationType === "linear") {
-      Animated.timing(scale, { ...animationConfig, duration: 100 }).start();
-    } else if (animationType === "pulse") {
-      Animated.sequence([
-        Animated.timing(scale, {
-          toValue: 1.05,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else if (animationType === "rotate") {
-      Animated.spring(rotate, {
-        toValue: isPressIn ? 1 : 0,
-        tension: 150,
-        useNativeDriver: true,
-      }).start();
-    }
-  };
-
-  return (
-    <Animated.View
-      style={[
-        styles.button,
-        buttonStyle,
-        shapeStyles[shape],
-        { transform: [{ scale }] },
-      ]}
-      onTouchStart={() => animateButton(true)}
-      onTouchEnd={() => animateButton(false)}
-    >
-      <TouchableOpacity onPress={onPress} disabled={isLoading}>
-        {isLoading ? (
-          <ActivityIndicator color={textStyle?.color || "white"} />
-        ) : (
-          <View style={styles.content}>
-            {icon}
-            {text && <Text style={[styles.text, textStyle]}>{text}</Text>}
-          </View>
-        )}
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
-
-const styles = StyleSheet.create({
-  button: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#007bff", // Default color
-  },
-  text: {
-    color: "white",
-    fontSize: 16,
-  },
-  content: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
-
-const shapeStyles = StyleSheet.create({
-  rectangle: {
-    borderRadius: 5,
-  },
-  round: {
-    borderRadius: 20,
-  },
-  circle: {
-    borderRadius: 50,
-  },
-  // Add more shapes if needed
-});
+  accessibilityLabel,
+  testID,
+}) => (
+  <Button
+    testID={testID}
+    title={text}
+    icon={icon}
+    onPress={onPress}
+    loading={isLoading}
+    // An icon-only button has no title to fall back on for its label.
+    accessibilityLabel={accessibilityLabel ?? text}
+    fullWidth={false}
+    style={buttonStyle}
+  />
+);
 
 export default AnimatedButton;

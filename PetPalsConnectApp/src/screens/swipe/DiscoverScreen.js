@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Image, Modal, Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
+import { useTokens } from "../../context/AppThemeContext";
+import { hit } from "../../styles/tokens";
+import {
+  Button,
+  CardSkeleton,
+  EmptyState,
+  Screen,
+  Text,
+  useToast,
+} from "../../components/ui";
 import { RequiresPet } from "../../components/RequiresPet";
 import SafetyMenu from "../../components/SafetyMenu";
 import {
@@ -43,16 +45,18 @@ const ownerId = (pet) => {
 
 const Stat = ({ tailwind, label, value }) =>
   value == null || value === "" ? null : (
-    <View style={tailwind("mr-6")}>
-      <Text style={tailwind("text-xs text-gray-500")}>{label}</Text>
-      <Text style={tailwind("text-base font-semibold text-gray-900")}>
-        {value}
+    <View style={tailwind("mr-xl")}>
+      <Text variant="caption" tone="muted">
+        {label}
       </Text>
+      <Text weight="600">{value}</Text>
     </View>
   );
 
 const DiscoverContent = ({ navigation }) => {
   const tailwind = useTailwind();
+  const tokens = useTokens();
+  const toast = useToast();
 
   const [myPet, setMyPet] = useState(null);
   const [candidates, setCandidates] = useState([]);
@@ -75,11 +79,11 @@ const DiscoverContent = ({ navigation }) => {
       setIndex(0);
     } catch (error) {
       console.warn("[discover]", error.message);
-      Alert.alert("Error", "Could not load matches. Pull to try again.");
+      toast.error("Could not load matches. Pull to try again.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +114,9 @@ const DiscoverContent = ({ navigation }) => {
       if (result?.mutual) setMatch(result.matchedPet);
     } catch (error) {
       console.warn("[discover] decide failed:", error.message);
-      Alert.alert("Error", "That didn't save. Please try again.");
+      // A modal here stops the deck dead for a transient network blip on the
+      // app's core loop. The card comes back; that is the feedback that matters.
+      toast.error("That didn't save. Please try again.");
       setIndex((position) => Math.max(0, position - 1));
     } finally {
       setDeciding(false);
@@ -147,107 +153,103 @@ const DiscoverContent = ({ navigation }) => {
   const matchModal = (
     <Modal visible={Boolean(match)} transparent animationType="fade">
       <View
-        style={tailwind(
-          "flex-1 bg-black bg-opacity-60 items-center justify-center p-8",
-        )}
+        style={[
+          tailwind("flex-1 items-center justify-center p-xxl"),
+          { backgroundColor: tokens.scrim },
+        ]}
       >
         <View
           testID="discover-match"
-          style={tailwind("bg-white rounded-3xl p-8 items-center w-full")}
+          style={tailwind("bg-surface rounded-card p-xxl items-center w-full")}
         >
-          <Ionicons name="heart" size={48} color="#2563eb" />
-          <Text style={tailwind("text-2xl font-bold mt-3 text-center")}>
+          <Ionicons name="heart" size={48} color={tokens.primary} />
+          <Text variant="display" align="center" style={tailwind("mt-md")}>
             It&apos;s a match!
           </Text>
-          <Text style={tailwind("text-base text-gray-600 mt-2 text-center")}>
+          <Text tone="muted" align="center" style={tailwind("mt-sm")}>
             {myPet?.name} and {match?.name} both said yes.
           </Text>
 
-          <TouchableOpacity
+          <Button
             testID="discover-say-hello"
+            title="Say hello"
             onPress={() => {
               const matched = match;
               setMatch(null);
               navigation.navigate("Chat", { pet: matched });
             }}
-            style={tailwind("bg-blue-600 rounded-xl px-6 py-3 mt-6 w-full")}
-          >
-            <Text style={tailwind("text-white font-semibold text-center")}>
-              Say hello
-            </Text>
-          </TouchableOpacity>
+            style={tailwind("mt-xl")}
+          />
 
-          <TouchableOpacity
+          <Button
             testID="discover-keep-browsing"
+            title="Keep browsing"
+            variant="ghost"
             onPress={() => setMatch(null)}
-            style={tailwind("py-4")}
-          >
-            <Text style={tailwind("text-gray-500")}>Keep browsing</Text>
-          </TouchableOpacity>
+            style={tailwind("mt-sm")}
+          />
         </View>
       </View>
     </Modal>
   );
 
   if (loading) {
+    // A skeleton rather than a spinner: this card's structure is completely
+    // known before the response arrives, and this is the screen a new user
+    // waits on first.
     return (
-      <View
-        testID="discover-loading"
-        style={tailwind("flex-1 items-center justify-center")}
-      >
-        <ActivityIndicator size="large" />
-      </View>
+      <Screen testID="discover-loading">
+        <View style={tailwind("mb-sm")}>
+          <Text variant="caption" tone="muted">
+            Finding matches…
+          </Text>
+        </View>
+        <CardSkeleton />
+      </Screen>
     );
   }
 
   if (!current) {
     return (
-      <View
-        testID="discover-empty"
-        style={tailwind("flex-1 items-center justify-center px-8")}
-      >
-        <Ionicons name="paw-outline" size={56} color="#d0d0d0" />
-        <Text
-          style={tailwind("text-xl font-bold text-gray-900 mt-5 text-center")}
-        >
-          That&apos;s everyone for now
-        </Text>
-        <Text style={tailwind("text-base text-gray-500 mt-2 text-center")}>
-          {range == null
-            ? "New pets join all the time. Check back soon."
-            : `Nobody new within ${range} miles. Widen your range in Settings, or check back soon.`}
-        </Text>
+      <Screen testID="discover-empty" padded={false}>
+        <EmptyState
+          testID="discover-empty-state"
+          title="That's everyone for now"
+          message={
+            range == null
+              ? "New pets join all the time. Check back soon."
+              : `Nobody new within ${range} miles. Widen your range in Settings, or check back soon.`
+          }
+          actionLabel="Refresh"
+          onAction={load}
+        />
         {!locationKnown ? (
           <Text
             testID="discover-location-hint"
-            style={tailwind("text-sm text-gray-400 mt-3 text-center")}
+            variant="caption"
+            tone="faint"
+            align="center"
+            style={tailwind("px-xl pb-xl")}
           >
             Sharing your location lets us show pets you could actually meet.
           </Text>
         ) : null}
-        <TouchableOpacity
-          testID="discover-refresh"
-          onPress={load}
-          style={tailwind("mt-6 bg-blue-600 rounded-xl px-6 py-3")}
-        >
-          <Text style={tailwind("text-white font-semibold")}>Refresh</Text>
-        </TouchableOpacity>
         {matchModal}
-      </View>
+      </Screen>
     );
   }
 
   const reasons = topReasons(current.breakdown);
 
   return (
-    <View testID="discover-card" style={tailwind("flex-1 p-4")}>
-      <Text style={tailwind("text-sm text-gray-500 mb-2")}>
+    <Screen testID="discover-card">
+      <Text variant="caption" tone="muted" style={tailwind("mb-sm")}>
         Matches for {myPet?.name}
       </Text>
 
       <View
         style={tailwind(
-          "flex-1 bg-white rounded-3xl border border-gray-200 overflow-hidden",
+          "flex-1 bg-surface rounded-card border border-border overflow-hidden",
         )}
       >
         {petPhoto(current.pet) ? (
@@ -258,24 +260,21 @@ const DiscoverContent = ({ navigation }) => {
         ) : (
           <View
             style={tailwind(
-              "w-full h-64 bg-gray-100 items-center justify-center",
+              "w-full h-64 bg-surfaceAlt items-center justify-center",
             )}
           >
-            <Ionicons name="paw-outline" size={48} color="#9ca3af" />
+            <Ionicons name="paw-outline" size={48} color={tokens.textFaint} />
           </View>
         )}
 
-        <View style={tailwind("p-5 flex-1")}>
+        <View style={tailwind("p-lg flex-1")}>
           <View style={tailwind("flex-row items-center justify-between")}>
-            <Text style={tailwind("text-2xl font-bold text-gray-900")}>
+            <Text variant="display" style={tailwind("flex-1")} numberOfLines={1}>
               {current.pet.name}
             </Text>
             <View style={tailwind("flex-row items-center")}>
-              <View style={tailwind("bg-blue-50 rounded-full px-3 py-1")}>
-                <Text
-                  testID="discover-score"
-                  style={tailwind("text-xs font-semibold text-blue-700")}
-                >
+              <View style={tailwind("bg-primarySoft rounded-pill px-md py-xs")}>
+                <Text testID="discover-score" variant="caption" tone="primary" weight="600">
                   {describeScore(current.score, threshold)}
                 </Text>
               </View>
@@ -295,13 +294,15 @@ const DiscoverContent = ({ navigation }) => {
           {describeDistance(current.distanceMiles) ? (
             <Text
               testID="discover-distance"
-              style={tailwind("text-sm text-gray-500 mt-1")}
+              variant="caption"
+              tone="muted"
+              style={tailwind("mt-xs")}
             >
               {describeDistance(current.distanceMiles)}
             </Text>
           ) : null}
 
-          <View style={tailwind("flex-row mt-4")}>
+          <View style={tailwind("flex-row mt-lg")}>
             <Stat tailwind={tailwind} label="Breed" value={current.pet.breed} />
             <Stat
               tailwind={tailwind}
@@ -318,59 +319,73 @@ const DiscoverContent = ({ navigation }) => {
           </View>
 
           {reasons.length > 0 ? (
-            <View style={tailwind("mt-5")}>
+            <View style={tailwind("mt-lg")}>
               {reasons.map((reason) => (
                 <View
                   key={reason}
-                  style={tailwind("flex-row items-center mb-1")}
+                  style={tailwind("flex-row items-center mb-xs")}
                 >
-                  <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-                  <Text style={tailwind("text-base text-gray-700 ml-2")}>
-                    {reason}
-                  </Text>
+                  <Ionicons name="checkmark-circle" size={16} color={tokens.success} />
+                  <Text style={tailwind("ml-sm flex-1")}>{reason}</Text>
                 </View>
               ))}
             </View>
           ) : null}
 
-          <TouchableOpacity
+          <Pressable
             testID="discover-details"
+            accessibilityRole="button"
             onPress={() =>
               navigation.navigate("PetDetails", { petId: current.pet._id })
             }
-            style={tailwind("mt-auto")}
+            style={[tailwind("mt-auto justify-center"), { minHeight: hit.min }]}
           >
-            <Text style={tailwind("text-blue-600")}>See full profile</Text>
-          </TouchableOpacity>
+            <Text tone="primary" weight="600">
+              See full profile
+            </Text>
+          </Pressable>
         </View>
       </View>
 
-      <View style={tailwind("flex-row justify-center items-center py-5")}>
-        <TouchableOpacity
+      {/* Icon-only, so each needs a label of its own: without one a screen
+          reader announces the two most important controls in the app as
+          nothing at all. */}
+      <View style={tailwind("flex-row justify-center items-center py-xl")}>
+        <Pressable
           testID="discover-pass"
+          accessibilityRole="button"
+          accessibilityLabel={`Pass on ${current.pet.name}`}
+          accessibilityState={{ disabled: deciding }}
           disabled={deciding}
           onPress={() => submit("pass")}
-          style={tailwind(
-            "h-16 w-16 rounded-full border border-gray-300 items-center justify-center mr-8",
-          )}
+          style={({ pressed }) => [
+            tailwind(
+              "h-16 w-16 rounded-pill border border-borderStrong items-center justify-center mr-xxl",
+            ),
+            { opacity: deciding ? 0.5 : pressed ? 0.8 : 1 },
+          ]}
         >
-          <Ionicons name="close" size={28} color="#6b7280" />
-        </TouchableOpacity>
+          <Ionicons name="close" size={28} color={tokens.textMuted} />
+        </Pressable>
 
-        <TouchableOpacity
+        <Pressable
           testID="discover-like"
+          accessibilityRole="button"
+          accessibilityLabel={`Like ${current.pet.name}`}
+          accessibilityState={{ disabled: deciding }}
           disabled={deciding}
           onPress={() => submit("like")}
-          style={tailwind(
-            "h-16 w-16 rounded-full bg-blue-600 items-center justify-center",
-          )}
+          style={({ pressed }) => [
+            tailwind("h-16 w-16 rounded-pill bg-primary items-center justify-center"),
+            { opacity: deciding ? 0.5 : pressed ? 0.85 : 1 },
+          ]}
         >
-          <Ionicons name="heart" size={28} color="#ffffff" />
-        </TouchableOpacity>
+          <Ionicons name="heart" size={28} color={tokens.onPrimary} />
+        </Pressable>
       </View>
 
       {matchModal}
-    </View>
+    </Screen>
   );
 };
 

@@ -4,6 +4,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react-nativ
 
 import BlockedAccountsScreen from "./BlockedAccountsScreen";
 import { fetchBlocked, unblockUser } from "../../api/safety";
+import { AppThemeProvider } from "../../context/AppThemeContext";
+import { ToastProvider } from "../../components/ui";
 
 jest.mock("../../api/safety", () => ({
   fetchBlocked: jest.fn(),
@@ -36,7 +38,13 @@ beforeEach(() => {
 
 describe("BlockedAccountsScreen", () => {
   it("says so plainly when nobody is blocked", async () => {
-    await render(<BlockedAccountsScreen />);
+    await render(
+      <AppThemeProvider>
+        <ToastProvider>
+          <BlockedAccountsScreen />
+        </ToastProvider>
+      </AppThemeProvider>
+    );
 
     await waitFor(() => expect(screen.getByTestId("blocked-empty")).toBeTruthy());
   });
@@ -46,7 +54,13 @@ describe("BlockedAccountsScreen", () => {
       { _id: "b1", blockedUser: { _id: "u1", username: "nuisance" } },
     ]);
 
-    await render(<BlockedAccountsScreen />);
+    await render(
+      <AppThemeProvider>
+        <ToastProvider>
+          <BlockedAccountsScreen />
+        </ToastProvider>
+      </AppThemeProvider>
+    );
 
     await waitFor(() => expect(screen.getByTestId("blocked-u1")).toBeTruthy());
     expect(screen.getByText("nuisance")).toBeTruthy();
@@ -57,7 +71,13 @@ describe("BlockedAccountsScreen", () => {
       { _id: "b1", blockedUser: { _id: "u1", username: "nuisance" } },
     ]);
 
-    await render(<BlockedAccountsScreen />);
+    await render(
+      <AppThemeProvider>
+        <ToastProvider>
+          <BlockedAccountsScreen />
+        </ToastProvider>
+      </AppThemeProvider>
+    );
     await tapById("unblock-u1");
 
     expect(unblockUser).not.toHaveBeenCalled();
@@ -74,7 +94,13 @@ describe("BlockedAccountsScreen", () => {
     ]);
     unblockUser.mockRejectedValue({ response: { data: { message: "Nope" } } });
 
-    await render(<BlockedAccountsScreen />);
+    await render(
+      <AppThemeProvider>
+        <ToastProvider>
+          <BlockedAccountsScreen />
+        </ToastProvider>
+      </AppThemeProvider>
+    );
     await tapById("unblock-u1");
     await pressAlertButton("Unblock");
 
@@ -85,7 +111,13 @@ describe("BlockedAccountsScreen", () => {
   it("survives a block whose user was deleted", async () => {
     fetchBlocked.mockResolvedValue([{ _id: "b1", blockedUser: null }]);
 
-    await render(<BlockedAccountsScreen />);
+    await render(
+      <AppThemeProvider>
+        <ToastProvider>
+          <BlockedAccountsScreen />
+        </ToastProvider>
+      </AppThemeProvider>
+    );
 
     await waitFor(() => expect(screen.getByText("Someone")).toBeTruthy());
   });

@@ -4,6 +4,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react-nativ
 
 import SafetyMenu from "./SafetyMenu";
 import { blockUser } from "../api/safety";
+import { AppThemeProvider } from "../context/AppThemeContext";
+import { ToastProvider } from "./ui";
 
 jest.mock("../api/safety", () => ({ blockUser: jest.fn() }));
 
@@ -16,6 +18,14 @@ jest.mock("../api/safety", () => ({ blockUser: jest.fn() }));
  */
 
 const navigation = { navigate: jest.fn() };
+
+/** With the toast host, because failures report through it now. */
+const renderMenu = (ui) =>
+  render(
+    <AppThemeProvider>
+      <ToastProvider>{ui}</ToastProvider>
+    </AppThemeProvider>
+  );
 
 const tapById = async (id) => {
   const element = await waitFor(() => screen.getByTestId(id));
@@ -37,13 +47,13 @@ beforeEach(() => {
 
 describe("SafetyMenu", () => {
   it("renders nothing without somebody to act on", async () => {
-    await render(<SafetyMenu userId={null} navigation={navigation} />);
+    await renderMenu(<SafetyMenu userId={null} navigation={navigation} />);
 
     expect(screen.queryByTestId("safety-menu")).toBeNull();
   });
 
   it("offers block and report", async () => {
-    await render(<SafetyMenu userId="u1" name="Bo's owner" navigation={navigation} />);
+    await renderMenu(<SafetyMenu userId="u1" name="Bo's owner" navigation={navigation} />);
 
     await tapById("safety-menu");
 
@@ -52,7 +62,7 @@ describe("SafetyMenu", () => {
   });
 
   it("takes the report route to the report screen with the person's id", async () => {
-    await render(<SafetyMenu userId="u1" name="Bo's owner" navigation={navigation} />);
+    await renderMenu(<SafetyMenu userId="u1" name="Bo's owner" navigation={navigation} />);
 
     await tapById("safety-menu");
     await tapById("safety-menu-report");
@@ -65,7 +75,7 @@ describe("SafetyMenu", () => {
 
   it("confirms before blocking, and blocks the user not the pet", async () => {
     const onBlocked = jest.fn();
-    await render(
+    await renderMenu(
       <SafetyMenu userId="owner-1" name="Bo's owner" navigation={navigation} onBlocked={onBlocked} />
     );
 
@@ -82,7 +92,7 @@ describe("SafetyMenu", () => {
   });
 
   it("does not block when the confirmation is cancelled", async () => {
-    await render(<SafetyMenu userId="owner-1" navigation={navigation} />);
+    await renderMenu(<SafetyMenu userId="owner-1" navigation={navigation} />);
 
     await tapById("safety-menu");
     await tapById("safety-menu-block");
@@ -96,21 +106,19 @@ describe("SafetyMenu", () => {
     const onBlocked = jest.fn();
     blockUser.mockRejectedValue({ response: { data: { message: "Nope" } } });
 
-    await render(<SafetyMenu userId="owner-1" navigation={navigation} onBlocked={onBlocked} />);
+    await renderMenu(<SafetyMenu userId="owner-1" navigation={navigation} onBlocked={onBlocked} />);
 
     await tapById("safety-menu");
     await tapById("safety-menu-block");
     await pressAlertButton("Block");
 
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith("Error", "Nope")
-    );
+    await waitFor(() => expect(screen.getByText("Nope")).toBeTruthy());
     expect(onBlocked).not.toHaveBeenCalled();
   });
 
   it("carries a host screen's own options alongside the safety ones", async () => {
     const onPress = jest.fn();
-    await render(
+    await renderMenu(
       <SafetyMenu
         userId="u1"
         navigation={navigation}

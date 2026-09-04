@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
+import { useToast } from "../../components/ui";
 import { fetchBlocked, unblockUser } from "../../api/safety";
 
 /**
@@ -22,6 +23,7 @@ import { fetchBlocked, unblockUser } from "../../api/safety";
  */
 const BlockedAccountsScreen = () => {
   const tailwind = useTailwind();
+  const toast = useToast();
 
   const [blocked, setBlocked] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,11 +34,11 @@ const BlockedAccountsScreen = () => {
       setBlocked(await fetchBlocked());
     } catch (error) {
       console.warn("[safety]", error.message);
-      Alert.alert("Error", "Could not load your blocked accounts.");
+      toast.error("Could not load your blocked accounts.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     load();
@@ -59,10 +61,7 @@ const BlockedAccountsScreen = () => {
             await unblockUser(id);
           } catch (error) {
             setBlocked(previous);
-            Alert.alert(
-              "Error",
-              error.response?.data?.message ?? "Could not unblock them."
-            );
+            toast.error(error.response?.data?.message ?? "Could not unblock them.");
           } finally {
             setBusyId(null);
           }

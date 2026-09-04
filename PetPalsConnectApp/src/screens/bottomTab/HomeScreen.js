@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   View,
-  Text,
+  Text as RNText,
   ScrollView,
   TouchableOpacity,
   Image,
@@ -10,10 +10,12 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
+import { useTokens } from "../../context/AppThemeContext";
+import { space } from "../../styles/tokens";
+import { Button, Screen, Skeleton, Text } from "../../components/ui";
 import { copilot, walkthroughable, CopilotStep } from "../../components/walkthrough";
 import CustomTooltip from "../../components/CustomTooltip";
 import ArticleCard from "../../components/ArticleCardComponent";
-import AnimatedButton from "../../components/AnimatedButton";
 import MatchingAlgorithmPopup from "../../components/MatchingAlgorithmPopupComponent";
 import api from "../../api/axios";
 
@@ -42,10 +44,16 @@ import api from "../../api/axios";
  *
  * Neither fetch had a `catch`, so each failure also surfaced as an unhandled
  * rejection rather than as anything the user could act on.
+ *
+ * It also had no loading state at all: every shelf rendered as its own empty
+ * message until the data landed, so a first launch on a slow connection said
+ * "No pets to show yet" and "Nothing saved yet" before it had asked. The
+ * structure here is completely predictable before the response, which is what
+ * skeletons are for.
  */
 
 const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
-const WalkthroughableText = walkthroughable(Text);
+const WalkthroughableText = walkthroughable(RNText);
 const WalkthroughableImage = walkthroughable(Image);
 
 const SHORTCUTS = [
@@ -58,12 +66,30 @@ const SHORTCUTS = [
 /** First photo, or null - `photos` is an array and is often empty. */
 const petPhoto = (pet) => (Array.isArray(pet?.photos) ? pet.photos[0] : null) ?? null;
 
+const PetShelfSkeleton = () => {
+  const tailwind = useTailwind();
+
+  return (
+    <View testID="home-pets-loading" style={tailwind("flex-row")}>
+      {[0, 1, 2].map((index) => (
+        <View key={index} style={tailwind("mr-md")}>
+          <Skeleton width={128} height={128} rounded="card" />
+          <View style={{ height: space.sm }} />
+          <Skeleton width={80} height={13} />
+        </View>
+      ))}
+    </View>
+  );
+};
+
 const HomeScreen = ({ navigation, route, start }) => {
   const tailwind = useTailwind();
+  const tokens = useTokens();
 
   const [latestPets, setLatestPets] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [latestArticle, setLatestArticle] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   // Bumped by pull-to-refresh. Using `refreshing` itself as the effect's
   // dependency would re-run it twice per pull - once on true, once on false.
@@ -92,6 +118,7 @@ const HomeScreen = ({ navigation, route, start }) => {
       setLatestPets(Array.isArray(pets) ? pets : []);
       setFavorites(Array.isArray(favouriteRows) ? favouriteRows : []);
       setLatestArticle(article);
+      setLoading(false);
       setRefreshing(false);
     };
 
@@ -106,12 +133,13 @@ const HomeScreen = ({ navigation, route, start }) => {
   }, [route.params?.showTutorial, start]);
 
   return (
-    <ScrollView
-      style={tailwind("flex-1")}
-      contentContainerStyle={tailwind("p-4")}
+    <Screen
+      testID="home"
+      scroll
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
+          tintColor={tokens.textMuted}
           onRefresh={() => {
             setRefreshing(true);
             setReloadToken((token) => token + 1);
@@ -120,61 +148,81 @@ const HomeScreen = ({ navigation, route, start }) => {
       }
     >
       <CopilotStep text="Welcome to PetPalsConnect!" order={1} name="welcome">
-        <WalkthroughableText style={tailwind("text-2xl font-bold mb-4")}>
+        <WalkthroughableText
+          style={[
+            tailwind("text-text mb-lg"),
+            { fontSize: 28, lineHeight: 34, fontWeight: "700" },
+          ]}
+          maxFontSizeMultiplier={1.4}
+        >
           Welcome to PetPals Connect
         </WalkthroughableText>
       </CopilotStep>
 
-      <View style={tailwind("flex-row justify-between mb-6")}>
+      <View style={tailwind("flex-row justify-between mb-xl")}>
         {SHORTCUTS.map((shortcut) => (
           <WalkthroughableTouchableOpacity
             key={shortcut.route}
             testID={`shortcut-${shortcut.route}`}
+            accessibilityRole="button"
+            accessibilityLabel={shortcut.label}
             onPress={() => navigation.navigate(shortcut.route)}
             style={tailwind("items-center")}
           >
-            <View style={tailwind("bg-blue-50 rounded-2xl p-3 mb-1")}>
-              <Ionicons name={shortcut.icon} size={22} color="#2563eb" />
+            <View style={tailwind("bg-primarySoft rounded-card p-md mb-xs")}>
+              <Ionicons name={shortcut.icon} size={22} color={tokens.primary} />
             </View>
-            <Text style={tailwind("text-xs text-gray-600")}>{shortcut.label}</Text>
+            <Text variant="caption" tone="muted">
+              {shortcut.label}
+            </Text>
           </WalkthroughableTouchableOpacity>
         ))}
       </View>
 
       <CopilotStep text="Check out the latest pets here" order={3} name="latestPets">
-        <View style={tailwind("mb-6")}>
-          <WalkthroughableText style={tailwind("text-lg font-semibold mb-2")}>
+        <View style={tailwind("mb-xl")}>
+          <WalkthroughableText
+            style={[
+              tailwind("text-text mb-sm"),
+              { fontSize: 20, lineHeight: 26, fontWeight: "600" },
+            ]}
+            maxFontSizeMultiplier={1.5}
+          >
             Latest Pets
           </WalkthroughableText>
 
-          {latestPets.length === 0 ? (
-            <Text style={tailwind("text-base text-gray-500")}>
-              No pets to show yet. Check back soon.
-            </Text>
+          {loading ? (
+            <PetShelfSkeleton />
+          ) : latestPets.length === 0 ? (
+            <Text tone="muted">No pets to show yet. Check back soon.</Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {latestPets.map((pet) => (
                 <WalkthroughableTouchableOpacity
                   key={pet._id}
                   testID={`pet-${pet._id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${pet.name}, open profile`}
                   onPress={() => navigation.navigate("PetDetails", { petId: pet._id })}
-                  style={tailwind("mr-3")}
+                  style={tailwind("mr-md")}
                 >
                   {petPhoto(pet) ? (
                     <WalkthroughableImage
                       source={{ uri: petPhoto(pet) }}
-                      style={tailwind("h-32 w-32 rounded-2xl")}
+                      style={tailwind("h-32 w-32 rounded-card")}
                     />
                   ) : (
                     <View
                       style={tailwind(
-                        "h-32 w-32 rounded-2xl bg-gray-100 items-center justify-center"
+                        "h-32 w-32 rounded-card bg-surfaceAlt items-center justify-center"
                       )}
                     >
-                      <Ionicons name="paw-outline" size={28} color="#9ca3af" />
+                      <Ionicons name="paw-outline" size={28} color={tokens.textFaint} />
                     </View>
                   )}
-                  <Text style={tailwind("mt-1 text-center text-sm")}>{pet.name}</Text>
+                  <Text variant="caption" align="center" style={tailwind("mt-xs")}>
+                    {pet.name}
+                  </Text>
                 </WalkthroughableTouchableOpacity>
               ))}
             </ScrollView>
@@ -183,13 +231,25 @@ const HomeScreen = ({ navigation, route, start }) => {
       </CopilotStep>
 
       <CopilotStep text="Your favorite pets and places are here" order={4} name="favorites">
-        <View style={tailwind("mb-6")}>
-          <WalkthroughableText style={tailwind("text-lg font-semibold mb-2")}>
+        <View style={tailwind("mb-xl")}>
+          <WalkthroughableText
+            style={[
+              tailwind("text-text mb-sm"),
+              { fontSize: 20, lineHeight: 26, fontWeight: "600" },
+            ]}
+            maxFontSizeMultiplier={1.5}
+          >
             Your Favorites
           </WalkthroughableText>
 
-          {favorites.length === 0 ? (
-            <Text style={tailwind("text-base text-gray-500")}>
+          {loading ? (
+            <View testID="home-favorites-loading">
+              <Skeleton width="60%" height={16} />
+              <View style={{ height: space.md }} />
+              <Skeleton width="45%" height={16} />
+            </View>
+          ) : favorites.length === 0 ? (
+            <Text tone="muted">
               Nothing saved yet. Tap the heart on a pet to keep it here.
             </Text>
           ) : (
@@ -197,15 +257,17 @@ const HomeScreen = ({ navigation, route, start }) => {
               <TouchableOpacity
                 key={favorite._id}
                 testID={`favorite-${favorite._id}`}
+                accessibilityRole="button"
+                accessibilityLabel={favorite.pet?.name ?? "Saved item"}
                 onPress={() =>
                   favorite.pet &&
                   navigation.navigate("PetDetails", { petId: favorite.pet._id })
                 }
-                style={tailwind("py-2")}
+                // The row was `py-2` - 8pt of padding around a line of text, so
+                // roughly 28pt of target against a 44pt floor.
+                style={tailwind("py-md justify-center")}
               >
-                <Text style={tailwind("text-base")}>
-                  {favorite.pet?.name ?? "Saved item"}
-                </Text>
+                <Text>{favorite.pet?.name ?? "Saved item"}</Text>
               </TouchableOpacity>
             ))
           )}
@@ -219,11 +281,13 @@ const HomeScreen = ({ navigation, route, start }) => {
       >
         <TouchableOpacity
           testID="open-map"
+          accessibilityRole="button"
+          accessibilityLabel="Open the map"
           onPress={() => navigation.navigate("Map")}
-          style={tailwind("items-center justify-center mb-6")}
+          style={tailwind("items-center justify-center mb-xl py-md")}
         >
-          <Ionicons name="map-outline" size={28} color="#111827" />
-          <Text style={tailwind("text-base mt-1")}>Open the map</Text>
+          <Ionicons name="map-outline" size={28} color={tokens.text} />
+          <Text style={tailwind("mt-xs")}>Open the map</Text>
         </TouchableOpacity>
       </CopilotStep>
 
@@ -235,11 +299,12 @@ const HomeScreen = ({ navigation, route, start }) => {
               navigation.navigate("ArticleDetail", { articleId: latestArticle._id })
             }
           />
-          <AnimatedButton
-            text="View All Articles"
+          <Button
+            testID="home-all-articles"
+            title="View all articles"
+            variant="soft"
             onPress={() => navigation.navigate("Articles")}
-            buttonStyle={tailwind("bg-blue-600 rounded-lg px-5 py-3 mt-2")}
-            textStyle={tailwind("text-white text-base text-center")}
+            style={tailwind("mt-sm")}
           />
         </View>
       ) : null}
@@ -251,7 +316,7 @@ const HomeScreen = ({ navigation, route, start }) => {
           navigation={navigation}
         />
       )}
-    </ScrollView>
+    </Screen>
   );
 };
 

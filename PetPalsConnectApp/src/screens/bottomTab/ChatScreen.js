@@ -7,7 +7,6 @@ import {
   FlatList,
   Image,
   StyleSheet,
-  Alert,
   Keyboard,
 } from "react-native";
 import { useTailwind } from "../../styles/tailwind";
@@ -20,6 +19,7 @@ import * as Clipboard from "expo-clipboard";
 import { clearError , startLoading, endLoading, setError } from "../../redux/actions";
 import { useSocketMessage } from "../../hooks/useSocketEvents";
 import SafetyMenu from "../../components/SafetyMenu";
+import { useToast } from "../../components/ui";
 import api from "../../api/axios";
 
 /** You block a person, not a dog. `owner` may be an id or a populated user. */
@@ -39,6 +39,7 @@ const ChatScreen = ({ route, navigation }) => {
   const flatListRef = useRef(null);
   const dispatch = useDispatch();
   const tailwind = useTailwind();
+  const toast = useToast();
 
   const userId = useSelector((state) => state.user.userId);
   const isLoading = useSelector((state) => state.chat.isLoading);
@@ -57,11 +58,10 @@ const ChatScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     if (error) {
-      Alert.alert("Chat Error", error, [
-        { text: "OK", onPress: () => dispatch(clearError()) },
-      ]);
+      toast.error(error);
+      dispatch(clearError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, toast]);
 
   /**
    * Opens (or reuses) the conversation with this pet's owner.
@@ -88,14 +88,13 @@ const ChatScreen = ({ route, navigation }) => {
       console.warn("[chat] Could not open chat:", error.message);
       // 403 is the server refusing a conversation one side has blocked. Saying
       // so plainly beats "failed to open", which reads as a bug.
-      Alert.alert(
-        "Unavailable",
+      toast.error(
         error.response?.status === 403
           ? "This conversation isn't available."
-          : "Failed to open this conversation"
+          : "Could not open this conversation."
       );
     }
-  }, [petId, userId, petInfo]);
+  }, [petId, userId, petInfo, toast]);
 
   // Messages come from the API. This was a Firestore onSnapshot subscription;
   // the socket hook above delivers live updates now that Mongo is the store.
@@ -106,9 +105,9 @@ const ChatScreen = ({ route, navigation }) => {
       setMessages(data);
     } catch (err) {
       console.warn("[chat] Could not load messages:", err.message);
-      Alert.alert("Error", "Failed to load messages");
+      toast.error("Could not load messages.");
     }
-  }, [chatId]);
+  }, [chatId, toast]);
 
   useEffect(() => {
     initiateChat();
@@ -145,8 +144,7 @@ const ChatScreen = ({ route, navigation }) => {
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
-      Alert.alert("Error", "Failed to send message");
-      dispatch(setError("Error sending message"));
+      dispatch(setError("Message not sent. Tap send to try again."));
     } finally {
       dispatch(endLoading());
     }
@@ -161,7 +159,7 @@ const ChatScreen = ({ route, navigation }) => {
       setMessages((prev) => prev.map((m) => (m._id === data._id ? data : m)));
     } catch (error) {
       console.error("Error reacting to message:", error);
-      Alert.alert("Error", "Failed to react to message");
+      toast.error("Could not add that reaction.");
     }
   };
 
@@ -169,17 +167,18 @@ const ChatScreen = ({ route, navigation }) => {
     try {
       await api.delete(`/api/chats/${chatId}/messages/${message._id}`);
       setMessages((prev) => prev.filter((m) => m._id !== message._id));
-      Alert.alert("Message Deleted");
+      toast.show("Message deleted");
     } catch (error) {
       console.error("Error deleting message:", error);
-      Alert.alert("Error", "Failed to delete message");
+      toast.error("Could not delete that message.");
     }
   };
 
   const copyMessageToClipboard = async (messageText) => {
     await Clipboard.setStringAsync(messageText);
-    // Optionally, you can display an alert or toast to inform the user that the text has been copied.
-    Alert.alert("Copied to Clipboard", messageText);
+    // Was an alert showing the copied text back - a modal to confirm the thing
+    // the user just watched happen.
+    toast.show("Copied");
   };
 
   const renderMessageItem = ({ item }) => {
@@ -225,9 +224,8 @@ const ChatScreen = ({ route, navigation }) => {
           name={petInfo?.name ? `${petInfo.name}'s owner` : "this person"}
           navigation={navigation}
           onBlocked={() => {
-            Alert.alert("Blocked", "You won't hear from them again.", [
-              { text: "OK", onPress: () => navigation.goBack() },
-            ]);
+            toast.success("Blocked. You won't hear from them again.");
+            navigation.goBack();
           }}
           extraOptions={[{ label: "Chat options", testID: "chat-options", onPress: toggleModal }]}
         />

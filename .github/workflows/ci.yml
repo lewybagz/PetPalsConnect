@@ -77,6 +77,13 @@ jobs:
         working-directory: PetPalsConnectApp
         run: npm run typecheck
 
+      # A ratchet, not a ban: colour belongs in src/styles/tokens.ts, and this
+      # fails if any file gains a hardcoded one. Converting a screen lowers its
+      # number; nothing can raise one.
+      - name: Colour ratchet
+        working-directory: PetPalsConnectApp
+        run: npm run check:colours
+
       - name: Test
         working-directory: PetPalsConnectApp
         run: npm test

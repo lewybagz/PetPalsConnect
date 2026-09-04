@@ -101,6 +101,30 @@ jest.mock("expo-secure-store", () => ({
   deleteItemAsync: jest.fn(async () => {}),
 }));
 
+/**
+ * Safe-area insets.
+ *
+ * `useSafeAreaInsets()` throws outside a `SafeAreaProvider`, and the `Screen`
+ * primitive calls it - so without this every screen test would have to mount
+ * the provider to assert anything at all. Real device values, so a test that
+ * cares about the inset (`ui.test.js`) can override this with its own mock and
+ * everything else just works.
+ */
+jest.mock("react-native-safe-area-context", () => {
+  const insets = { top: 47, bottom: 34, left: 0, right: 0 };
+  return {
+    useSafeAreaInsets: () => insets,
+    useSafeAreaFrame: () => ({ x: 0, y: 0, width: 390, height: 844 }),
+    SafeAreaProvider: ({ children }) => children,
+    SafeAreaView: ({ children }) => children,
+    SafeAreaInsetsContext: {
+      Consumer: ({ children }) => children(insets),
+      Provider: ({ children }) => children,
+    },
+    initialWindowMetrics: { insets, frame: { x: 0, y: 0, width: 390, height: 844 } },
+  };
+});
+
 // Quieten the expected console noise from error-path tests.
 global.__DEV__ = true;
 

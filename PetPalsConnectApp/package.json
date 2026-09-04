@@ -16,6 +16,7 @@
     "doctor": "npx expo-doctor@latest",
     "reset": "expo start -c",
     "typecheck": "tsc --noEmit",
+    "check:colours": "node scripts/checkTokens.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },

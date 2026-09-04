@@ -22,5 +22,11 @@ module.exports = {
     "!src/**/*.test.{js,jsx}",
     "!**/node_modules/**",
   ],
-  testMatch: ["<rootDir>/src/**/*.test.{js,jsx}", "<rootDir>/__tests__/**/*.test.{js,jsx}"],
+  testMatch: [
+    "<rootDir>/src/**/*.test.{js,jsx}",
+    "<rootDir>/__tests__/**/*.test.{js,jsx}",
+    // The static checks live beside the scripts they cover, in the same spirit
+    // as the backend's audits: the guard and its proof in one place.
+    "<rootDir>/scripts/**/*.test.js",
+  ],
 };
