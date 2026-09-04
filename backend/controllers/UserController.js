@@ -23,20 +23,58 @@ const verifySecret = async (value, stored) => {
 };
 
 const UserController = {
+  /**
+   * Finds people by username.
+   *
+   * Was `User.find()` with no filter and no projection: one request returned
+   * every account in the database, email addresses and Firebase uids included.
+   * Nothing in the app called it. It is a search now, and it returns only what
+   * one user may see of another.
+   */
   async getAllUsers(req, res) {
+    const query = String(req.query.q ?? "").trim();
+
     try {
-      const users = await User.find();
+      if (query.length < 2) {
+        return res.json([]);
+      }
+
+      const users = await User.find({
+        usernameLower: { $regex: `^${query.toLowerCase().replace(/[^a-z0-9_.-]/g, "")}` },
+        _id: { $ne: req.userId },
+      })
+        .select("username userPhoto verified")
+        .limit(20);
+
       res.json(users);
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
   },
 
+  /**
+   * One user's profile.
+   *
+   * This returned the whole document to anyone who asked - email address,
+   * Firebase uid, FCM device token, security questions, Stripe customer id -
+   * and pet records hand out their owner's id freely, so the browsable half of
+   * the app led straight to everybody's personal data.
+   *
+   * You get the full record for yourself and the public projection for anyone
+   * else. (`populate("friends")` was a no-op too: the path is `friendsList`.)
+   */
   async getUserById(req, res, next) {
+    const PUBLIC_FIELDS = "username userPhoto verified pets createdDate";
+    const isSelf = String(req.params.id) === String(req.userId);
+
     try {
-      const user = await User.findById(req.params.id)
-        .populate("friends") // Assuming 'friends' is a field in User schema that references other User documents
-        .populate("pets", "name age breed"); // You can specify just the fields you need from the pets collection
+      const query = User.findById(req.params.id).populate(
+        "pets",
+        "name age breed photos"
+      );
+      if (!isSelf) query.select(PUBLIC_FIELDS);
+
+      const user = await query;
 
       if (!user) {
         return res.status(404).json({ message: "Cannot find user" });

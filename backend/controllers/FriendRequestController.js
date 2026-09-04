@@ -22,7 +22,11 @@ async function updateFriendStatus(sender, receiver) {
 const FriendRequestController = {
   async getAllFriendRequests(req, res) {
     try {
-      const friendRequests = await FriendRequest.find()
+      // Was `find()` with no filter: behind `authenticate`, but that only means
+      // you need *an* account, not that the rows are yours.
+      const friendRequests = await FriendRequest.find({
+        $or: [{ sender: req.userId }, { receiver: req.userId }],
+      })
         .populate("sender")
         .populate("receiver");
       res.json(friendRequests);
@@ -39,6 +43,14 @@ const FriendRequestController = {
       if (!friendRequest) {
         return res.status(404).json({ message: "Friend request not found" });
       }
+      // Fetching by id is not authorisation. Without this, any signed-in user
+      // could read any friend request by guessing or harvesting an id.
+      if (![friendRequest.sender, friendRequest.receiver]
+        .map((party) => String(party?._id ?? party))
+        .includes(String(req.userId))) {
+        return res.status(404).json({ message: "Cannot find friend request" });
+      }
+
       res.friendRequest = friendRequest;
       next();
     } catch (err) {

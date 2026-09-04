@@ -3,11 +3,13 @@ const BlockList = require("../models/BlockList");
 const BlockListController = {
   async getAllBlockLists(req, res) {
     try {
-      const blockLists = await BlockList.find()
-        .populate("BlockedUser")
-        .populate("BlockedUserList")
-        .populate("Owner")
-        .populate("Creator");
+      // Was `find()` with no filter: behind `authenticate`, but that only means
+      // you need *an* account, not that the rows are yours. A block list is the one thing that
+      // must never be readable by the person it names.
+      const blockLists = await BlockList.find({ owner: req.userId }).populate(
+        "blockedUser",
+        "username userPhoto"
+      );
       res.json(blockLists);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -25,6 +27,12 @@ const BlockListController = {
       if (blockList == null) {
         return res.status(404).json({ message: "Cannot find block list" });
       }
+      // Fetching by id is not authorisation. Without this, any signed-in user
+      // could read any block list by guessing or harvesting an id.
+      if (String(blockList.owner?._id ?? blockList.owner) !== String(req.userId)) {
+        return res.status(404).json({ message: "Cannot find block list" });
+      }
+
     } catch (err) {
       return res.status(500).json({ message: err.message });
     }

@@ -3,10 +3,14 @@ const Friend = require("../models/Friend");
 const FriendController = {
   async getAllFriends(req, res) {
     try {
-      const friends = await Friend.find()
-        .populate("user1")
-        .populate("user2")
-        .populate("creator");
+      // Was `find()` with no filter: behind `authenticate`, but that only means
+      // you need *an* account, not that the rows are yours. FriendsListScreen calls this, so it
+      // was showing every friendship in the database as if it were yours.
+      const friends = await Friend.find({
+        $or: [{ user1: req.userId }, { user2: req.userId }],
+      })
+        .populate("user1", "username userPhoto pets")
+        .populate("user2", "username userPhoto pets");
       res.json(friends);
     } catch (err) {
       res.status(500).json({ message: err.message });

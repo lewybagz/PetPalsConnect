@@ -3,10 +3,13 @@ const Event = require("../models/Event");
 const EventController = {
   async getAllEvents(req, res) {
     try {
-      const events = await Event.find()
-        .populate("Attendees")
-        .populate("Organizer")
-        .populate("Creator");
+      // Was `find()` with no filter: behind `authenticate`, but that only means
+      // you need *an* account, not that the rows are yours.
+      const events = await Event.find({
+        $or: [{ organizer: req.userId }, { attendees: req.userId }],
+      })
+        .populate("organizer", "username userPhoto")
+        .sort({ date: 1 });
       res.json(events);
     } catch (err) {
       res.status(500).json({ message: err.message });

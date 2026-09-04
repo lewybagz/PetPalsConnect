@@ -170,6 +170,27 @@ const auditSchemas = () => {
   }
 };
 
+/**
+ * Reports reads that are not scoped to the caller, and writes that take
+ * identity from the request body. Same posture as the schema audit: loud in
+ * development, enforced by `test/authAudit.test.js` in CI, silent in
+ * production where a regex pass has no business deciding whether to boot.
+ */
+const auditAuthorisation = () => {
+  if (env.isProduction) return;
+
+  try {
+    const problems = require("./services/authAudit").audit();
+    if (problems.length === 0) return;
+
+    console.warn(`\n[authz] ${problems.length} authorisation problem(s):`);
+    for (const problem of problems) console.warn(`[authz]   ${problem}`);
+    console.warn("");
+  } catch (error) {
+    console.warn("[authz] Audit could not run:", error.message);
+  }
+};
+
 const start = async () => {
   // Start listening immediately so platform health checks succeed even while the
   // database is still connecting or is temporarily unreachable. /health reports
@@ -184,6 +205,7 @@ const start = async () => {
 
   scheduler.start();
   auditSchemas();
+  auditAuthorisation();
 
   // Refresh cached place data at 00:00 on the 1st of each month.
   cron.schedule("0 0 1 * *", async () => {

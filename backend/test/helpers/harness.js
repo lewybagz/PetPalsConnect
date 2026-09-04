@@ -41,9 +41,18 @@ const firebaseStub = {
 };
 
 /**
- * Seeds require.cache so `require("../config/firebase")` resolves to the stub.
- * Done before the app is loaded, this needs no production-code seam.
+ * Replaces a module in require.cache with a stub, before the app loads it.
+ * Done ahead of the first require, this needs no production-code seam.
  */
+const seedModule = (specifier, exports) => {
+  const resolved = require.resolve(specifier);
+  const stubModule = new Module(resolved);
+  stubModule.filename = resolved;
+  stubModule.loaded = true;
+  stubModule.exports = exports;
+  require.cache[resolved] = stubModule;
+};
+
 const stubFirebase = () => seedModule("../../config/firebase", firebaseStub);
 
 /**
@@ -164,16 +173,6 @@ const makeStripeStub = () => {
   };
 
   return stub;
-};
-
-/** Replaces a module in require.cache with a stub, before the app loads it. */
-const seedModule = (specifier, exports) => {
-  const resolved = require.resolve(specifier);
-  const stubModule = new Module(resolved);
-  stubModule.filename = resolved;
-  stubModule.loaded = true;
-  stubModule.exports = exports;
-  require.cache[resolved] = stubModule;
 };
 
 /**

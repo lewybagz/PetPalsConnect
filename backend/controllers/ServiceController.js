@@ -3,7 +3,10 @@ const Service = require("../models/Service");
 const ServiceController = {
   async getAllServices(req, res) {
     try {
-      const services = await Service.find().populate("Creator");
+      // A directory of vets and groomers - catalogue data, deliberately
+      // readable by any signed-in user. `Creator` is not a path on this
+      // schema, so that populate was a no-op.
+      const services = await Service.find().sort({ name: 1 });
       res.json(services);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -26,12 +29,15 @@ const ServiceController = {
   },
 
   async createService(req, res) {
-    const service = new service({
+    // `new service(...)` referenced the const being declared - a TDZ error
+    // on every call. The model is `Service`.
+    const service = new Service({
       contactInfo: req.body.contactInfo,
       location: req.body.location,
       name: req.body.name,
       serviceType: req.body.serviceType,
-      creator: req.body.creator,
+      // Identity comes from the token, never the body.
+      creator: req.userId,
       slug: req.body.slug,
     });
 

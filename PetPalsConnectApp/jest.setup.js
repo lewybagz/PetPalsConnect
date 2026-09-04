@@ -107,7 +107,14 @@ global.__DEV__ = true;
 // Explicit unmount between tests. RTL's automatic cleanup is not reliably wired
 // in this version, which left `screen` pointing at a previous test's render and
 // made later tests assert against a stale tree.
-const { cleanup } = require("@testing-library/react-native");
+const { cleanup, configure } = require("@testing-library/react-native");
+
+// RTL's async helpers default to a 1s budget of their own, separate from
+// jest's test timeout. On a cold cache the first `render()` in a run triggers
+// the Babel transform of a large dependency tree lazily, which blows that
+// budget and fails with "`render` function has not been called" - a suite that
+// passes on every warm re-run and fails the first time CI sees it.
+configure({ asyncUtilTimeout: 5000 });
 afterEach(() => {
   cleanup();
 });

@@ -118,6 +118,13 @@ converted file silently drops out of the check.
   `require`, which crashes at load; do not reintroduce ESM syntax here.
 - Every route is mounted behind `authenticate`, which resolves the Firebase
   token to a Mongo user and sets `req.userId`. Use `req.userId` in controllers.
+- **`authenticate` is not authorisation.** It proves the caller has *an*
+  account, not that a row is theirs. Every list must filter by `req.userId`,
+  and fetching by id must check ownership before returning. Twenty handlers
+  were `Model.find()` with no filter — any signed-in user could read every
+  private message, notification, user record and report in the database.
+  `npm run check:auth` enforces this; genuinely public catalogue reads go in
+  `PUBLIC_READS` in `services/authAudit.js` with a reason.
 - Delayed work goes through `services/scheduler` (MongoDB-backed), not a queue
   service. Register a handler, then `scheduler.schedule(type, payload, runAt)`.
 - Express error handlers need all four arguments (`err, req, res, next`) or
@@ -221,7 +228,7 @@ missing key must never stop the app from opening.
 ```bash
 # Backend: lint, schema audit, tests. Tests run against an in-memory MongoDB,
 # so they need no database, no service-account key and no network.
-cd backend && npm run lint && npm run check:schemas && npm test
+cd backend && npm run lint && npm run check:schemas && npm run check:auth && npm test
 
 # App: lint, types, tests, then both bundles — the real build gate
 cd PetPalsConnectApp && npm run lint && npm run typecheck && npm test
@@ -267,6 +274,12 @@ requires. This is the one that found the most: nine call sites whose documents
 could never be saved, failing inside a catch that only logged or as a 400
 nobody watched. `services/schemaAudit.js` holds the analysis, and it
 understands shorthand keys, conditional `required`, and fields a hook derives.
+
+`backend/test/authAudit.test.js` — access: no handler reads a whole collection
+unscoped, and no create path takes `creator`/`sender`/`reporter`/`user` from the
+request body. `backend/test/authorisation.test.js` proves the behaviour with two
+accounts, since a query scoped to the wrong field would still pass the static
+check.
 
 `PetPalsConnectApp/src/screens/navigation/navigation.test.js` — navigation:
 every `navigate()` names a route that exists and sends a param its target

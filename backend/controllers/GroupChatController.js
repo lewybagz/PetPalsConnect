@@ -14,10 +14,12 @@ const SHA256 = (value) => createHash("sha256").update(String(value)).digest("hex
 const GroupChatController = {
   async getAllGroupChats(req, res) {
     try {
-      const groupChats = await GroupChat.find()
-        .populate("messages")
-        .populate("participants")
-        .populate("creator");
+      // Was `find()` with no filter: behind `authenticate`, but that only means
+      // you need *an* account, not that the rows are yours. This returned every group chat in
+      // the database, messages included.
+      const groupChats = await GroupChat.find({ participants: req.userId })
+        .populate("participants", "username userPhoto")
+        .sort({ lastUpdated: -1 });
       res.json(groupChats);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -340,7 +342,8 @@ const GroupChatController = {
     let chatId = SHA256(baseId);
 
     try {
-      let chat = await chat.findOne({ chatId });
+      // Same self-referential bug: the model is `GroupChat`.
+      let chat = await GroupChat.findOne({ chatId });
 
       while (
         chat &&
@@ -393,7 +396,8 @@ const GroupChatController = {
       groupName: req.body.groupName,
       messages: [],
       participants: req.body.participants,
-      creator: req.body.creator,
+      // Identity comes from the token, never the body.
+      creator: req.userId,
       media: req.body.media || [],
     });
 

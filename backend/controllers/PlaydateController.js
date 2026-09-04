@@ -13,10 +13,11 @@ const { sendPushNotification } = require("./NotificationController");
 const PlaydateController = {
   async getAllPlaydates(req, res) {
     try {
-      const playdates = await Playdate.find()
-        .populate("participants")
-        .populate("petsInvolved")
-        .populate("creator", "name");
+      // Was every playdate in the database with everyone's participants.
+      const playdates = await Playdate.find({ participants: req.userId })
+        .populate("participants", "username userPhoto")
+        .populate("petsInvolved", "name photos")
+        .sort({ date: -1 });
       res.json(playdates);
     } catch (err) {
       res.status(500).json({ message: err.message });

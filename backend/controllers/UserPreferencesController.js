@@ -3,9 +3,9 @@ const UserPreferences = require("../models/UserPreferences");
 const UserPreferencesController = {
   async getAllUserPreferences(req, res) {
     try {
-      const userPreferences = await UserPreferences.find()
-        .populate("user")
-        .populate("creator");
+      // Was `find()` with no filter: behind `authenticate`, but that only means
+      // you need *an* account, not that the rows are yours.
+      const userPreferences = await UserPreferences.find({ user: req.userId });
       res.json(userPreferences);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -49,8 +49,9 @@ const UserPreferencesController = {
     const userPreferences = new UserPreferences({
       notificationSettings: req.body.notificationSettings,
       searchSettings: req.body.searchSettings,
-      user: req.body.user,
-      creator: req.body.creator,
+      // Identity comes from the verified token, never the request body.
+      user: req.userId,
+      creator: req.userId,
       slug: req.body.slug,
     });
 
@@ -95,9 +96,9 @@ const UserPreferencesController = {
     if (req.body.searchSettings != null) {
       res.userPreferences.searchSettings = req.body.searchSettings;
     }
-    if (req.body.user != null) {
-      res.userPreferences.user = req.body.user;
-    }
+    // `user` is who these preferences belong to. Letting a request reassign it
+    // hands someone else's settings to the caller.
+
     if (req.body.modifiedDate != null) {
       res.userPreferences.modifiedDate = req.body.modifiedDate;
     }

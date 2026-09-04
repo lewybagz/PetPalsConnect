@@ -67,9 +67,10 @@ const pushPlaydateReviewReminderNotification = async (playdateId, userId) => {
 const NotificationController = {
   async getAllNotifications(req, res) {
     try {
-      const notifications = await Notification.find()
-        .populate("recipient")
-        .populate("creator");
+      // Was every notification in the database, recipients populated.
+      const notifications = await Notification.find({ recipient: req.userId })
+        .sort({ timestamp: -1 })
+        .limit(200);
       res.json(notifications);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -79,7 +80,10 @@ const NotificationController = {
   async getUserNotifications(req, res) {
     const { userId } = req.params;
     try {
-      const userNotifications = await Notification.find({ Recipient: userId })
+      // `Recipient` is not a path - the schema has `recipient` - and
+      // `strictQuery` is off, so this filtered on a field that does not exist
+      // and returned nothing. The notifications screen has always been empty.
+      const userNotifications = await Notification.find({ recipient: userId })
         .populate("recipient", "name") // Assuming you only need the name
         .populate("creator", "name") // Same here
         .sort({ Timestamp: -1 });
@@ -101,6 +105,12 @@ const NotificationController = {
       if (!notification) {
         return res.status(404).json({ message: "Cannot find notification" });
       }
+      // Fetching by id is not authorisation. Without this, any signed-in user
+      // could read any notification by guessing or harvesting an id.
+      if (String(notification.recipient?._id ?? notification.recipient) !== String(req.userId)) {
+        return res.status(404).json({ message: "Cannot find notification" });
+      }
+
       res.json(notification);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -197,7 +207,8 @@ const NotificationController = {
       readStatus: req.body.readStatus || false,
       recipient: req.body.recipient,
       type: req.body.type,
-      creator: req.body.creator,
+      // Identity comes from the token, never the body.
+      creator: req.userId,
       petName: req.body.petName,
       slug: req.body.slug,
     });

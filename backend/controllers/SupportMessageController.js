@@ -28,7 +28,12 @@ const sendEmail = async (messageData) => {
 const SupportMessageController = {
   async getAllSupportMessages(req, res) {
     try {
-      const messages = await SupportMessage.find({});
+      // Support tickets carry a name, an email and whatever the person wrote.
+      // Unfiltered, any account could read all of them. There is no admin role
+      // here, so this is "the tickets I have raised".
+      const messages = await SupportMessage.find({ email: req.user?.email })
+        .sort({ createdAt: -1 })
+        .limit(100);
       res.json(messages);
     } catch (error) {
       res.status(500).json({ error: error.message });

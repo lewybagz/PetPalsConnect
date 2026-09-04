@@ -38,6 +38,13 @@ jobs:
         working-directory: backend
         run: npm run check:schemas
 
+      # Reads scoped to the caller, identity from the token. Named separately
+      # for the same reason: an authorisation regression should be the first
+      # thing you see in the log, not the hundredth assertion.
+      - name: Authorisation audit
+        working-directory: backend
+        run: npm run check:auth
+
       # The suite runs against an in-memory MongoDB, so no service container,
       # database or credentials are required.
       - name: Test

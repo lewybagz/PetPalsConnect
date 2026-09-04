@@ -3,10 +3,11 @@ const Report = require("../models/Report");
 const ReportController = {
   async getAllReports(req, res) {
     try {
-      const reports = await Report.find()
-        .populate("reportedUser")
-        .populate("reporter")
-        .populate("creator");
+      // Moderation data. Unfiltered, this told anyone with an account who had
+      // reported whom, and for what.
+      const reports = await Report.find({ reporter: req.userId })
+        .populate("reportedUser", "username")
+        .sort({ timestamp: -1 });
       res.json(reports);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -23,6 +24,12 @@ const ReportController = {
       if (report == null) {
         return res.status(404).json({ message: "Cannot find report" });
       }
+      // Fetching by id is not authorisation. Without this, any signed-in user
+      // could read any report by guessing or harvesting an id.
+      if (String(report.reporter?._id ?? report.reporter) !== String(req.userId)) {
+        return res.status(404).json({ message: "Cannot find report" });
+      }
+
     } catch (err) {
       return res.status(500).json({ message: err.message });
     }
@@ -32,13 +39,18 @@ const ReportController = {
   },
 
   async createReport(req, res) {
-    const report = new report({
+    // `new report(...)` referenced the `const report` being declared on that
+    // same line - a TDZ error on every call, thrown outside the try below, so
+    // filing a report has always failed. The model is `Report`.
+    const report = new Report({
       content: req.body.content,
       reportedContent: req.body.reportedContent,
       reportedUser: req.body.reportedUser,
-      reporter: req.body.reporter,
-      status: req.body.status,
-      creator: req.body.creator,
+      // Identity comes from the verified token, never the request body.
+      reporter: req.userId,
+      // A new report is always pending; the client does not get to set it.
+      status: "pending",
+      creator: req.userId,
       slug: req.body.slug,
     });
 

@@ -3,9 +3,11 @@ const ActivityLog = require("../models/ActivityLog");
 const ActivityLogController = {
   async getAllActivityLogs(req, res) {
     try {
-      const activityLogs = await ActivityLog.find()
-        .populate("User")
-        .populate("Creator");
+      // Was `find()` with no filter: behind `authenticate`, but that only means
+      // you need *an* account, not that the rows are yours.
+      const activityLogs = await ActivityLog.find({ user: req.userId }).sort({
+        timestamp: -1,
+      });
       res.json(activityLogs);
     } catch (err) {
       res.status(500).json({ message: err.message });
