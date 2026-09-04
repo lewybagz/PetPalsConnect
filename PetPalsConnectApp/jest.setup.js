@@ -125,6 +125,74 @@ jest.mock("react-native-safe-area-context", () => {
   };
 });
 
+/**
+ * Reanimated, without its native half.
+ *
+ * Reanimated 4 loads `react-native-worklets`, which calls `loadUnpackers()` on
+ * a TurboModule that does not exist under Jest - so merely *importing* a screen
+ * with a gesture on it took the whole suite down before a single test ran. That
+ * fails at suite level, which is reported separately from test failures and is
+ * easy to read straight past in a summary line.
+ *
+ * Reanimated ships `react-native-reanimated/mock`, and it does not help: the
+ * mock itself imports the package's real entry point, so it hits the same
+ * TurboModule. This is a hand-rolled double for the five APIs the app actually
+ * uses, in the same spirit as the Firebase stubs above.
+ *
+ * `useAnimatedStyle` runs its worklet once and returns a plain style object, so
+ * the resting appearance of an animated view is real. Nothing animates, which
+ * is why the swipe thresholds live in `swipeDecision.js` as pure functions
+ * rather than inside the gesture handlers - a pan cannot be simulated here.
+ */
+jest.mock("react-native-reanimated", () => {
+  const { View } = require("react-native");
+
+  // Gesture-handler asks Reanimated for this to build its own wrapper, so the
+  // double has to offer it or importing `GestureDetector` throws.
+  const createAnimatedComponent = (Component) => Component;
+
+  return {
+    __esModule: true,
+    default: { View, createAnimatedComponent },
+    createAnimatedComponent,
+    // A plain mutable box. Writing `.value` does not re-render, which matches
+    // the real thing: shared values live off the React tree on purpose.
+    useSharedValue: (initial) => ({ value: initial }),
+    useAnimatedStyle: (worklet) => worklet(),
+    useDerivedValue: (worklet) => ({ value: worklet() }),
+    // Animations resolve instantly to their target. `withTiming` runs its
+    // completion callback so a test can drive the commit path if it needs to.
+    withTiming: (toValue, _config, callback) => {
+      callback?.(true);
+      return toValue;
+    },
+    withSpring: (toValue) => toValue,
+    // On a device this hops from the UI thread back to JS; here there is only
+    // the one thread, so the function is already callable.
+    runOnJS: (fn) => fn,
+    interpolate: (value) => value,
+    Extrapolation: { CLAMP: "clamp" },
+
+    // Gesture-handler drives `GestureDetector` through Reanimated's event
+    // plumbing when it is installed. None of it does anything without the UI
+    // thread; it only has to exist so the detector mounts and renders its
+    // child, which is all a test can observe anyway.
+    useEvent: () => ({}),
+    useHandler: () => ({ context: {}, doDependenciesDiffer: false }),
+    useComposedEventHandler: () => ({}),
+    setGestureState: () => {},
+    isSharedValue: (value) =>
+      Boolean(value && typeof value === "object" && "value" in value),
+    makeMutable: (value) => ({ value }),
+    cancelAnimation: () => {},
+    startMapper: () => 0,
+    stopMapper: () => {},
+    runOnUI: (fn) => fn,
+  };
+});
+
+require("react-native-gesture-handler/jestSetup");
+
 // A socket that never opens a connection.
 //
 // `useSocketEvents` reaches `services/socket`, which creates a real socket.io

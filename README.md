@@ -178,7 +178,6 @@ Firebase credential. Apple requires this of any app offering account creation.
 ## Known gaps
 
 - Onboarding walkthrough is disabled (`src/components/walkthrough.js` explains why)
-- Discovery uses like/pass buttons rather than drag-to-swipe gestures
 - Facebook login was removed; Google and email/phone remain
 - Apple Pay and Google Pay are off; subscriptions take a card through Stripe's
   PaymentSheet. Turning Apple Pay on needs a registered merchant ID (see

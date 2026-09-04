@@ -91,6 +91,21 @@ module.exports = [
     },
   },
   {
+    // Reanimated's shared values are mutable boxes by design: `sv.value = x` is
+    // the library's entire write API, and the assignment is what crosses to the
+    // UI thread. The React Compiler's model sees a value passed to a hook being
+    // modified afterwards and flags it, correctly by its own rules and wrongly
+    // here - there is no other way to drive an animation with this library.
+    //
+    // Scoped to the files that hold gestures rather than downgraded globally:
+    // the rule reached zero violations everywhere else and is worth keeping as
+    // an error there.
+    files: ["**/SwipeableCard.js"],
+    rules: {
+      "react-hooks/immutability": "off",
+    },
+  },
+  {
     // The base rule cannot see TypeScript: it reports every parameter in an
     // interface's method signature as an unused variable. Hand those files to
     // the typescript-eslint version, which understands declarations.

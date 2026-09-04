@@ -145,6 +145,34 @@ renders an arbitrary substitute - and each role names a weight *inside* the
 family, because Android ignores `fontWeight` when a family is set. A face that
 fails to load never blocks the launch.
 
+**The deck is thrown or tapped, and both go through `submit`.**
+`SwipeableCard` wraps the card in a pan gesture; `onDecide` is the screen's
+existing `submit`, which advances optimistically, shows the match modal and
+rolls back with a toast on failure. A gesture handler with its own copy of that
+is a second place to forget the rollback. The buttons stay: WCAG 2.5.1 wants a
+single-pointer alternative to a path-based gesture, and a drag is unavailable
+to VoiceOver and switch control regardless.
+
+**The swipe thresholds are pure functions in `swipeDecision.js`.** A pan cannot
+be simulated — RTL has no gesture driver and the handlers run on the UI thread
+— so rules buried in `onEnd` would never be tested. Direction comes from
+velocity when the flick is decisive and from displacement otherwise: dragging
+right, changing your mind and throwing left leaves a positive displacement and
+a negative velocity, and the throw is what the thumb just did. `stampOpacity`
+reaches 1 exactly at the distance threshold, so the stamp arriving *is* the
+promise that letting go will commit — `swipeDecision.test.js` asserts those two
+agree.
+
+**Reanimated has no native half under Jest.** Importing a screen with a gesture
+on it called `loadUnpackers()` on a TurboModule that does not exist and took
+the whole suite down *at suite level*, which reports separately from test
+failures and is easy to read past. `react-native-reanimated/mock` does not help
+— it imports the package's real entry point. `jest.setup.js` carries a
+hand-rolled double for the five APIs the app uses plus the surface
+gesture-handler asks for; `useAnimatedStyle` runs its worklet once and returns a
+plain style object, so a card's resting transform and stamp opacity can be
+asserted rather than eyeballed.
+
 **Discovery has a preview mode.** A caller with no pet gets the same deck,
 filtered by the same distance and the same blocks, with no score - matching
 compares two pets and there is only one. Both paths share

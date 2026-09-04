@@ -14,6 +14,7 @@ import {
   useToast,
 } from "../../components/ui";
 import SafetyMenu from "../../components/SafetyMenu";
+import SwipeableCard from "./SwipeableCard";
 import {
   decide,
   describeDistance,
@@ -31,6 +32,13 @@ import {
  * The card leads with *why* two pets matched rather than a bare percentage.
  * "Similar size, likes the same things" is something an owner can agree with;
  * "78%" is not.
+ *
+ * The card can be thrown left or right as well as decided with the buttons.
+ * Both go through `submit`, which is the only thing that talks to the API: the
+ * gesture is a faster way to reach the same decision, never a second one. The
+ * buttons stay because a drag is unavailable to VoiceOver and switch control,
+ * and WCAG 2.5.1 requires a single-pointer alternative to a path-based gesture
+ * regardless.
  */
 
 const petPhoto = (pet) =>
@@ -52,7 +60,7 @@ const Stat = ({ tailwind, label, value }) =>
     </View>
   );
 
-const DiscoverScreen = ({ navigation }) => {
+const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
   const toast = useToast();
@@ -248,6 +256,17 @@ const DiscoverScreen = ({ navigation }) => {
         {preview ? "Pets near you" : `Matches for ${myPet?.name}`}
       </Text>
 
+      <SwipeableCard
+        testID="discover-swipe"
+        // Preview mode browses rather than decides - there is no pet to decide
+        // *with* - so there is nothing for a throw to commit.
+        enabled={!preview && !deciding}
+        onDecide={submit}
+        // Only the gallery passes this: a headless browser cannot pan, and the
+        // lean and the stamps are the part of this screen a screenshot is most
+        // needed for.
+        previewTranslateX={previewTranslateX}
+      >
       <View
         style={tailwind(
           "flex-1 bg-surface rounded-card border border-border overflow-hidden",
@@ -353,6 +372,7 @@ const DiscoverScreen = ({ navigation }) => {
           </Pressable>
         </View>
       </View>
+      </SwipeableCard>
 
       {/*
         Without a pet there is nothing to match *with*, so the deck browses

@@ -66,6 +66,21 @@ export const BOARDS = [
     render: () => <DiscoverScreen navigation={navigation} />,
   },
   {
+    id: "discover-swipe",
+    label: "Discover - mid-throw",
+    routes: ROUTES,
+    // Seeded past the decision threshold, so the LIKE stamp is at full
+    // strength and the card is at its maximum lean. That is the exact frame
+    // the gesture promises, and the one nothing else can show.
+    render: () => <DiscoverScreen navigation={navigation} previewTranslateX={140} />,
+  },
+  {
+    id: "discover-swipe-pass",
+    label: "Discover - mid-throw, passing",
+    routes: ROUTES,
+    render: () => <DiscoverScreen navigation={navigation} previewTranslateX={-140} />,
+  },
+  {
     id: "discover-loading",
     label: "Discover - skeleton",
     routes: { ...ROUTES, "/api/petmatches/discover": pending },

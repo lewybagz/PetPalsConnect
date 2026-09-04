@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { Provider as ReduxProvider } from "react-redux";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
 
 import store from "../../src/redux/store";
@@ -216,6 +217,7 @@ export default function Gallery() {
   return (
     <ReduxProvider store={store}>
       <AppThemeProvider initialPreference={theme}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <ToastProvider>
             <AuthSessionContext.Provider value={SESSION}>
@@ -225,6 +227,7 @@ export default function Gallery() {
             </AuthSessionContext.Provider>
           </ToastProvider>
         </SafeAreaProvider>
+        </GestureHandlerRootView>
       </AppThemeProvider>
     </ReduxProvider>
   );
