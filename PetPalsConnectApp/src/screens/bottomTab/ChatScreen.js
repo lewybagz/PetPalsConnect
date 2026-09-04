@@ -19,13 +19,21 @@ import { FontAwesome as Icon } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { clearError , startLoading, endLoading, setError } from "../../redux/actions";
 import { useSocketMessage } from "../../hooks/useSocketEvents";
+import SafetyMenu from "../../components/SafetyMenu";
 import api from "../../api/axios";
+
+/** You block a person, not a dog. `owner` may be an id or a populated user. */
+const ownerId = (pet) => {
+  const owner = pet?.owner;
+  return owner == null ? null : String(owner?._id ?? owner);
+};
 
 const ChatScreen = ({ route, navigation }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [isModalVisible, setModalVisible] = useState(false);
   const [chatId, setChatId] = useState(null);
+  const [otherUserId, setOtherUserId] = useState(null);
   const petInfo = route.params.pet;
   const petId = petInfo?._id;
   const flatListRef = useRef(null);
@@ -68,11 +76,26 @@ const ChatScreen = ({ route, navigation }) => {
     try {
       const { data } = await api.post("/api/chats/findOrCreate", { petId });
       setChatId(data._id);
+
+      // The person on the other end, for the block-and-report menu. Taken from
+      // the chat rather than the pet, because a pet reached through the match
+      // modal arrives without its owner populated.
+      const other = (data.participants ?? [])
+        .map((participant) => String(participant?._id ?? participant))
+        .find((participant) => participant !== String(userId));
+      setOtherUserId(other ?? ownerId(petInfo));
     } catch (error) {
       console.warn("[chat] Could not open chat:", error.message);
-      Alert.alert("Error", "Failed to open this conversation");
+      // 403 is the server refusing a conversation one side has blocked. Saying
+      // so plainly beats "failed to open", which reads as a bug.
+      Alert.alert(
+        "Unavailable",
+        error.response?.status === 403
+          ? "This conversation isn't available."
+          : "Failed to open this conversation"
+      );
     }
-  }, [petId]);
+  }, [petId, userId, petInfo]);
 
   // Messages come from the API. This was a Firestore onSnapshot subscription;
   // the socket hook above delivers live updates now that Mongo is the store.
@@ -192,7 +215,23 @@ const ChatScreen = ({ route, navigation }) => {
       {/* this is how they are displayed in chat */}
       <View style={styles.header}>
         <Image source={{ uri: petInfo?.photos?.[0] }} style={styles.petImage} />
-        <Text style={tailwind("text-lg font-bold")}>{petInfo.name}</Text>
+        <Text style={tailwind("flex-1 text-lg font-bold")}>{petInfo?.name}</Text>
+
+        {/* A conversation with a stranger is the place people most need to get
+            out of one. There was no way to block or report from here at all. */}
+        <SafetyMenu
+          testID="chat-safety"
+          userId={otherUserId}
+          name={petInfo?.name ? `${petInfo.name}'s owner` : "this person"}
+          navigation={navigation}
+          onBlocked={() => {
+            Alert.alert("Blocked", "You won't hear from them again.", [
+              { text: "OK", onPress: () => navigation.goBack() },
+            ]);
+          }}
+          extraOptions={[{ label: "Chat options", testID: "chat-options", onPress: toggleModal }]}
+        />
+
         <ChatOptionsModal
           isVisible={isModalVisible}
           onClose={toggleModal}

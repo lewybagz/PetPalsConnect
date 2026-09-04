@@ -3,6 +3,7 @@ const { toCoordinates, rangeToMiles } = require("../services/matching/distance")
 const { sanitisePhoto } = require("../services/photos");
 const firebase = require("../config/firebase");
 const usernames = require("../services/usernames");
+const blocking = require("../services/blocking");
 const { scrypt, randomBytes, timingSafeEqual } = require("node:crypto");
 const { promisify } = require("node:util");
 
@@ -41,9 +42,14 @@ const UserController = {
         return res.json([]);
       }
 
+      // Search was the way round a block: the person you blocked was gone from
+      // discovery but one query away by name, with a working profile link.
+      const blockedIds = await blocking.blockedIdsFor(req.userId);
+
       const users = await User.find({
         usernameLower: { $regex: `^${query.toLowerCase().replace(/[^a-z0-9_.-]/g, "")}` },
-        _id: { $ne: req.userId },
+        _id: { $ne: req.userId, $nin: blockedIds },
+        suspended: { $ne: true },
       })
         .select("username userPhoto verified")
         .limit(20);
@@ -79,6 +85,13 @@ const UserController = {
       const user = await query;
 
       if (!user) {
+        return res.status(404).json({ message: "Cannot find user" });
+      }
+      // The last way round a block: hidden from the deck and from search, but
+      // still one id away - and pet records hand their owner's id out freely.
+      // 404 rather than 403, which would confirm the block to the person it is
+      // protecting somebody from.
+      if (!isSelf && (await blocking.isBlockedBetween(req.userId, user._id))) {
         return res.status(404).json({ message: "Cannot find user" });
       }
       res.user = user;

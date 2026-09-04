@@ -12,12 +12,20 @@ const { createNotification } = require("../services/NotificationService");
 // TypeError into the catch below - silently, since the catch only warns.
 const { sendPushNotification } = require("./NotificationController");
 const { emitToUser } = require("../services/realtime");
+const blocking = require("../services/blocking");
 
 const ChatController = {
   /** Every chat the caller participates in, most recently active first. */
   async getUserChats(req, res) {
     try {
-      const chats = await Chat.find({ participants: req.userId })
+      // A blocked person's conversation leaves the inbox. Leaving it there and
+      // only refusing new messages means the thread you blocked someone to stop
+      // seeing sits at the top of the list with their last message in it.
+      const blockedIds = await blocking.blockedIdsFor(req.userId);
+
+      const chats = await Chat.find({
+        participants: { $all: [req.userId], $nin: blockedIds },
+      })
         .populate("participants", "username userPhoto")
         .populate("lastMessage")
         .populate("petId", "name photos")
@@ -85,6 +93,14 @@ const ChatController = {
         return res.status(400).json({ message: "You cannot start a chat with yourself" });
       }
 
+      // The same answer in both directions, and deliberately vague: telling
+      // somebody "they blocked you" hands a harasser a way to confirm it.
+      if (await blocking.isBlockedBetween(req.userId, pet.owner)) {
+        return res
+          .status(403)
+          .json({ message: "This conversation is not available" });
+      }
+
       const pair = [String(req.userId), String(pet.owner)].sort().join("-");
       const chatId = SHA256(pair);
 
@@ -130,6 +146,14 @@ const ChatController = {
       const recipient = chat.participants.find(
         (p) => String(p._id) !== String(req.userId)
       );
+
+      // Blocking has to hold on a thread that already exists, which is the only
+      // kind that matters: nobody blocks a stranger they have never spoken to.
+      if (recipient && (await blocking.isBlockedBetween(req.userId, recipient._id))) {
+        return res
+          .status(403)
+          .json({ message: "This conversation is not available" });
+      }
 
       const message = await Message.create({
         chat: chat._id,

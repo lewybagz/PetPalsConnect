@@ -232,6 +232,15 @@ const SettingsScreen = ({ navigation }) => {
         <Text>Privacy Settings</Text>
       </TouchableOpacity>
 
+      {/* A block you cannot see is a block you cannot take back. */}
+      <TouchableOpacity
+        testID="settings-blocked-accounts"
+        onPress={() => navigation.navigate("BlockedAccounts")}
+        style={tailwind("my-2 p-2 border rounded border-gray-300")}
+      >
+        <Text>Blocked Accounts</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         onPress={() => navigation.navigate("AboutApp")}
         style={tailwind("my-2 p-2 border rounded border-gray-300")}

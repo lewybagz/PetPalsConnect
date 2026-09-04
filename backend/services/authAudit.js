@@ -43,6 +43,21 @@ const PUBLIC_READS = {
   "UserController.checkUsernameAvailability": "answers yes or no about one name",
 };
 
+/**
+ * Reads that deliberately cross users, and the guard that makes that safe.
+ *
+ * A moderation queue is the one list that has to show other people's rows. It
+ * is safe only because its route carries `requireModerator`, and that guard is
+ * one careless edit away from being dropped - at which point the handler still
+ * reads perfectly well and every report in the database is public. So the
+ * pairing is checked rather than trusted: the key names the handler, the value
+ * names the middleware its route must carry.
+ */
+const GUARDED_READS = {
+  "ReportController.getReportQueue": "requireModerator",
+  "ReportController.updateReportStatus": "requireModerator",
+};
+
 /** Ways a handler can prove it scoped the query to the caller. */
 const SCOPE_MARKERS = [
   "req.userId",
@@ -172,13 +187,61 @@ const bodyIdentityWrites = () => {
   return problems;
 };
 
-/** Everything both checks found, newest concern first. */
-const audit = () => [...unscopedReads(), ...bodyIdentityWrites()];
+/**
+ * Every handler in `GUARDED_READS` is registered on a route that still carries
+ * its guard.
+ *
+ * The handler is what a reviewer reads, and it looks fine on its own - the
+ * whole reason it is safe lives in a different file, on one line, in the middle
+ * of a router. Losing that line is a silent change from "moderators only" to
+ * "anybody with an account".
+ */
+const unguardedReads = () => {
+  const problems = [];
+  const routeDir = path.join(ROOT, "routes");
+
+  const sources = fs
+    .readdirSync(routeDir)
+    .filter((name) => name.endsWith(".js"))
+    .map((name) => fs.readFileSync(path.join(routeDir, name), "utf8"))
+    .join("\n");
+
+  for (const [key, guard] of Object.entries(GUARDED_READS)) {
+    const handler = key.split(".")[1];
+    const registration = sources
+      .split("\n")
+      .find((line) => line.includes(`.${handler}`) && line.includes("router."));
+
+    if (!registration) {
+      problems.push(
+        `${key} is allowlisted as a guarded read but no route registers it.`
+      );
+      continue;
+    }
+    if (!registration.includes(guard)) {
+      problems.push(
+        `${key} reads across users but its route no longer carries \`${guard}\`, ` +
+          `so any signed-in account can call it.`
+      );
+    }
+  }
+
+  return problems;
+};
+
+/** Everything the checks found, newest concern first. */
+const audit = () => [
+  ...unscopedReads(),
+  ...bodyIdentityWrites(),
+  ...unguardedReads(),
+];
 
 module.exports = {
   audit,
   unscopedReads,
   bodyIdentityWrites,
+  unguardedReads,
   handlers,
   PUBLIC_READS,
+  GUARDED_READS,
 };

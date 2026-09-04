@@ -1,9 +1,11 @@
 import React from "react";
+import { Alert } from "react-native";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react-native";
 
 import DiscoverScreen from "./DiscoverScreen";
 import api from "../../api/axios";
 import { useAuthSession } from "../../context/AuthSessionContext";
+import { blockUser } from "../../api/safety";
 
 jest.mock("../../api/axios", () => ({ get: jest.fn(), post: jest.fn() }));
 jest.mock("../../context/AuthSessionContext", () => ({
@@ -12,6 +14,7 @@ jest.mock("../../context/AuthSessionContext", () => ({
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: jest.fn() }),
 }));
+jest.mock("../../api/safety", () => ({ blockUser: jest.fn() }));
 
 /**
  * The app's core loop, which did not exist before: browse candidates, say yes
@@ -21,7 +24,15 @@ jest.mock("@react-navigation/native", () => ({
 const navigation = { navigate: jest.fn() };
 
 const candidate = (id, name, extra = {}) => ({
-  pet: { _id: id, name, breed: "Beagle", age: 4, weight: 25, photos: [] },
+  pet: {
+    _id: id,
+    name,
+    breed: "Beagle",
+    age: 4,
+    weight: 25,
+    photos: [],
+    owner: extra.owner ?? `owner-of-${id}`,
+  },
   score: 78,
   breakdown: { temperament: 27, size: 23, activities: 5, breed: 4, age: 2 },
   ...extra,
@@ -35,8 +46,10 @@ const respondWith = (candidates, pet = { _id: "mine", name: "Rex" }, extra = {})
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(Alert, "alert").mockImplementation(() => {});
   useAuthSession.mockReturnValue({ hasPet: true });
   api.post.mockResolvedValue({ data: { decision: "like", mutual: false } });
+  blockUser.mockResolvedValue({});
 });
 
 describe("DiscoverScreen", () => {
@@ -167,5 +180,55 @@ describe("DiscoverScreen", () => {
     // Advancing optimistically keeps the screen responsive, but a failed save
     // must not silently drop the pet.
     await waitFor(() => expect(screen.getByTestId("discover-card")).toBeTruthy());
+  });
+});
+
+describe("safety, from the card", () => {
+  const tapById = async (id) => {
+    const element = await waitFor(() => screen.getByTestId(id));
+    await fireEvent.press(element);
+  };
+
+  const pressAlertButton = (label) => {
+    const [, , buttons] = Alert.alert.mock.calls.at(-1);
+    return buttons.find((entry) => entry.text === label).onPress();
+  };
+
+  it("offers block and report on the card", async () => {
+    respondWith([candidate("pet-1", "Bo")]);
+    await render(<DiscoverScreen navigation={navigation} />);
+
+    await tapById("discover-safety");
+
+    // Discover is where you meet a stranger, and it had neither affordance.
+    expect(screen.getByTestId("discover-safety-block")).toBeTruthy();
+    expect(screen.getByTestId("discover-safety-report")).toBeTruthy();
+  });
+
+  it("blocks the pet's owner, not the pet", async () => {
+    respondWith([candidate("pet-1", "Bo", { owner: "owner-1" })]);
+    await render(<DiscoverScreen navigation={navigation} />);
+
+    await tapById("discover-safety");
+    await tapById("discover-safety-block");
+    await pressAlertButton("Block");
+
+    await waitFor(() => expect(blockUser).toHaveBeenCalledWith("owner-1"));
+  });
+
+  it("takes every pet of a blocked owner out of the deck", async () => {
+    respondWith([
+      candidate("pet-1", "Bo", { owner: "owner-1" }),
+      candidate("pet-2", "Rex", { owner: "owner-1" }),
+      candidate("pet-3", "Sky", { owner: "owner-2" }),
+    ]);
+    await render(<DiscoverScreen navigation={navigation} />);
+
+    await tapById("discover-safety");
+    await tapById("discover-safety-block");
+    await pressAlertButton("Block");
+
+    // Their second dog coming back next reads as the block having failed.
+    await waitFor(() => expect(screen.getByText("Sky")).toBeTruthy());
   });
 });

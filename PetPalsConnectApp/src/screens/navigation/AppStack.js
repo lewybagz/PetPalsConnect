@@ -55,6 +55,7 @@ import LegalPoliciesScreen from "../settings/LegalPoliciesScreen";
 import NotificationPreferencesScreen from "../settings/NotificationPreferencesScreen";
 import PaymentMethodsScreen from "../settings/PaymentMethodsScreen";
 import PrivacySettingsScreen from "../settings/PrivacySettingsScreen";
+import BlockedAccountsScreen from "../settings/BlockedAccountsScreen";
 import SecuritySettingsScreen from "../settings/SecuritySettingsScreen";
 import SettingsScreen from "../settings/SettingsScreen";
 import ChoosePlanScreen from "../settings/subscription/ChoosePlanScreen";
@@ -160,6 +161,7 @@ export default function AppStack() {
       <Stack.Screen name="LegalPolicies" component={LegalPoliciesScreen} options={{ title: "Legal" }} />
       <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ title: "Notifications" }} />
       <Stack.Screen name="PrivacySettings" component={PrivacySettingsScreen} options={{ title: "Privacy" }} />
+      <Stack.Screen name="BlockedAccounts" component={BlockedAccountsScreen} options={{ title: "Blocked Accounts" }} />
       <Stack.Screen name="SecuritySettings" component={SecuritySettingsScreen} options={{ title: "Security" }} />
       <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} options={{ title: "Payment Methods" }} />
       <Stack.Screen name="AddPaymentMethod" component={AddPaymentMethodScreen} options={{ title: "Add Payment" }} />

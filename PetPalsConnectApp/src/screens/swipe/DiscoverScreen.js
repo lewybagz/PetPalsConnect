@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
 import { RequiresPet } from "../../components/RequiresPet";
+import SafetyMenu from "../../components/SafetyMenu";
 import {
   decide,
   describeDistance,
@@ -33,6 +34,12 @@ import {
 
 const petPhoto = (pet) =>
   (Array.isArray(pet?.photos) ? pet.photos[0] : null) ?? null;
+
+/** You block a person, not a dog. `owner` may be an id or a populated user. */
+const ownerId = (pet) => {
+  const owner = pet?.owner;
+  return owner == null ? null : String(owner?._id ?? owner);
+};
 
 const Stat = ({ tailwind, label, value }) =>
   value == null || value === "" ? null : (
@@ -109,6 +116,29 @@ const DiscoverContent = ({ navigation }) => {
       setDeciding(false);
     }
   };
+
+  /**
+   * Takes every pet belonging to one owner out of the deck.
+   *
+   * Not just the card in front of you: somebody with three dogs would otherwise
+   * come back twice more after being blocked, which reads as the block having
+   * failed. The server excludes them from the next load either way; this is so
+   * the current deck agrees with what just happened.
+   */
+  const dropCurrent = useCallback(
+    (blockedOwnerId) => {
+      const theirs = (candidate) => ownerId(candidate.pet) === blockedOwnerId;
+
+      // The index points into the list being rewritten. Removing a card the
+      // cursor has already passed shifts everything down, so without this the
+      // deck skips a pet nobody ever saw.
+      const removedBefore = candidates.slice(0, index).filter(theirs).length;
+
+      setCandidates(candidates.filter((candidate) => !theirs(candidate)));
+      setIndex(Math.max(0, index - removedBefore));
+    },
+    [candidates, index]
+  );
 
   // Rendered next to *every* branch, not inside the card: deciding on the last
   // candidate flips the screen to its empty state, and a match modal declared
@@ -240,13 +270,25 @@ const DiscoverContent = ({ navigation }) => {
             <Text style={tailwind("text-2xl font-bold text-gray-900")}>
               {current.pet.name}
             </Text>
-            <View style={tailwind("bg-blue-50 rounded-full px-3 py-1")}>
-              <Text
-                testID="discover-score"
-                style={tailwind("text-xs font-semibold text-blue-700")}
-              >
-                {describeScore(current.score, threshold)}
-              </Text>
+            <View style={tailwind("flex-row items-center")}>
+              <View style={tailwind("bg-blue-50 rounded-full px-3 py-1")}>
+                <Text
+                  testID="discover-score"
+                  style={tailwind("text-xs font-semibold text-blue-700")}
+                >
+                  {describeScore(current.score, threshold)}
+                </Text>
+              </View>
+              {/* This is where strangers meet, so this is where reporting one
+                  has to be. It used to live only on a card component nothing
+                  rendered. */}
+              <SafetyMenu
+                testID="discover-safety"
+                userId={ownerId(current.pet)}
+                name={`${current.pet.name}'s owner`}
+                navigation={navigation}
+                onBlocked={dropCurrent}
+              />
             </View>
           </View>
 

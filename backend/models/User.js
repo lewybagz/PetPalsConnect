@@ -133,6 +133,21 @@ const UserSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  // Hidden from discovery, search and new conversations after enough distinct
+  // people reported them, or when a moderator actions a report. Not a ban: the
+  // account still opens, so an appeal is possible and the person is not simply
+  // locked out of data they own.
+  suspended: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  suspendedAt: {
+    type: Date,
+  },
+  suspendedReason: {
+    type: String,
+  },
   email: {
     type: String,
     required: true,

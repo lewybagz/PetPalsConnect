@@ -10,6 +10,7 @@ const {
 } = require("../services/matching/distance");
 const { createNotification } = require("../services/NotificationService");
 const { emitToUser } = require("../services/realtime");
+const blocking = require("../services/blocking");
 
 /**
  * Pet matching.
@@ -229,12 +230,24 @@ const PetMatchController = {
         .select("toPet")
         .lean();
 
+      // Blocking did nothing before this. A person you blocked - or who blocked
+      // you - stayed in the deck, and the block was a menu item that wrote a row
+      // nothing read. Suspended accounts drop out here too: the point of hiding
+      // somebody is that they stop appearing in front of people.
+      const [blockedIds, suspendedIds] = await Promise.all([
+        blocking.blockedIdsFor(req.userId),
+        User.distinct("_id", { suspended: true }),
+      ]);
+      const excludedOwners = [
+        ...new Set([...blockedIds, ...suspendedIds.map(String)]),
+      ];
+
       const candidates = await Pet.find({
         _id: {
           $ne: actingPet._id,
           $nin: decided.map((decision) => decision.toPet),
         },
-        owner: { $ne: req.userId, $exists: true },
+        owner: { $ne: req.userId, $exists: true, $nin: excludedOwners },
       })
         .limit(CANDIDATE_LIMIT)
         .lean();

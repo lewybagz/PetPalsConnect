@@ -162,6 +162,47 @@ capped at `PHOTO_LIMIT` (6, the same both sides).
 `PetPhotosScreen` is where an owner adds, reorders and removes; it saves after
 every change so closing mid-edit cannot lose an upload already paid for.
 
+### Safety
+
+**A block is symmetric, and every list has to consult it.** `services/blocking.js`
+is the only place that resolves who cannot see whom; `blockedIdsFor(userId)`
+returns everyone blocked in *either* direction. Blocking was a model and a
+controller that nothing queried — a blocked person stayed in the deck, could
+open a chat, and turned up in search — so the rule is that any query returning
+people or their pets filters through it: discovery, `getUserChats`,
+`findOrCreateChat`, `sendMessage`, username search and `getUserById`. Refusals
+say "not available", never "they blocked you": the second confirms the block to
+a harasser.
+
+**Reporting blocks.** `POST /api/reports` files the report *and* blocks the
+reported person in one request, so the two cannot come apart. Asking somebody
+who has just said they feel unsafe to keep looking at the reason is not a thing
+to ship.
+
+**A report has a state machine, and no admin console.** `services/reportStates.js`
+holds the reasons, targets and legal transitions (`pending -> reviewing ->
+actioned | dismissed`; terminal states are terminal); `services/moderation.js`
+applies them. `status` was a required String with an empty enum and no default,
+so the app wrote "Pending" and the controller wrote "pending" and no query
+found both. Three *distinct* reporters hide an account automatically
+(`AUTO_SUSPEND_THRESHOLD`) — the mechanism has to work while nobody is
+watching, and the unique index on `(reporter, reportedUser, reportedContent)`
+stops one account supplying all three. `MODERATOR_EMAILS` is an env allowlist
+rather than a role on `User`: no schema, no UI to grant it, nothing to escalate
+into.
+
+**A cross-user read must name its guard.** `GUARDED_READS` in
+`services/authAudit.js` pairs the moderation handlers with `requireModerator`
+and fails if a route stops carrying it. The handler reads fine on its own; the
+only thing making it safe lives on one line in another file.
+
+**Block and report belong where strangers meet.** `src/components/SafetyMenu.js`
+is the one affordance, on the Discover card and the chat header — the two
+screens that had neither. `src/api/safety.js` is the one payload shape; the
+three inline copies all sent PascalCase keys a lowercase schema dropped.
+Blocking from Discover removes *every* pet of that owner from the deck, and
+`BlockedAccountsScreen` (Settings) is where a block is seen and undone.
+
 ### Realtime
 
 **One socket, joined to the user's room.** `src/services/socket.js` owns the

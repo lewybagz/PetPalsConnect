@@ -15,6 +15,7 @@ import { getStoredToken } from "../../../utils/tokenutil";
 import { useSelector } from "react-redux";
 import { setError } from "../../redux/actions";
 import api from "../../api/axios";
+import { blockUser } from "../../api/safety";
 
 const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -29,23 +30,17 @@ const SwipeableUserPetCard = ({ data, type, reviews, onPress, navigation }) => {
     }
   };
 
+  /**
+   * `{ BlockedUser, Owner }` against a lowercase schema: strict mode dropped
+   * both keys and the save failed on the required ones, so this never blocked
+   * anybody. `Owner` also came from the card's data rather than the caller -
+   * the server takes it from the token now and ignores the body.
+   */
   const handleBlockUser = async (userIdToBlock) => {
     try {
-      const token = await getToken();
-      const response = await api.post(
-        "/api/blocklists",
-        {
-          BlockedUser: userIdToBlock,
-          Owner: data.user._id,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (response.status === 201) {
-        Alert.alert("User Blocked", "The user has been successfully blocked.");
-        setModalVisible(false);
-      }
+      await blockUser(userIdToBlock);
+      Alert.alert("User Blocked", "The user has been successfully blocked.");
+      setModalVisible(false);
     } catch (error) {
       console.error("Error blocking user:", error);
       Alert.alert("Error", "Failed to block user.");
