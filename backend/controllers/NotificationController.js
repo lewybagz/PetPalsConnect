@@ -3,7 +3,6 @@ const User = require("../models/User");
 const Playdate = require("../models/Playdate");
 const scheduler = require("../services/scheduler");
 const { notify, sendPush } = require("../services/NotificationService");
-const { normalise } = require("../services/notificationTypes");
 
 const findTokenByUserId = async (userId) => {
   const user = await User.findById(userId).select("fcmToken");
@@ -211,25 +210,6 @@ const NotificationController = {
     }
   },
 
-  async createNotification(req, res) {
-    const notification = new Notification({
-      content: req.body.content,
-      readStatus: req.body.readStatus || false,
-      recipient: req.body.recipient,
-      type: normalise(req.body.type),
-      // Identity comes from the token, never the body.
-      creator: req.userId,
-      petName: req.body.petName,
-      slug: req.body.slug,
-    });
-
-    try {
-      const newNotification = await notification.save();
-      res.status(201).json(newNotification);
-    } catch (err) {
-      res.status(400).json({ message: err.message });
-    }
-  },
 };
 
 module.exports = NotificationController;

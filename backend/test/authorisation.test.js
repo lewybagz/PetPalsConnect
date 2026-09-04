@@ -242,3 +242,115 @@ test("catalogue reads stay open - the app browses them", async () => {
   // matters: the browsable half of the app must not lead to personal data.
   assert.equal(pets.body[0].name, "Bo");
 });
+
+/**
+ * Matches.
+ *
+ * `PetMatch` carries two populated pets and says who they are relevant to.
+ * Three handlers reached one by id alone - a match id, a user id in the URL,
+ * two pet ids - and the static audit passed all three, because a query with a
+ * filter on it looks scoped whether or not the filter came from the caller.
+ * `requestSuppliedOwners` in the audit is the static half of this; these are
+ * the behaviour.
+ */
+const matchedPair = async () => {
+  const { owner, stranger } = await twoAccounts();
+  const PetMatch = require("../models/PetMatch");
+
+  const [mine, theirs] = await Promise.all([
+    Pet.create({
+      name: "Bo",
+      weight: 20,
+      breed: "Beagle",
+      age: 3,
+      owner: owner._id,
+      creator: owner._id,
+    }),
+    Pet.create({
+      name: "Sky",
+      weight: 25,
+      breed: "Whippet",
+      age: 2,
+      owner: stranger._id,
+      creator: stranger._id,
+    }),
+  ]);
+
+  const match = await PetMatch.create({
+    pet1: mine._id,
+    pet2: theirs._id,
+    relevantToUser: owner._id,
+    creator: owner._id,
+    matchScore: 80,
+  });
+
+  return { owner, stranger, mine, theirs, match };
+};
+
+test("a stranger cannot read one of your matches by its id", async () => {
+  const { match } = await matchedPair();
+
+  await request(app)
+    .get(`/api/petmatches/${match._id}`)
+    .set(...auth("stranger"))
+    .expect(404);
+});
+
+test("you can still read your own match by its id", async () => {
+  const { match } = await matchedPair();
+
+  const response = await request(app)
+    .get(`/api/petmatches/${match._id}`)
+    .set(...auth("owner"))
+    .expect(200);
+
+  assert.equal(String(response.body._id), String(match._id));
+});
+
+test("nobody can list another account's matches by putting its id in the URL", async () => {
+  const { owner } = await matchedPair();
+
+  // The route is gone entirely: `GET /` already returns the caller's matches,
+  // scoped to the token, so a by-user variant was a second answer to the same
+  // question with the filter supplied by whoever was asking.
+  await request(app)
+    .get(`/api/petmatches/user/${owner._id}`)
+    .set(...auth("stranger"))
+    .expect(404);
+});
+
+test("explaining a match needs one of the pets to be yours", async () => {
+  const { mine, theirs } = await matchedPair();
+  // A third account, since both pets in the pair belong to the two above and
+  // either side is entitled to the explanation.
+  await makeUser("outsider");
+
+  await request(app)
+    .get(`/api/petmatches/explain/${mine._id}/${theirs._id}`)
+    .set(...auth("outsider"))
+    .expect(403);
+
+  await request(app)
+    .get(`/api/petmatches/explain/${mine._id}/${theirs._id}`)
+    .set(...auth("owner"))
+    .expect(200);
+
+  // The other owner may ask too - it is their pet in the comparison.
+  await request(app)
+    .get(`/api/petmatches/explain/${mine._id}/${theirs._id}`)
+    .set(...auth("stranger"))
+    .expect(200);
+});
+
+test("a client cannot put a notification in somebody else's list", async () => {
+  const { stranger } = await twoAccounts();
+
+  // `POST /api/notifications` wrote `recipient` from the body. Nothing in the
+  // app ever called it, and a notification is a side effect of something
+  // happening, not something a client asks for.
+  await request(app)
+    .post("/api/notifications")
+    .set(...auth("stranger"))
+    .send({ content: "Click here", recipient: String(stranger._id), type: "message" })
+    .expect(404);
+});

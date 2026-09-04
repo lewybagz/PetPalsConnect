@@ -256,9 +256,68 @@ const unguardedReads = () => {
   return problems;
 };
 
+/**
+ * Fields that say *whose* a row is, however the query spells it.
+ *
+ * Wider than `IDENTITY_FIELDS`, which is about writes: a query can be scoped on
+ * a field a create path never sets by hand.
+ */
+const OWNERSHIP_FIELDS = [
+  "user",
+  "userId",
+  "owner",
+  "creator",
+  "relevantToUser",
+  "recipient",
+  "sender",
+  "reporter",
+  "participants",
+  "members",
+];
+
+/**
+ * Queries scoped on an owner the *request* named.
+ *
+ * `unscopedReads` only looks for `.find()` with no filter, so a query that has
+ * a filter passes - including `PetMatch.find({ relevantToUser: req.params.userId })`,
+ * which is every match belonging to whoever's id you put in the URL. It reads
+ * like a scoped query and audited like one; it is an open door with a filter on
+ * it. `explainMatch` and `getPetMatchById` were the same shape by a different
+ * route, so this is a class, not an instance.
+ *
+ * An ownership field takes its value from the token. If a handler genuinely
+ * needs to name another user, it belongs in `GUARDED_READS` behind a guard.
+ */
+const requestSuppliedOwners = () => {
+  const problems = [];
+
+  for (const file of controllerFiles()) {
+    const source = fs.readFileSync(file, "utf8");
+
+    source.split("\n").forEach((line, index) => {
+      for (const field of OWNERSHIP_FIELDS) {
+        const assigns = new RegExp(
+          `\\b${field}\\s*:\\s*(?:String\\()?req\\.(params|body|query)\\.`
+        );
+        const match = line.match(assigns);
+        if (!match) continue;
+
+        problems.push(
+          `${path.relative(ROOT, file)}:${index + 1} scopes a query on ` +
+            `\`${field}\` taken from \`req.${match[1]}\`, so the caller chooses ` +
+            `whose rows to read. Use \`req.userId\`.`
+        );
+      }
+    });
+  }
+
+  return problems;
+};
+
 /** Everything the checks found, newest concern first. */
 const audit = () => [
   ...unscopedReads(),
+  ...requestSuppliedOwners(),
   ...bodyIdentityWrites(),
   ...unguardedReads(),
 ];
@@ -266,6 +325,7 @@ const audit = () => [
 module.exports = {
   audit,
   unscopedReads,
+  requestSuppliedOwners,
   bodyIdentityWrites,
   unguardedReads,
   handlers,

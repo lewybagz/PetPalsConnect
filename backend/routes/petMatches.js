@@ -13,7 +13,9 @@ router.post("/match", PetMatchController.runMatchingHandler);
 router.post("/", PetMatchController.createPetMatch);
 
 router.get("/explain/:petId/:otherPetId", PetMatchController.explainMatch);
-router.get("/user/:userId", PetMatchController.getPetMatchesByUser);
+// `GET /user/:userId` is gone: it read `relevantToUser: req.params.userId`, so
+// any signed-in account could list anybody else's matches - and `GET /` already
+// returns the caller's, scoped to the token.
 router.get("/:id", PetMatchController.getPetMatchById, (req, res) =>
   res.json(res.petMatch)
 );

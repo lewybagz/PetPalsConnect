@@ -311,6 +311,20 @@ converted file silently drops out of the check.
   `chat.participants.pull(userId)` with the id from the body, which is "remove
   anybody from any group". Look a conversation up with `memberChat(id,
   req.userId)`, which finds nothing when the caller is not in it.
+- **A filter is not a scope.** The audit only looked for `.find()` with nothing
+  in it, so a query that *had* a filter passed however that filter was built —
+  including `PetMatch.find({ relevantToUser: req.params.userId })`, which is
+  every match belonging to whoever's id you put in the URL. It reads like a
+  scoped query and audited like one. `getPetMatchById` and `explainMatch` were
+  the same hole by a different route: a match id returns two populated pets, and
+  two pet ids returned the breed, size, age and temperament of any two pets in
+  the database. `requestSuppliedOwners` in `services/authAudit.js` now rejects
+  any query scoping an `OWNERSHIP_FIELDS` key on `req.params`/`body`/`query`;
+  a handler that genuinely needs to name another user belongs in `GUARDED_READS`
+  behind a guard. It also caught `POST /api/notifications`, which wrote
+  `recipient` from the body — a way to put arbitrary text in anybody's
+  notification list. That route is gone: a notification is a side effect of
+  something happening, and `notify()` is the only way to raise one.
 - **Identity taken from the body hides in a destructure.** The audit matched
   `creator: req.body.creator` and missed `const { sender } = req.body` followed
   by `new FriendRequest({ sender })`. It checks both now — that one let a client

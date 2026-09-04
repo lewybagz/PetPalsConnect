@@ -152,9 +152,20 @@ const PetMatchController = {
     }
   },
 
+  /**
+   * One match of the caller's.
+   *
+   * Scoped on `relevantToUser`, not looked up by id alone: a PetMatch carries
+   * two populated pets, and an id in a URL is not a claim to it. Missing and
+   * somebody else's answer the same way, which is the only answer that does
+   * not confirm the row exists.
+   */
   async getPetMatchById(req, res, next) {
     try {
-      const petMatch = await PetMatch.findById(req.params.id)
+      const petMatch = await PetMatch.findOne({
+        _id: req.params.id,
+        relevantToUser: req.userId,
+      })
         .populate("pet1")
         .populate("pet2");
 
@@ -221,7 +232,13 @@ const PetMatchController = {
     }
   },
 
-  /** Explains why two specific pets scored the way they did. */
+  /**
+   * Explains why two specific pets scored the way they did.
+   *
+   * One of them has to be the caller's. Two ids in a URL were enough before,
+   * so anybody with an account could read the breed, size, age and temperament
+   * of any two pets in the database by asking why they matched.
+   */
   async explainMatch(req, res) {
     try {
       const [petA, petB] = await Promise.all([
@@ -232,23 +249,16 @@ const PetMatchController = {
       if (!petA || !petB) {
         return res.status(404).json({ message: "Cannot find both pets" });
       }
+      if (
+        String(petA.owner) !== String(req.userId) &&
+        String(petB.owner) !== String(req.userId)
+      ) {
+        return res.status(403).json({ message: "One of the pets has to be yours" });
+      }
 
       res.json({ ...scorePair(petA, petB), threshold: MATCH_THRESHOLD });
     } catch (error) {
       res.status(500).json({ message: error.message });
-    }
-  },
-
-  async getPetMatchesByUser(req, res) {
-    try {
-      const petMatches = await PetMatch.find({ relevantToUser: req.params.userId })
-        .populate("pet1")
-        .populate("pet2")
-        .sort({ matchScore: -1 });
-
-      res.json(petMatches);
-    } catch (err) {
-      res.status(500).json({ message: err.message });
     }
   },
 

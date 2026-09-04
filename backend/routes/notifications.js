@@ -11,7 +11,11 @@ router.get("/recent", NotificationController.fetchRecentNotifications);
 router.get("/unread-count", NotificationController.getUnreadCount);
 router.get("/user/:userId", NotificationController.getUserNotifications);
 
-router.post("/", NotificationController.createNotification);
+// `POST /` is gone. It wrote `recipient` from the request body, so any signed-in
+// account could put a notification with arbitrary text in anybody's list - and
+// nothing in the app ever called it. Notifications are a side effect of
+// something happening; `services/NotificationService.notify()` is the one way
+// to raise one.
 router.post("/device-token", NotificationController.saveDeviceToken);
 router.post("/read", NotificationController.markAllRead);
 

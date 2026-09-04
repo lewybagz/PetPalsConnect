@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {
   audit,
   unscopedReads,
+  requestSuppliedOwners,
   bodyIdentityWrites,
   handlers,
   PUBLIC_READS,
@@ -113,5 +114,68 @@ test("an unscoped read is caught wherever it appears", () => {
     );
   } finally {
     fs.writeFileSync(file, original);
+  }
+});
+
+/**
+ * A filter is not a scope.
+ *
+ * `unscopedReads` only looks for `.find()` with nothing in it, so a query with
+ * a filter passed however that filter was built - including
+ * `PetMatch.find({ relevantToUser: req.params.userId })`, which is every match
+ * belonging to whoever's id is in the URL. It read like a scoped query and
+ * audited like one. Two more handlers had the same shape by a different route,
+ * so this is a class of hole rather than one mistake.
+ */
+test("a query scoped on an owner the caller named is caught", () => {
+  assert.deepEqual(requestSuppliedOwners(), []);
+
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const file = path.resolve(__dirname, "../controllers/PetMatchController.js");
+  const original = fs.readFileSync(file, "utf8");
+
+  try {
+    fs.writeFileSync(
+      file,
+      original.replace(
+        "PetMatch.find({ relevantToUser: req.userId })",
+        "PetMatch.find({ relevantToUser: req.params.userId })"
+      )
+    );
+
+    const problems = requestSuppliedOwners();
+    assert.ok(
+      problems.some((problem) => problem.includes("relevantToUser")),
+      "the audit did not catch a query scoped on an id from the URL"
+    );
+  } finally {
+    fs.writeFileSync(file, original);
+  }
+});
+
+test("it looks at the body and the query string too, not only params", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const file = path.resolve(__dirname, "../controllers/PetMatchController.js");
+  const original = fs.readFileSync(file, "utf8");
+
+  for (const source of ["req.body.userId", "req.query.userId"]) {
+    try {
+      fs.writeFileSync(
+        file,
+        original.replace(
+          "PetMatch.find({ relevantToUser: req.userId })",
+          `PetMatch.find({ relevantToUser: ${source} })`
+        )
+      );
+
+      assert.ok(
+        requestSuppliedOwners().length > 0,
+        `the audit missed an owner taken from ${source}`
+      );
+    } finally {
+      fs.writeFileSync(file, original);
+    }
   }
 });
