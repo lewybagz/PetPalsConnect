@@ -110,13 +110,21 @@ const LocationController = {
   },
 
   async createLocation(req, res) {
+    // `placeId` is required - it is how a place is matched against Google's
+    // catalogue and how `updateLocations` refreshes it - and was never set, so
+    // creating a location always failed validation. `creator` is not a path on
+    // this schema at all, so that key was dropped.
+    if (!req.body.placeId) {
+      return res.status(400).json({ message: "placeId is required" });
+    }
+
     const location = new Location({
       address: req.body.address,
       description: req.body.description,
       photo: req.body.photo,
       rating: req.body.rating,
       reviews: req.body.reviews,
-      creator: req.body.creator,
+      placeId: req.body.placeId,
       slug: req.body.slug,
     });
 

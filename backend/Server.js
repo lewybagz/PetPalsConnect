@@ -144,6 +144,32 @@ require("./services/realtime").setIO(io);
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
+/**
+ * Reports create paths that can never satisfy their schema.
+ *
+ * Non-fatal, and skipped in production: the enforcement lives in
+ * `test/schemaAudit.test.js`, which fails CI. This is here so a developer who
+ * writes one sees it on the next restart rather than on the next bug report -
+ * which for the nine we found was months.
+ */
+const auditSchemas = () => {
+  if (env.isProduction) return;
+
+  try {
+    const problems = require("./services/schemaAudit").audit();
+    if (problems.length === 0) return;
+
+    console.warn(
+      `\n[schema] ${problems.length} create path(s) cannot satisfy their model:`
+    );
+    for (const problem of problems) console.warn(`[schema]   ${problem}`);
+    console.warn("[schema] These writes will fail validation at runtime.\n");
+  } catch (error) {
+    // A broken audit must never stop the server from booting.
+    console.warn("[schema] Audit could not run:", error.message);
+  }
+};
+
 const start = async () => {
   // Start listening immediately so platform health checks succeed even while the
   // database is still connecting or is temporarily unreachable. /health reports
@@ -157,6 +183,7 @@ const start = async () => {
   });
 
   scheduler.start();
+  auditSchemas();
 
   // Refresh cached place data at 00:00 on the 1st of each month.
   cron.schedule("0 0 1 * *", async () => {

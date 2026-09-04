@@ -34,12 +34,16 @@ const BlockListController = {
   },
 
   async createBlockList(req, res) {
+    // PascalCase against a lowercase schema: all five keys dropped, and the
+    // save failed on the two required ones. Blocking has never worked.
+    // The owner is the caller - a block list you can create for someone else
+    // is worse than one that does not work.
     const blockList = new BlockList({
-      BlockedUser: req.body.BlockedUser,
-      BlockedUserList: req.body.BlockedUserList,
-      Owner: req.body.Owner,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      blockedUser: req.body.blockedUser,
+      blockedUserList: req.body.blockedUserList,
+      owner: req.userId,
+      creator: req.userId,
+      slug: req.body.slug,
     });
 
     try {

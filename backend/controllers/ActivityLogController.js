@@ -28,12 +28,15 @@ const ActivityLogController = {
   },
 
   async createActivityLog(req, res) {
+    // Every key here was PascalCase against a lowercase schema, so strict mode
+    // dropped all five and the save failed on four required fields. No
+    // activity log this app tried to write has ever been stored.
     const activityLog = new ActivityLog({
-      ActionDetails: req.body.ActionDetails,
-      ActionType: req.body.ActionType,
-      User: req.body.User,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      actionDetails: req.body.actionDetails,
+      actionType: req.body.actionType,
+      user: req.userId,
+      creator: req.userId,
+      slug: req.body.slug,
     });
 
     try {

@@ -32,14 +32,15 @@ const EventController = {
   },
 
   async createEvent(req, res) {
+    // Seven PascalCase keys, five of them required. Nothing was ever stored.
     const event = new Event({
-      Attendees: req.body.Attendees,
-      Date: req.body.Date,
-      Description: req.body.Description,
-      Organizer: req.body.Organizer,
-      Title: req.body.Title,
-      Creator: req.body.Creator,
-      Slug: req.body.Slug,
+      attendees: req.body.attendees,
+      date: req.body.date,
+      description: req.body.description,
+      organizer: req.body.organizer ?? req.userId,
+      title: req.body.title,
+      creator: req.userId,
+      slug: req.body.slug,
     });
 
     try {

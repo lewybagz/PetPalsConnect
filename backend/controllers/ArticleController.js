@@ -68,11 +68,15 @@ const ArticleController = {
   },
 
   async createArticle(req, res) {
+    // `Content`, `PublishedDate` and `Tags` were dropped by strict mode, and
+    // `author` and `creator` were never set at all - both required.
     const article = new Article({
       title: req.body.title,
-      Content: req.body.Content,
-      PublishedDate: req.body.PublishedDate,
-      Tags: req.body.Tags,
+      content: req.body.content,
+      author: req.body.author ?? req.user?.username,
+      publishedDate: req.body.publishedDate ?? new Date(),
+      tags: req.body.tags,
+      creator: req.userId,
       contentType: "Article",
     });
 

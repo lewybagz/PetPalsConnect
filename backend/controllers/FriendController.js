@@ -34,12 +34,14 @@ const FriendController = {
   },
 
   async createFriend(req, res) {
+    // The values were read correctly and then written to PascalCase keys the
+    // schema does not have, so all three required fields were missing.
     const friend = new Friend({
-      Status: req.body.status,
-      User1: req.body.user1,
-      User2: req.body.user2,
-      Creator: req.body.creator,
-      Slug: req.body.slug,
+      status: req.body.status,
+      user1: req.body.user1,
+      user2: req.body.user2,
+      creator: req.userId,
+      slug: req.body.slug,
     });
 
     try {
