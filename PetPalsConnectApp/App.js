@@ -6,7 +6,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { Provider as ReduxProvider } from "react-redux";
 
 import store from "./src/redux/store";
-import { AppThemeProvider } from "./src/context/AppThemeContext";
+import { AppThemeProvider, useAppTheme } from "./src/context/AppThemeContext";
+import { ToastProvider } from "./src/components/ui/Toast";
 import { AuthSessionProvider } from "./src/context/AuthSessionContext";
 import RootNavigator from "./src/screens/navigation/RootNavigator";
 import PaymentsProvider from "./src/components/PaymentsProvider";
@@ -21,6 +22,16 @@ import { navigationRef } from "./src/navigation/navigationRef";
  * rejects. Navigation-dependent work (push notification routing, the hardware
  * back handler) now lives inside RootNavigator, below the container.
  */
+/**
+ * `style="auto"` follows the *system* scheme, which is wrong the moment
+ * somebody pins the app to a theme the OS is not using: dark bars on a light
+ * app, or invisible ones on a dark app.
+ */
+const ThemedStatusBar = () => {
+  const { isDark } = useAppTheme();
+  return <StatusBar style={isDark ? "light" : "dark"} />;
+};
+
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -29,10 +40,15 @@ export default function App() {
           <AuthSessionProvider>
             <PaymentsProvider>
               <SafeAreaProvider>
-                <NavigationContainer ref={navigationRef}>
-                  <StatusBar style="auto" />
-                  <RootNavigator />
-                </NavigationContainer>
+                {/* Inside the safe-area provider because the toast positions
+                    itself above the home indicator, and outside the navigator
+                    so one host serves every screen. */}
+                <ToastProvider>
+                  <NavigationContainer ref={navigationRef}>
+                    <ThemedStatusBar />
+                    <RootNavigator />
+                  </NavigationContainer>
+                </ToastProvider>
               </SafeAreaProvider>
             </PaymentsProvider>
           </AuthSessionProvider>

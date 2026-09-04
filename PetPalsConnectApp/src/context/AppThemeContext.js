@@ -2,6 +2,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { palettes } from "../styles/tokens";
+
 /**
  * App theme.
  *
@@ -10,6 +12,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
  *
  * "system" follows the OS setting; "light"/"dark" pin it. The choice persists
  * across launches.
+ *
+ * It also shipped a dark-mode switch that changed nothing but its own thumb.
+ * That was structural rather than lazy: with 185 hardcoded hex literals and no
+ * token layer there was nothing for a theme to switch. `palette` is what there
+ * is to switch now - `useTailwind()` resolves its classes against it, so a
+ * screen gets dark mode without mentioning it.
  */
 
 const STORAGE_KEY = "@petpals/theme-preference";
@@ -19,6 +27,7 @@ const AppThemeContext = createContext({
   preference: "system",
   setPreference: () => {},
   isDark: false,
+  palette: palettes.light,
 });
 
 export const AppThemeProvider = ({ children }) => {
@@ -57,6 +66,9 @@ export const AppThemeProvider = ({ children }) => {
       // SettingsScreen drives a plain light/dark switch.
       toggleAppTheme: () => setPreference(theme === "dark" ? "light" : "dark"),
       isDark: theme === "dark",
+      // The active token set. Primitives read colours from here; everything
+      // else goes through `useTailwind()`, which is bound to the same palette.
+      palette: palettes[theme] ?? palettes.light,
       hydrated,
     };
   }, [preference, systemScheme, setPreference, hydrated]);
@@ -65,6 +77,12 @@ export const AppThemeProvider = ({ children }) => {
 };
 
 export const useAppTheme = () => useContext(AppThemeContext);
+
+/**
+ * The active palette, for the handful of places that need a raw colour rather
+ * than a class - an icon's `color` prop, an `ActivityIndicator`, a shadow.
+ */
+export const useTokens = () => useAppTheme().palette;
 
 // SettingsScreen imported this under the name ThemeContext.
 export const ThemeContext = AppThemeContext;
