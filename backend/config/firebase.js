@@ -20,10 +20,19 @@ if (env.firebase.enabled) {
 
 const isEnabled = () => app !== null;
 
-/** Verify a Firebase ID token. Throws if Firebase is not configured. */
-const verifyIdToken = (token) => {
+/**
+ * Verify a Firebase ID token. Throws if Firebase is not configured.
+ *
+ * `checkRevoked` additionally asks Firebase whether the account has since been
+ * disabled or its refresh tokens revoked. Signature verification alone is
+ * offline and cryptographic, so a stolen ID token stays valid for the rest of
+ * its hour however loudly the account has been shut down since. The cost is a
+ * round trip, which is why `middleware/authenticate` does it on a schedule
+ * rather than on every request.
+ */
+const verifyIdToken = (token, { checkRevoked = false } = {}) => {
   if (!app) throw new Error("Firebase Admin is not configured");
-  return admin.auth().verifyIdToken(token);
+  return admin.auth().verifyIdToken(token, checkRevoked);
 };
 
 /** Send a single FCM message. Resolves to null when Firebase is not configured. */

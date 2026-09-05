@@ -1,6 +1,7 @@
 const express = require("express");
 const UserController = require("../controllers/UserController");
 const { requireProfile } = require("../middleware/authenticate");
+const limits = require("../middleware/rateLimits");
 
 const router = express.Router();
 
@@ -21,11 +22,20 @@ const router = express.Router();
 // --- The signed-in caller -------------------------------------------------
 router.get("/me", UserController.getCurrentUser);
 router.delete("/me", UserController.deleteCurrentUser);
-router.post("/", UserController.createUser); // Firebase account -> Mongo profile
+// Per address, not per account: there is no account yet, and minting them in
+// bulk is the thing being limited.
+router.post("/", limits.signup, UserController.createUser);
 
 // Checked live while someone types a username during signup, so they find out
-// before submitting rather than after the account already exists.
-router.get("/username-available", UserController.checkUsernameAvailability);
+// before submitting rather than after the account already exists. That makes it
+// an enumeration oracle as well as a convenience - it answers yes or no about
+// one name - so it gets a ceiling generous enough for typing and useless for
+// walking a word list.
+router.get(
+  "/username-available",
+  limits.usernameChecks,
+  UserController.checkUsernameAvailability
+);
 
 // --- Settings (all act on the caller) -------------------------------------
 router.put("/me/location", requireProfile, UserController.updateMyLocation);

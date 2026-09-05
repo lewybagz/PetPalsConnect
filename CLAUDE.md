@@ -296,6 +296,41 @@ converted file silently drops out of the check.
   `require`, which crashes at load; do not reintroduce ESM syntax here.
 - Every route is mounted behind `authenticate`, which resolves the Firebase
   token to a Mongo user and sets `req.userId`. Use `req.userId` in controllers.
+- **`services/callerIdentity.js` is the one place a token becomes a caller**,
+  shared by `authenticate` and the socket handshake — the two used to answer
+  that question differently, and the realtime side did not ask at all.
+- **Signature verification is offline; revocation is not.** Verifying a token
+  proves Firebase minted it and it has not expired, and says nothing about the
+  account since. A disabled account kept working for the rest of its token's
+  hour, which is exactly the hour that matters after a phone is stolen. The
+  revocation check runs once per account per five minutes rather than per
+  request, so the common path stays offline.
+- **Suspension is a gate, not a filter.** It used to remove an account from
+  discovery, the map and search and leave it able to open chats, send messages
+  and file friend requests — hiding a harasser from strangers while doing
+  nothing about the people they had already reached. A suspended account now
+  keeps exactly two routes, listed in `SUSPENDED_ALLOWED`: read your own
+  profile, and delete your account (Apple requires in-app deletion, and being
+  suspended is not an exemption).
+- **An id-shaped route parameter that is not an id is a 404**, via
+  `guardObjectIdParams` in the mount loop. Controllers catch their own errors
+  and answer `res.status(500).json({ message: err.message })`, walking past the
+  production mask in the error handler — so a typo returned "Cast to ObjectId
+  failed … at path `_id` for model `User`", a map of the schema. `/api/users/search`
+  did exactly that by falling through to `GET /:id`.
+- **`middleware/sanitize.js` strips `$`-prefixed and dotted keys** from bodies
+  and query strings. Mongoose's casting stops most operator injection and is
+  not a guarantee — a loosely typed path or a filter built by spreading request
+  data takes the object as written. Values are untouched: a message mentioning
+  a dollar sign is a message.
+- **Rate limits are keyed by account, not address** (`middleware/rateLimits.js`).
+  One global 1000/IP limiter counted a household behind one NAT as a single
+  client and was far too generous for the routes where abuse costs somebody
+  else something — reports, support mail, friend requests, username probing.
+  Keying on `req.ip` for IPv6 is itself a bypass, since a subscriber gets a
+  whole /64, so the key goes through `ipKeyGenerator`. The suite disarms them
+  (`setEnabled(false)`) because it drives hundreds of requests from one address;
+  `hardening.test.js` arms them again for its own cases.
 - **`authenticate` is not authorisation.** It proves the caller has *an*
   account, not that a row is theirs. Every list must filter by `req.userId`,
   and fetching by id must check ownership before returning. Twenty handlers
@@ -419,6 +454,18 @@ Blocking from Discover removes *every* pet of that owner from the deck, and
 `BlockedAccountsScreen` (Settings) is where a block is seen and undone.
 
 ### Realtime
+
+**A socket proves who it is, and the room comes from the token.** The server
+used to learn the room from the client — `socket.on("join", (userId) => …)`,
+with nothing verifying the connection. A user id is not a secret; it comes back
+on a pet's `owner` and on chat participants. So anyone who could open a socket
+could name somebody else and receive their `message`, `notification`,
+`friendRequest` and `petMatch` events live, private message text included.
+Every REST read here is filtered by `req.userId`; one line of realtime code
+undid all of it. `services/socketRooms.js` verifies the handshake and joins the
+room itself — there is no `join` event any more, and the one thing the client
+used to control is the one thing it cannot. Refusals are a single string, so
+"suspended" and "no such account" are not distinguishable from outside.
 
 **One socket, joined to the user's room.** `src/services/socket.js` owns the
 single connection; `RootNavigator` calls `useSocketSession()` so every screen

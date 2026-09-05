@@ -42,6 +42,39 @@ const firebaseStub = {
 };
 
 /**
+ * Tokens the caller has "revoked", by uid.
+ *
+ * `resolveCaller` asks Firebase whether an account has been disabled or its
+ * refresh tokens revoked, on a schedule rather than per request. The stub above
+ * answers that question so the behaviour can be tested without a real project.
+ */
+const revoked = new Set();
+
+/** Counted so a test can prove the check is cached rather than per request. */
+firebaseStub.revocationChecks = 0;
+
+firebaseStub.verifyIdToken = async (token, { checkRevoked = false } = {}) => {
+  if (checkRevoked) firebaseStub.revocationChecks += 1;
+
+  const decoded = tokens.get(token);
+  if (!decoded) {
+    const error = new Error("Invalid token");
+    error.code = "auth/argument-error";
+    throw error;
+  }
+  if (checkRevoked && revoked.has(decoded.uid)) {
+    const error = new Error("The ID token has been revoked");
+    error.code = "auth/id-token-revoked";
+    throw error;
+  }
+  return decoded;
+};
+
+/** Marks an account's sessions revoked, the way disabling it would. */
+const revokeTokens = (uid) => revoked.add(uid);
+const unrevokeTokens = (uid) => revoked.delete(uid);
+
+/**
  * Replaces a module in require.cache with a stub, before the app loads it.
  * Done ahead of the first require, this needs no production-code seam.
  */
@@ -228,6 +261,11 @@ const start = async () => {
 
   const { app } = require("../../Server");
 
+  // Off by default: the suite makes hundreds of requests from one address, and
+  // a limiter counting them would fail tests that are about something else.
+  // `rateLimits.test.js` turns them back on for its own cases.
+  require("../../middleware/rateLimits").setEnabled(false);
+
   // Mongoose builds indexes in the background, so without this a unique-index
   // test can pass simply because the index does not exist yet.
   const mongoose = require("mongoose");
@@ -257,9 +295,23 @@ const stop = async () => {
 
 /** Empties every collection between tests. */
 const clear = async () => {
+  // Revocation answers are cached for five minutes per account; a test that
+  // did not clear that would inherit the previous test's verdict.
+  require("../../services/callerIdentity").resetRevocationCache();
+  revoked.clear();
   const mongoose = require("mongoose");
   const { collections } = mongoose.connection;
   await Promise.all(Object.values(collections).map((c) => c.deleteMany({})));
 };
 
-module.exports = { start, stop, clear, issueToken, stubStripe, firebaseStub, tokens };
+module.exports = {
+  start,
+  stop,
+  clear,
+  issueToken,
+  stubStripe,
+  firebaseStub,
+  tokens,
+  revokeTokens,
+  unrevokeTokens,
+};

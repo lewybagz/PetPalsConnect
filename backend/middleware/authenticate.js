@@ -1,5 +1,7 @@
-const firebase = require("../config/firebase");
-const User = require("../models/User");
+const {
+  resolveCaller,
+  allowedWhileSuspended,
+} = require("../services/callerIdentity");
 
 /**
  * Verifies the Firebase ID token in the Authorization header and attaches the
@@ -13,35 +15,45 @@ const User = require("../models/User");
  * Controllers previously assumed req.user was a Mongo document while this
  * middleware set it to a Firebase token, so IDs never lined up. Resolving the
  * Mongo user here fixes that mismatch in one place.
+ *
+ * Who the caller is now comes from `services/callerIdentity`, shared with the
+ * socket handshake - the realtime side used to take a user id off a `join`
+ * event and trust it.
  */
 const authenticate = async (req, res, next) => {
   const header = req.headers.authorization || "";
   const [scheme, token] = header.split(" ");
 
-  if (!header || scheme !== "Bearer" || !token) {
-    return res
-      .status(401)
-      .json({ message: "Missing or malformed Authorization header" });
-  }
-
-  if (!firebase.isEnabled()) {
-    return res
-      .status(503)
-      .json({ message: "Authentication is not configured on this server" });
-  }
-
   try {
-    const decoded = await firebase.verifyIdToken(token);
-    req.firebaseUser = decoded;
+    const { firebaseUser, user, suspended } = await resolveCaller(
+      scheme === "Bearer" ? token : null
+    );
 
-    const user = await User.findOne({ firebaseUid: decoded.uid });
+    // A suspended account keeps only what it needs to read its own profile and
+    // delete itself. Everything that reaches another person is closed, which is
+    // what suspension was supposed to mean and previously did not.
+    if (suspended && !allowedWhileSuspended(req.method, req.baseUrl + req.path)) {
+      return res
+        .status(403)
+        .json({ message: "This account is not available", code: "ACCOUNT_SUSPENDED" });
+    }
+
+    req.firebaseUser = firebaseUser;
     req.user = user;
     req.userId = user?._id ?? null;
+    req.suspended = suspended;
 
     return next();
   } catch (error) {
-    console.error("[auth] Token verification failed:", error.message);
-    return res.status(401).json({ message: "Invalid or expired token" });
+    if (!error.status) {
+      console.error("[auth] Token verification failed:", error.message);
+    }
+    return res
+      .status(error.status ?? 401)
+      .json({
+        message: error.message ?? "Invalid or expired token",
+        code: error.code ?? "INVALID_TOKEN",
+      });
   }
 };
 

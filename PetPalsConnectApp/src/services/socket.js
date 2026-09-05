@@ -1,4 +1,5 @@
 import { io } from "socket.io-client";
+import { getAuth } from "@react-native-firebase/auth";
 
 import { API_URL } from "../config/env";
 
@@ -18,46 +19,67 @@ import { API_URL } from "../config/env";
  * - connecting at module scope means connecting before sign-in, and never
  *   re-joining when the account changes.
  *
- * One lazily-created socket, joined to the current user's room and re-joined on
- * reconnect, fixes all three.
+ * One lazily-created socket, authenticated on the handshake, fixes all three.
+ *
+ * It used to announce itself instead: `socket.emit("join", userId)`, with the
+ * server trusting whatever id arrived. A user id is not a secret - it comes
+ * back on a pet's owner and on chat participants - so any connection could name
+ * somebody else and receive their messages and notifications live. The token
+ * goes on the handshake now and the server derives the room from it; there is
+ * nothing left for this file to claim.
  */
 
 let socket = null;
 let joinedUserId = null;
 
-/** The shared socket, created on first use. */
+/**
+ * The shared socket, created on first use.
+ *
+ * `auth` is a function rather than a value because socket.io calls it again on
+ * every reconnect. A dropped connection can outlive the ID token's hour, and a
+ * stale token would reconnect into a rejection loop; asking Firebase each time
+ * gets a fresh one, which it refreshes silently when needed.
+ */
 export const getSocket = () => {
   if (!socket) {
     socket = io(API_URL, {
       // The default is a long-poll upgrade dance that React Native does not
       // need; websockets connect faster and reconnect more predictably.
       transports: ["websocket"],
-      autoConnect: true,
+      autoConnect: false,
       reconnection: true,
       reconnectionDelay: 1000,
-    });
-
-    // A reconnect starts a new session server-side, so the room must be
-    // re-joined or the socket goes quiet after the first network blip.
-    socket.on("connect", () => {
-      if (joinedUserId) socket.emit("join", joinedUserId);
+      auth: async (cb) => {
+        const user = getAuth().currentUser;
+        cb({ token: user ? await user.getIdToken() : null });
+      },
     });
   }
   return socket;
 };
 
 /**
- * Puts this connection in a user's room so the server can reach them.
- * Passing null (sign-out) leaves the room and stops further delivery.
+ * Connects this device's socket, now that somebody is signed in.
+ *
+ * Keeps the old name and shape so the hooks did not change, but there is no
+ * room to ask for any more: the server reads it off the verified token. Passing
+ * null (sign-out) disconnects, which is what stops delivery.
  */
 export const joinUserRoom = (userId) => {
   if (userId === joinedUserId) return;
 
   joinedUserId = userId ?? null;
-  if (!joinedUserId) return;
+
+  if (!joinedUserId) {
+    if (socket) socket.disconnect();
+    return;
+  }
 
   const active = getSocket();
-  if (active.connected) active.emit("join", joinedUserId);
+  // A reconnect re-runs `auth`, so switching accounts has to start a new
+  // handshake rather than reuse the one belonging to the previous token.
+  if (active.connected) active.disconnect();
+  active.connect();
 };
 
 /**

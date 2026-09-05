@@ -3,7 +3,6 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const rateLimit = require("express-rate-limit");
 const { Server: SocketIOServer } = require("socket.io");
 const cron = require("node-cron");
 
@@ -12,6 +11,10 @@ const db = require("./config/db");
 require("./config/firebase"); // Initialise Firebase Admin before any route needs it.
 const scheduler = require("./services/scheduler");
 const authenticate = require("./middleware/authenticate");
+const sanitize = require("./middleware/sanitize");
+const limits = require("./middleware/rateLimits");
+const { guardObjectIdParams } = require("./middleware/objectIdParams");
+const { authenticateSocket, joinOwnRoom } = require("./services/socketRooms");
 const { updateLocations } = require("./controllers/LocationController");
 
 const app = express();
@@ -41,17 +44,13 @@ app.use(
 );
 
 app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
+// `extended: false` because nothing here sends nested form data, and the
+// extended parser is what turns `?filter[$ne]=` into an object in the first
+// place. `middleware/sanitize` is the belt to this pair of braces.
+app.use(express.urlencoded({ extended: false }));
+app.use(sanitize);
 
-app.use(
-  "/api",
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 1000,
-    standardHeaders: "draft-7",
-    legacyHeaders: false,
-  })
-);
+app.use("/api", limits.general);
 
 // ---------------------------------------------------------------------------
 // Health check - unauthenticated, used by hosting platforms and smoke tests.
@@ -97,8 +96,34 @@ const routes = {
   users: "users",
 };
 
+/**
+ * Routes whose abuse costs somebody else something, rather than costing CPU.
+ *
+ * Applied after `authenticate` so the limit is keyed by account, not by
+ * address - a household behind one NAT is several people, and one of them
+ * should not be able to spend everybody's allowance.
+ */
+const TIGHTER = {
+  reports: limits.reporting,
+  supportmessages: limits.reporting,
+  friendrequests: limits.outreach,
+  messages: limits.outreach,
+  chats: limits.outreach,
+  groupchats: limits.outreach,
+  playdates: limits.outreach,
+};
+
 for (const [mountPath, moduleName] of Object.entries(routes)) {
-  app.use(`/api/${mountPath}`, authenticate, require(`./routes/${moduleName}`));
+  const tighter = TIGHTER[mountPath];
+  const chain = [authenticate];
+  if (tighter) chain.push(tighter);
+
+  // An id-shaped parameter that is not an id is a 404 before it reaches a
+  // controller. Registered here rather than in twenty-four route files so it
+  // cannot be forgotten by the twenty-fifth.
+  const router = guardObjectIdParams(require(`./routes/${moduleName}`));
+
+  app.use(`/api/${mountPath}`, ...chain, router);
 }
 
 // ---------------------------------------------------------------------------
@@ -111,8 +136,22 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error("[error]", err.stack || err.message);
+  // A malformed id in a URL is a client mistake, not a server fault. Mongoose
+  // throws a CastError, which fell through to a 500 with a stack trace in the
+  // log - so probing an endpoint with junk looked exactly like a real outage,
+  // and buried the real ones.
+  if (err.name === "CastError" || err.name === "ValidationError") {
+    const status = err.name === "CastError" ? 404 : 400;
+    return res.status(status).json({
+      message: err.name === "CastError" ? "Not found" : "That request isn't valid",
+      code: err.name === "CastError" ? "NOT_FOUND" : "INVALID_REQUEST",
+    });
+  }
+
   const status = err.status || err.statusCode || 500;
+  // Only unexpected failures deserve a stack; a deliberate 4xx is not news.
+  if (status >= 500) console.error("[error]", err.stack || err.message);
+
   res.status(status).json({
     message: env.isProduction && status === 500 ? "Internal server error" : err.message,
   });
@@ -125,13 +164,14 @@ const io = new SocketIOServer(server, {
   cors: { origin: env.corsOrigins.length > 0 ? env.corsOrigins : true },
 });
 
-io.on("connection", (socket) => {
-  console.log(`[socket] connected: ${socket.id}`);
+// Every connection proves who it is before it is admitted, and the room it
+// hears is derived from that - never from a `join` event carrying an id the
+// client chose. See services/socketRooms.js.
+io.use(authenticateSocket);
 
-  // Clients join a room named after their user id so the server can target them.
-  socket.on("join", (userId) => {
-    if (userId) socket.join(String(userId));
-  });
+io.on("connection", (socket) => {
+  const room = joinOwnRoom(socket);
+  console.log(`[socket] connected: ${socket.id} (user ${room})`);
 
   socket.on("disconnect", () => console.log(`[socket] disconnected: ${socket.id}`));
 });

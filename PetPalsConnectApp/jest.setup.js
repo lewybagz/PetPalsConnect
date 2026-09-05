@@ -20,18 +20,29 @@ jest.mock("@react-native-firebase/auth", () => {
 
   const auth = () => ({ currentUser });
 
+  // One object, not a fresh one per call, so a test can reach for
+  // `getAuth().__setToken(...)` and have it apply to what the code under test
+  // sees. The socket handshake asks for a token on every reconnect.
+  const instance = {
+    get currentUser() {
+      return currentUser;
+    },
+    signOut: jest.fn(async () => {
+      currentUser = null;
+      listener?.(null);
+    }),
+    /** Test seam: stand up a signed-in user whose ID token is `token`. */
+    __setToken: (token) => {
+      currentUser = token
+        ? { uid: "test-uid", getIdToken: jest.fn(async () => token) }
+        : null;
+    },
+  };
+
   return {
     __esModule: true,
     default: auth,
-    getAuth: () => ({
-      get currentUser() {
-        return currentUser;
-      },
-      signOut: jest.fn(async () => {
-        currentUser = null;
-        listener?.(null);
-      }),
-    }),
+    getAuth: () => instance,
     onAuthStateChanged: (_auth, callback) => {
       listener = callback;
       callback(currentUser);

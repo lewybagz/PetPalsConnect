@@ -127,7 +127,7 @@ compiled into the app bundle and is public by definition — never put a secret 
 ## Tests
 
 ```bash
-cd backend && npm test     # 30 tests, ~4s, no database or credentials needed
+cd backend && npm test     # 337 tests, ~30s, no database or credentials needed
 ```
 
 The suite boots the real Express app against an in-memory MongoDB with a stubbed
