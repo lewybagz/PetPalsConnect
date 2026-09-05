@@ -23,10 +23,6 @@ const ReviewSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: "Playdate", // Link to Playdate
   },
-  relatedService: {
-    type: Schema.Types.ObjectId,
-    ref: "Service", // Assuming 'Service' is another schema/model we created
-  },
   relatedLocation: {
     type: Schema.Types.ObjectId,
     ref: "Location", // Assuming 'Location' is your location model

@@ -10,6 +10,10 @@ router.post("/import", LocationController.importNearby);
 // Kept for the older screens, which ask for this path by name.
 router.get("/playdate-locations", LocationController.getAllLocations);
 
+// The care hub's list: vets, shops, groomers and boarders, plus the emergency
+// numbers that need neither a location nor a Google key.
+router.get("/care", LocationController.getCarePlaces);
+
 // GET places, nearest first when `lat`/`lng` are given
 router.get("/", LocationController.getAllLocations);
 

@@ -106,10 +106,20 @@ const PotentialPlaydateLocationScreen = ({ route }) => {
     <ScrollView style={styles.container}>
       {locationDetails ? (
         <>
-          <Text style={styles.title}>{locationDetails.address}</Text>
+          {/*
+            The heading was the address and the two lines under it were
+            `.Address` and `.Description` - PascalCase against a lowercase
+            schema, so both read `undefined` and rendered as blank lines. The
+            heading is the place's `name` now, which is the field's whole
+            purpose: "Dolores Park" is what somebody recognises, "19th St &
+            Dolores St" is what they navigate to.
+          */}
+          <Text style={styles.title}>{locationDetails.name}</Text>
           <Image source={{ uri: locationDetails.photo }} style={styles.image} />
-          <Text style={styles.address}>{locationDetails.Address}</Text>
-          <Text style={styles.description}>{locationDetails.Description}</Text>
+          <Text style={styles.address}>{locationDetails.address}</Text>
+          {locationDetails.description ? (
+            <Text style={styles.description}>{locationDetails.description}</Text>
+          ) : null}
           {/* Was a bare block statement in the function body, so it never
               reached the output - the button simply did not exist. */}
           <Button title="Get Directions" onPress={handleOpenDirections} />

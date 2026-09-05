@@ -30,7 +30,12 @@ const TYPES_FILE = path.resolve(
 );
 
 /** Interfaces here describe a Mongo document, and the model they map to. */
-const DOCUMENT_INTERFACES = { Pet: "Pet", User: "User", Subscription: "Subscription" };
+const DOCUMENT_INTERFACES = {
+  Pet: "Pet",
+  User: "User",
+  Subscription: "Subscription",
+  Location: "Location",
+};
 
 /** Fields that exist on the JSON but not as schema paths. */
 const SYNTHETIC = new Set(["_id"]);
@@ -38,6 +43,7 @@ const SYNTHETIC = new Set(["_id"]);
 require("../models/User");
 require("../models/Pet");
 require("../models/Subscription");
+require("../models/Location");
 
 /** Extracts `interface Name { ... }` bodies, ignoring comments. */
 const readInterfaces = () => {

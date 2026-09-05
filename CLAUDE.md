@@ -641,6 +641,50 @@ by name, so no screen has to remember that the stored pair is GeoJSON
 same block and suspension filters as discovery: a map says where somebody is,
 so forgetting the filter there is worse than forgetting it in the deck.
 
+**A place has categories, and there is one model for every kind of place.**
+`services/placeCategories.js` holds them - `park`, `vet`, `petStore`, `groomer`,
+`boarding` - and it is an array, because plenty of vets board and plenty of
+shops groom. There was a second model for this too: `Service`, a stub with a
+String address, no coordinates, an unconstrained `serviceType` and a create
+route any signed-in account could post to, whose `getAllServices` handed the
+lot to everybody. Nothing in the app ever called it, and the importer had been
+pulling `veterinary_care` and `pet_store` into `Location` all along - so the vet
+directory already half-existed in the model with the geo index and the unique
+`placeId`, while the wrong one sat there being a spam surface. It is deleted,
+with `Review.relatedService`, the way `PotentialPlaydateLocation` was.
+
+**A category filter only ever narrows when asked to.** Rows imported before the
+field existed have no categories, so `/api/locations` unfiltered still returns
+everything and the playdate pickers keep working untouched. A *filtered* query
+leaves uncategorised rows out on purpose: a row whose kind we do not know is not
+evidence of a vet, and serving one as a vet is worse than a short list. The
+filter is applied on `Array.isArray(categories)`, not `length > 0` - an empty
+array is a caller whose category names were all invalid, and `$in: []` correctly
+matches nothing, where treating it as "no filter" would answer a misspelling
+with parks in the vet list. Re-running the import backfills, since the upsert
+writes categories onto rows that already exist.
+
+**Google has no type for grooming or boarding**, so those two go out as a
+keyword against the nearest type that does exist, and the category *the search
+was for* is carried onto the row - a groomer comes back typed `pet_store` and is
+otherwise indistinguishable from a shop. `importNear` merges by `placeId` before
+writing, because a vet that boards answers two searches and per-search upserts
+would let the last one's categories replace the first's.
+
+**Contact details are fetched lazily, not on import.** An import covers five
+categories at twenty results each; a Details call per result is a hundred billed
+requests to fill a screen nobody has opened. `places.withDetails()` runs on
+`GET /api/locations/:id`, caches for `DETAILS_TTL_MS` (30 days) and never
+throws: an address and a route to it are useful without a phone number, and a
+missing key must not turn opening a place into an error.
+
+**`services/petCare/emergency.js` is the part of the hub that always works.** No
+shared location, no `GOOGLE_MAPS_API_KEY`, no rows: a hub whose entire content
+depends on an optional integration shows an empty screen on every fresh
+deployment, and this is also the half somebody needs most urgently. Every entry
+carries a `region`, because these are US and Canada services and the app never
+asks anybody where they live.
+
 **`Location` is the only place model, and `name` is required.** There was a
 second, `PotentialPlaydateLocation`, with the same fields, its own controller
 and routes that repeated their own mount prefix; nothing referenced it.

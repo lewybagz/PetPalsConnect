@@ -9,8 +9,7 @@ const ReviewController = {
       // are served by `getReviewsByLocation`; this is "my reviews".
       const reviews = await Review.find({ reviewer: req.userId })
         .populate("relatedArticle")
-        .populate("relatedPlaydate")
-        .populate("relatedService");
+        .populate("relatedPlaydate");
       res.json(reviews);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -26,7 +25,6 @@ const ReviewController = {
       review = await Review.findById(req.params.id)
         .populate("relatedArticle")
         .populate("relatedPlaydate")
-        .populate("relatedService")
         .populate("reviewer", "username userPhoto");
       if (review == null) {
         return res.status(404).json({ message: "Cannot find review" });
@@ -100,7 +98,6 @@ const ReviewController = {
       rating: req.body.rating,
       relatedArticle: req.body.relatedArticle,
       relatedPlaydate: req.body.relatedPlaydate,
-      relatedService: req.body.relatedService,
       // Never set, so a review of a place could not be attached to one and
       // `getReviewsByLocation` had nothing to find.
       relatedLocation: req.body.relatedLocation,

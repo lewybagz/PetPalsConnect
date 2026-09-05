@@ -69,6 +69,50 @@ export interface Pet {
   createdAt?: IsoDate;
 }
 
+/**
+ * What kind of place a `Location` is.
+ *
+ * `park` is where a playdate happens; the rest are the care hub. A place can
+ * be several - plenty of vets board, plenty of shops groom - so `categories`
+ * is a list. Mirrors the enum on the schema.
+ */
+export type PlaceCategory = "park" | "vet" | "petStore" | "groomer" | "boarding";
+
+/**
+ * A place: a park to meet at, or somewhere to take a pet for care.
+ *
+ * There is one model for both. There used to be two - `Location` and a
+ * `Service` stub with a String address and no coordinates - and the importer
+ * had been pulling vets and pet shops into `Location` the whole time, so the
+ * directory existed in the model with the geo index while the other one sat
+ * unused. `Service` is gone.
+ *
+ * `categories` is optional because rows imported before the field existed have
+ * none, and a filtered list deliberately leaves those out rather than guessing
+ * at their kind. `phone`, `website` and `openingHours` are filled in lazily by
+ * the server the first time somebody opens the place, so a list response has
+ * them absent and a detail response has them - when Google is configured and
+ * has an answer.
+ */
+export interface Location {
+  _id: ObjectId;
+  name: string;
+  address: string;
+  /** Google's id for the place; the collection is unique on it. */
+  placeId?: string;
+  categories?: PlaceCategory[];
+  description?: string;
+  photo?: string;
+  rating?: number;
+  phone?: string;
+  website?: string;
+  /** Google's weekday text, one string per day, rendered as given. */
+  openingHours?: string[];
+  detailsFetchedAt?: IsoDate;
+  createdDate?: IsoDate;
+  modifiedDate?: IsoDate;
+}
+
 export interface User {
   _id: ObjectId;
   firebaseUid: string;

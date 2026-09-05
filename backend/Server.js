@@ -88,7 +88,6 @@ const routes = {
   playdates: "playdates",
   reports: "reports",
   reviews: "reviews",
-  services: "services",
   "subscription-history": "subscriptionHistory",
   subscriptions: "subscriptions",
   supportmessages: "supportMessages",
