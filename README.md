@@ -37,7 +37,10 @@ backend/              Express API
   models/             Mongoose schemas
   routes/             Route definitions (all mounted behind auth)
   services/           Scheduler and notifications
-data-fetch-scripts/   One-off scripts for seeding location data
+data-fetch-scripts/   One-off scripts for seeding location data and articles
+content/              Editorial content for the in-app Articles feature
+  research/           The verified claims, with citations
+  articles/           The finished articles, as seed-ready JSON
 ```
 
 ## Getting started
@@ -80,6 +83,35 @@ it will not run in Expo Go:
 ```bash
 npx expo run:ios       # or: npx expo run:android
 ```
+
+## Content
+
+The in-app Articles feature is backed by `content/`. `content/research/` holds
+the verified material — claims, numbers and the source each came from —
+and `content/articles/articles.json` is the batch built from it: 25 articles,
+~20,000 words, 93 citations, covering dogs, cats, rabbits, guinea pigs, birds
+and reptiles.
+
+`content/research/standards.md` is the sourcing and editorial policy, and
+`content/research/topics.md` maps every article to the app feature it supports
+and lists the researched backlog.
+
+```bash
+# Validate the corpus. No database, no dependencies, no network.
+node data-fetch-scripts/articles/seedArticles.js --dry-run
+
+# Seed it. Idempotent - upserts on `slug`, so re-run after any edit.
+# Reads MONGODB_URI from the environment or backend/.env.
+node data-fetch-scripts/articles/seedArticles.js
+
+# ...and remove seeded articles whose slug has left the JSON.
+node data-fetch-scripts/articles/seedArticles.js --prune
+```
+
+Health content describes published veterinary guidance and never prescribes.
+Every article carries its sources, which the app renders, and a
+`lastReviewedDate` recording when a human last checked its claims. Vaccination,
+parasite and toxicology guidance should be re-checked annually.
 
 ## Store builds
 
@@ -127,7 +159,7 @@ compiled into the app bundle and is public by definition — never put a secret 
 ## Tests
 
 ```bash
-cd backend && npm test     # 337 tests, ~30s, no database or credentials needed
+cd backend && npm test     # 383 tests, ~35s, no database or credentials needed
 ```
 
 The suite boots the real Express app against an in-memory MongoDB with a stubbed

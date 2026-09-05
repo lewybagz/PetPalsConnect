@@ -116,7 +116,9 @@ const HomeScreen = ({ navigation, route, start }) => {
         api.get("/api/pets/latest").then((r) => r.data, () => []),
         // Scoped by the token, so this does not wait on the profile to load.
         api.get("/api/favorites").then((r) => r.data, () => []),
-        api.get("/api/articles/latest").then((r) => r.data, () => null),
+        // /latest is the list (an array of twenty); /recent is the single
+        // newest article, which is all this shelf renders.
+        api.get("/api/articles/recent").then((r) => r.data, () => null),
       ]);
 
       if (cancelled) return;

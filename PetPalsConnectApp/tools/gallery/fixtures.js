@@ -101,12 +101,68 @@ export const BLOCKED = [
 
 export const ARTICLE = {
   _id: "article-1",
-  title: "Six games that tire a collie out",
+  slug: "six-games-for-a-herding-dog",
+  title: "Six games that tire a herding dog out",
+  byline: "PetPals Connect",
+  summary:
+    "Herding breeds need a job more than they need a longer walk. These six " +
+    "give them one, and most of them fit in a back garden.",
   content:
-    "Herding breeds need a job more than they need a long walk. These six " +
-    "games give them one, and most of them fit in a back garden.",
+    "If you have a Border Collie, an Australian Shepherd, a Kelpie or a " +
+    "Malinois, you have probably discovered the central problem: physical " +
+    "exercise makes them fitter, not tireder.\n\n" +
+    "One. Hide and seek with a person.\n\n" +
+    "Have someone hold the dog. Go and hide. Call once. Let the dog find " +
+    "you, and make a genuine fuss when they do. It uses scent and " +
+    "problem-solving, and it doubles as recall practice.\n\n" +
+    "Two. Scatter feeding and the sniffari.\n\n" +
+    "Stop using a bowl. Throw the meal across rough grass and let them hunt. " +
+    "A meal that took eleven seconds now takes fifteen minutes of work.",
+  // Long enough to prove the source list wraps and the tap targets clear the
+  // 44pt floor, which is the only reason this board exists.
+  sources: [
+    {
+      title: "Let me sniff! Nosework induces positive judgment bias in pet dogs",
+      publisher: "Applied Animal Behaviour Science",
+      url: "https://psychology.barnard.edu/sites/default/files/inline-files/Let%20me%20sniff.pdf",
+    },
+    {
+      title: "Guidelines for exercising pups: separating myths from science",
+      publisher: "Veterinary Ireland Journal",
+      url: "https://www.veterinaryirelandjournal.com/small-animal/392-guidelines-for-exercising-pups-separating-myths-from-science",
+    },
+  ],
+  tags: ["dogs", "enrichment", "play"],
   publishedDate: new Date().toISOString(),
+  lastReviewedDate: new Date().toISOString(),
 };
+
+/** The list screen. Deliberately mixed: one with an image, one without. */
+export const ARTICLES = [
+  ARTICLE,
+  {
+    _id: "article-2",
+    slug: "playdates-in-the-heat",
+    title: "Playdates in the heat: the seven-second test",
+    byline: "PetPals Connect",
+    summary:
+      "At 87F air temperature asphalt can hit 143F, and flat-faced dogs had " +
+      "over four times the odds of heat-related illness in a 2024 study.",
+    content: "This is the article to read before an August playdate.",
+    publishedDate: new Date(Date.now() - 3 * 86400000).toISOString(),
+  },
+  {
+    _id: "article-3",
+    slug: "microchips-and-registration",
+    title: "A microchip only works if the registration does",
+    byline: "PetPals Connect",
+    summary:
+      "Microchipped dogs went home 52.2% of the time against 21.9% unchipped; " +
+      "for cats it was 38.5% against 1.8%.",
+    content: "Save ten minutes today and check the registry.",
+    publishedDate: new Date(Date.now() - 6 * 86400000).toISOString(),
+  },
+];
 
 /**
  * A request that never resolves, for photographing a loading state.
@@ -186,7 +242,8 @@ export const ROUTES = {
   },
   "/api/pets/latest": [CANDIDATES[0].pet, CANDIDATES[1].pet, MY_PET],
   "/api/favorites": [{ _id: "fav-1", pet: CANDIDATES[0].pet }],
-  "/api/articles/latest": ARTICLE,
+  "/api/articles/recent": ARTICLE,
+  "/api/articles/latest": ARTICLES,
   "/api/chats": CHATS,
   "/api/blocklists": BLOCKED,
   "/api/reports/options": { reasons: [], targets: [] },

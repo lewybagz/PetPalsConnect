@@ -420,6 +420,61 @@ converted file silently drops out of the check.
   check:schemas` compares every create site to its model; it also runs as a
   test and warns at boot outside production.
 
+### Editorial content
+
+**`content/` is the source of the app's Articles feature, and the research is
+committed alongside the prose.** `content/articles/articles.json` is the batch
+that `data-fetch-scripts/articles/seedArticles.js` upserts; `content/research/`
+is the verified material behind it, one file per species cluster, every number
+attached to a named source. The research is the durable artefact and an article
+is a rendering of it - a claim in the JSON is a sentence with no evidence, and
+the same claim in `research/` names the study, the year and the figure. Update
+the research first.
+
+**`content/research/standards.md` is the sourcing policy**, and the two rules
+that matter most are that a number gets a name attached ("59% of dogs, 2022
+APOP survey", never "studies show"), and that where the evidence is thin the
+article says so. The puppy five-minute rule and the shelter 3-3-3 rule are both
+in the corpus, flagged, with the actual evidence next to them, because an
+article that quietly repeats folklore is worse than no article.
+
+**Health content describes published guidance and never prescribes.** No doses
+a reader could act on, no symptom-checker, no diagnosis; every health article
+ends pointing at a vet. `topics.md` lists what is deliberately excluded and
+why. Guidance moves - leptospirosis became a core canine vaccine in 2024 - so
+anything citing a guideline names its year and `lastReviewedDate` records when
+a human last checked it.
+
+**An article body is plain text.** `ArticleDetailScreen` splits `content` on
+blank lines into `Text` nodes; there is no markdown renderer anywhere in the
+app, so `**` and `## ` reach a device as literal characters. Both the seeder's
+`--dry-run` and `backend/test/articles.test.js` fail on markdown in a body, on
+a missing summary, and on an article with no `sources`.
+
+**`author` and `creator` are optional on an Article and required nowhere else
+content is written.** Articles are editorial - `PUBLIC_READS` calls them "the
+same for everyone" - so they are written by the publication and there is no
+`User` to point at. Requiring one meant seeded content could not be inserted
+without inventing a fake person who would then appear in username search. The
+visible attribution is `byline`. An article posted through `POST /api/articles`
+still sets both, from the token.
+
+**The seeder requires the backend's model and takes Mongoose from it.** A
+seeder with its own schema is a second definition that drifts, and strict mode
+drops what it does not recognise, so a renamed field would simply stop being
+written. Taking `Article.base` rather than `require("mongoose")` guarantees one
+model registry - two copies of Mongoose in a process are two registries, and a
+model registered on one is invisible to a connection opened on the other.
+`--dry-run` validates the JSON with no dependencies and no database, so it can
+run as a content check before anything is deployed.
+
+**`/latest` is the list; `/recent` is the one article Home shows.**
+`getLatestArticle` existed from the start and `PUBLIC_READS` even described it
+as "the home screen's article shelf", but it was never routed - so Home called
+`/latest`, got an array of twenty full articles, and handed the array to a card
+that reads `.title` off it. The card rendered blank and the screen downloaded
+twenty article bodies to display one.
+
 ### Photos
 
 **One path in: `src/services/photos.js`.** It picks, compresses (longest edge
@@ -723,6 +778,9 @@ cd backend && npm run lint && npm run check:schemas && npm run check:auth && npm
 
 # App: lint, types, the colour ban, tests, then both bundles
 cd PetPalsConnectApp && npm run lint && npm run typecheck && npm run check:colours && npm test
+
+# Content: validates articles.json with no database and no dependencies
+node data-fetch-scripts/articles/seedArticles.js --dry-run
 
 # And look at it. Renders the real screens to screenshots/, light and dark.
 cd PetPalsConnectApp && npm run gallery && npm run screenshots

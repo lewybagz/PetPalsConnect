@@ -14,7 +14,9 @@ import PostPlaydateReviewScreen from "../../src/screens/playdate/PostPlaydateRev
 import MapScreen from "../../src/screens/swipe/MapScreen";
 import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateScreen";
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
-import { CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
+import ArticlesScreen from "../../src/screens/misc/ArticlesScreen";
+import ArticleDetailScreen from "../../src/screens/misc/ArticleDetailScreen";
+import { ARTICLE, CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
 
 /**
  * What the gallery can render, and the fixtures each board needs.
@@ -142,7 +144,7 @@ export const BOARDS = [
     routes: {
       "/api/pets/latest": pending,
       "/api/favorites": pending,
-      "/api/articles/latest": pending,
+      "/api/articles/recent": pending,
     },
     render: () => (
       <HomeScreen
@@ -203,6 +205,35 @@ export const BOARDS = [
     label: "Chats - skeleton",
     routes: { ...ROUTES, "/api/chats": pending },
     render: () => <ChatsScreen navigation={navigation} />,
+  },
+  {
+    id: "articles",
+    label: "Articles",
+    routes: ROUTES,
+    render: () => <ArticlesScreen navigation={navigation} />,
+  },
+  {
+    id: "articles-loading",
+    label: "Articles - skeleton",
+    routes: { ...ROUTES, "/api/articles/latest": pending },
+    render: () => <ArticlesScreen navigation={navigation} />,
+  },
+  {
+    id: "articles-empty",
+    label: "Articles - empty",
+    routes: { ...ROUTES, "/api/articles/latest": [] },
+    render: () => <ArticlesScreen navigation={navigation} />,
+  },
+  {
+    // The body renders as plain text split on blank lines, and the citation
+    // list is the part that makes the health content answerable - both are
+    // only really checkable by looking at them.
+    id: "article-detail",
+    label: "Article",
+    routes: { ...ROUTES, [`/api/articles/${ARTICLE._id}`]: ARTICLE },
+    render: () => (
+      <ArticleDetailScreen route={{ params: { articleId: ARTICLE._id } }} />
+    ),
   },
   {
     id: "report",
