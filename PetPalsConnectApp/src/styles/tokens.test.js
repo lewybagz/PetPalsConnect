@@ -100,6 +100,86 @@ describe.each([
   });
 });
 
+/**
+ * A switch is a knob on a track on a surface, so it has three relationships to
+ * keep, not one - and the two that were borrowed both failed.
+ *
+ * `thumbColor: surface` is white in light and near-black in dark, so every
+ * switch in dark mode had a hole in it. And `success` looks like the obvious
+ * on-track until you measure it: in dark it is a mint a near-white knob sits
+ * on at 1.7:1.
+ *
+ * 3:1 is the floor here rather than 4.5:1 - these are UI components, not text
+ * (WCAG 1.4.11).
+ */
+describe("the switch keeps all three of its relationships", () => {
+  const CONTROL = 3;
+
+  for (const [name, palette] of [["light", light], ["dark", dark]]) {
+    describe(name, () => {
+      it("shows the knob against the on-track", () => {
+        expect(contrast(palette.switchKnob, palette.switchOn)).toBeGreaterThanOrEqual(
+          CONTROL
+        );
+      });
+
+      it("shows the knob against the off-track", () => {
+        expect(contrast(palette.switchKnob, palette.switchOff)).toBeGreaterThanOrEqual(
+          CONTROL
+        );
+      });
+
+      it("shows both tracks against the surfaces they sit on", () => {
+        // Settings rows sit on `bg`; a switch inside a Card sits on `surface`.
+        for (const behind of [palette.surface, palette.bg]) {
+          expect(contrast(palette.switchOn, behind)).toBeGreaterThanOrEqual(CONTROL);
+          expect(contrast(palette.switchOff, behind)).toBeGreaterThanOrEqual(CONTROL);
+        }
+      });
+
+      /**
+       * On and off must differ in *brightness*, not only in hue.
+       *
+       * The track carries no label, so its colour is the whole signal - and a
+       * signal carried by hue alone is no signal to the ~8% of men with a
+       * red-green deficiency. The first pair chosen here was a green and a grey
+       * of almost identical luminance: 1.14:1, indistinguishable in greyscale.
+       *
+       * 1.6 rather than something rounder because the ceiling is 1.83. Both
+       * tracks have to clear 3:1 against a near-white knob *and* against the
+       * surface, which pins them inside luminance 0.124-0.268; on sits at the
+       * top of that band and off at the bottom.
+       */
+      it("separates on from off by brightness, not just hue", () => {
+        expect(contrast(palette.switchOn, palette.switchOff)).toBeGreaterThanOrEqual(
+          1.6
+        );
+      });
+
+      /**
+       * "On" has to read as the filled state.
+       *
+       * Not "on is brighter": that flips between themes. On a light ground a
+       * filled switch is a dark green; on a dark one it is a light green. What
+       * holds either way is that the on-track departs from the background more
+       * than the off-track does, which is what "filled" means optically.
+       */
+      it("reads on as the filled state, whichever theme it is in", () => {
+        expect(contrast(palette.switchOn, palette.bg)).toBeGreaterThan(
+          contrast(palette.switchOff, palette.bg)
+        );
+      });
+    });
+  }
+
+  it("does not reuse a token that only works in one theme", () => {
+    // The two that were tried. Kept as a regression, because both read as the
+    // obvious choice and both are wrong in exactly one theme.
+    expect(contrast(dark.switchKnob, dark.success)).toBeLessThan(CONTROL);
+    expect(contrast(dark.surface, dark.switchOn)).toBeGreaterThanOrEqual(CONTROL);
+  });
+});
+
 describe("scales", () => {
   it("every spacing step is a multiple of four", () => {
     // The app's real histogram had fifteen values; `10` alone appeared 98 times

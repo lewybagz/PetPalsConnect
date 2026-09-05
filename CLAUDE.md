@@ -125,6 +125,30 @@ is the same as not having one. The migration is finished, so the baseline is
 empty and the same code is now a ban. `-- --update` still exists; needing it
 means you are adding a colour, and the answer is almost always a token.
 
+**A switch is the one control that cannot borrow its colours.** Everything else
+is a surface, a text tone or a fill; a switch is a knob on a track on a
+surface, which is three relationships at once. Both borrowed tokens failed:
+`thumbColor: surface` is white in light and *near-black* in dark, so every
+switch in dark mode had a hole in it — and `success` reads as the obvious
+on-track until you measure it, because in dark it is a mint a near-white knob
+sits on at 1.7:1. `switchOn`/`switchOff`/`switchKnob` exist for that, and
+`tokens.test.js` asserts all of it. The band is genuinely tight: with both
+tracks clearing 3:1 against the knob *and* the surface, only luminance
+0.124–0.268 is left in dark, so the most on/off separation available is 1.83:1
+and the pair sits at 1.72:1. On and off must differ in **brightness**, not only
+hue — the first pair chosen here was a green and a grey at 1.14:1, identical in
+greyscale. "On is brighter" is *not* the rule, though: that flips per theme. On
+a light ground a filled switch is a dark green, on a dark one a light green, so
+what is asserted is that the on-track departs from the background more than the
+off-track does.
+
+**A web-only default can make the gallery lie.** `react-native-web`'s `Switch`
+takes `activeThumbColor` for the on-state knob and falls back to Material teal
+`#009688` — so every screenshot showed a green knob on a blue track that no
+device would ever render, and the one tool meant to show what the app looks
+like was showing something else. Setting it alongside `thumbColor` makes all
+three platforms agree.
+
 **A colour in a `StyleSheet.create` cannot follow a theme.** Where a file keeps
 one, it is `const makeStyles = (t) => StyleSheet.create({...})` called as
 `useMemo(() => makeStyles(tokens), [tokens])`. Same for a default prop: a

@@ -53,6 +53,19 @@ export type Palette = {
   warning: string;
   warningSoft: string;
 
+  /**
+   * A switch, which is the one control that cannot borrow its colours.
+   *
+   * Everything else here is a surface, a text tone or a fill. A switch is a
+   * knob on a track, and both need to read against each other *and* against
+   * the surface behind them - three relationships no existing token was chosen
+   * for. `success` cannot be the on-track: in dark it is a mint green a white
+   * knob disappears into at 1.7:1.
+   */
+  switchOn: string;
+  switchOff: string;
+  switchKnob: string;
+
   /** Skeleton placeholders and other "not here yet" fills. */
   skeleton: string;
   /** Scrims behind modals and sheets. */
@@ -81,6 +94,12 @@ export const light: Palette = {
   successSoft: "#E4F2E8",
   warning: "#8A5A00", // 5.9:1
   warningSoft: "#FBF0DC",
+
+  // Green rather than the primary blue: a switch reports state, and every
+  // button in the app is already blue. 6.3:1 against the knob.
+  switchOn: "#1B6E3C",
+  switchOff: "#8A909B",
+  switchKnob: "#FFFFFF",
 
   skeleton: "#E7EAEF",
   scrim: "rgba(10, 12, 16, 0.55)",
@@ -115,6 +134,16 @@ export const dark: Palette = {
   successSoft: "#152619",
   warning: "#E0B457", // 9.4:1
   warningSoft: "#2A2213",
+
+  // The knob stays near-white in dark too, so the tracks are pinned to the ends
+  // of a narrow band: both must clear 3:1 against that knob *and* against the
+  // surface, which leaves only L 0.124-0.268 to work in. On sits at the top of
+  // it and off at the bottom, which is the most on/off separation the band
+  // allows - 1.72:1 against a ceiling of 1.83:1. `success` cannot be the
+  // on-track: in dark it is a mint the knob vanishes into at 1.7:1.
+  switchOn: "#2E9E5B",
+  switchOff: "#5D6575",
+  switchKnob: "#F2F4F8",
 
   skeleton: "#22262D",
   scrim: "rgba(0, 0, 0, 0.66)",
