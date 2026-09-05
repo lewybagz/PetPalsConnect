@@ -1,5 +1,6 @@
 const UserPreferences = require("../models/UserPreferences");
 const { CATEGORIES } = require("../services/notificationTypes");
+const { timeOfDay } = require("../services/settings");
 
 /**
  * Notification preferences.
@@ -28,6 +29,42 @@ const forUser = async (userId) => {
   if (existing) return existing;
 
   return UserPreferences.create({ user: userId });
+};
+
+/**
+ * The hours somebody would rather not be woken.
+ *
+ * A partial patch, like the switches beside it: the screen sends the end that
+ * moved. The times are validated with the same `timeOfDay` the account settings
+ * use, so "7pm" is a 400 rather than a window that silently never opens.
+ *
+ * The offset comes from the device (`-new Date().getTimezoneOffset()`) because
+ * the window is wall-clock: "22:00" means ten at night wherever its owner is
+ * standing, and storing an instant would get it wrong for exactly the person it
+ * exists for - the one who has just landed somewhere else and would like to
+ * sleep.
+ */
+const applyQuietHours = (preferences, incoming) => {
+  const allowed = ["enabled", "start", "end", "utcOffsetMinutes"];
+
+  for (const [key, value] of Object.entries(incoming)) {
+    if (!allowed.includes(key)) {
+      const error = new Error(`"quietHours.${key}" is not a preference`);
+      error.status = 400;
+      throw error;
+    }
+
+    if (key === "enabled") preferences.quietHours.enabled = Boolean(value);
+    else if (key === "utcOffsetMinutes") {
+      const offset = Number(value);
+      if (!Number.isFinite(offset) || offset < -840 || offset > 840) {
+        const error = new Error("quietHours.utcOffsetMinutes is out of range");
+        error.status = 400;
+        throw error;
+      }
+      preferences.quietHours.utcOffsetMinutes = offset;
+    } else preferences.quietHours[key] = timeOfDay(value, `quietHours.${key}`);
+  }
 };
 
 const UserPreferencesController = {
@@ -121,6 +158,10 @@ const UserPreferencesController = {
     try {
       const preferences = await forUser(req.userId);
 
+      if (req.body.quietHours) {
+        applyQuietHours(preferences, req.body.quietHours);
+      }
+
       for (const [key, value] of Object.entries(incoming)) {
         // Anything not on the schema would be dropped silently, which is how
         // this failed before. Refuse it instead.
@@ -137,7 +178,9 @@ const UserPreferencesController = {
 
       res.json(preferences);
     } catch (err) {
-      res.status(400).json({ message: err.message });
+      res
+        .status(err.status ?? 400)
+        .json({ message: err.message, ...(err.code ? { code: err.code } : {}) });
     }
   },
 

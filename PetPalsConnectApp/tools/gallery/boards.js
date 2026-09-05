@@ -9,12 +9,16 @@ import PetPhotosScreen from "../../src/screens/pets/PetPhotosScreen";
 import SettingsScreen from "../../src/screens/settings/SettingsScreen";
 import NotificationsScreen from "../../src/screens/bottomTab/NotificationsScreen";
 import NotificationPreferencesScreen from "../../src/screens/settings/NotificationPreferencesScreen";
+import PrivacySettingsScreen from "../../src/screens/settings/PrivacySettingsScreen";
+import DiscoveryPreferencesScreen from "../../src/screens/settings/DiscoveryPreferencesScreen";
+import DisplaySettingsScreen from "../../src/screens/settings/DisplaySettingsScreen";
+import SecuritySettingsScreen from "../../src/screens/settings/SecuritySettingsScreen";
 import HelpSupportScreen from "../../src/screens/settings/HelpSupportScreen";
 import PostPlaydateReviewScreen from "../../src/screens/playdate/PostPlaydateReviewScreen";
 import MapScreen from "../../src/screens/swipe/MapScreen";
 import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateScreen";
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
-import { CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
+import { CANDIDATES, MY_PET, ROUTES, SETTINGS, pending } from "./fixtures";
 
 /**
  * What the gallery can render, and the fixtures each board needs.
@@ -296,6 +300,73 @@ export const BOARDS = [
     label: "Settings",
     routes: ROUTES,
     render: () => <SettingsScreen navigation={navigation} />,
+  },
+  {
+    id: "settings-privacy",
+    label: "Privacy",
+    routes: ROUTES,
+    render: () => <PrivacySettingsScreen />,
+  },
+  {
+    id: "settings-discovery",
+    label: "Discovery preferences",
+    routes: ROUTES,
+    render: () => <DiscoveryPreferencesScreen />,
+  },
+  {
+    id: "settings-discovery-metric",
+    label: "Discovery preferences - kilometres and kilograms",
+    // The whole point of the unit preference is that it changes what a screen
+    // reads, and a slider labelled in the wrong unit is the sort of thing only
+    // a picture catches.
+    settings: { ...SETTINGS, units: { distance: "km", weight: "kg" } },
+    routes: ROUTES,
+    render: () => <DiscoveryPreferencesScreen />,
+  },
+  {
+    id: "settings-display",
+    label: "Appearance",
+    routes: ROUTES,
+    render: () => <DisplaySettingsScreen />,
+  },
+  {
+    id: "settings-display-larger-text",
+    label: "Appearance - larger text",
+    // Pinned rather than tapped, so this and the board above are two pages
+    // rather than a race with a cache read - the same reason the walkthrough
+    // has `walkthroughAutoStart`.
+    preferences: { reduceMotion: false, largerText: true, showMatchScore: true },
+    routes: ROUTES,
+    render: () => <DisplaySettingsScreen />,
+  },
+  {
+    id: "settings-security",
+    label: "Sign-in and security",
+    routes: ROUTES,
+    // The web auth stub keeps `currentUser` null so no screen can claim a
+    // session it does not have, which would leave this board showing only the
+    // "no password on this account" branch. The account is passed in instead.
+    render: () => (
+      <SecuritySettingsScreen
+        user={{
+          email: "alex@example.com",
+          providerData: [{ providerId: "password" }],
+        }}
+      />
+    ),
+  },
+  {
+    id: "settings-security-google",
+    label: "Sign-in and security - no password to change",
+    routes: ROUTES,
+    render: () => (
+      <SecuritySettingsScreen
+        user={{
+          email: "alex@example.com",
+          providerData: [{ providerId: "google.com" }],
+        }}
+      />
+    ),
   },
 ];
 

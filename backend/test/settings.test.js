@@ -308,3 +308,128 @@ test("quiet hours off, or malformed, never silence anything", () => {
   // request never to be told anything again.
   assert.equal(isQuiet({ enabled: true, start: "22:00", end: "22:00" }, at("23:00")), false);
 });
+
+test("a patch answers in the same shape as a read", async () => {
+  await makeUser();
+
+  const saved = await request(app)
+    .patch("/api/users/me/settings")
+    .set(...auth("owner"))
+    .send({ units: { weight: "kg" } })
+    .expect(200);
+
+  const read = await request(app)
+    .get("/api/users/me/settings")
+    .set(...auth("owner"))
+    .expect(200);
+
+  // A save that answers differently from a read is a save the client has to
+  // model twice, and the second model is the one that goes stale.
+  const { message, ...settingsFromSave } = saved.body;
+  assert.ok(message);
+  assert.deepEqual(settingsFromSave, read.body);
+});
+
+// ---------------------------------------------------------------------------
+// The quiet-hours window, over the wire
+// ---------------------------------------------------------------------------
+
+test("quiet hours save and come back", async () => {
+  await makeUser();
+
+  await request(app)
+    .patch("/api/userpreferences/me")
+    .set(...auth("owner"))
+    .send({ quietHours: { enabled: true, start: "23:30", end: "06:15" } })
+    .expect(200);
+
+  const response = await request(app)
+    .get("/api/userpreferences/me")
+    .set(...auth("owner"))
+    .expect(200);
+
+  assert.equal(response.body.quietHours.enabled, true);
+  assert.equal(response.body.quietHours.start, "23:30");
+  assert.equal(response.body.quietHours.end, "06:15");
+});
+
+test("a patch touching only quiet hours leaves the switches alone", async () => {
+  await makeUser();
+
+  await request(app)
+    .patch("/api/userpreferences/me")
+    .set(...auth("owner"))
+    .send({ notificationPreferences: { pushNotificationsEnabled: false } })
+    .expect(200);
+
+  await request(app)
+    .patch("/api/userpreferences/me")
+    .set(...auth("owner"))
+    .send({ quietHours: { enabled: true } })
+    .expect(200);
+
+  const response = await request(app)
+    .get("/api/userpreferences/me")
+    .set(...auth("owner"));
+
+  assert.equal(response.body.notificationPreferences.pushNotificationsEnabled, false);
+  assert.equal(response.body.quietHours.enabled, true);
+});
+
+test("a malformed time is refused rather than stored", async () => {
+  await makeUser();
+
+  const response = await request(app)
+    .patch("/api/userpreferences/me")
+    .set(...auth("owner"))
+    .send({ quietHours: { start: "7pm" } });
+
+  // A window that never opens would silence nothing and look like it worked.
+  assert.equal(response.status, 400);
+  assert.match(response.body.message, /quietHours.start/);
+});
+
+test("an unknown quiet-hours key is refused, not dropped", async () => {
+  await makeUser();
+
+  const response = await request(app)
+    .patch("/api/userpreferences/me")
+    .set(...auth("owner"))
+    .send({ quietHours: { untilSpring: true } });
+
+  assert.equal(response.status, 400);
+});
+
+test("an offset outside the world's time zones is refused", async () => {
+  await makeUser();
+
+  await request(app)
+    .patch("/api/userpreferences/me")
+    .set(...auth("owner"))
+    .send({ quietHours: { utcOffsetMinutes: 100000 } })
+    .expect(400);
+});
+
+test("quiet hours silence the push and still write the row", async () => {
+  const user = await makeUser();
+
+  await request(app)
+    .patch("/api/userpreferences/me")
+    .set(...auth("owner"))
+    .send({ quietHours: { enabled: true, start: "00:00", end: "23:59" } })
+    .expect(200);
+
+  const { notify } = require("../services/NotificationService");
+  const Notification = require("../models/Notification");
+
+  await notify({
+    recipientId: user._id,
+    type: "message",
+    content: "Someone said hello",
+  });
+
+  // The record is the durable part: somebody who slept through a match should
+  // still find it in the morning.
+  const rows = await Notification.find({ recipient: user._id }).lean();
+  assert.equal(rows.length, 1);
+});

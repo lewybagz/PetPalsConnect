@@ -19,6 +19,8 @@ import api from "../../api/axios";
 import { useToast } from "../../components/ui";
 import { setChatId } from "../../redux/actions";
 import { useTokens } from "../../context/AppThemeContext";
+import { useUnits } from "../../context/SettingsContext";
+import { formatWeight } from "../../utils/units";
 
 /**
  * One pet's profile, and the three things you can do from it.
@@ -36,6 +38,7 @@ import { useTokens } from "../../context/AppThemeContext";
  */
 const PetDetailsScreen = ({ route, navigation }) => {
   const tokens = useTokens();
+  const units = useUnits();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
   const dispatch = useDispatch();
@@ -173,7 +176,7 @@ const PetDetailsScreen = ({ route, navigation }) => {
       {pet.breed ? <Text style={styles.detail}>Breed: {pet.breed}</Text> : null}
       {pet.age != null ? <Text style={styles.detail}>Age: {pet.age}</Text> : null}
       {pet.weight != null ? (
-        <Text style={styles.detail}>Weight: {pet.weight} lb</Text>
+        <Text style={styles.detail}>Weight: {formatWeight(pet.weight, units)}</Text>
       ) : null}
       {pet.specialNeeds ? (
         <Text style={styles.detail}>Special Needs: {pet.specialNeeds}</Text>

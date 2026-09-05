@@ -26,6 +26,30 @@ const verifySecret = async (value, stored) => {
   return expected.length === derived.length && timingSafeEqual(expected, derived);
 };
 
+/**
+ * Every account setting, with defaults filled in, plus the choices each allows.
+ *
+ * One shape for the read and the write, because a client that has to model the
+ * response of a save differently from the response of a read ends up with two
+ * models, and the second one goes stale.
+ *
+ * `choices` travels with them so the app builds its pickers from the validator
+ * rather than repeating the option lists - the same reason the notification
+ * screen fetches its categories instead of listing them.
+ */
+const settingsPayload = (user = {}) => ({
+  playdateRange: user.playdateRange ?? 25,
+  locationSharingEnabled: user.locationSharingEnabled ?? true,
+  notificationsEnabled: user.notificationsEnabled ?? true,
+  ...settings.withDefaults(user),
+  choices: {
+    units: settings.UNIT_CHOICES,
+    audiences: settings.AUDIENCES,
+    requestAudiences: settings.REQUEST_AUDIENCES,
+    species: settings.SPECIES,
+  },
+});
+
 const UserController = {
   /**
    * Finds people by username.
@@ -540,9 +564,15 @@ const UserController = {
         req.userId,
         { $set: update },
         { returnDocument: "after", runValidators: true }
-      ).select("-suspendedReason");
+      )
+        .select("playdateRange locationSharingEnabled notificationsEnabled units discovery privacy")
+        .lean();
 
-      res.json({ message: "Settings updated successfully", user: updated });
+      // The same body as `GET`, so the app can replace what it holds with the
+      // response rather than guessing what the write did. A save that answers
+      // in a different shape from the read is a save the client has to model
+      // twice, and the second model is the one that goes stale.
+      res.json({ message: "Settings updated successfully", ...settingsPayload(updated) });
     } catch (error) {
       if (error.status === 400) {
         return res
@@ -569,18 +599,7 @@ const UserController = {
 
       if (!user) return res.status(404).json({ message: "User not found" });
 
-      res.json({
-        playdateRange: user.playdateRange ?? 25,
-        locationSharingEnabled: user.locationSharingEnabled ?? true,
-        notificationsEnabled: user.notificationsEnabled ?? true,
-        ...settings.withDefaults(user),
-        choices: {
-          units: settings.UNIT_CHOICES,
-          audiences: settings.AUDIENCES,
-          requestAudiences: settings.REQUEST_AUDIENCES,
-          species: settings.SPECIES,
-        },
-      });
+      res.json(settingsPayload(user));
     } catch (error) {
       console.error("Error reading user settings:", error);
       res.status(500).json({ message: "Failed to read settings" });
