@@ -133,12 +133,30 @@ const resolveCaller = async (token) => {
 const SUSPENDED_ALLOWED = [
   { method: "GET", path: "/api/users/me" },
   { method: "DELETE", path: "/api/users/me" },
+  // Appealing. Three distinct reporters hide an account automatically, and a
+  // coordinated three can do it to somebody who did nothing - so a suspension
+  // with no way to answer it is a permanent silent ban handed out by strangers.
+  // This is the one route that reaches the operator rather than another user,
+  // and it is rate limited like every other way of reaching them.
+  { method: "POST", path: "/api/supportmessages" },
 ];
 
-const allowedWhileSuspended = (method, path) =>
-  SUSPENDED_ALLOWED.some(
-    (allowed) => allowed.method === method && allowed.path === path
+/**
+ * Express gives a router mounted at `/api/supportmessages` a `path` of `/` for
+ * its root route, so `baseUrl + path` is `/api/supportmessages/` - which does
+ * not match the entry above, and quietly refused the one route this list
+ * exists to keep open. Both sides are normalised rather than the list being
+ * written with a trailing slash on some entries and not others.
+ */
+const normalisePath = (path) =>
+  path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
+
+const allowedWhileSuspended = (method, path) => {
+  const wanted = normalisePath(path);
+  return SUSPENDED_ALLOWED.some(
+    (allowed) => allowed.method === method && normalisePath(allowed.path) === wanted
   );
+};
 
 module.exports = {
   resolveCaller,

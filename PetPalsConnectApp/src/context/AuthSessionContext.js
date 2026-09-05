@@ -10,6 +10,7 @@ import React, {
 import { getAuth, onAuthStateChanged } from "@react-native-firebase/auth";
 
 import api from "../api/axios";
+import { onSessionInvalidated } from "../api/sessionEvents";
 import { readCache, writeCache, removeCache, CacheKeys } from "../services/localCache";
 
 /**
@@ -30,6 +31,8 @@ import { readCache, writeCache, removeCache, CacheKeys } from "../services/local
  *   signedOut    - no Firebase user
  *   needsProfile - Firebase user, but no Mongo profile yet
  *   needsPet     - profile exists, but no pets yet and the prompt wasn't skipped
+ *   suspended    - the account is hidden pending review; the API refuses it
+ *                  nearly everything, so the app must not pretend otherwise
  *   ready        - the app can be entered
  *   error        - profile lookup failed for a reason that isn't "absent"
  *
@@ -49,6 +52,7 @@ const STATUS = {
   signedOut: "signedOut",
   needsProfile: "needsProfile",
   needsPet: "needsPet",
+  suspended: "suspended",
   ready: "ready",
   error: "error",
 };
@@ -69,8 +73,18 @@ const skipKey = (profile) => `pet-setup-skipped:${profile?._id ?? "unknown"}`;
  * Having a pet always wins over a stored skip, so adding one later clears the
  * prompt without needing the flag tidied up first.
  */
-const statusForProfile = (profile, skipped) =>
-  profileHasPet(profile) || skipped ? STATUS.ready : STATUS.needsPet;
+/**
+ * Suspension is a session state, not an error.
+ *
+ * The API refuses a suspended account nearly everything, so without this the
+ * app rendered its normal tree and turned every screen into a failed request
+ * and a toast that said nothing about why. It is the same shape as the other
+ * gates: a state the session reports, and one tree the navigator picks from it.
+ */
+const statusForProfile = (profile, skipped) => {
+  if (profile?.suspended) return STATUS.suspended;
+  return profileHasPet(profile) || skipped ? STATUS.ready : STATUS.needsPet;
+};
 
 export const AuthSessionProvider = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState(null);
@@ -142,6 +156,23 @@ export const AuthSessionProvider = ({ children }) => {
     });
     return unsubscribe;
   }, [loadProfile]);
+
+  /**
+   * The server can end a session while the app is open - an account suspended
+   * by a third report, a token revoked after a phone was stolen. The API client
+   * says so; re-reading the profile is what decides the new state, because the
+   * interceptor knows only that something changed.
+   *
+   * Without this the app kept its normal tree and turned every screen into a
+   * failed request with a toast that explained nothing.
+   */
+  useEffect(
+    () =>
+      onSessionInvalidated(() => {
+        loadProfile(getAuth().currentUser);
+      }),
+    [loadProfile]
+  );
 
   /** Creates the Mongo profile for the current Firebase account. */
   const createProfile = useCallback(

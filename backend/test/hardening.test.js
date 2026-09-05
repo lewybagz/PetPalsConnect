@@ -87,6 +87,41 @@ test("a suspended account can still read its own profile and delete itself", asy
     .expect(200);
 });
 
+test("a suspended account can ask for a review, and reach nobody else", async () => {
+  await makeUser("nuisance", { suspended: true });
+
+  // Three distinct reporters hide an account automatically, and three
+  // coordinated ones can do it to somebody who did nothing. A suspension with
+  // no way to answer it is a permanent ban handed out by strangers.
+  await request(app)
+    .post("/api/supportmessages")
+    .set(...auth("nuisance"))
+    .send({ message: "Please review this." })
+    .expect(201);
+
+  // It is the only route that reaches anyone, and it reaches the operator.
+  await request(app)
+    .get("/api/supportmessages")
+    .set(...auth("nuisance"))
+    .expect(403);
+});
+
+test("a moderator's note about an account is not sent to that account", async () => {
+  await makeUser("nuisance", {
+    suspended: true,
+    suspendedReason: "Reported by 3 people; awaiting review",
+  });
+
+  const response = await request(app)
+    .get("/api/users/me")
+    .set(...auth("nuisance"))
+    .expect(200);
+
+  // The count is a nudge towards working out who reported them.
+  assert.equal(response.body.suspendedReason, undefined);
+  assert.equal(response.body.suspended, true);
+});
+
 test("an ordinary account is untouched by any of it", async () => {
   await makeUser("regular");
 

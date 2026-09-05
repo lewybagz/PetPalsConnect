@@ -305,6 +305,22 @@ converted file silently drops out of the check.
   hour, which is exactly the hour that matters after a phone is stolen. The
   revocation check runs once per account per five minutes rather than per
   request, so the common path stays offline.
+- **A suspended account gets a session state, not a toast.** The API refuses it
+  nearly everything, so rendering the normal tree turned every screen into a
+  failed request explaining nothing. `AuthSessionContext` reports `suspended`
+  and `RootNavigator` picks `AccountSuspendedScreen` from it, exactly like the
+  onboarding gates. The API client publishes `ACCOUNT_SUSPENDED` and
+  `SESSION_REVOKED` through `src/api/sessionEvents.js`, so an account suspended
+  while the app is open moves there rather than filling with errors — the
+  interceptor only knows *something* changed; re-reading the profile decides
+  what.
+- **A suspension has a way out, and it is not a UI decision.** Three distinct
+  reporters hide an account automatically, and three coordinated ones can do it
+  to somebody who did nothing, so `POST /api/supportmessages` is on
+  `SUSPENDED_ALLOWED` — the one route that reaches the operator rather than
+  another user. The screen never says how many people reported them; a count is
+  a nudge towards working out who. `suspendedReason` is a moderator's note and
+  `GET /api/users/me` deselects it.
 - **Suspension is a gate, not a filter.** It used to remove an account from
   discovery, the map and search and leave it able to open chats, send messages
   and file friend requests — hiding a harasser from strangers while doing

@@ -47,6 +47,19 @@ const VARIANTS = {
     label: "text-primary",
     spinner: "primary",
   },
+  /**
+   * Destructive, but not the primary action on the screen.
+   *
+   * A filled danger button is the loudest thing wherever it sits, which is
+   * wrong for a last resort offered beside something constructive - on the
+   * suspended screen it outshouted "Ask for a review". Settings was already
+   * hand-rolling this exact treatment with a border and `text-danger`.
+   */
+  dangerOutline: {
+    container: "bg-transparent border border-danger",
+    label: "text-danger",
+    spinner: "danger",
+  },
 };
 
 const SIZES = {

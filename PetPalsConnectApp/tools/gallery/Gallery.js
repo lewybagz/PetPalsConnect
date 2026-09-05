@@ -197,6 +197,18 @@ const SESSION = {
   skipPetSetup: () => {},
 };
 
+/** For the one board about an account that has been paused. */
+const SUSPENDED_SESSION = {
+  ...SESSION,
+  status: AuthStatus.suspended,
+  profile: {
+    ...SESSION.profile,
+    suspended: true,
+    suspendedAt: "2026-09-01T10:00:00.000Z",
+  },
+  deleteAccount: async () => {},
+};
+
 /** `?board=discover&theme=dark`, defaulting to the first board in light. */
 const params = () => {
   const search =
@@ -222,7 +234,11 @@ export default function Gallery() {
         <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <ToastProvider>
-            <AuthSessionContext.Provider value={SESSION}>
+            <AuthSessionContext.Provider
+              value={
+                board?.id === "account-suspended" ? SUSPENDED_SESSION : SESSION
+              }
+            >
               <NavigationContainer>
                 <Surface board={board} />
               </NavigationContainer>

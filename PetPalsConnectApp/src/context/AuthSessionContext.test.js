@@ -6,6 +6,7 @@ import * as firebaseAuth from "@react-native-firebase/auth";
 
 import { AuthSessionProvider, useAuthSession } from "./AuthSessionContext";
 import api from "../api/axios";
+import { sessionInvalidated } from "../api/sessionEvents";
 
 jest.mock("../api/axios", () => ({
   __esModule: true,
@@ -203,4 +204,84 @@ describe("AuthSessionContext", () => {
   // Not covered: the "used outside the provider" guard. React 19 routes render
   // errors through its own channel rather than rethrowing synchronously, and
   // asserting on it reliably costs more than the two-line guard is worth.
+});
+
+/**
+ * Suspension.
+ *
+ * The API refuses a suspended account nearly every route, so this has to be a
+ * session state rather than an error: without it the app renders its normal
+ * tree and every screen becomes a failed request and a toast that says nothing
+ * about why.
+ */
+describe("a suspended account", () => {
+  const suspended = {
+    _id: "user-3",
+    username: "under-review",
+    pets: [{ _id: "pet-9", name: "Bo" }],
+    suspended: true,
+  };
+
+  it("reports suspended rather than ready", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: suspended });
+
+    renderSession();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("suspended")
+    );
+  });
+
+  it("wins over having a pet, so it cannot be skipped past", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: { ...suspended, pets: [] } });
+
+    renderSession();
+
+    // With no pet this would otherwise be `needsPet`, which would put the user
+    // in onboarding and then into an app that refuses them.
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("suspended")
+    );
+  });
+
+  it("clears once the account is reinstated", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: suspended });
+    renderSession();
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("suspended")
+    );
+
+    api.get.mockResolvedValue({ data: { ...suspended, suspended: false } });
+    await act(async () => {
+      firebaseAuth.__emitAuthState({ uid: "abc" });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("ready")
+    );
+  });
+
+  it("moves there when the API says so mid-session", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: withPet });
+    renderSession();
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("ready")
+    );
+
+    // Being suspended while the app is open is the common case - a third
+    // report lands and every request starts coming back 403. The API client
+    // announces it; re-reading the profile is what decides the new state.
+    api.get.mockResolvedValue({ data: suspended });
+    await act(async () => {
+      sessionInvalidated("suspended");
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("suspended")
+    );
+  });
 });

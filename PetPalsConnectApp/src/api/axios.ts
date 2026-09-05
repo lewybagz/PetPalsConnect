@@ -2,6 +2,8 @@ import axios, { type InternalAxiosRequestConfig } from "axios";
 import { getAuth } from "@react-native-firebase/auth";
 
 import { API_URL } from "../config/env";
+import { sessionInvalidated } from "./sessionEvents";
+import type { ApiErrorBody } from "../types/api";
 
 /**
  * Shared API client.
@@ -37,6 +39,20 @@ instance.interceptors.response.use(
   async (error) => {
     const config = error.config as RetriableConfig | undefined;
     const response = error.response;
+
+    const code = (response?.data as ApiErrorBody | undefined)?.code;
+
+    // The server has decided this session is no longer what it was. Neither
+    // case is retriable, and both need the whole tree to change rather than a
+    // toast on whichever screen happened to ask - so tell the session and let
+    // it re-read the profile.
+    if (
+      (response?.status === 403 && code === "ACCOUNT_SUSPENDED") ||
+      (response?.status === 401 && code === "SESSION_REVOKED")
+    ) {
+      sessionInvalidated(code === "ACCOUNT_SUSPENDED" ? "suspended" : "revoked");
+      return Promise.reject(error);
+    }
 
     // A 401 usually means the cached ID token went stale. Force-refresh once
     // and replay the request before surfacing the failure.

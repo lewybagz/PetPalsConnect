@@ -175,6 +175,11 @@ const UserController = {
     }
 
     const user = await User.findById(req.user._id)
+      // `suspendedReason` is a note for whoever reviews the account ("Reported
+      // by 3 people; awaiting review"), not something to hand the account it is
+      // about - it says how many people complained, which is a nudge towards
+      // working out who.
+      .select("-suspendedReason")
       .populate("friendsList", "username userPhoto")
       .populate("pets", "name age breed photos");
 

@@ -13,6 +13,7 @@ import HelpSupportScreen from "../../src/screens/settings/HelpSupportScreen";
 import PostPlaydateReviewScreen from "../../src/screens/playdate/PostPlaydateReviewScreen";
 import MapScreen from "../../src/screens/swipe/MapScreen";
 import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateScreen";
+import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
 import { CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
 
 /**
@@ -175,6 +176,15 @@ export const BOARDS = [
         route={{ params: { locationId: "loc-1" } }}
       />
     ),
+  },
+  {
+    id: "account-suspended",
+    label: "Account under review",
+    routes: ROUTES,
+    // The one screen in the app somebody sees on their worst day with it. Worth
+    // looking at rather than only reading: the tone has to be neutral and the
+    // way out has to be obvious.
+    render: () => <AccountSuspendedScreen />,
   },
   {
     id: "chats",

@@ -65,6 +65,13 @@ export interface User {
   fcmToken?: string;
   subscribed?: boolean;
   stripeCustomerId?: string;
+  /**
+   * Hidden pending review. The session gate reads this and renders the
+   * suspended tree; the API refuses a suspended account nearly every route.
+   * `suspendedReason` is a moderator's note and is deliberately not returned.
+   */
+  suspended?: boolean;
+  suspendedAt?: IsoDate;
   createdDate?: IsoDate;
   modifiedDate?: IsoDate;
 }
@@ -128,10 +135,18 @@ export type SessionState =
   | "signedOut"
   | "needsProfile"
   | "needsPet"
+  | "suspended"
   | "ready"
   | "error";
 
 /** The API's error body. Controllers return a user-facing `message` on 4xx. */
 export interface ApiErrorBody {
   message: string;
+  /**
+   * A stable machine-readable reason, where the client has to act on the
+   * difference rather than just show the message. `ACCOUNT_SUSPENDED` and
+   * `SESSION_REVOKED` both change the whole navigation tree; `INVALID_TOKEN`
+   * is a refresh-and-retry.
+   */
+  code?: string;
 }

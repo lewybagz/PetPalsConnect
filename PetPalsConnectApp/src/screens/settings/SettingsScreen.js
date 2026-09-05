@@ -7,7 +7,7 @@ import { useAppTheme } from "../../context/AppThemeContext";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import api from "../../api/axios";
 import { readCache, writeCache, CacheKeys } from "../../services/localCache";
-import { Toggle, useToast } from "../../components/ui";
+import { Button, Toggle, useToast } from "../../components/ui";
 import { resetAllWalkthroughs } from "../../components/walkthrough";
 
 const SettingsScreen = ({ navigation }) => {
@@ -294,12 +294,13 @@ const SettingsScreen = ({ navigation }) => {
       </TouchableOpacity>
 
       {/* Account deletion - required by App Store guideline 5.1.1(v) */}
-      <TouchableOpacity
+      <Button
+        testID="settings-delete-account"
+        title="Delete My Account"
+        variant="dangerOutline"
         onPress={handleDeleteAccount}
-        style={tailwind("mt-3 mb-8 py-2 px-4 rounded border border-danger")}
-      >
-        <Text style={tailwind("text-danger text-center")}>Delete My Account</Text>
-      </TouchableOpacity>
+        style={tailwind("mt-3 mb-8")}
+      />
     </View>
   );
 };

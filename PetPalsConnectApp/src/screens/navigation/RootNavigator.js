@@ -6,6 +6,7 @@ import AuthStack from "./AuthStack";
 import AppStack from "./AppStack";
 import CreateProfileScreen from "../auth/CreateProfileScreen";
 import AddFirstPetScreen from "../pets/AddFirstPetScreen";
+import AccountSuspendedScreen from "../auth/AccountSuspendedScreen";
 import usePushNotifications from "../../hooks/usePushNotifications";
 import { useSocketSession } from "../../hooks/useSocketEvents";
 import useSessionStore from "../../hooks/useSessionStore";
@@ -102,6 +103,13 @@ export default function RootNavigator() {
 
       {status === AuthStatus.needsPet && (
         <Root.Screen name="AddFirstPet" component={AddFirstPetScreen} />
+      )}
+
+      {/* A suspended account gets its own tree for the same reason onboarding
+          does: the API refuses it nearly everything, so rendering the app would
+          be a screenful of failed requests explaining nothing. */}
+      {status === AuthStatus.suspended && (
+        <Root.Screen name="AccountSuspended" component={AccountSuspendedScreen} />
       )}
 
       {status === AuthStatus.ready && <Root.Screen name="App" component={AppStack} />}
