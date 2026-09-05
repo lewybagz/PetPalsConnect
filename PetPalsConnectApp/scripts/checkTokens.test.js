@@ -42,6 +42,13 @@ describe("the colour ban", () => {
    * real source file here breaks whichever screen suite happens to import it at
    * that moment - which is exactly the intermittent, unreproducible failure
    * that wastes an afternoon.
+   *
+   * The scratch file traded that race for a smaller one: it lives under `src/`,
+   * because that is what the audit scans, and the other suites that walk `src/`
+   * list the files and then read them. A scratch file created after the listing
+   * and deleted before the read is an ENOENT in a suite that has nothing to do
+   * with colours - `store.test.js` failed exactly that way. Hence the `__`
+   * prefix, which every walker skips, and the ENOENT tolerance behind it.
    */
   const withScratchFile = (contents, assertion) => {
     const file = path.resolve(__dirname, "../src/__ratchet-scratch.js");

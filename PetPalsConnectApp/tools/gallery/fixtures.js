@@ -175,6 +175,130 @@ export const NOTIFICATIONS = [
   },
 ];
 
+/**
+ * The care hub's two halves.
+ *
+ * A dog and a cat, because one pet hides the pet picker and the whole point of
+ * the hub is that a profile can hold more than one kind of animal. The cat
+ * carries a `seeAVet` flag, which is the state worth looking at: an owner who
+ * noted something about their pet's health gets their vets rather than a
+ * product, and that callout has to read as care rather than as an error.
+ */
+export const CARE_PICKS = {
+  categories: ["food", "supplies", "enrichment", "grooming", "health"],
+  placeCategories: ["vet", "petStore", "groomer", "boarding"],
+  emergency: [
+    {
+      id: "aspca-apcc",
+      name: "ASPCA Animal Poison Control Center",
+      phone: "888-426-4435",
+      region: "US",
+      note: "24/7. A consultation fee may apply.",
+    },
+    {
+      id: "pet-poison-helpline",
+      name: "Pet Poison Helpline",
+      phone: "855-764-7661",
+      region: "US and Canada",
+      note: "24/7. A consultation fee may apply.",
+    },
+  ],
+  pets: [
+    {
+      petId: "pet-1",
+      name: "Bo",
+      species: "dog",
+      stage: "adult",
+      size: "medium",
+      seeAVet: false,
+      shelves: [
+        {
+          category: "food",
+          picks: [
+            {
+              id: "dog-adult-food",
+              category: "food",
+              title: "Adult dog food",
+              why: "Formulated for a dog that has finished growing.",
+              url: "https://example.test/1",
+            },
+          ],
+        },
+        {
+          category: "supplies",
+          picks: [
+            {
+              id: "dog-harness-large",
+              category: "supplies",
+              title: "No-pull harness",
+              why: "A front clip gives you steering on a dog strong enough to need it.",
+              url: "https://example.test/2",
+            },
+            {
+              id: "dog-crate",
+              category: "supplies",
+              title: "Crate",
+              why: "Sized so they can stand up and turn around - measure before buying.",
+              url: "https://example.test/3",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      petId: "pet-2",
+      name: "Mog",
+      species: "cat",
+      stage: "senior",
+      size: "small",
+      seeAVet: true,
+      shelves: [
+        {
+          category: "food",
+          picks: [
+            {
+              id: "cat-senior-food",
+              category: "food",
+              title: "Senior cat food",
+              why: "Easier to chew and gentler on ageing kidneys.",
+              url: "https://example.test/4",
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export const CARE_PLACES = {
+  locationKnown: true,
+  importable: true,
+  emergency: [],
+  places: [
+    {
+      _id: "loc-1",
+      name: "Averill Veterinary Clinic",
+      address: "1200 Averill Street",
+      categories: ["vet"],
+      distanceMiles: 0.8,
+    },
+    {
+      _id: "loc-2",
+      name: "Bay Pet Supply",
+      address: "44 Harrison Avenue",
+      categories: ["petStore", "groomer"],
+      distanceMiles: 1.4,
+    },
+    {
+      _id: "loc-3",
+      name: "Sunset Boarding Kennels",
+      address: "9 Sunset Way",
+      categories: ["boarding"],
+      distanceMiles: 3.1,
+    },
+  ],
+};
+
 export const ROUTES = {
   "/api/petmatches/discover": {
     pet: MY_PET,
@@ -190,6 +314,8 @@ export const ROUTES = {
   "/api/chats": CHATS,
   "/api/blocklists": BLOCKED,
   "/api/reports/options": { reasons: [], targets: [] },
+  "/api/petcare/picks": CARE_PICKS,
+  "/api/locations/care": CARE_PLACES,
   "/api/petmatches/map": {
     origin: { latitude: 37.78825, longitude: -122.4324 },
     range: 25,

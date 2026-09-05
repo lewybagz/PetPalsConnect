@@ -474,6 +474,56 @@ capped at `PHOTO_LIMIT` (6, the same both sides).
 `PetPhotosScreen` is where an owner adds, reorders and removes; it saves after
 every change so closing mid-edit cannot lose an upload already paid for.
 
+### The care hub
+
+**`MoreScreen` is the hub, and it is the half of the app for the pets somebody
+already has.** It was five unstyled buttons in a centred column; it is now
+emergency numbers, picks per pet, care places nearby, and the links it always
+had. Every section degrades on its own - no pets, no shared position, no
+imported places and no Google key are ordinary states here, not errors.
+
+**`services/petCare/picks.js` is a table in the source, not a collection.**
+Same reasoning as `notificationTypes.js` and `reportStates.js`: it is not user
+data, there is no admin console to edit it from, and changing what the app
+tells somebody to feed their dog should be a reviewed diff. Nothing writes it
+at runtime, so there is no create path and no spam surface. Every entry is a
+*category* of thing with a search link, not a named product with an affiliate
+tag - and if that ever changes, the fact belongs on screen next to the link.
+
+**`specialNeeds` never selects a product.** Life stage and size are shopping
+facts; "diabetic" is a conversation with a vet. `recommend.js` takes species,
+age and weight and nothing else, and an owner who wrote anything in that field
+gets `seeAVet` and their local vets instead. `petCare.test.js` asserts the two
+pick lists are identical with and without the note - that test is the rule.
+
+**An unknown age is unknown, not "adult".** `lifeStage` returns null rather
+than guessing, and a pick that depends on a stage is then left out: a
+recommendation for the wrong stage is worse than one not shown. Only dogs and
+cats have a `sizeBand`, because they are the only species the schema stores a
+weight for.
+
+**Empty is not the same as broken.** The hub tells three nothings apart, and
+each was a wrong answer at some point in writing it: no pets (`picks` came back
+with an empty list) invites you to add one; a failed fetch (`picks` is null)
+says so and offers a retry; and for places, "we do not know where you are",
+"your area has not been imported" and "there is nothing here" are three
+different sentences. Keying the first pair on `hasPet` from the session - which
+is what this did first - answers a petless owner with an apology for a bug that
+did not happen.
+
+**A `__`-prefixed file under `src/` is a scratch file, and every source walker
+skips one.** `checkTokens.test.js` writes one to prove the colour ban still
+fires, and jest runs suites in parallel workers off a single working tree - so
+`store.test.js` listed it, it was deleted, and the read threw ENOENT in a suite
+about redux selectors. `store.test.js`, `walkthrough.test.js` and
+`tooling.test.js` skip the prefix, and the selector walk also tolerates a file
+that vanishes mid-walk.
+
+**`playwright-core` is a devDependency now.** `npm run screenshots` imports it
+and it was never in `package.json`, so the one tool CLAUDE.md tells you to run
+after a design change could not run from a clean install - and the missing
+import was also the repo's only lint error.
+
 ### Safety
 
 **A block is symmetric, and every list has to consult it.** `services/blocking.js`

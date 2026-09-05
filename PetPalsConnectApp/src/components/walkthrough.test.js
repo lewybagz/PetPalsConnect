@@ -370,6 +370,9 @@ describe("every tour in the app is in the table", () => {
   const sourceFiles = (dir) =>
     fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
       const full = path.join(dir, entry.name);
+      // A `__`-prefixed file is a scratch file another suite writes and
+      // deletes while this one walks the same tree, in a parallel worker.
+      if (entry.name.startsWith("__")) return [];
       if (entry.isDirectory()) return sourceFiles(full);
       // `.ts`/`.tsx` as well: a converted screen must not drop out of the check.
       return /\.(js|jsx|ts|tsx)$/.test(entry.name) && !/\.test\./.test(entry.name)

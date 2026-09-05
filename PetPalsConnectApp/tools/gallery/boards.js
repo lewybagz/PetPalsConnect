@@ -14,7 +14,8 @@ import PostPlaydateReviewScreen from "../../src/screens/playdate/PostPlaydateRev
 import MapScreen from "../../src/screens/swipe/MapScreen";
 import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateScreen";
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
-import { CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
+import MoreScreen from "../../src/screens/bottomTab/MoreScreen";
+import { CANDIDATES, CARE_PICKS, CARE_PLACES, MY_PET, ROUTES, pending } from "./fixtures";
 
 /**
  * What the gallery can render, and the fixtures each board needs.
@@ -115,6 +116,40 @@ export const BOARDS = [
         // Home is the first screen a new account sees, so its tour opens over
         // it unasked. That is the point of the tour and the wrong thing for a
         // board about the screen underneath.
+        walkthroughAutoStart={false}
+      />
+    ),
+  },
+  {
+    id: "care-hub",
+    label: "Pet care hub",
+    routes: ROUTES,
+    // Two pets, so the pet picker is on screen, and the cat carries the
+    // `seeAVet` callout - the state where the hub has to look like care rather
+    // than like an error.
+    render: () => (
+      <MoreScreen
+        navigation={navigation}
+        route={{ params: {} }}
+        walkthroughAutoStart={false}
+      />
+    ),
+  },
+  {
+    id: "care-hub-empty",
+    label: "Pet care hub - nothing imported yet",
+    // What a fresh deployment looks like: no pets, no places, and the
+    // emergency numbers still there, which is the whole reason they are a
+    // table in the source rather than rows in a collection.
+    routes: {
+      ...ROUTES,
+      "/api/petcare/picks": { ...CARE_PICKS, pets: [] },
+      "/api/locations/care": { ...CARE_PLACES, places: [], locationKnown: false },
+    },
+    render: () => (
+      <MoreScreen
+        navigation={navigation}
+        route={{ params: {} }}
         walkthroughAutoStart={false}
       />
     ),

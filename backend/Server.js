@@ -83,6 +83,7 @@ const routes = {
   messages: "messages",
   notifications: "notifications",
   payments: "payments",
+  petcare: "petCare",
   petmatches: "petMatches",
   pets: "pets",
   playdates: "playdates",

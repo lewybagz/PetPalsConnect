@@ -113,6 +113,57 @@ export interface Location {
   modifiedDate?: IsoDate;
 }
 
+/**
+ * One thing worth buying, and why.
+ *
+ * Not a document - these come from a source-controlled table on the server
+ * (`services/petCare/picks.js`), not a collection, so there is no model to
+ * check this against and nothing writes one at runtime. Each is a *category*
+ * of thing with a search link, not a named product with an affiliate tag: the
+ * app is not paid to say any of it, and if that ever changes the fact belongs
+ * on screen next to the link.
+ */
+export interface CarePick {
+  id: string;
+  category: string;
+  title: string;
+  /** Shown to the owner - a recommendation that cannot say why is an advert. */
+  why: string;
+  url: string;
+}
+
+/** One pet's picks, grouped into the hub's shelves. */
+export interface CarePicksForPet {
+  petId: ObjectId | null;
+  name: string | null;
+  species: PetSpecies;
+  /** Null when the pet's age is unknown; stage-dependent picks are then left out. */
+  stage: "young" | "adult" | "senior" | null;
+  /** Only dogs and cats record a weight, so null for everything else. */
+  size: "small" | "medium" | "large" | null;
+  /**
+   * The owner wrote something in `specialNeeds`.
+   *
+   * The hub shows the local vets rather than a product. Those notes are never
+   * an input to a pick - "diabetic" is a conversation with a vet, not a
+   * shopping problem, and answering it with a bag of food is not something
+   * this app should do.
+   */
+  seeAVet: boolean;
+  shelves: { category: string; picks: CarePick[] }[];
+}
+
+/** A number to call when something has gone wrong. */
+export interface EmergencyContact {
+  id: string;
+  name: string;
+  phone: string;
+  /** These are North American services and the app never asks where you live. */
+  region: string;
+  note?: string;
+  url?: string;
+}
+
 export interface User {
   _id: ObjectId;
   firebaseUid: string;
