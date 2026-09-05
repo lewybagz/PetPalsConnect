@@ -4,6 +4,7 @@ const User = require("../models/User");
 const firebase = require("../config/firebase");
 const { emitToUser } = require("./realtime");
 const UserPreferences = require("../models/UserPreferences");
+const { isQuiet } = require("./quietHours");
 const { normalise, titleFor, categoryFor } = require("./notificationTypes");
 
 /**
@@ -102,12 +103,17 @@ const sendPush = async (userId, { title, body, data } = {}) => {
 const wantsPush = async (userId, type) => {
   try {
     const preferences = await UserPreferences.findOne({ user: userId })
-      .select("notificationPreferences")
+      .select("notificationPreferences quietHours")
       .lean();
     if (!preferences) return true;
 
     const settings = preferences.notificationPreferences ?? {};
     if (settings.pushNotificationsEnabled === false) return false;
+
+    // Quiet hours silence the push, never the row: the notification is still
+    // written and still raises the badge, so nothing is lost - it just does not
+    // light up a phone at 3am.
+    if (isQuiet(preferences.quietHours)) return false;
 
     const category = categoryFor(type);
     return category ? settings[category] !== false : true;

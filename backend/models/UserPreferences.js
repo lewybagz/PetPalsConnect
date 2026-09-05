@@ -30,6 +30,25 @@ const UserPreferencesSchema = new Schema({
     friendRequests: { type: Boolean, default: true },
     appUpdates: { type: Boolean, default: true },
   },
+
+  /**
+   * Hours in which no push is sent.
+   *
+   * Times are "HH:MM" in the device's own zone, with the offset stored
+   * alongside, because a quiet hour is a wall-clock fact about somebody's
+   * evening rather than an instant: 22:00 has to stay 22:00 after they fly
+   * somewhere, and a stored UTC instant would not.
+   *
+   * A window may wrap midnight - 22:00 to 07:00 is the obvious one - so the
+   * comparison is not simply `start <= now <= end`.
+   */
+  quietHours: {
+    enabled: { type: Boolean, default: false },
+    start: { type: String, default: "22:00" },
+    end: { type: String, default: "07:00" },
+    // Minutes east of UTC, which is what `-new Date().getTimezoneOffset()` is.
+    utcOffsetMinutes: { type: Number, default: 0, min: -840, max: 840 },
+  },
   user: {
     type: Schema.Types.ObjectId,
     ref: "User",

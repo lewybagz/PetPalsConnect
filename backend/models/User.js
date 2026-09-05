@@ -63,6 +63,62 @@ const UserSchema = new Schema({
     type: Boolean,
     default: true,
   },
+
+  /**
+   * How distances and weights read to this person.
+   *
+   * Storage stays canonical - miles and pounds - because matching compares
+   * numbers and a stored unit would mean every comparison had to convert
+   * first. This is a display preference and nothing else reads it.
+   */
+  units: {
+    distance: { type: String, enum: ["mi", "km"], default: "mi" },
+    weight: { type: String, enum: ["lb", "kg"], default: "lb" },
+  },
+
+  /**
+   * Narrows the deck, in canonical units.
+   *
+   * `services/matching` applies these alongside distance and blocking, in
+   * `reachableCandidates` - the one filter every discovery path shares, so a
+   * preference cannot be honoured on one route and forgotten on another.
+   */
+  discovery: {
+    minWeight: { type: Number, min: 0, max: 300, default: 0 },
+    maxWeight: { type: Number, min: 0, max: 300, default: 300 },
+    minAge: { type: Number, min: 0, max: 30, default: 0 },
+    maxAge: { type: Number, min: 0, max: 30, default: 30 },
+    // Empty means "no preference", which is not the same as "none of them".
+    species: { type: [String], default: () => [] },
+    includeUnknownDistance: { type: Boolean, default: true },
+  },
+
+  /**
+   * Who may reach this person, enforced rather than displayed.
+   *
+   * `services/audience.js` is the only thing that answers these, in the same
+   * spirit as `services/blocking.js`: a rule about who can see whom that lives
+   * in one place cannot be applied inconsistently across eight controllers.
+   */
+  privacy: {
+    profileVisibility: {
+      type: String,
+      enum: ["everyone", "matches", "friends"],
+      default: "everyone",
+    },
+    messagesFrom: {
+      type: String,
+      enum: ["everyone", "matches", "friends"],
+      default: "everyone",
+    },
+    friendRequestsFrom: {
+      type: String,
+      enum: ["everyone", "friendsOfFriends", "nobody"],
+      default: "everyone",
+    },
+    discoverableInSearch: { type: Boolean, default: true },
+    showOnMap: { type: Boolean, default: true },
+  },
   /**
    * Where this person is, as GeoJSON [longitude, latitude].
    *
