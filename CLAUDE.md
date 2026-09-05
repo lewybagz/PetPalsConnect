@@ -37,6 +37,38 @@ an interruption between any two resumes at the next launch rather than
 stranding the user. Never assume "signed in" implies "has a profile", and keep
 `POST /api/users` idempotent.
 
+**A profile holds any species; playdates are dogs only.** `Pet.species` is one
+of `dog`, `cat`, `smallMammal`, `bird`, `reptile` or `fish`, and the two facts
+live in different places on purpose: the enum is open because the care hub
+recommends food, supplies and a vet from whatever somebody owns, and the
+matching query is narrow because `compatibility.js` scores size, temperament and
+activity in dog terms. `services/matching/eligibility.js` is the one place that
+rule is written - both candidate queries (`runMatching` and
+`reachableCandidates`) spread `matchableQuery()`, because a rule written twice is
+a rule one of them will end up missing. It matches a null species as well as
+`dog`: the field was added after rows existed, those rows have no key at all, and
+a plain `{ species: "dog" }` would have emptied the deck for every pet created
+before it. `breed` and `weight` are `required` functions rather than `true` -
+required for dogs and cats, meaningless for a fish - which is the idiom
+`Media.thumbnail` already uses and one `schemaAudit` deliberately skips.
+
+**`hasPet` does not imply `hasDog`.** This is the same trap as "`ready` does not
+imply a pet exists", one level down: a cat-only owner passes every `hasPet`
+check, walks into Discover, and finds a deck that is empty forever with nothing
+saying why. `withRequiredPet(Screen, { species: "dog" })` is what Map, PetSelection
+and SchedulePlaydate use, and `useAuthSession` exposes both flags. `/api/users/me`
+projects `species` onto `pets` for exactly this reason - drop it and every pet
+looks equally matchable to the client. The server's own answer to the same
+question is to fall through to preview mode: an owner with pets but no dog gets
+the browse deck, not an error, which is the experience already built for someone
+with no pet at all. Copy in that state names the species ("Add your dog"), because
+telling somebody to "add a pet" while they are looking at the cat they added
+reads as a bug.
+
+**The browsable pet lists are dogs only, and that is privacy, not matching.**
+`getAllPets` and `getLatestPets` filter through `matchableQuery()`. A cat is added
+to get food and a vet out of the hub, not published for strangers to browse.
+
 **Screens below the gate may assume a profile, but NOT a pet.** The add-a-pet
 step is a prompt, not a wall - it can be skipped, and the choice is remembered
 per user. So `ready` does not imply a pet exists. Screens that cannot function

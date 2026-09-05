@@ -84,17 +84,26 @@ const Stack = createNativeStackNavigator();
  */
 
 // Screens that are meaningless without a pet, with copy that says why.
+//
+// All three take `species: "dog"`. A profile can hold a cat, a rabbit or a
+// bearded dragon - the care hub is built on those - but matching, chats and
+// playdates all run between dogs, so an owner whose only pet is a cat needs
+// the same honest empty state as an owner with no pet at all. Gating these on
+// `hasPet` would let them through to a deck that is permanently empty.
 const MapWithPet = withRequiredPet(MapScreen, {
-  title: "Add a pet to start matching",
-  message: "The map shows pets near you that could be a good match for yours.",
+  species: "dog",
+  title: "Add a dog to start matching",
+  message: "The map shows dogs near you that could be a good match for yours.",
 });
 const PetSelectionWithPet = withRequiredPet(PetSelectionScreen, {
-  title: "Add a pet to start chatting",
-  message: "Chats in PetPals happen between pets, so you'll need one first.",
+  species: "dog",
+  title: "Add a dog to start chatting",
+  message: "Chats in PetPals happen between dogs, so you'll need one first.",
 });
 const SchedulePlaydateWithPet = withRequiredPet(SchedulePlaydateScreen, {
-  title: "Add a pet to plan a playdate",
-  message: "Playdates are arranged between pets, so add yours to get started.",
+  species: "dog",
+  title: "Add a dog to plan a playdate",
+  message: "Playdates are arranged between dogs, so add yours to get started.",
 });
 
 export default function AppStack() {

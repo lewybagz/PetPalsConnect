@@ -4,11 +4,20 @@ const User = require("../models/User");
 const SubscriptionController = require("./SubscriptionController");
 const PetMatchController = require("./PetMatchController");
 const Favorite = require("../models/Favorite"); // or Pet model, as needed
+const { matchableQuery } = require("../services/matching/eligibility");
 
 const PetController = {
+  /**
+   * The browsable field of pets.
+   *
+   * Dogs only, and that is a privacy decision rather than a matching one. A
+   * profile can now hold a cat or a rabbit, but those are added to get food,
+   * supplies and a vet out of the care hub - not published for strangers to
+   * browse. A dog is on this app to meet other dogs; nothing else here is.
+   */
   async getAllPets(req, res) {
     try {
-      const pets = await Pet.find();
+      const pets = await Pet.find(matchableQuery());
       res.json(pets);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -94,9 +103,12 @@ const PetController = {
     }
   },
 
+  /** The home screen's new-pets shelf. Dogs only, as `getAllPets` explains. */
   async getLatestPets(req, res) {
     try {
-      const latestPets = await Pet.find().sort({ createdAt: -1 }).limit(10); // example logic
+      const latestPets = await Pet.find(matchableQuery())
+        .sort({ createdAt: -1 })
+        .limit(10);
       res.json(latestPets);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -149,12 +161,16 @@ const PetController = {
       return res.status(404).json({ message: "No profile for this account yet" });
     }
 
-    const { name, breed, age, weight, photos, specialNeeds, temperament,
+    const { name, species, breed, age, weight, photos, specialNeeds, temperament,
             activityLevel, socialisation, favoriteActivities, location } = req.body;
 
     try {
       const pet = await Pet.create({
         name,
+        // Left undefined when a client does not send it, so the schema default
+        // ("dog") applies. Older builds of the app have no species picker and
+        // must keep working; they only ever created dogs anyway.
+        ...(species ? { species } : {}),
         breed,
         age,
         weight,
@@ -175,7 +191,8 @@ const PetController = {
       await User.updateOne({ _id: req.userId }, { $addToSet: { pets: pet._id } });
 
       // Matching is best-effort: a pet that saved must not fail the request
-      // because the matcher had a problem.
+      // because the matcher had a problem. `runMatching` returns nothing for a
+      // species that cannot match, so adding a cat is a save and no more.
       let matches = [];
       try {
         const isSubscribed = await SubscriptionController.checkSubscriptionStatus(

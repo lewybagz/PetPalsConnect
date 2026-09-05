@@ -103,6 +103,68 @@ describe("RequiresPet", () => {
   });
 });
 
+describe("RequiresPet with a species", () => {
+  /**
+   * The case this exists for: a profile can hold a cat so the care hub has
+   * something to work from, but playdates are dogs only. Gating on `hasPet`
+   * would let a cat owner into a deck that is permanently empty, with nothing
+   * on screen explaining why.
+   */
+  it("gates a dog-only screen on hasDog, not hasPet", async () => {
+    useAuthSession.mockReturnValue({ hasPet: true, hasDog: false });
+
+    render(
+      <RequiresPet species="dog">
+        <Protected />
+      </RequiresPet>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("requires-pet-empty-state")).toBeTruthy()
+    );
+    expect(screen.queryByTestId("protected")).toBeNull();
+  });
+
+  it("lets a dog owner through a dog-only screen", async () => {
+    useAuthSession.mockReturnValue({ hasPet: true, hasDog: true });
+
+    render(
+      <RequiresPet species="dog">
+        <Protected />
+      </RequiresPet>
+    );
+
+    await waitFor(() => expect(screen.getByTestId("protected")).toBeTruthy());
+  });
+
+  it("still admits a cat owner to a screen that takes any pet", async () => {
+    useAuthSession.mockReturnValue({ hasPet: true, hasDog: false });
+
+    render(
+      <RequiresPet>
+        <Protected />
+      </RequiresPet>
+    );
+
+    await waitFor(() => expect(screen.getByTestId("protected")).toBeTruthy());
+  });
+
+  it("asks for a dog by name on a dog-only screen", async () => {
+    // "Add my pet" reads as a bug to somebody who has already added a cat.
+    useAuthSession.mockReturnValue({ hasPet: true, hasDog: false });
+
+    render(
+      <RequiresPet species="dog">
+        <Protected />
+      </RequiresPet>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("requires-pet-add-button")).toHaveTextContent("Add my dog")
+    );
+  });
+});
+
 describe("withRequiredPet", () => {
   it("passes props through to the wrapped screen", async () => {
     useAuthSession.mockReturnValue({ hasPet: true });
@@ -118,7 +180,7 @@ describe("withRequiredPet", () => {
   });
 
   it("gates the wrapped screen when there is no pet", async () => {
-    useAuthSession.mockReturnValue({ hasPet: false });
+    useAuthSession.mockReturnValue({ hasPet: false, hasDog: false });
 
     const Wrapped = withRequiredPet(Protected, { title: "Nope" });
     render(<Wrapped />);

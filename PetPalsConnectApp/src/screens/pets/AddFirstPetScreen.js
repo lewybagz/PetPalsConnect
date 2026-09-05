@@ -20,14 +20,22 @@ import { useTailwind } from "../../styles/tailwind";
 import { OnboardingProgress, useToast } from "../../components/ui";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { describeApiError } from "../../utils/authErrors";
-import { BREEDS } from "../../data/breeds";
+import { SPECIES, DEFAULT_SPECIES, speciesInfo } from "../../data/species";
 import { useTokens } from "../../context/AppThemeContext";
 
 /**
  * The last step of onboarding: the user's first pet.
  *
- * Deliberately short: name, breed, age and weight - what the schema requires
- * and what matching needs - plus an optional photo. The full AddPetScreen also
+ * Deliberately short: species, name, breed, age and weight - what the schema
+ * requires and what matching needs - plus an optional photo.
+ *
+ * The species question comes first because it decides what the rest of the
+ * form asks. A dog is the default and the common case, and only a dog can be
+ * matched - but a first pet does not have to be one. Somebody here for the
+ * care hub with a cat, a rabbit or a bearded dragon completes onboarding with
+ * that animal and reaches the app; the matching screens then gate on `hasDog`
+ * and say plainly what a dog would unlock. Requiring a dog to get in would
+ * turn away exactly the owners this feature is for. The full AddPetScreen also
  * asks for temperament and favourite activities, which sharpen matching but do
  * not need to stand between a new user and the app; the pet's own screen
  * prompts for those later.
@@ -44,6 +52,7 @@ export default function AddFirstPetScreen() {
   const { createPet, skipPetSetup, signOut } = useAuthSession();
 
   const [name, setName] = useState("");
+  const [species, setSpecies] = useState(DEFAULT_SPECIES);
   const [breed, setBreed] = useState("");
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
@@ -55,11 +64,15 @@ export default function AddFirstPetScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  // What this species is asked for: a breed list, a weight, or neither.
+  const speciesRules = speciesInfo(species);
+
   const filteredBreeds = useMemo(() => {
+    const breeds = speciesRules.breeds ?? [];
     const query = breedQuery.trim().toLowerCase();
-    if (!query) return BREEDS;
-    return BREEDS.filter((option) => option.toLowerCase().includes(query));
-  }, [breedQuery]);
+    if (!query) return breeds;
+    return breeds.filter((option) => option.toLowerCase().includes(query));
+  }, [breedQuery, speciesRules]);
 
   const parsedAge = Number(age);
   const ageIsValid = age !== "" && Number.isFinite(parsedAge) && parsedAge >= 0 && parsedAge < 40;
@@ -72,13 +85,15 @@ export default function AddFirstPetScreen() {
   // owner prefers to type.
   const weightInPounds = weightUnit === "kg" ? parsedWeight * 2.20462 : parsedWeight;
 
+  // A field that is not asked cannot block the button. Requiring a weight from
+  // a fish keeper would make onboarding impossible to finish for them.
   const canSubmit =
     !submitting &&
     !uploading &&
     name.trim().length > 0 &&
-    breed !== "" &&
+    (!speciesRules.breeds || breed !== "") &&
     ageIsValid &&
-    weightIsValid;
+    (!speciesRules.weighed || weightIsValid);
 
   const onChoosePhoto = async () => {
     // Picking, compressing and uploading live in services/photos - this screen
@@ -111,9 +126,14 @@ export default function AddFirstPetScreen() {
     try {
       await createPet({
         name: name.trim(),
-        breed,
+        species,
+        // Omitted rather than sent empty where the species has no such field -
+        // the schema requires them only for dogs and cats.
+        breed: speciesRules.breeds ? breed : undefined,
         age: parsedAge,
-        weight: Math.round(weightInPounds * 10) / 10,
+        weight: speciesRules.weighed
+          ? Math.round(weightInPounds * 10) / 10
+          : undefined,
         photos: photo ? [photo] : [],
       });
       // No navigation: the session re-reads the profile, sees a pet, and
@@ -194,6 +214,46 @@ export default function AddFirstPetScreen() {
           </Text>
         </Pressable>
 
+        <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>
+          What kind of pet?
+        </Text>
+        <View style={tailwind("flex-row flex-wrap mb-4")}>
+          {SPECIES.map((entry) => (
+            <Pressable
+              key={entry.value}
+              testID={`species-${entry.value}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: species === entry.value }}
+              disabled={submitting}
+              onPress={() => {
+                // Breed and weight belong to the species that was chosen, so
+                // switching clears them - a Labrador breed must not survive a
+                // change to "Bird".
+                setSpecies(entry.value);
+                setBreed("");
+                setWeight("");
+              }}
+              style={tailwind(
+                `border rounded-lg px-3 py-2 mr-2 mb-2 ${
+                  species === entry.value
+                    ? "bg-danger border-danger"
+                    : "bg-surface border-border"
+                }`
+              )}
+            >
+              <Text
+                style={tailwind(
+                  `text-sm font-medium ${
+                    species === entry.value ? "text-onPrimary" : "text-textMuted"
+                  }`
+                )}
+              >
+                {entry.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>Name</Text>
         <TextInput
           style={tailwind("border border-border rounded-lg px-3 py-3 mb-4 text-base")}
@@ -206,19 +266,24 @@ export default function AddFirstPetScreen() {
           editable={!submitting}
         />
 
-        <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>Breed</Text>
-        <Pressable
-          onPress={() => setBreedPickerOpen(true)}
-          disabled={submitting}
-          style={tailwind(
-            "border border-border rounded-lg px-3 py-3 mb-4 flex-row items-center justify-between"
-          )}
-        >
-          <Text style={tailwind(breed ? "text-base text-text" : "text-base text-textFaint")}>
-            {breed || "Choose a breed"}
-          </Text>
-          <Ionicons name="chevron-down" size={18} color={tokens.textMuted} />
-        </Pressable>
+        {speciesRules.breeds ? (
+          <>
+            <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>Breed</Text>
+            <Pressable
+              testID="breed-picker"
+              onPress={() => setBreedPickerOpen(true)}
+              disabled={submitting}
+              style={tailwind(
+                "border border-border rounded-lg px-3 py-3 mb-4 flex-row items-center justify-between"
+              )}
+            >
+              <Text style={tailwind(breed ? "text-base text-text" : "text-base text-textFaint")}>
+                {breed || "Choose a breed"}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={tokens.textMuted} />
+            </Pressable>
+          </>
+        ) : null}
 
         <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>Age (years)</Text>
         <TextInput
@@ -241,6 +306,8 @@ export default function AddFirstPetScreen() {
           </Text>
         )}
 
+        {speciesRules.weighed ? (
+        <>
         <Text style={tailwind("text-sm font-medium text-textMuted mb-1 mt-2")}>Weight</Text>
         <View style={tailwind("flex-row items-center mb-2")}>
           <TextInput
@@ -284,7 +351,25 @@ export default function AddFirstPetScreen() {
           </Text>
         ) : (
           <Text style={tailwind("text-xs text-textMuted mb-4")}>
-            We use this to match your pet with others of a similar size.
+            {speciesRules.matchable
+              ? "We use this to match your pet with others of a similar size."
+              : "We use this to get food portions and supply sizes right."}
+          </Text>
+        )}
+        </>
+        ) : null}
+
+        {/*
+          Said once, here, rather than discovered later on an empty Discover
+          tab. Somebody adding a cat has not made a mistake - the care hub is
+          for them - but they should know before they finish that the swiping
+          half of the app will ask them for a dog.
+        */}
+        {speciesRules.matchable ? null : (
+          <Text testID="species-not-matchable" style={tailwind("text-xs text-textMuted mb-4")}>
+            Playdates are for dogs, so {name.trim() || "this pet"} won&apos;t appear in
+            matching. You&apos;ll still get vets, food and supplies picked for them - and
+            you can add a dog any time.
           </Text>
         )}
 

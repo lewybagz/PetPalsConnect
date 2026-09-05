@@ -12,6 +12,10 @@ const {
 const { notify } = require("../services/NotificationService");
 const { emitToUser } = require("../services/realtime");
 const blocking = require("../services/blocking");
+const {
+  matchableQuery,
+  isMatchable,
+} = require("../services/matching/eligibility");
 
 /**
  * Pet matching.
@@ -40,9 +44,14 @@ const runMatching = async (petId, { isSubscribed = false } = {}) => {
   const currentPet = await Pet.findById(petId);
   if (!currentPet) return [];
 
+  // A cat has no playdates to be scored for. Returning early rather than
+  // scoring and discarding keeps `createPet` from writing PetMatch rows nobody
+  // can ever see, and is why adding a rabbit does not run the matcher at all.
+  if (!isMatchable(currentPet)) return [];
+
   // A subscriber gets a wider net and keeps more results; everyone gets the
   // same scoring, so the ranking is never quietly different.
-  const candidates = await Pet.find({ _id: { $ne: currentPet._id } })
+  const candidates = await Pet.find({ _id: { $ne: currentPet._id }, ...matchableQuery() })
     .limit(isSubscribed ? CANDIDATE_LIMIT : Math.floor(CANDIDATE_LIMIT / 2))
     .lean();
 
@@ -104,6 +113,9 @@ const reachableCandidates = async ({
 
   const query = {
     owner: { $ne: userId, $exists: true, $nin: excludedOwners },
+    // Playdates are dogs only. This sits with blocking, suspension and range
+    // for the same reason they do: one query, so there is one place to forget.
+    ...matchableQuery(),
   };
   if (excludePetIds.length > 0) query._id = { $nin: excludePetIds };
 
@@ -283,7 +295,33 @@ const PetMatchController = {
 
       const maxMiles = rangeToMiles(owner.playdateRange);
       const origin = owner.geoLocation?.coordinates ?? null;
-      const actingPetId = req.query.petId ?? owner.pets?.[0];
+
+      /**
+       * The pet doing the swiping, which has to be one that can match.
+       *
+       * `owner.pets[0]` was fine when every pet was a dog. Now a profile can
+       * hold a cat, a rabbit or a bearded dragon, and picking the first pet
+       * blindly would hand the matcher an animal it has no way to score - the
+       * caller would get a deck built around a cat. So the default is the
+       * caller's first *matchable* pet, and an owner with pets but no dog falls
+       * through to the preview below, which is exactly the right experience for
+       * them: the same deck, no scoring, nothing to swipe with.
+       */
+      const actingPetId =
+        req.query.petId ??
+        (
+          await Pet.findOne({
+            // Scoped through the profile's own `pets` array, not by `owner`.
+            // That array is what links a pet to its owner and what the
+            // onboarding gate reads, and it is deliberately the authority:
+            // somebody who deletes their last pet has an empty array while the
+            // document can still be around, and they belong in the preview.
+            _id: { $in: owner.pets ?? [] },
+            ...matchableQuery(),
+          })
+            .select("_id")
+            .lean()
+        )?._id;
 
       /**
        * Browsing without a pet of your own.
@@ -326,6 +364,14 @@ const PetMatchController = {
       }
       if (String(actingPet.owner) !== String(req.userId)) {
         return res.status(403).json({ message: "That isn't your pet" });
+      }
+      // An explicitly named pet, unlike the default above, is the caller
+      // asking for something specific - so say why it cannot be done rather
+      // than quietly swapping in a different pet.
+      if (!isMatchable(actingPet)) {
+        return res
+          .status(400)
+          .json({ message: "Playdates are for dogs, so only a dog can browse matches" });
       }
 
       const decided = await PetDecision.find({ fromPet: actingPet._id })
@@ -494,6 +540,13 @@ const PetMatchController = {
       }
       if (String(toPet.owner) === String(req.userId)) {
         return res.status(400).json({ message: "That is your own pet" });
+      }
+      // The deck cannot serve a non-dog, so reaching here with one means a
+      // hand-made request. Checking both sides rather than only the caller's:
+      // a decision recorded against a cat would sit in PetDecision forever
+      // waiting for a reciprocal like that can never be made.
+      if (!isMatchable(fromPet) || !isMatchable(toPet)) {
+        return res.status(400).json({ message: "Playdates are for dogs" });
       }
 
       await PetDecision.findOneAndUpdate(

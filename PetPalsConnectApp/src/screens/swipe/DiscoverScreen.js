@@ -253,7 +253,7 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
   return (
     <Screen testID="discover-card">
       <Text variant="caption" tone="muted" style={tailwind("mb-sm")}>
-        {preview ? "Pets near you" : `Matches for ${myPet?.name}`}
+        {preview ? "Dogs near you" : `Matches for ${myPet?.name}`}
       </Text>
 
       <SwipeableCard
@@ -342,7 +342,7 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
 
           {preview ? (
             <Text variant="caption" tone="faint" style={tailwind("mt-lg")}>
-              Add a pet and we&apos;ll show you how well they fit.
+              Add a dog and we&apos;ll show you how well they fit.
             </Text>
           ) : reasons.length > 0 ? (
             <View style={tailwind("mt-lg")}>
@@ -375,19 +375,24 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
       </SwipeableCard>
 
       {/*
-        Without a pet there is nothing to match *with*, so the deck browses
+        Without a dog there is nothing to match *with*, so the deck browses
         rather than decides. Asking here - next to a specific dog somebody is
         already looking at - is a better moment than the wall this screen used
         to put up before showing anything at all.
+
+        "Dog", not "pet": preview mode now covers two people. One has no pets at
+        all; the other has a cat, and telling them to "add a pet" when they are
+        looking at the cat they already added is the kind of copy that reads as
+        a bug. Naming the species is true for both.
       */}
       {preview ? (
         <View testID="discover-preview" style={tailwind("py-lg")}>
           <Text variant="caption" tone="muted" align="center" style={tailwind("mb-md")}>
-            Add your pet to say hello to {current.pet.name}.
+            Add your dog to say hello to {current.pet.name}.
           </Text>
           <Button
             testID="discover-add-pet"
-            title="Add my pet"
+            title="Add my dog"
             onPress={() => navigation.navigate("AddPet")}
           />
           <Button

@@ -24,11 +24,35 @@ export type ObjectId = string;
 /** Dates arrive as ISO strings, not `Date`s. */
 export type IsoDate = string;
 
+/**
+ * The kinds of animal a profile can hold.
+ *
+ * Only `"dog"` can be matched - playdates are dogs meeting dogs, and the deck
+ * filters to it. The rest exist so the care hub has something to recommend
+ * food, supplies and a vet from. Mirrors the `SPECIES` enum on the schema.
+ */
+export type PetSpecies =
+  | "dog"
+  | "cat"
+  | "smallMammal"
+  | "bird"
+  | "reptile"
+  | "fish";
+
 export interface Pet {
   _id: ObjectId;
   name: string;
-  /** Required by the schema: matching compares size. */
-  weight: number;
+  /**
+   * Optional because it is only stored for pets that have one in any useful
+   * sense. A pet from before the field existed has none, and reads as a dog.
+   */
+  species?: PetSpecies;
+  /**
+   * Required by the schema for dogs and cats only - matching compares size and
+   * portions are sized from it. A bird or a fish has no weight recorded, so
+   * this is not guaranteed to be present.
+   */
+  weight?: number;
   /** Derived from `name` by a hook - `Pet` is a discriminator of `Content`. */
   title?: string;
   breed?: string;

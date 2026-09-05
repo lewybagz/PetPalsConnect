@@ -181,7 +181,11 @@ const UserController = {
       // working out who.
       .select("-suspendedReason")
       .populate("friendsList", "username userPhoto")
-      .populate("pets", "name age breed photos");
+      // `species` is projected because the session needs it: playdates are
+      // dogs only, so the app derives `hasDog` from this array to decide
+      // whether matching screens are usable. Without it every pet looks
+      // equally matchable to the client.
+      .populate("pets", "name age breed species photos");
 
     res.json(user);
   },

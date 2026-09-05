@@ -8,12 +8,18 @@ import { useAuthSession } from "../context/AuthSessionContext";
 import { useTokens } from "../context/AppThemeContext";
 
 /**
- * Renders `children` only when the user has at least one pet.
+ * Renders `children` only when the user has a pet the screen can work with.
  *
  * The add-a-pet step during onboarding is skippable, so reaching the app no
  * longer guarantees a pet exists. Rather than scattering `pets.length === 0`
  * branches through every screen, the screens that genuinely need a pet wrap
  * themselves in this and get one consistent, actionable empty state.
+ *
+ * `species` narrows what counts. A profile can hold a cat or a rabbit so the
+ * care hub has something to work from, but playdates are dogs only - so a
+ * matching screen passes `species="dog"` and a cat-only owner gets the same
+ * clear empty state a petless one does, instead of a deck that is silently
+ * always empty. Screens that work with any pet leave it unset.
  *
  * Screens that merely *display* pets (a list, a profile) do not need this - an
  * ordinary empty list is fine there. Use it where the screen cannot function
@@ -21,15 +27,18 @@ import { useTokens } from "../context/AppThemeContext";
  */
 export function RequiresPet({
   children,
+  species,
   title = "Add a pet first",
   message = "This part of PetPals works from your pet's profile. Add one and you're in.",
 }) {
   const tailwind = useTailwind();
   const tokens = useTokens();
   const navigation = useNavigation();
-  const { hasPet } = useAuthSession();
+  const { hasPet, hasDog } = useAuthSession();
 
-  if (hasPet) return children;
+  // Only one species is matchable, so this is the only distinction to draw.
+  // If that ever stops being true it becomes a lookup rather than a ternary.
+  if (species === "dog" ? hasDog : hasPet) return children;
 
   return (
     <View
@@ -52,7 +61,9 @@ export function RequiresPet({
         onPress={() => navigation.navigate("AddPet")}
         style={tailwind("bg-danger rounded-lg py-3 px-8")}
       >
-        <Text style={tailwind("text-onPrimary font-semibold")}>Add my pet</Text>
+        <Text style={tailwind("text-onPrimary font-semibold")}>
+          {species === "dog" ? "Add my dog" : "Add my pet"}
+        </Text>
       </Pressable>
     </View>
   );
@@ -62,9 +73,9 @@ export function RequiresPet({
  * Screen-level wrapper, applied where screens are registered so the screen
  * files themselves stay focused on their own job.
  */
-export const withRequiredPet = (Component, copy) => {
+export const withRequiredPet = (Component, options) => {
   const Wrapped = (props) => (
-    <RequiresPet {...copy}>
+    <RequiresPet {...options}>
       <Component {...props} />
     </RequiresPet>
   );
