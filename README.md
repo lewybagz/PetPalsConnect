@@ -100,6 +100,12 @@ It is idempotent and skips rows that already carry their pets. A conversation
 whose pets cannot be resolved is left exactly as it is rather than given a
 wrong key.
 
+`backend/test/migration.test.js` runs the script for real against seeded
+legacy-shaped data and checks the properties that matter: the new key is the
+one `findOrCreateChat` will compute (so a migrated thread is reused rather than
+stranded beside a new empty one), messages and participants are untouched, a
+second run changes nothing, and `--dry-run` writes nothing.
+
 ## Content
 
 The in-app Articles feature is backed by `content/`. `content/research/` holds
@@ -180,7 +186,7 @@ compiled into the app bundle and is public by definition — never put a secret 
 ## Tests
 
 ```bash
-cd backend && npm test               # 503 tests, ~40s, no database or credentials needed
+cd backend && npm test               # 511 tests, ~40s, no database or credentials needed
 cd PetPalsConnectApp && npm test     # 555 tests, ~10s
 ```
 

@@ -1247,16 +1247,32 @@ Mongo path, and has been all along. It carried 42 advisories, three critical,
 and its `functions` block is out of `firebase.json` so a deploy does not go
 looking for it.
 
-**An advisory is triaged by reachability, not by its count.** The moderates
-left in the two packages that ship are transitive and their vulnerable code
-paths cannot be reached: the `uuid` advisory (GHSA-w5hq-g745-h8pq) is about
-`v3/v5/v6` when a `buf` argument is passed, and both `gaxios` and
-`teeny-request` call `uuid.v4()` with no arguments. Forcing a major bump of a
-transitive through a path no test exercises, to close a hole nothing can reach,
-trades a real risk for a smaller number. The app's `xcode`/`uuid` chain is
-`@expo/config-plugins`, which runs at prebuild and does not appear in the
-exported bundle; `decode-uri-component` comes through
-`@react-navigation/native` and has no fix published upstream.
+**An advisory is triaged by reachability, not by its count.** As of the last
+audit there are **no critical and no high advisories** in any of the three
+packages: 6 moderates in `backend`, 25 in `PetPalsConnectApp`, 0 in the seeding
+scripts. They are two distinct advisories between them, both transitive, and
+both with vulnerable code paths that cannot be reached from here:
+
+- **`uuid` (GHSA-w5hq-g745-h8pq)** is about `v3/v5/v6` when a `buf` argument is
+  passed. The backend reaches it through `gaxios` and `teeny-request`, which
+  call `uuid.v4()` with no arguments. The app reaches it through
+  `expo-splash-screen -> @expo/config-plugins -> xcode -> uuid@7.0.3`, and
+  config-plugins runs at prebuild - it is not in the exported bundle.
+- **`decode-uri-component` (GHSA-vcc3-ghjq-m6fr)** arrives as
+  `@react-navigation/native -> core -> query-string@7.1.3 ->
+  decode-uri-component@0.2.2`. A fixed version *is* published (0.5.0), but
+  `query-string@7.1.3` declares `^0.2.2`, which caps at `<0.3.0` - so the fix
+  is unreachable until React Navigation bumps `query-string`. Forcing it with
+  an override would swap a denial-of-service nobody can trigger for a change to
+  how every deep link in the app is parsed.
+
+Forcing a major bump of a transitive through a path no test exercises, to close
+a hole nothing can reach, trades a real risk for a smaller number.
+
+**GitHub's push warning counts the whole default branch history and lags.** It
+reported 197 advisories with 8 critical immediately after the two dead packages
+carrying them were deleted. `npm audit` in each package is the checkable
+number; the banner is not.
 
 ## Things deliberately left out
 
