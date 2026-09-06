@@ -10,6 +10,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { Text } from "../../components/ui";
+import { useReduceMotion } from "../../hooks/useReduceMotion";
 import { useTailwind } from "../../styles/tailwind";
 import { radius } from "../../styles/tokens";
 import {
@@ -90,6 +91,13 @@ const SwipeableCard = ({
 }) => {
   const tailwind = useTailwind();
   const { width } = useWindowDimensions();
+  /**
+   * A card that flies off the screen is the biggest movement in the app, and
+   * the one a vestibular disorder notices. With reduced motion asked for, the
+   * decision commits where the finger left it and the card is simply replaced -
+   * the stamp has already said which way it went.
+   */
+  const reduceMotion = useReduceMotion();
 
   const translateX = useSharedValue(previewTranslateX);
   const translateY = useSharedValue(0);
@@ -128,8 +136,18 @@ const SwipeableCard = ({
       });
 
       if (!decision) {
+        if (reduceMotion) {
+          translateX.value = 0;
+          translateY.value = 0;
+          return;
+        }
         translateX.value = withSpring(0);
         translateY.value = withSpring(0);
+        return;
+      }
+
+      if (reduceMotion) {
+        runOnJS(commit)(decision);
         return;
       }
 

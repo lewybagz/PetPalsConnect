@@ -12,6 +12,7 @@ const {
 const { notify } = require("../services/NotificationService");
 const { emitToUser } = require("../services/realtime");
 const blocking = require("../services/blocking");
+const settings = require("../services/settings");
 
 /**
  * Pet matching.
@@ -96,9 +97,10 @@ const reachableCandidates = async ({
   excludePetIds = [],
   limit = CANDIDATE_LIMIT,
 }) => {
-  const [blockedIds, suspendedIds] = await Promise.all([
+  const [blockedIds, suspendedIds, viewer] = await Promise.all([
     blocking.blockedIdsFor(userId),
     User.distinct("_id", { suspended: true }),
+    User.findById(userId).select("discovery").lean(),
   ]);
   const excludedOwners = [...new Set([...blockedIds, ...suspendedIds.map(String)])];
 
@@ -106,6 +108,23 @@ const reachableCandidates = async ({
     owner: { $ne: userId, $exists: true, $nin: excludedOwners },
   };
   if (excludePetIds.length > 0) query._id = { $nin: excludePetIds };
+
+  // The owner's own filters, in canonical units. Applied here rather than in
+  // each caller because this is the one filter every discovery path shares -
+  // the same reason blocking and suspension live here.
+  const { discovery } = settings.withDefaults(viewer ?? {});
+  const { minWeight, maxWeight, minAge, maxAge, species } = discovery;
+
+  if (minWeight > 0 || maxWeight < 300) {
+    query.weight = { $gte: minWeight, $lte: maxWeight };
+  }
+  if (minAge > 0 || maxAge < 30) {
+    query.age = { $gte: minAge, $lte: maxAge };
+  }
+  // Empty means "no preference", which is not the same as "none of them".
+  if (species.length > 0) {
+    query.species = { $in: species };
+  }
 
   const candidates = await Pet.find(query).limit(limit).lean();
 
@@ -132,6 +151,12 @@ const reachableCandidates = async ({
         maxMiles
       )
     : candidates.map((pet) => ({ pet, distanceMiles: null }));
+
+  // Somebody who has never shared a position has a null distance. Dropping
+  // them empties the deck early on, so it is opt-out rather than the default.
+  if (!discovery.includeUnknownDistance) {
+    return reachable.filter((entry) => entry.distanceMiles !== null);
+  }
 
   return reachable;
 };
@@ -406,7 +431,13 @@ const PetMatchController = {
 
       const [blockedIds, owners] = await Promise.all([
         blocking.blockedIdsFor(req.userId),
-        User.find({ _id: { $in: ownerIds }, suspended: { $ne: true } })
+        // `showOnMap: false` is a person saying where they are is nobody's
+        // business. A map is the one screen where forgetting that is worst.
+        User.find({
+          _id: { $in: ownerIds },
+          suspended: { $ne: true },
+          "privacy.showOnMap": { $ne: false },
+        })
           .select("geoLocation username")
           .lean(),
       ]);

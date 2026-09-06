@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const settings = require("../services/settings");
 const { toCoordinates, rangeToMiles } = require("../services/matching/distance");
 const { sanitisePhoto } = require("../services/photos");
 const firebase = require("../config/firebase");
@@ -25,6 +26,30 @@ const verifySecret = async (value, stored) => {
   return expected.length === derived.length && timingSafeEqual(expected, derived);
 };
 
+/**
+ * Every account setting, with defaults filled in, plus the choices each allows.
+ *
+ * One shape for the read and the write, because a client that has to model the
+ * response of a save differently from the response of a read ends up with two
+ * models, and the second one goes stale.
+ *
+ * `choices` travels with them so the app builds its pickers from the validator
+ * rather than repeating the option lists - the same reason the notification
+ * screen fetches its categories instead of listing them.
+ */
+const settingsPayload = (user = {}) => ({
+  playdateRange: user.playdateRange ?? 25,
+  locationSharingEnabled: user.locationSharingEnabled ?? true,
+  notificationsEnabled: user.notificationsEnabled ?? true,
+  ...settings.withDefaults(user),
+  choices: {
+    units: settings.UNIT_CHOICES,
+    audiences: settings.AUDIENCES,
+    requestAudiences: settings.REQUEST_AUDIENCES,
+    species: settings.SPECIES,
+  },
+});
+
 const UserController = {
   /**
    * Finds people by username.
@@ -50,6 +75,9 @@ const UserController = {
         usernameLower: { $regex: `^${query.toLowerCase().replace(/[^a-z0-9_.-]/g, "")}` },
         _id: { $ne: req.userId, $nin: blockedIds },
         suspended: { $ne: true },
+        // Opted out of being found by name. Absent means true, so an account
+        // created before this setting existed stays discoverable.
+        "privacy.discoverableInSearch": { $ne: false },
       })
         .select("username userPhoto verified")
         .limit(20);
@@ -500,40 +528,81 @@ const UserController = {
     }
   },
 
+  /**
+   * The one writer of account settings.
+   *
+   * Was three named fields written on every call, so a client sending only
+   * `playdateRange` also wrote `notificationsEnabled` and
+   * `locationSharingEnabled` - whatever they happened to be in that request.
+   * `services/settings.js` validates a partial patch against one schema and
+   * returns flat dotted paths, which is what stops `{ privacy: { showOnMap:
+   * false } }` replacing the whole `privacy` subdocument.
+   */
   async updateUserSettings(req, res) {
-    const userId = req.userId;
-    const { playdateRange, notificationsEnabled, locationSharingEnabled } =
-      req.body;
-
     try {
-      // Assuming these are the names of the fields in your User model
-      // `playdateRange` is a number of miles now. An older client (or a value
-      // cached on the device) may still send "Within 20 miles"; convert rather
-      // than fail validation, which is what the enum did to every save the
-      // settings slider ever made.
-      const rangeMiles =
-        typeof playdateRange === "string"
-          ? (rangeToMiles(playdateRange) ?? 0)
-          : playdateRange;
+      const current = await User.findById(req.userId)
+        .select("discovery privacy units")
+        .lean();
 
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        {
-          playdateRange: rangeMiles,
-          notificationsEnabled,
-          locationSharingEnabled,
-        },
-        { new: true }
-      );
+      if (!current) return res.status(404).json({ message: "User not found" });
 
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
+      // An older client (or a value cached on a device) may still send
+      // `playdateRange` as "Within 20 miles". Convert rather than reject, which
+      // is what the enum used to do to every save the slider ever made.
+      const patch = { ...req.body };
+      if (typeof patch.playdateRange === "string") {
+        patch.playdateRange = rangeToMiles(patch.playdateRange) ?? 0;
       }
 
-      res.json({ message: "Settings updated successfully", user: updatedUser });
+      const update = settings.updateFor(patch, current);
+
+      if (Object.keys(update).length === 0) {
+        return res.status(400).json({ message: "No settings to update" });
+      }
+
+      const updated = await User.findByIdAndUpdate(
+        req.userId,
+        { $set: update },
+        { returnDocument: "after", runValidators: true }
+      )
+        .select("playdateRange locationSharingEnabled notificationsEnabled units discovery privacy")
+        .lean();
+
+      // The same body as `GET`, so the app can replace what it holds with the
+      // response rather than guessing what the write did. A save that answers
+      // in a different shape from the read is a save the client has to model
+      // twice, and the second model is the one that goes stale.
+      res.json({ message: "Settings updated successfully", ...settingsPayload(updated) });
     } catch (error) {
+      if (error.status === 400) {
+        return res
+          .status(400)
+          .json({ message: error.message, code: error.code ?? "INVALID_SETTING" });
+      }
       console.error("Error updating user settings:", error);
       res.status(500).json({ message: "Failed to update settings" });
+    }
+  },
+
+  /**
+   * Every account setting, with defaults filled in.
+   *
+   * A screen that has to know which fields might be missing is a screen that
+   * will get one wrong, so absent subdocuments are resolved here rather than in
+   * five places in the app.
+   */
+  async getUserSettings(req, res) {
+    try {
+      const user = await User.findById(req.userId)
+        .select("playdateRange locationSharingEnabled notificationsEnabled units discovery privacy")
+        .lean();
+
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      res.json(settingsPayload(user));
+    } catch (error) {
+      console.error("Error reading user settings:", error);
+      res.status(500).json({ message: "Failed to read settings" });
     }
   },
 

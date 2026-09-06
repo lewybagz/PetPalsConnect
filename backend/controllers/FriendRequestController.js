@@ -1,4 +1,6 @@
 const FriendRequest = require("../models/FriendRequest");
+const blocking = require("../services/blocking");
+const audience = require("../services/audience");
 const User = require("../models/User");
 const FriendController = require("./FriendController");
 const { notify } = require("../services/NotificationService");
@@ -170,6 +172,21 @@ const FriendRequestController = {
     }
     if (String(receiver) === String(sender)) {
       return res.status(400).json({ message: "You cannot befriend yourself" });
+    }
+
+    try {
+      // Blocking first, then whatever the receiver has narrowed friend requests
+      // to. Both answer the same way, so neither confirms anything about the
+      // other account.
+      if (await blocking.isBlockedBetween(sender, receiver)) {
+        return res.status(403).json({ message: "This request is not available" });
+      }
+      if (!(await audience.canFriendRequest(receiver, sender))) {
+        return res.status(403).json({ message: "This request is not available" });
+      }
+    } catch (error) {
+      console.error("[friends] Could not check the audience:", error.message);
+      return res.status(500).json({ message: "Could not send that request" });
     }
 
     const newFriendRequest = new FriendRequest({

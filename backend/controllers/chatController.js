@@ -12,6 +12,7 @@ const Pet = require("../models/Pet");
 const { notify } = require("../services/NotificationService");
 const { emitToUser } = require("../services/realtime");
 const blocking = require("../services/blocking");
+const audience = require("../services/audience");
 
 /**
  * The conversation, if the caller is in it.
@@ -137,6 +138,15 @@ const ChatController = {
       // The same answer in both directions, and deliberately vague: telling
       // somebody "they blocked you" hands a harasser a way to confirm it.
       if (await blocking.isBlockedBetween(req.userId, pet.owner)) {
+        return res
+          .status(403)
+          .json({ message: "This conversation is not available" });
+      }
+
+      // The recipient may have narrowed who can start a conversation. Same
+      // wording as a block, on purpose: "they only accept messages from
+      // matches" tells a stranger exactly what to do next.
+      if (!(await audience.canMessage(pet.owner, req.userId))) {
         return res
           .status(403)
           .json({ message: "This conversation is not available" });

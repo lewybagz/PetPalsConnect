@@ -248,6 +248,42 @@ export const NOTIFICATIONS = [
   },
 ];
 
+/**
+ * Account settings, as `GET /api/users/me/settings` answers them.
+ *
+ * `choices` travels with the values because the screens build their pickers
+ * from it rather than repeating the option lists - so a board that dropped it
+ * would render an empty segmented control and look like a bug in the design
+ * rather than a gap in the fixture.
+ */
+export const SETTINGS = {
+  playdateRange: 25,
+  locationSharingEnabled: true,
+  notificationsEnabled: true,
+  units: { distance: "mi", weight: "lb" },
+  discovery: {
+    minWeight: 10,
+    maxWeight: 80,
+    minAge: 0,
+    maxAge: 30,
+    species: ["dog"],
+    includeUnknownDistance: true,
+  },
+  privacy: {
+    profileVisibility: "everyone",
+    messagesFrom: "matches",
+    friendRequestsFrom: "everyone",
+    discoverableInSearch: true,
+    showOnMap: true,
+  },
+  choices: {
+    units: { distance: ["mi", "km"], weight: ["lb", "kg"] },
+    audiences: ["everyone", "matches", "friends"],
+    requestAudiences: ["everyone", "friendsOfFriends", "nobody"],
+    species: ["dog", "cat", "rabbit", "bird", "other"],
+  },
+};
+
 export const ROUTES = {
   "/api/petmatches/discover": {
     pet: MY_PET,
@@ -357,5 +393,12 @@ export const ROUTES = {
       friendRequests: true,
       appUpdates: true,
     },
+    quietHours: {
+      enabled: true,
+      start: "22:00",
+      end: "07:00",
+      utcOffsetMinutes: 0,
+    },
   },
+  "/api/users/me/settings": SETTINGS,
 };

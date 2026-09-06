@@ -10,6 +10,8 @@ import store from "./src/redux/store";
 import { AppThemeProvider, useAppTheme } from "./src/context/AppThemeContext";
 import { ToastProvider } from "./src/components/ui/Toast";
 import { AuthSessionProvider } from "./src/context/AuthSessionContext";
+import { DevicePreferencesProvider } from "./src/context/DevicePreferencesContext";
+import { SettingsProvider } from "./src/context/SettingsContext";
 import RootNavigator from "./src/screens/navigation/RootNavigator";
 import PaymentsProvider from "./src/components/PaymentsProvider";
 import { navigationRef } from "./src/navigation/navigationRef";
@@ -56,21 +58,31 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onReady}>
       <ReduxProvider store={store}>
         <AppThemeProvider>
-          <AuthSessionProvider>
-            <PaymentsProvider>
-              <SafeAreaProvider>
-                {/* Inside the safe-area provider because the toast positions
-                    itself above the home indicator, and outside the navigator
-                    so one host serves every screen. */}
-                <ToastProvider>
-                  <NavigationContainer ref={navigationRef}>
-                    <ThemedStatusBar />
-                    <RootNavigator />
-                  </NavigationContainer>
-                </ToastProvider>
-              </SafeAreaProvider>
-            </PaymentsProvider>
-          </AuthSessionProvider>
+          {/* Device preferences sit above the theme's consumers because `Text`
+              reads "larger text" from here, and above the session because none
+              of them needs an account. */}
+          <DevicePreferencesProvider>
+            <AuthSessionProvider>
+              {/* Account settings need a signed-in caller, so this is below the
+                  session gate; every screen under it reads units, privacy and
+                  discovery from one fetch rather than four. */}
+              <SettingsProvider>
+                <PaymentsProvider>
+                  <SafeAreaProvider>
+                    {/* Inside the safe-area provider because the toast
+                        positions itself above the home indicator, and outside
+                        the navigator so one host serves every screen. */}
+                    <ToastProvider>
+                      <NavigationContainer ref={navigationRef}>
+                        <ThemedStatusBar />
+                        <RootNavigator />
+                      </NavigationContainer>
+                    </ToastProvider>
+                  </SafeAreaProvider>
+                </PaymentsProvider>
+              </SettingsProvider>
+            </AuthSessionProvider>
+          </DevicePreferencesProvider>
         </AppThemeProvider>
       </ReduxProvider>
     </GestureHandlerRootView>

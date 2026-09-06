@@ -27,12 +27,16 @@ const DEFAULTS = {
   matches: true,
 };
 
-const respondWith = (preferences = DEFAULTS) => {
+const QUIET = { enabled: false, start: "22:00", end: "07:00", utcOffsetMinutes: 0 };
+
+const respondWith = (preferences = DEFAULTS, quietHours = QUIET) => {
   api.get.mockImplementation((url) => {
     if (url === "/api/userpreferences/categories")
       return Promise.resolve({ data: { categories: CATEGORIES } });
     if (url === "/api/userpreferences/me")
-      return Promise.resolve({ data: { notificationPreferences: preferences } });
+      return Promise.resolve({
+        data: { notificationPreferences: preferences, quietHours },
+      });
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
 };
@@ -128,5 +132,85 @@ describe("NotificationPreferencesScreen", () => {
     await waitFor(() =>
       expect(screen.getByText("Couldn't load your settings")).toBeTruthy()
     );
+  });
+
+  /**
+   * Quiet hours were the piece missing entirely.
+   *
+   * Every other control here answers "do you want to know about this at all",
+   * which is the wrong question to have to answer at two in the morning - the
+   * only lever for "not right now" was turning a category off and remembering
+   * to turn it back on.
+   */
+  describe("quiet hours", () => {
+    it("keeps the times out of the way until they are wanted", async () => {
+      respondWith();
+      await renderScreen();
+
+      await waitFor(() =>
+        expect(screen.getByTestId("quiet-hours-enabled")).toBeTruthy()
+      );
+      expect(screen.queryByTestId("quiet-hours-start")).toBeNull();
+    });
+
+    it("turning it on saves it and reveals the window", async () => {
+      respondWith();
+      api.patch.mockResolvedValue({
+        data: { quietHours: { ...QUIET, enabled: true } },
+      });
+      await renderScreen();
+
+      await fireEvent(
+        await waitFor(() => screen.getByTestId("quiet-hours-enabled")),
+        "valueChange",
+        true
+      );
+
+      await waitFor(() =>
+        expect(api.patch.mock.calls[0][1].quietHours.enabled).toBe(true)
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("quiet-hours-start")).toBeTruthy()
+      );
+    });
+
+    it("sends the device's own offset with every save", async () => {
+      respondWith(DEFAULTS, { ...QUIET, enabled: true });
+      api.patch.mockResolvedValue({ data: { quietHours: QUIET } });
+      await renderScreen();
+
+      await fireEvent(
+        await waitFor(() => screen.getByTestId("quiet-hours-enabled")),
+        "valueChange",
+        false
+      );
+
+      // The window is wall-clock, so the phone doing the saving is the one
+      // that knows where its owner currently is. A stored instant would be
+      // wrong for exactly the person this exists for.
+      await waitFor(() =>
+        expect(api.patch.mock.calls[0][1].quietHours.utcOffsetMinutes).toBe(
+          -new Date().getTimezoneOffset()
+        )
+      );
+    });
+
+    it("a failed save puts the switch back", async () => {
+      respondWith();
+      api.patch.mockRejectedValue(new Error("offline"));
+      await renderScreen();
+
+      await fireEvent(
+        await waitFor(() => screen.getByTestId("quiet-hours-enabled")),
+        "valueChange",
+        true
+      );
+
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("quiet-hours-enabled").props.accessibilityState.checked
+        ).toBe(false)
+      );
+    });
   });
 });

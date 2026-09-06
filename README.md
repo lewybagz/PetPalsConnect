@@ -164,7 +164,8 @@ compiled into the app bundle and is public by definition — never put a secret 
 ## Tests
 
 ```bash
-cd backend && npm test     # 391 tests, ~35s, no database or credentials needed
+cd backend && npm test               # 431 tests, ~35s, no database or credentials needed
+cd PetPalsConnectApp && npm test     # 504 tests, ~10s
 ```
 
 The suite boots the real Express app against an in-memory MongoDB with a stubbed
