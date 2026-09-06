@@ -6,10 +6,22 @@ import * as Location from "expo-location";
 import MoreScreen from "./MoreScreen";
 import api from "../../api/axios";
 import { useAuthSession } from "../../context/AuthSessionContext";
+import { importPlaces } from "../../api/maps";
+import { savePlace } from "../../api/petCare";
 
 jest.mock("../../api/axios", () => ({ get: jest.fn(), post: jest.fn() }));
+jest.mock("../../api/petCare", () => ({
+  ...jest.requireActual("../../api/petCare"),
+  savePlace: jest.fn(),
+  unsavePlace: jest.fn(),
+}));
 jest.mock("../../context/AuthSessionContext", () => ({
   useAuthSession: jest.fn(),
+}));
+jest.mock("../../api/maps", () => ({ importPlaces: jest.fn() }));
+jest.mock("@react-navigation/native", () => ({
+  // Runs the effect once, like a first focus, and never re-focuses.
+  useFocusEffect: (effect) => require("react").useEffect(effect, [effect]),
 }));
 jest.mock("expo-location", () => ({
   getForegroundPermissionsAsync: jest.fn(),
@@ -64,7 +76,13 @@ const dogPicks = (overrides = {}) => ({
   ...overrides,
 });
 
-const respondWith = ({ pets = [], places = [], locationKnown = true, importable = true } = {}) => {
+const respondWith = ({
+  pets = [],
+  places = [],
+  saved = [],
+  locationKnown = true,
+  importable = true,
+} = {}) => {
   api.get.mockImplementation((url) => {
     if (url === "/api/petcare/picks") {
       return Promise.resolve({
@@ -78,7 +96,7 @@ const respondWith = ({ pets = [], places = [], locationKnown = true, importable 
     }
     if (url === "/api/locations/care") {
       return Promise.resolve({
-        data: { locationKnown, importable, emergency: EMERGENCY, places },
+        data: { locationKnown, importable, emergency: EMERGENCY, saved, places },
       });
     }
     return Promise.reject(new Error(`unexpected GET ${url}`));
@@ -92,6 +110,8 @@ beforeEach(() => {
   Location.getCurrentPositionAsync.mockResolvedValue({
     coords: { latitude: 37.76, longitude: -122.43 },
   });
+  importPlaces.mockResolvedValue({ configured: true, imported: 0 });
+  savePlace.mockResolvedValue({});
 });
 
 describe("the care hub", () => {
@@ -209,12 +229,107 @@ describe("the care hub", () => {
     expect(screen.getByText(/Share your location/)).toBeTruthy();
   });
 
-  it("says a fresh area is unimported rather than empty", async () => {
-    respondWith({ pets: [dogPicks()], places: [], locationKnown: true, importable: true });
+  it("fills an empty area in rather than telling you to go elsewhere", async () => {
+    // Sending somebody to a different tab to fix an empty list on this one is
+    // a dead end.
+    respondWith({ pets: [dogPicks()], places: [], locationKnown: true });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() =>
+      expect(importPlaces).toHaveBeenCalledWith({ latitude: 37.76, longitude: -122.43 })
+    );
+  });
+
+  it("never imports without knowing where you are", async () => {
+    // Importing around a position we do not have spends billed requests on
+    // the wrong city.
+    Location.getForegroundPermissionsAsync.mockResolvedValue({ granted: false });
+    respondWith({ pets: [dogPicks()], places: [], locationKnown: false });
     render(<MoreScreen navigation={navigation} route={route} />);
 
     await waitFor(() => expect(screen.getByTestId("hub-no-places")).toBeTruthy());
-    expect(screen.getByText(/Nothing here yet for your area/)).toBeTruthy();
+    expect(importPlaces).not.toHaveBeenCalled();
+  });
+
+  it("never imports when the server has no Google key", async () => {
+    respondWith({ pets: [dogPicks()], places: [], importable: false });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("hub-no-places")).toBeTruthy());
+    expect(importPlaces).not.toHaveBeenCalled();
+  });
+
+  it("does not import when there are already places", async () => {
+    respondWith({
+      pets: [dogPicks()],
+      places: [{ _id: "loc-1", name: "Averill Vets", address: "1 Averill St" }],
+    });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("place-loc-1")).toBeTruthy());
+    expect(importPlaces).not.toHaveBeenCalled();
+  });
+
+  it("tries the import once, not on every refresh", async () => {
+    // An import is billed Google traffic. A screen that retries on every
+    // pull-to-refresh turns a quota problem into a bill.
+    importPlaces.mockRejectedValue(new Error("rate limited"));
+    respondWith({ pets: [dogPicks()], places: [], locationKnown: true });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(importPlaces).toHaveBeenCalledTimes(1));
+
+    fireEvent.press(screen.getByTestId("hub-category-vet"));
+    await waitFor(() => expect(screen.getByTestId("hub-no-places")).toBeTruthy());
+    expect(importPlaces).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-reads the list when the import found something", async () => {
+    importPlaces.mockResolvedValue({ configured: true, imported: 12 });
+    let call = 0;
+    api.get.mockImplementation((url) => {
+      if (url === "/api/petcare/picks") {
+        return Promise.resolve({
+          data: {
+            categories: [],
+            placeCategories: ["vet"],
+            emergency: EMERGENCY,
+            pets: [dogPicks()],
+          },
+        });
+      }
+      if (url === "/api/locations/care") {
+        call += 1;
+        return Promise.resolve({
+          data: {
+            locationKnown: true,
+            importable: true,
+            emergency: EMERGENCY,
+            places:
+              call === 1
+                ? []
+                : [{ _id: "loc-9", name: "New Vets", address: "9 New Street" }],
+          },
+        });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("place-loc-9")).toBeTruthy());
+  });
+
+  it("says an area is genuinely empty only once it has looked", async () => {
+    // Before the hub imported for itself this told people to go to the map,
+    // which was a dead end. It now says what it found, after looking.
+    respondWith({ pets: [dogPicks()], places: [], locationKnown: true, importable: true });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(importPlaces).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByText(/Nothing found for your area yet/)).toBeTruthy()
+    );
   });
 
   it("never asks for the location permission on its own", async () => {
@@ -237,7 +352,9 @@ describe("the care hub", () => {
     });
     render(<MoreScreen navigation={navigation} route={route} />);
 
-    const place = await waitFor(() => screen.getByTestId("place-loc-1"));
+    // The card's own body, not the card: the save star beside it is a
+    // separate tap target on purpose.
+    const place = await waitFor(() => screen.getByTestId("place-open-loc-1"));
     fireEvent.press(place);
 
     expect(navigation.navigate).toHaveBeenCalledWith("PotentialPlaydateLocation", {
@@ -257,6 +374,66 @@ describe("the care hub", () => {
         params: { lat: 37.76, lng: -122.43, category: "vet" },
       })
     );
+  });
+
+  it("saves a place and shows it pinned above the search", async () => {
+    savePlace.mockResolvedValue({});
+    respondWith({
+      pets: [dogPicks()],
+      places: [{ _id: "loc-1", name: "Averill Vets", address: "1 Averill St" }],
+    });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    const star = await waitFor(() => screen.getByTestId("place-save-loc-1"));
+    fireEvent.press(star);
+
+    // Optimistic: the list moves under the thumb rather than after a round trip.
+    await waitFor(() => expect(screen.getByTestId("hub-saved")).toBeTruthy());
+    expect(savePlace).toHaveBeenCalledWith("loc-1");
+  });
+
+  it("rolls a failed save back rather than lying about it", async () => {
+    savePlace.mockRejectedValue(new Error("nope"));
+    respondWith({
+      pets: [dogPicks()],
+      places: [{ _id: "loc-1", name: "Averill Vets", address: "1 Averill St" }],
+    });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    const star = await waitFor(() => screen.getByTestId("place-save-loc-1"));
+    fireEvent.press(star);
+
+    await waitFor(() => expect(savePlace).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByTestId("hub-saved")).toBeNull());
+  });
+
+  it("keeps saving separate from opening", async () => {
+    // Nesting one press handler inside another makes which fires depend on
+    // exactly where the thumb landed.
+    savePlace.mockResolvedValue({});
+    respondWith({
+      pets: [dogPicks()],
+      places: [{ _id: "loc-1", name: "Averill Vets", address: "1 Averill St" }],
+    });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    const star = await waitFor(() => screen.getByTestId("place-save-loc-1"));
+    fireEvent.press(star);
+
+    await waitFor(() => expect(savePlace).toHaveBeenCalled());
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  it("shows a saved place even when it is not in the nearby list", async () => {
+    // Saved places are not filtered by the category chips or the range: your
+    // own vet is the entry you came here to find.
+    respondWith({ pets: [dogPicks()], places: [], saved: [
+      { _id: "loc-mine", name: "My Vet", address: "2 Home Road" },
+    ] });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("hub-saved")).toBeTruthy());
+    expect(screen.getByTestId("place-loc-mine")).toBeTruthy();
   });
 
   it("keeps the links this screen already had", async () => {

@@ -511,6 +511,37 @@ different sentences. Keying the first pair on `hasPet` from the session - which
 is what this did first - answers a petless owner with an apology for a bug that
 did not happen.
 
+**A place is a phone number and a route to it before it is anything else.**
+`PotentialPlaydateLocationScreen` fetched `/api/playdates/locations/:id` - a
+second endpoint returning the same Location by the same id, without the Places
+Details enrichment - so a vet opened from the hub showed an address and no way
+to ring them. That duplicate is deleted; the screen reads `/api/locations/:id`,
+which fills in phone, website and hours on first open.
+
+**The hub imports its own places.** Sending somebody to the map to fix an empty
+list on this screen is a dead end. It fires only when the list is genuinely
+empty, the position is known, the server reports Places configured, and it has
+not already tried this mount - an import is billed Google traffic, and a screen
+that retries on every pull-to-refresh turns a quota problem into a bill.
+
+**A favourite is of a pet or of a place, never both and never neither.**
+`Favorite` held only pets, with `pet` and `content` both `required`, so "this is
+my vet" did not fit. Both `required`s are functions now and a pre-validate hook
+enforces exactly one target, because each `required` excuses the other and a row
+with neither would otherwise save and be rendered by nothing. Saved places come
+back with the care list rather than from a second request, and are deliberately
+*not* filtered by category or range: somebody's own vet is the entry they opened
+the screen to find.
+
+**The gallery photographs a viewport, and react-native-web scrolls inside an
+element.** Playwright's `fullPage` is useless here - a ScrollView renders as a
+fixed-height div with its own overflow, so the document is always exactly one
+viewport tall however much is inside it. A board sets `scrollY` and `shoot.mjs`
+scrolls the element. Note that `shoot.mjs` *parses* `boards.js` rather than
+importing it (it is JSX only Metro can load), so a new per-board option has to
+be picked up by that parser too - `scrollY` was declared, ignored, and every
+scrolled screenshot came out silently unscrolled with nothing saying why.
+
 **A `__`-prefixed file under `src/` is a scratch file, and every source walker
 skips one.** `checkTokens.test.js` writes one to prove the colour ban still
 fires, and jest runs suites in parallel workers off a single working tree - so

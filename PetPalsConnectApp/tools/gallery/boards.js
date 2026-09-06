@@ -15,6 +15,7 @@ import MapScreen from "../../src/screens/swipe/MapScreen";
 import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateScreen";
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
 import MoreScreen from "../../src/screens/bottomTab/MoreScreen";
+import PotentialPlaydateLocationScreen from "../../src/screens/playdate/PotentialPlaydateLocationScreen";
 import { CANDIDATES, CARE_PICKS, CARE_PLACES, MY_PET, ROUTES, pending } from "./fixtures";
 
 /**
@@ -144,13 +145,68 @@ export const BOARDS = [
     routes: {
       ...ROUTES,
       "/api/petcare/picks": { ...CARE_PICKS, pets: [] },
-      "/api/locations/care": { ...CARE_PLACES, places: [], locationKnown: false },
+      "/api/locations/care": {
+        ...CARE_PLACES,
+        places: [],
+        saved: [],
+        locationKnown: false,
+      },
     },
     render: () => (
       <MoreScreen
         navigation={navigation}
         route={{ params: {} }}
         walkthroughAutoStart={false}
+      />
+    ),
+  },
+  {
+    id: "care-hub-places",
+    label: "Pet care hub - saved places and what's nearby",
+    routes: ROUTES,
+    // The same screen, scrolled past the picks. Everything below the second
+    // section was invisible to this tool until now, which is most of it.
+    scrollY: 900,
+    render: () => (
+      <MoreScreen
+        navigation={navigation}
+        route={{ params: {} }}
+        walkthroughAutoStart={false}
+      />
+    ),
+  },
+  {
+    id: "place",
+    label: "A place - vet with contact details",
+    // The screen every card in the hub opens, and the one that had never been
+    // photographed: it fetched a duplicate endpoint with no contact details,
+    // so its whole reason to exist was missing.
+    routes: {
+      ...ROUTES,
+      "/api/locations/loc-1": {
+        _id: "loc-1",
+        name: "Averill Veterinary Clinic",
+        address: "1200 Averill Street",
+        categories: ["vet"],
+        phone: "(415) 555-0142",
+        website: "https://example.test/averill",
+        openingHours: [
+          "Monday: 8:00 AM – 6:00 PM",
+          "Tuesday: 8:00 AM – 6:00 PM",
+          "Wednesday: 8:00 AM – 6:00 PM",
+          "Thursday: 8:00 AM – 6:00 PM",
+          "Friday: 8:00 AM – 5:00 PM",
+          "Saturday: 9:00 AM – 1:00 PM",
+          "Sunday: Closed",
+        ],
+        geoLocation: { type: "Point", coordinates: [-122.4382, 37.7925] },
+      },
+      "/api/reviews/location/loc-1": [],
+    },
+    render: () => (
+      <PotentialPlaydateLocationScreen
+        navigation={navigation}
+        route={{ params: { locationId: "loc-1" } }}
       />
     ),
   },

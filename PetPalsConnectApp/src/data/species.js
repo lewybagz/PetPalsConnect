@@ -52,6 +52,7 @@ export const SPECIES = [
   {
     value: "dog",
     label: "Dog",
+    shortLabel: "Dog",
     /** The only species playdates are for. */
     matchable: true,
     breeds: BREEDS,
@@ -60,13 +61,17 @@ export const SPECIES = [
   {
     value: "cat",
     label: "Cat",
+    shortLabel: "Cat",
     matchable: false,
     breeds: CAT_BREEDS,
     weighed: true,
   },
   {
     value: "smallMammal",
+    // The long label is what a picker needs - somebody looking for "rabbit"
+    // has to find this row. The short one is what a finished profile shows.
     label: "Small pet (rabbit, guinea pig, hamster…)",
+    shortLabel: "Small pet",
     matchable: false,
     breeds: null,
     weighed: false,
@@ -74,6 +79,7 @@ export const SPECIES = [
   {
     value: "bird",
     label: "Bird",
+    shortLabel: "Bird",
     matchable: false,
     breeds: null,
     weighed: false,
@@ -81,6 +87,7 @@ export const SPECIES = [
   {
     value: "reptile",
     label: "Reptile",
+    shortLabel: "Reptile",
     matchable: false,
     breeds: null,
     weighed: false,
@@ -88,6 +95,7 @@ export const SPECIES = [
   {
     value: "fish",
     label: "Fish",
+    shortLabel: "Fish",
     matchable: false,
     breeds: null,
     weighed: false,

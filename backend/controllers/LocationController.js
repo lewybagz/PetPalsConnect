@@ -3,6 +3,7 @@ const places = require("../services/places");
 const { milesBetween, formatMiles } = require("../services/matching/distance");
 const { CATEGORIES, CARE_CATEGORIES } = require("../services/placeCategories");
 const { EMERGENCY_CONTACTS } = require("../services/petCare/emergency");
+const Favorite = require("../models/Favorite");
 
 /**
  * Places to meet.
@@ -178,31 +179,52 @@ const LocationController = {
       : CARE_CATEGORIES;
 
     try {
-      const locations = await places.nearby({
-        latitude: lat,
-        longitude: lng,
-        radiusMiles: range,
-        categories: requested,
-      });
+      /**
+       * The caller's saved places come back with the list, not from a second
+       * request, and are deliberately not filtered by category or distance.
+       * Somebody's own vet is the one entry they came here to find, and it
+       * stays findable whether or not it is inside their range today or
+       * matches the chip they happen to have tapped.
+       */
+      const [locations, saved] = await Promise.all([
+        places.nearby({
+          latitude: lat,
+          longitude: lng,
+          radiusMiles: range,
+          categories: requested,
+        }),
+        Favorite.find({ user: req.userId, location: { $exists: true } })
+          .populate("location")
+          .sort({ createdDate: -1 })
+          .lean(),
+      ]);
 
       const origin =
         Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
           ? [Number(lng), Number(lat)]
           : null;
 
+      const withDistance = (location) => ({
+        ...location,
+        distanceMiles:
+          origin && location.geoLocation?.coordinates
+            ? formatMiles(milesBetween(origin, location.geoLocation.coordinates))
+            : null,
+      });
+
       res.json({
         locationKnown: Boolean(origin),
+        // A place deleted since it was saved leaves `location: null` on the
+        // row, so the populate result is filtered rather than assumed.
+        saved: saved
+          .map((favorite) => favorite.location)
+          .filter(Boolean)
+          .map(withDistance),
         // Said plainly, so a short list reads as "we have not imported your
         // area yet" rather than "there are no vets near you".
         importable: places.isEnabled(),
         emergency: EMERGENCY_CONTACTS,
-        places: locations.map((location) => ({
-          ...location,
-          distanceMiles:
-            origin && location.geoLocation?.coordinates
-              ? formatMiles(milesBetween(origin, location.geoLocation.coordinates))
-              : null,
-        })),
+        places: locations.map(withDistance),
       });
     } catch (err) {
       res.status(500).json({ message: err.message });

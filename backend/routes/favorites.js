@@ -5,11 +5,17 @@ const FavoriteController = require("../controllers/FavoriteController"); // Adju
 // Route to get all favorites
 router.get("/", FavoriteController.getAllFavorites);
 
-// Route to get a specific favorite by ID
-router.get("/:id", FavoriteController.getFavoriteById);
+// Static paths before the parameterised one, or `/:id` swallows them.
+
+// Saving a place - a vet, a groomer, a park - from the care hub.
+router.post("/places", FavoriteController.createPlaceFavorite);
+router.delete("/place/:locationId", FavoriteController.removePlaceFavorite);
 
 // Route to create a new favorite
 router.post("/", FavoriteController.createFavorite);
 router.delete("/pet/:petId", FavoriteController.removeFavorite);
+
+// Route to get a specific favorite by ID
+router.get("/:id", FavoriteController.getFavoriteById);
 
 module.exports = router;

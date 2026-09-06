@@ -236,6 +236,125 @@ test("care categories never include parks", () => {
   assert.ok(!CARE_CATEGORIES.includes("park"));
 });
 
+// --- Saved places -----------------------------------------------------------
+
+test("an owner can save a place and gets it back with the list", async () => {
+  const owner = await makeUser("save-owner");
+  assert.ok(owner);
+  const vet = await makePlace("My Vet", ["vet"]);
+
+  await request(app)
+    .post("/api/favorites/places")
+    .set(...auth("save-owner"))
+    .send({ locationId: vet._id })
+    .expect(201);
+
+  const res = await request(app)
+    .get("/api/locations/care")
+    .set(...auth("save-owner"))
+    .expect(200);
+
+  assert.deepEqual(
+    res.body.saved.map((place) => place.name),
+    ["My Vet"]
+  );
+});
+
+test("a saved place survives a category filter that excludes it", async () => {
+  // Your own vet is the entry you came here to find; it must not vanish
+  // because you tapped the "Groomers" chip.
+  await makeUser("filter-owner");
+  const vet = await makePlace("My Vet", ["vet"]);
+
+  await request(app)
+    .post("/api/favorites/places")
+    .set(...auth("filter-owner"))
+    .send({ locationId: vet._id })
+    .expect(201);
+
+  const res = await request(app)
+    .get("/api/locations/care?category=groomer")
+    .set(...auth("filter-owner"))
+    .expect(200);
+
+  assert.deepEqual(res.body.places, []);
+  assert.equal(res.body.saved.length, 1);
+});
+
+test("saving twice is a double tap, not an error", async () => {
+  await makeUser("twice-owner");
+  const vet = await makePlace("My Vet", ["vet"]);
+
+  for (let i = 0; i < 2; i += 1) {
+    await request(app)
+      .post("/api/favorites/places")
+      .set(...auth("twice-owner"))
+      .send({ locationId: vet._id })
+      .expect(201);
+  }
+
+  const res = await request(app)
+    .get("/api/locations/care")
+    .set(...auth("twice-owner"))
+    .expect(200);
+
+  assert.equal(res.body.saved.length, 1);
+});
+
+test("unsaving is idempotent", async () => {
+  await makeUser("unsave-owner");
+  const vet = await makePlace("My Vet", ["vet"]);
+
+  await request(app)
+    .post("/api/favorites/places")
+    .set(...auth("unsave-owner"))
+    .send({ locationId: vet._id })
+    .expect(201);
+
+  const first = await request(app)
+    .delete(`/api/favorites/place/${vet._id}`)
+    .set(...auth("unsave-owner"))
+    .expect(200);
+  const second = await request(app)
+    .delete(`/api/favorites/place/${vet._id}`)
+    .set(...auth("unsave-owner"))
+    .expect(200);
+
+  assert.equal(first.body.removed, true);
+  assert.equal(second.body.removed, false);
+});
+
+test("you never see somebody else's saved places", async () => {
+  await makeUser("mine-owner");
+  await makeUser("theirs-owner");
+  const vet = await makePlace("Their Vet", ["vet"]);
+
+  await request(app)
+    .post("/api/favorites/places")
+    .set(...auth("theirs-owner"))
+    .send({ locationId: vet._id })
+    .expect(201);
+
+  const res = await request(app)
+    .get("/api/locations/care")
+    .set(...auth("mine-owner"))
+    .expect(200);
+
+  assert.deepEqual(res.body.saved, []);
+});
+
+test("a favourite is of a pet or a place, never both and never neither", async () => {
+  // Each `required` excuses the other, so without this validator a row with
+  // neither target would save and be rendered by nothing.
+  const Favorite = require("../models/Favorite");
+  const owner = await makeUser("validator-owner");
+
+  await assert.rejects(
+    Favorite.create({ user: owner._id, creator: owner._id }),
+    /not both and not neither/
+  );
+});
+
 test("Service is gone rather than left mounted", async () => {
   await makeUser("gone-viewer");
 

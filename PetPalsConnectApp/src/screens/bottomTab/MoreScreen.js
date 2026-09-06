@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Pressable, Linking, RefreshControl } from "react-native";
 import * as Location from "expo-location";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
 import {
@@ -12,8 +13,14 @@ import {
 import CustomTooltip from "../../components/CustomTooltip";
 import { useTailwind } from "../../styles/tailwind";
 import { useTokens } from "../../context/AppThemeContext";
-import { Button, Card, Screen, Skeleton, Text } from "../../components/ui";
-import { fetchCarePicks, fetchCarePlaces } from "../../api/petCare";
+import { Button, Card, Screen, Skeleton, Text, useToast } from "../../components/ui";
+import {
+  fetchCarePicks,
+  fetchCarePlaces,
+  savePlace,
+  unsavePlace,
+} from "../../api/petCare";
+import { importPlaces } from "../../api/maps";
 
 /**
  * The pet owner's hub.
@@ -145,6 +152,7 @@ const SectionHeading = ({ children }) => {
 const MoreScreen = ({ route, start, navigation }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
+  const toast = useToast();
 
   const [picks, setPicks] = useState(null);
   const [places, setPlaces] = useState(null);
@@ -152,11 +160,43 @@ const MoreScreen = ({ route, start, navigation }) => {
   const [selectedPetId, setSelectedPetId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+
+  /**
+   * Whether this session has already tried to pull places in for this area.
+   *
+   * An import is a handful of billed Google requests, so it fires at most once
+   * per mount and never again after a failure - a server that is rate-limited
+   * or misconfigured must not be asked repeatedly by a screen the user is
+   * pulling to refresh. A ref rather than state because changing it must not
+   * re-render, and because the effect that reads it also sets it.
+   */
+  const importAttempted = useRef(false);
 
   useEffect(() => {
     if (route.params?.showTutorial) start();
   }, [route.params?.showTutorial, start]);
+
+  /**
+   * Re-reads when the tab comes back into view, but not on the first one.
+   *
+   * The hub is a tab, so it stays mounted: adding a pet from the "Add a pet"
+   * button and coming back showed the same "Add a pet to see this" card,
+   * because nothing had asked again. `useFocusEffect` fires on the initial
+   * focus too, which would make every launch fetch twice, so the first one is
+   * skipped and the effect only bumps the token on a genuine return.
+   */
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      setReloadToken((token) => token + 1);
+    }, [])
+  );
 
   /**
    * Reads the position we already have permission for, and never asks.
@@ -208,6 +248,51 @@ const MoreScreen = ({ route, start, navigation }) => {
       setPlaces(placeData);
       setLoading(false);
       setRefreshing(false);
+
+      /**
+       * Fill an empty area in, rather than telling somebody to go and do it.
+       *
+       * Sending a user to a different tab to fix an empty list on this one is
+       * a dead end, so the hub pulls its own places in. Every condition here
+       * is load-bearing:
+       *
+       * - Nothing came back, so there is genuinely nothing to fill.
+       * - We know where they are; importing around a position we do not have
+       *   would spend requests on the wrong city.
+       * - The server says Places is configured, so this is not a request that
+       *   is going to come back 503.
+       * - We have not tried yet this session. An import is billed Google
+       *   traffic, and a screen that retries on every pull-to-refresh turns a
+       *   quota problem into a bill.
+       */
+      const nothingHere = (placeData?.places?.length ?? 0) === 0;
+      if (
+        nothingHere &&
+        position &&
+        placeData?.importable &&
+        !importAttempted.current
+      ) {
+        importAttempted.current = true;
+        setImporting(true);
+        try {
+          const result = await importPlaces({ ...position });
+          if (cancelled) return;
+          // Only worth a re-read if it actually found something; otherwise the
+          // empty state below already says the right thing.
+          if (result.imported > 0) {
+            const filled = await fetchCarePlaces({
+              ...position,
+              category: placeCategory,
+            }).catch(() => null);
+            if (!cancelled && filled) setPlaces(filled);
+          }
+        } catch {
+          // Left to the empty state, which says what it can. A failed import
+          // is not something to interrupt somebody with.
+        } finally {
+          if (!cancelled) setImporting(false);
+        }
+      }
     };
 
     load();
@@ -226,6 +311,40 @@ const MoreScreen = ({ route, start, navigation }) => {
   const selectedPet = useMemo(
     () => pets.find((pet) => String(pet.petId) === String(selectedPetId)) ?? pets[0] ?? null,
     [pets, selectedPetId]
+  );
+
+  const savedPlaces = useMemo(() => places?.saved ?? [], [places]);
+  const savedIds = useMemo(
+    () => new Set(savedPlaces.map((place) => String(place._id))),
+    [savedPlaces]
+  );
+
+  /**
+   * Saves or unsaves a place, optimistically.
+   *
+   * The list moves under the thumb the moment it is tapped and rolls back with
+   * a toast if the write fails - the same shape the deck uses for a swipe, and
+   * for the same reason: waiting on a round trip to redraw a star makes a
+   * working app feel broken.
+   */
+  const toggleSaved = useCallback(
+    async (place) => {
+      const wasSaved = savedIds.has(String(place._id));
+      const optimistic = wasSaved
+        ? savedPlaces.filter((saved) => String(saved._id) !== String(place._id))
+        : [place, ...savedPlaces];
+
+      setPlaces((current) => ({ ...current, saved: optimistic }));
+
+      try {
+        if (wasSaved) await unsavePlace(place._id);
+        else await savePlace(place._id);
+      } catch {
+        setPlaces((current) => ({ ...current, saved: savedPlaces }));
+        toast.error(wasSaved ? "Couldn't remove that." : "Couldn't save that.");
+      }
+    },
+    [savedIds, savedPlaces, toast]
   );
 
   const emergency = picks?.emergency ?? places?.emergency ?? [];
@@ -456,42 +575,75 @@ const MoreScreen = ({ route, start, navigation }) => {
             })}
           </View>
 
+          {/*
+            Saved places sit above the search, unfiltered by the chips and by
+            the range. Somebody's own vet is the one entry they opened this
+            screen to find, and making them hunt for it among the twenty
+            nearest is the opposite of what a saved list is for.
+          */}
+          {savedPlaces.length > 0 ? (
+            <View testID="hub-saved">
+              <Text variant="caption" tone="faint" style={tailwind("mb-xs")}>
+                SAVED
+              </Text>
+              {savedPlaces.map((place) => (
+                <PlaceCard
+                  key={place._id}
+                  place={place}
+                  saved
+                  onToggleSave={() => toggleSaved(place)}
+                  onOpen={() =>
+                    navigation.navigate("PotentialPlaydateLocation", {
+                      locationId: place._id,
+                    })
+                  }
+                />
+              ))}
+            </View>
+          ) : null}
+
+          {/*
+            Only when there is a saved list above to distinguish it from -
+            otherwise the results are the only thing here and a label on them
+            is noise.
+          */}
+          {savedPlaces.length > 0 && places?.places?.length ? (
+            <Text variant="caption" tone="faint" style={tailwind("mb-xs mt-sm")}>
+              NEARBY
+            </Text>
+          ) : null}
+
           {places?.places?.length ? (
             places.places.map((place) => (
-              <Card
+              <PlaceCard
                 key={place._id}
-                testID={`place-${place._id}`}
-                style={tailwind("mb-sm")}
-                onPress={() =>
+                place={place}
+                saved={savedIds.has(String(place._id))}
+                onToggleSave={() => toggleSaved(place)}
+                onOpen={() =>
                   navigation.navigate("PotentialPlaydateLocation", {
                     locationId: place._id,
                   })
                 }
-              >
-                <Text weight="600">{place.name}</Text>
-                <Text variant="caption" tone="muted">
-                  {place.address}
-                </Text>
-                {place.distanceMiles != null ? (
-                  <Text variant="caption" tone="faint" style={tailwind("mt-xs")}>
-                    {place.distanceMiles} miles away
-                  </Text>
-                ) : null}
-              </Card>
+              />
             ))
           ) : (
             <Card testID="hub-no-places">
               {/*
-                Three different nothings, and they are not the same thing. A
+                Four different nothings, and they are not the same thing. A
                 list that says "no vets near you" when it has simply never
-                been given a position is a lie the user cannot correct.
+                been given a position is a lie the user cannot correct - and
+                one that says it while an import is still running is a lie
+                that is about to correct itself.
               */}
               <Text tone="muted">
-                {places?.locationKnown === false
-                  ? "Share your location on the map to see places near you."
-                  : places?.importable
-                    ? "Nothing here yet for your area. Open the map to pull nearby places in."
-                    : "No places have been added for your area yet."}
+                {importing
+                  ? "Looking for places near you…"
+                  : places?.locationKnown === false
+                    ? "Share your location on the map to see places near you."
+                    : places?.importable
+                      ? "Nothing found for your area yet."
+                      : "No places have been added for your area yet."}
               </Text>
             </Card>
           )}
@@ -522,6 +674,63 @@ const MoreScreen = ({ route, start, navigation }) => {
         </>
       )}
     </Screen>
+  );
+};
+
+/**
+ * One place, with a save toggle that is its own tap target.
+ *
+ * The star is a `Pressable` beside the card's own press rather than inside it:
+ * nesting one press handler in another makes which one fires depend on where
+ * exactly the thumb landed, and "I tried to save it and it opened instead" is
+ * the kind of bug nobody reports and everybody notices.
+ */
+const PlaceCard = ({ place, saved, onToggleSave, onOpen }) => {
+  const tailwind = useTailwind();
+  const tokens = useTokens();
+
+  return (
+    <Card testID={`place-${place._id}`} style={tailwind("mb-sm")}>
+      <View style={tailwind("flex-row items-start")}>
+        <Pressable
+          testID={`place-open-${place._id}`}
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${place.name}`}
+          onPress={onOpen}
+          style={tailwind("flex-1 mr-sm")}
+        >
+          <Text weight="600">{place.name}</Text>
+          <Text variant="caption" tone="muted">
+            {place.address}
+          </Text>
+          {place.distanceMiles != null ? (
+            <Text variant="caption" tone="faint" style={tailwind("mt-xs")}>
+              {place.distanceMiles} miles away
+            </Text>
+          ) : null}
+        </Pressable>
+
+        <Pressable
+          testID={`place-save-${place._id}`}
+          accessibilityRole="button"
+          accessibilityState={{ selected: saved }}
+          accessibilityLabel={
+            saved ? `Remove ${place.name} from saved` : `Save ${place.name}`
+          }
+          onPress={onToggleSave}
+          // The 44pt floor: a star is a small glyph and a small glyph is not a
+          // tap target.
+          style={tailwind("items-center justify-center")}
+          hitSlop={12}
+        >
+          <Ionicons
+            name={saved ? "bookmark" : "bookmark-outline"}
+            size={22}
+            color={saved ? tokens.primary : tokens.textMuted}
+          />
+        </Pressable>
+      </View>
+    </Card>
   );
 };
 

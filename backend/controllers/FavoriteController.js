@@ -1,5 +1,6 @@
 const Favorite = require("../models/Favorite");
 const Pet = require("../models/Pet");
+const Location = require("../models/Location");
 const User = require("../models/User");
 
 const FavoriteController = {
@@ -14,6 +15,10 @@ const FavoriteController = {
     try {
       const favorites = await Favorite.find({ user: req.userId })
         .populate("pet")
+        // A favourite is of a pet or of a place; populating both means one
+        // read serves the Home shelf and the care hub without either needing
+        // to know the other exists.
+        .populate("location")
         .sort({ createdDate: -1 });
       res.json(favorites);
     } catch (err) {
@@ -81,6 +86,68 @@ const FavoriteController = {
       res.status(201).json(favorite);
     } catch (err) {
       res.status(400).json({ message: err.message });
+    }
+  },
+
+  /**
+   * Saves a place - a vet, a groomer, a park - to the caller's favourites.
+   *
+   * Separate from `createFavorite` rather than a branch inside it: the two
+   * take different ids, check different collections and mean different things
+   * to the screens that read them, and the one shared line is the `$addToSet`
+   * below.
+   */
+  async createPlaceFavorite(req, res) {
+    const locationId = req.body.locationId ?? req.body.location;
+    if (!locationId) {
+      return res.status(400).json({ message: "locationId is required" });
+    }
+
+    try {
+      const place = await Location.findById(locationId).select("_id");
+      if (!place) {
+        return res.status(404).json({ message: "Cannot find that place" });
+      }
+
+      // Saving twice is a double tap, not an error.
+      const favorite = await Favorite.findOneAndUpdate(
+        { user: req.userId, location: place._id },
+        {
+          $set: { creator: req.userId, modifiedDate: new Date() },
+          $setOnInsert: { createdDate: new Date() },
+        },
+        { upsert: true, new: true }
+      );
+
+      await User.updateOne(
+        { _id: req.userId },
+        { $addToSet: { favorites: favorite._id } }
+      );
+
+      res.status(201).json(favorite);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  },
+
+  /** Removes a place. Idempotent, like its pet counterpart. */
+  async removePlaceFavorite(req, res) {
+    try {
+      const favorite = await Favorite.findOneAndDelete({
+        user: req.userId,
+        location: req.params.locationId,
+      });
+
+      if (favorite) {
+        await User.updateOne(
+          { _id: req.userId },
+          { $pull: { favorites: favorite._id } }
+        );
+      }
+
+      res.json({ removed: Boolean(favorite) });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
     }
   },
 

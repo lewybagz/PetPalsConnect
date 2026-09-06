@@ -274,6 +274,17 @@ export const CARE_PLACES = {
   locationKnown: true,
   importable: true,
   emergency: [],
+  // A saved place, because the pinned section above the search is the part of
+  // this screen that has to read as "yours" rather than as another result.
+  saved: [
+    {
+      _id: "loc-saved",
+      name: "Dr Okafor - Family Veterinary",
+      address: "310 Bryant Street",
+      categories: ["vet"],
+      distanceMiles: 2.2,
+    },
+  ],
   places: [
     {
       _id: "loc-1",

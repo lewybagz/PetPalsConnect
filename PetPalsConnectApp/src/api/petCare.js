@@ -48,8 +48,23 @@ export const fetchCarePlaces = async ({ latitude, longitude, range, category } =
     locationKnown: Boolean(data?.locationKnown),
     importable: Boolean(data?.importable),
     emergency: Array.isArray(data?.emergency) ? data.emergency : [],
+    // Deliberately not filtered by the category or the range: somebody's own
+    // vet is the entry they came to find.
+    saved: Array.isArray(data?.saved) ? data.saved : [],
     places: Array.isArray(data?.places) ? data.places : [],
   };
+};
+
+/** Saves a place to the caller's own list. Safe to call twice. */
+export const savePlace = async (locationId) => {
+  const { data } = await api.post("/api/favorites/places", { locationId });
+  return data;
+};
+
+/** Removes one. Idempotent - unsaving something that is not saved is fine. */
+export const unsavePlace = async (locationId) => {
+  const { data } = await api.delete(`/api/favorites/place/${locationId}`);
+  return Boolean(data?.removed);
 };
 
 /** One place, with the contact details the server fills in on first open. */
