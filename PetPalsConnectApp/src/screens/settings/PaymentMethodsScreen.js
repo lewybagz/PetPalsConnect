@@ -65,7 +65,7 @@ const PaymentMethodsScreen = (navigation) => {
   const renderItem = ({ item }) => (
     <View style={tailwind("border-b border-border py-2")}>
       <Text
-        style={tailwind("text-lg")}
+        style={tailwind("text-lg text-text")}
       >{`${item.type} ending in ${item.last4}`}</Text>
       <Text
         style={tailwind("text-sm text-textMuted")}
@@ -78,7 +78,7 @@ const PaymentMethodsScreen = (navigation) => {
 
   return (
     <View style={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold mb-4")}>Payment Methods</Text>
+      <Text style={tailwind("text-xl font-bold mb-4 text-text")}>Payment Methods</Text>
       <FlatList
         data={paymentMethods}
         renderItem={renderItem}

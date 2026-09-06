@@ -41,7 +41,7 @@ const EmailVerificationScreen = ({ route, navigation }) => {
 
   return (
     <View style={tailwind("flex-1 justify-center items-center")}>
-      <Text style={tailwind("text-lg mb-4")}>Email Sent</Text>
+      <Text style={tailwind("text-lg mb-4 text-text")}>Email Sent</Text>
       <Text style={tailwind("text-center mb-4")}>
         We&rsquo;ve sent a verification link to {email}. Please check your email
         and click on the link to verify your account.

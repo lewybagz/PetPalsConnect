@@ -103,7 +103,7 @@ const ChatDetailsScreen = ({ route, navigation }) => {
         </>
       )}
       <Text>Number of Messages: {chatDetails.messages?.length}</Text>
-      <Text style={tailwind("font-bold mb-2")}>Media:</Text>
+      <Text style={tailwind("font-bold mb-2 text-text")}>Media:</Text>
       <FlatList
         data={chatDetails.media?.slice(-6)} // Get the last 6 media items
         horizontal

@@ -241,7 +241,7 @@ const GroupChatScreen = ({ route, navigation }) => {
                 setSearchType(searchType === "messages" ? "pets" : "messages")
               }
             >
-              <Text style={tailwind("text-lg")}>
+              <Text style={tailwind("text-lg text-text")}>
                 {searchType === "messages" ? "Search Pets" : "Search Messages"}
               </Text>
             </TouchableOpacity>
@@ -254,8 +254,8 @@ const GroupChatScreen = ({ route, navigation }) => {
           source={{ uri: groupInfo?.groupImage }}
           style={styles.groupImage}
         />
-        <Text style={tailwind("text-lg font-bold")}>{groupInfo?.groupName}</Text>
-        <Text style={tailwind("text-sm")}>
+        <Text style={tailwind("text-lg font-bold text-text")}>{groupInfo?.groupName}</Text>
+        <Text style={tailwind("text-sm text-text")}>
           {groupInfo?.participants?.length ?? 0} Members
         </Text>
 

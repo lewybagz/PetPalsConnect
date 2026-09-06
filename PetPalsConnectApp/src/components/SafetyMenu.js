@@ -98,7 +98,7 @@ const SafetyMenu = ({
                 }}
                 style={tailwind("py-4 border-b border-border")}
               >
-                <Text style={tailwind("text-lg text-center")}>{option.label}</Text>
+                <Text style={tailwind("text-lg text-center text-text")}>{option.label}</Text>
               </TouchableOpacity>
             ))}
 

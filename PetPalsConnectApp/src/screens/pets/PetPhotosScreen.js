@@ -138,7 +138,7 @@ const PetPhotosScreen = ({ route, navigation }) => {
 
   return (
     <ScrollView testID="pet-photos" contentContainerStyle={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold mb-1")}>
+      <Text style={tailwind("text-xl font-bold mb-1 text-text")}>
         {pet?.name ? `${pet.name}'s photos` : "Photos"}
       </Text>
       <Text style={tailwind("text-sm text-textMuted mb-4")}>
@@ -205,7 +205,7 @@ const PetPhotosScreen = ({ route, navigation }) => {
             onPress={() => add(true)}
             style={tailwind("flex-1 border border-border rounded-xl py-3 items-center")}
           >
-            <Text style={tailwind("font-semibold")}>Take one</Text>
+            <Text style={tailwind("font-semibold text-text")}>Take one</Text>
           </TouchableOpacity>
         </View>
       )}

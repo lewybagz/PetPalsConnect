@@ -1,116 +1,133 @@
-import React, { useEffect } from "react";
-import {
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
+import React, { useState } from "react";
+import { TextInput, View } from "react-native";
 import { getAuth } from "@react-native-firebase/auth";
-import { getFirestore, doc, updateDoc, getDoc } from "firebase/firestore";
+
+import api from "../../api/axios";
 import { useTailwind } from "../../styles/tailwind";
-import { useSelector, useDispatch } from "react-redux";
-import LoadingScreen from "../../components/LoadingScreenComponent";
-import { useToast } from "../../components/ui";
+import { useTokens } from "../../context/AppThemeContext";
+import { useAuthSession } from "../../context/AuthSessionContext";
+import { Button, Card, Screen, Text, useToast } from "../../components/ui";
 
+/**
+ * The account, as opposed to the profile people see.
+ *
+ * This screen read and wrote `users/{uid}` in **Firestore**, which is the one
+ * store this app deliberately does not have: Mongo is the source of truth and
+ * Firebase is auth, push and file storage only. Nothing has written a Firestore
+ * user document since that decision, so the read always missed and told the
+ * owner "we couldn't find your profile", and `updateDoc` wrote into a
+ * collection nothing reads. It also mixed the `firebase/firestore` web SDK with
+ * `@react-native-firebase/auth`, so two Firebase SDKs were initialised side by
+ * side.
+ *
+ * What it edited could not work either. `phone` is not a field on `User` at
+ * all, and `email` belongs to Firebase Auth - the server derives it from the
+ * verified token when the profile is created, so a copy edited here would only
+ * drift from the address you actually sign in with.
+ *
+ * So the screen shows the account facts, and edits the one thing that is
+ * genuinely the owner's to change: their username. Email and sign-in method
+ * are shown as what they are - facts owned by Firebase Auth - rather than as
+ * inputs that pretend to save.
+ */
 const AccountInformationScreen = () => {
-  const dispatch = useDispatch();
-  const user = useSelector((state) => state.user.user);
-  const isLoading = useSelector((state) => state.user.isLoading); // Access isLoading
-  const error = useSelector((state) => state.user.error); // Access error
   const tailwind = useTailwind();
+  const tokens = useTokens();
   const toast = useToast();
-  const auth = getAuth();
-  const db = getFirestore();
+  const { profile, refresh } = useAuthSession();
 
-  useEffect(() => {
-    const getUserProfile = async () => {
-      const authUser = auth.currentUser;
-      if (authUser) {
-        const userDocRef = doc(db, "users", authUser.uid);
-        try {
-          const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists()) {
-            const fetchedUserInfo = userDocSnap.data();
-            dispatch({ type: "SET_USER", payload: fetchedUserInfo });
-          } else {
-            toast.error("We couldn't find your profile.");
-          }
-        } catch (error) {
-          console.warn("[accountinformation]", error.message);
-          toast.error("Couldn't load your account.");
-        }
-      } else {
-        toast.error("You need to be signed in.");
-      }
-    };
-    getUserProfile();
-  }, [auth, db, dispatch, toast]);
+  const [username, setUsername] = useState(profile?.username ?? "");
+  const [saving, setSaving] = useState(false);
 
-  const handleUpdate = async () => {
+  const firebaseUser = getAuth().currentUser;
+  const changed = username.trim() !== (profile?.username ?? "");
+
+  const save = async () => {
+    if (!changed || !profile?._id) return;
+
+    setSaving(true);
     try {
-      const authUser = auth.currentUser;
-      if (authUser) {
-        const userDocRef = doc(db, "users", authUser.uid);
-        await updateDoc(userDocRef, {
-          email: user.email,
-          phone: user.phone,
-        });
-        toast.success("Saved");
-      } else {
-        toast.error("You need to be signed in.");
-      }
+      await api.patch(`/api/users/${profile._id}`, { username: username.trim() });
+      // The session holds the profile, so re-reading it is what makes the new
+      // name appear everywhere rather than only here.
+      await refresh();
+      toast.success("Saved");
     } catch (error) {
-      console.error("Error updating user information:", error);
-      toast.error("Couldn't save that. Try again.");
+      // The server answers 409 for a name somebody holds and 400 with a reason
+      // for one that breaks the rules, and both are worth showing as written.
+      toast.error(error.response?.data?.message ?? "Couldn't save that. Try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-
-  if (error) {
-    toast.error(error);
-  }
-
   return (
-    <ScrollView style={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold mb-4")}>
-        Account Information
-      </Text>
-      <Text style={tailwind("text-lg mb-4")}>
-        {user?.displayName || "User"}
+    <Screen testID="account-information" scroll>
+      <Text variant="title" style={tailwind("mb-md")}>
+        Account
       </Text>
 
+      <Text variant="caption" tone="muted" style={tailwind("mb-xs")}>
+        USERNAME
+      </Text>
       <TextInput
-        style={tailwind("border border-border p-2 rounded mb-4")}
-        value={user?.email || ""}
-        onChangeText={(text) =>
-          dispatch({ type: "SET_USER", payload: { ...user, email: text } })
-        }
-        placeholder="Email"
-        keyboardType="email-address"
+        testID="account-username"
+        style={tailwind(
+          "border border-border rounded-lg px-3 py-3 mb-xs text-base text-text bg-surface"
+        )}
+        // Without this the input renders the platform's default text colour,
+        // which is black - invisible on a dark surface.
+        placeholderTextColor={tokens.textFaint}
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
+        autoCorrect={false}
+        maxLength={20}
+        editable={!saving}
+        placeholder="username"
+      />
+      <Text variant="caption" tone="faint" style={tailwind("mb-lg")}>
+        3 to 20 characters. Letters, numbers and underscores.
+      </Text>
+
+      <Button
+        testID="account-save"
+        title={saving ? "Saving…" : "Save"}
+        disabled={!changed || saving}
+        onPress={save}
       />
 
-      <TextInput
-        style={tailwind("border border-border p-2 rounded mb-4")}
-        value={user?.phone || ""}
-        onChangeText={(text) =>
-          dispatch({ type: "SET_USER", payload: { ...user, phone: text } })
-        }
-        placeholder="Phone Number"
-        keyboardType="phone-pad"
-      />
-
-      <TouchableOpacity
-        onPress={handleUpdate}
-        style={tailwind("bg-primary py-2 px-4 rounded")}
-      >
-        <Text style={tailwind("text-onPrimary text-center")}>
-          Update Information
+      {/*
+        Shown rather than edited. Firebase Auth owns both, and the server takes
+        the email from the verified token - an editable copy here could only
+        ever disagree with the address you sign in with.
+      */}
+      <Text variant="title" style={tailwind("mt-xl mb-sm")}>
+        Sign-in
+      </Text>
+      <Card testID="account-signin">
+        <Row label="Email" value={firebaseUser?.email ?? profile?.email ?? "—"} />
+        {firebaseUser?.phoneNumber ? (
+          <Row label="Phone" value={firebaseUser.phoneNumber} />
+        ) : null}
+        <Text variant="caption" tone="faint" style={tailwind("mt-sm")}>
+          These come from how you sign in, and are managed by your sign-in
+          provider rather than here.
         </Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </Card>
+    </Screen>
+  );
+};
+
+const Row = ({ label, value }) => {
+  const tailwind = useTailwind();
+  return (
+    <View style={tailwind("flex-row justify-between items-center py-xs")}>
+      <Text tone="muted">{label}</Text>
+      <Text weight="600" style={tailwind("flex-1 text-right ml-md")}>
+        {value}
+      </Text>
+    </View>
   );
 };
 

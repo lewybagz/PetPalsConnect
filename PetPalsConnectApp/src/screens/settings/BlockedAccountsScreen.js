@@ -124,7 +124,7 @@ const BlockedAccountsScreen = () => {
               </View>
             )}
 
-            <Text style={tailwind("flex-1 text-base font-semibold ml-3")}>
+            <Text style={tailwind("flex-1 text-base font-semibold ml-3 text-text")}>
               {entry.blockedUser?.username ?? "Someone"}
             </Text>
 

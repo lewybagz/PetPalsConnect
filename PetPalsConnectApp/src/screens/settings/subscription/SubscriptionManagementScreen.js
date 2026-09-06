@@ -94,7 +94,7 @@ const SubscriptionManagementScreen = ({ navigation }) => {
   if (!subscription) {
     return (
       <View testID="subscription-empty" style={tailwind("flex-1 items-center justify-center p-8")}>
-        <Text style={tailwind("text-lg font-semibold mb-2")}>
+        <Text style={tailwind("text-lg font-semibold mb-2 text-text")}>
           You’re on the free plan
         </Text>
         <Text style={tailwind("text-base text-textMuted text-center mb-6")}>
@@ -115,20 +115,20 @@ const SubscriptionManagementScreen = ({ navigation }) => {
 
   return (
     <View testID="subscription-detail" style={tailwind("flex-1 p-6")}>
-      <Text style={tailwind("text-2xl font-bold mb-4")}>Your subscription</Text>
+      <Text style={tailwind("text-2xl font-bold mb-4 text-text")}>Your subscription</Text>
 
       <View style={tailwind("bg-surface border border-border rounded-2xl p-5 mb-6")}>
-        <Text style={tailwind("text-base mb-1")}>
+        <Text style={tailwind("text-base mb-1 text-text")}>
           Status: {describeStatus(subscription)}
         </Text>
-        <Text style={tailwind("text-base mb-1")}>
+        <Text style={tailwind("text-base mb-1 text-text")}>
           Billed: {subscription.planType === "year" ? "yearly" : "monthly"}
           {subscription.amount != null
             ? ` - ${formatPrice(subscription.amount, subscription.currency)}`
             : ""}
         </Text>
         {renews ? (
-          <Text style={tailwind("text-base")}>
+          <Text style={tailwind("text-base text-text")}>
             {subscription.cancelAtPeriodEnd ? "Ends" : "Renews"}:{" "}
             {renews.toLocaleDateString()}
           </Text>

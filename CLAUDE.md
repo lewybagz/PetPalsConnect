@@ -83,6 +83,17 @@ out all change Firebase auth state, and `RootNavigator` swaps the whole tree in
 response. A manual `navigation.navigate()` after those calls targets a route
 that no longer exists.
 
+**A user may only write their own account, and only some of it.**
+`getUserById` scopes what a stranger may *read*; nothing scoped the writes
+behind it, so `PUT`/`PATCH`/`DELETE /api/users/:id` acted on whatever account
+the URL named - any signed-in caller could edit anybody's email or delete their
+account outright. "A resource id is not an identity" was already the rule for
+reads; it is the same rule one verb over, and the audit could not see it because
+those handlers build no query at all, they mutate the document the middleware
+fetched. The writable set is an allowlist (`username`, `userPhoto`, `location`)
+rather than a denylist: `subscribed` is Stripe's, `verified` is a moderator's,
+and `pets`/`friendsList` belong to the endpoints that maintain them.
+
 **No passwords in the database.** Firebase Auth owns credentials. The `User`
 model has no password field, and `changeUserPassword` returns 410 by design —
 clients call Firebase's `updatePassword()`.
@@ -150,6 +161,15 @@ showing what is queued and offering a second button. It now does.
 **A wait with predictable structure gets a skeleton, not a spinner.** Discover,
 Home and the chat list know their own shape before the response arrives, and
 they are the three screens a new user waits on first.
+
+**A text style has to name a colour, in a StyleSheet *and* in a class string.**
+A `Text` with a size and no colour inherits React Native's black: right while
+every surface was white, invisible on a dark one. `colourlessText` caught the
+`StyleSheet.create` half; the tailwind half went unseen for longer and was
+bigger - 46 styles across 23 files, because a class name is not a hex literal
+and the colour ban was only ever looking for literals. `colourlessClasses`
+covers it now. An interpolated class string is deliberately skipped, since the
+colour usually lives in the expression and this check cannot evaluate one.
 
 **`npm run check:colours` fails on any colour outside `tokens.ts`.** It began
 as a ratchet — a per-file count in `scripts/colour-baseline.json`, failing only

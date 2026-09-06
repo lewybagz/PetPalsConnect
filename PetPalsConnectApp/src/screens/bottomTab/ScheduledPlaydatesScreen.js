@@ -51,7 +51,7 @@ const ScheduledPlaydatesScreen = (navigation) => {
       onPress={() => navigateToDetails(item._id)}
       style={[tailwind("p-4 border-b border-border"), styles.playdateItem]}
     >
-      <Text style={[tailwind("text-lg font-bold"), styles.playdateTitle]}>
+      <Text style={[tailwind("text-lg font-bold text-text"), styles.playdateTitle]}>
         {item.petsInvolved.map((pet) => pet.name).join(", ")}
       </Text>
       <Text style={styles.playdateDetails}>

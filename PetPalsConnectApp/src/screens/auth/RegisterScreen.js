@@ -144,7 +144,7 @@ export default function RegisterScreen({ navigation }) {
         )}
 
         <TextInput
-          style={tailwind("border border-border rounded-lg px-3 py-3 mb-4 text-base")}
+          style={tailwind("border border-border rounded-lg px-3 py-3 mb-4 text-base text-text")}
           placeholder="Email"
           placeholderTextColor={tokens.textFaint}
           value={email}
@@ -163,7 +163,7 @@ export default function RegisterScreen({ navigation }) {
           style={tailwind("flex-row items-center border border-border rounded-lg px-3 mb-2")}
         >
           <TextInput
-            style={tailwind("flex-1 py-3 text-base")}
+            style={tailwind("flex-1 py-3 text-base text-text")}
             placeholder="Password"
             placeholderTextColor={tokens.textFaint}
             value={password}

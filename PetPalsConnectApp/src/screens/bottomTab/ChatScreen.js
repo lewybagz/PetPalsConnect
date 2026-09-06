@@ -229,7 +229,7 @@ const ChatScreen = ({ route, navigation }) => {
       {/* this is how they are displayed in chat */}
       <View style={styles.header}>
         <Image source={{ uri: petInfo?.photos?.[0] }} style={styles.petImage} />
-        <Text style={tailwind("flex-1 text-lg font-bold")}>{petInfo?.name}</Text>
+        <Text style={tailwind("flex-1 text-lg font-bold text-text")}>{petInfo?.name}</Text>
 
         {/* A conversation with a stranger is the place people most need to get
             out of one. There was no way to block or report from here at all. */}

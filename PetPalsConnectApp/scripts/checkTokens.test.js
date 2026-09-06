@@ -74,6 +74,47 @@ describe("the colour ban", () => {
     });
   });
 
+  it("fails on a tailwind text style with no colour", () => {
+    // The larger half of the dark-mode blind spot, and one the colour ban
+    // could not see: a class name is not a hex literal. 46 of these rendered
+    // black on a dark surface.
+    withScratchFile(
+      'export const S = () => tailwind("text-xl font-bold mb-4");\n',
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(true);
+      }
+    );
+  });
+
+  it("accepts a tailwind text style that names a tone", () => {
+    withScratchFile(
+      'export const S = () => tailwind("text-xl font-bold text-textMuted");\n',
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(false);
+      }
+    );
+  });
+
+  it("leaves an interpolated class string alone", () => {
+    // The colour usually lives in the expression, and this check cannot
+    // evaluate it - a deliberate hole rather than a false positive.
+    withScratchFile(
+      "export const S = (c) => tailwind(`text-sm ${c}`);\n",
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(false);
+      }
+    );
+  });
+
+  it("does not flag a class string with no type in it", () => {
+    withScratchFile(
+      'export const S = () => tailwind("flex-1 p-lg bg-surface");\n',
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(false);
+      }
+    );
+  });
+
   it("does not flag an icon name that happens to be a colour word", () => {
     withScratchFile('export const NAME = "white";\n', (problems, name) => {
       expect(problems.some((problem) => problem.includes(name))).toBe(false);

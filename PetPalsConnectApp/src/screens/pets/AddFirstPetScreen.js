@@ -256,7 +256,7 @@ export default function AddFirstPetScreen() {
 
         <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>Name</Text>
         <TextInput
-          style={tailwind("border border-border rounded-lg px-3 py-3 mb-4 text-base")}
+          style={tailwind("border border-border rounded-lg px-3 py-3 mb-4 text-base text-text")}
           placeholder="Rex"
           placeholderTextColor={tokens.textFaint}
           value={name}
@@ -421,7 +421,7 @@ export default function AddFirstPetScreen() {
           </View>
 
           <TextInput
-            style={tailwind("border border-border rounded-lg px-3 py-3 mb-3 text-base")}
+            style={tailwind("border border-border rounded-lg px-3 py-3 mb-3 text-base text-text")}
             placeholder="Search breeds"
             placeholderTextColor={tokens.textFaint}
             value={breedQuery}

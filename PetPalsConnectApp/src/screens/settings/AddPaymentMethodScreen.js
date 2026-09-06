@@ -53,7 +53,7 @@ const AddPaymentMethodScreen = ({ navigation }) => {
 
   return (
     <View style={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold mb-4")}>Add Payment Method</Text>
+      <Text style={tailwind("text-xl font-bold mb-4 text-text")}>Add Payment Method</Text>
       <TextInput
         style={tailwind("border border-border p-2 mb-2")}
         placeholder="Card Number"

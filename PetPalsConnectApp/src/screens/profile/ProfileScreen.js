@@ -122,7 +122,7 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold mb-4")}>Profile</Text>
+      <Text style={tailwind("text-xl font-bold mb-4 text-text")}>Profile</Text>
 
       <TouchableOpacity
         testID="profile-photo"
@@ -151,9 +151,9 @@ const ProfileScreen = ({ navigation }) => {
       </TouchableOpacity>
 
       {/* User Info */}
-      <Text style={tailwind("text-lg mb-2")}>{userInfo.name}</Text>
-      <Text style={tailwind("text-sm mb-2")}>{userInfo.email}</Text>
-      <Text style={tailwind("text-sm mb-4")}>{userInfo.phone}</Text>
+      <Text style={tailwind("text-lg mb-2 text-text")}>{userInfo.name}</Text>
+      <Text style={tailwind("text-sm mb-2 text-text")}>{userInfo.email}</Text>
+      <Text style={tailwind("text-sm mb-4 text-text")}>{userInfo.phone}</Text>
       <TouchableOpacity
         onPress={navigateToEditProfile}
         style={tailwind("bg-primary py-2 px-4 rounded mb-4")}

@@ -10,7 +10,7 @@ const AboutAppScreen = () => {
 
   return (
     <ScrollView style={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold text-center mb-4")}>
+      <Text style={tailwind("text-xl font-bold text-center mb-4 text-text")}>
         About PetPalsConnect
       </Text>
 
@@ -19,26 +19,26 @@ const AboutAppScreen = () => {
         style={tailwind("self-center w-40 h-40 mb-4")}
       />
 
-      <Text style={tailwind("text-base")}>
+      <Text style={tailwind("text-base text-text")}>
         Welcome to PetPalsConnect, the ultimate social network for your furry
         friends! 🐾 Our app brings together pet lovers from all over, allowing
         your pets to find new friends, set up playdates, and explore
         pet-friendly places.
       </Text>
 
-      <Text style={tailwind("text-base mt-4")}>
+      <Text style={tailwind("text-base mt-4 text-text")}>
         Dive into a world where your pets take the lead. Share their adorable
         moments, schedule meetups, and discover a community that celebrates the
         joy pets bring into our lives. PetPalsConnect is more than an app;
         it&rsquo;s a paw-some journey! 🐕🐈
       </Text>
 
-      <Text style={tailwind("text-base mt-4")}>
+      <Text style={tailwind("text-base mt-4 text-text")}>
         Stay connected, stay engaged, and let your pets spread their joy and
         love. PetPalsConnect is where friendships begin, tales wag, and paws
         meet. Join us now and be a part of the most vibrant pet community! 🌟
       </Text>
-      <Text style={tailwind("text-base mt-4")}>App Version: {appVersion}</Text>
+      <Text style={tailwind("text-base mt-4 text-text")}>App Version: {appVersion}</Text>
     </ScrollView>
   );
 };

@@ -19,7 +19,7 @@ const SubscriptionConfirmationScreen = ({ route, navigation }) => {
 
   return (
     <View style={tailwind("flex-1 items-center justify-center p-8")}>
-      <Text style={tailwind("text-2xl font-bold text-center mb-3")}>
+      <Text style={tailwind("text-2xl font-bold text-center mb-3 text-text")}>
         You’re all set
       </Text>
       <Text style={tailwind("text-base text-textMuted text-center mb-2")}>

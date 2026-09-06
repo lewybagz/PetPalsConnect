@@ -381,12 +381,52 @@ const UserController = {
     }
   },
 
+  /**
+   * Edits the caller's own account.
+   *
+   * Two separate holes lived here. The first was authorisation: `getUserById`
+   * scopes what a stranger may *read* - public fields only, 404 across a block
+   * - and nothing scoped the write behind it, so `PUT`/`PATCH /api/users/:id`
+   * saved whatever account the URL named. Any signed-in user could rewrite
+   * anybody's email, or set `verified` on them. "A resource id is not an
+   * identity" was already the rule for reads; this is the same rule one verb
+   * over, and the audit could not see it because this handler builds no query
+   * at all - it mutates the document the middleware fetched.
+   *
+   * The second was the field list. `subscribed` is Stripe's, written only by
+   * `syncFromStripe`, and a client that can set it walks through the paywall.
+   * `verified` is a moderation fact. `friendsList` and `pets` are maintained
+   * by the endpoints that own them, and letting a body replace them wholesale
+   * is how somebody claims a pet that is not theirs. None of them are a user's
+   * to set, so the writable set is an allowlist rather than a denylist: a
+   * field added to the schema tomorrow is not silently writable today.
+   *
+   * `req.body.Username` was PascalCase against a lowercase schema, so strict
+   * mode dropped it and renaming yourself did nothing at all.
+   */
   async updateUser(req, res) {
-    if (req.body.Username != null) {
-      res.user.Username = req.body.Username;
+    if (String(res.user._id) !== String(req.userId)) {
+      return res.status(403).json({ message: "That isn't your account" });
     }
-    if (req.body.email != null) {
-      res.user.email = req.body.email;
+
+    if (req.body.username != null) {
+      const problem = usernames.validate(req.body.username);
+      if (problem) {
+        return res.status(400).json({ message: problem });
+      }
+
+      // Uniqueness is enforced on `usernameLower`, and the pre-validate hook
+      // keeps it in step - but checking here turns a duplicate-key crash into
+      // an answer the screen can show.
+      const taken = await User.findOne({
+        usernameLower: usernames.normalise(req.body.username),
+        _id: { $ne: req.userId },
+      }).select("_id");
+      if (taken) {
+        return res.status(409).json({ message: "That username is taken" });
+      }
+
+      res.user.username = String(req.body.username).trim();
     }
     if (req.body.location != null) {
       res.user.location = req.body.location;
@@ -397,21 +437,6 @@ const UserController = {
         return res.status(400).json({ message: "That photo is not one of ours" });
       }
       res.user.userPhoto = photo;
-    }
-    if (req.body.subscribed != null) {
-      res.user.subscribed = req.body.subscribed;
-    }
-    if (req.body.verified != null) {
-      res.user.verified = req.body.verified;
-    }
-    if (req.body.slug != null) {
-      res.user.slug = req.body.slug;
-    }
-    if (req.body.friendsList != null) {
-      res.user.friendsList = req.body.friendsList;
-    }
-    if (req.body.pets != null) {
-      res.user.pets = req.body.pets;
     }
 
     try {
@@ -610,13 +635,20 @@ const UserController = {
     }
   },
 
+  /**
+   * Deleting an account by id, which is only ever your own.
+   *
+   * This was `res.user.deleteOne()` with nothing checking whose account it
+   * was: any signed-in caller could delete any other account by putting its id
+   * in the URL. `DELETE /api/users/me` is the real path - it removes the
+   * Firebase account too, which Apple requires - so this one exists for older
+   * clients and does nothing a stranger can use.
+   */
   async deleteUser(req, res) {
-    try {
-      await res.user.deleteOne();
-      res.json({ message: "Deleted User" });
-    } catch (err) {
-      res.status(500).json({ message: err.message });
+    if (String(res.user._id) !== String(req.userId)) {
+      return res.status(403).json({ message: "That isn't your account" });
     }
+    return UserController.deleteCurrentUser(req, res);
   },
 };
 
