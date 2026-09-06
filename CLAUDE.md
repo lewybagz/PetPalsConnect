@@ -1165,6 +1165,35 @@ to fail the build.
 Add a route, a field or a selector, and one of these tells you if the other side
 disagrees.
 
+## Dependencies and advisories
+
+**There are three packages, and the repo root is not one of them.**
+`PetPalsConnectApp/`, `backend/` and the seeding scripts. A fourth
+`package.json` sat at the repo root with no name, no scripts and no CI step -
+a stale copy of the app's dependency list, still pinning `react-native-copilot`
+and `nativewind` months after both were removed from the app. Nothing installed
+it and nothing could; it carried 43 advisories, two of them critical. Deleted.
+
+**`PetPalsConnectApp/functions/` is gone, and Firestore with it.** It was a
+Cloud Function triggering on `playdates/{playdateId}` in *Firestore* - a
+collection nothing has written since Mongo became the source of truth - so it
+could never fire. What it did, a playdate review reminder, is
+`pushPlaydateReviewReminderNotification` in `NotificationController`, on the
+Mongo path, and has been all along. It carried 42 advisories, three critical,
+and its `functions` block is out of `firebase.json` so a deploy does not go
+looking for it.
+
+**An advisory is triaged by reachability, not by its count.** The moderates
+left in the two packages that ship are transitive and their vulnerable code
+paths cannot be reached: the `uuid` advisory (GHSA-w5hq-g745-h8pq) is about
+`v3/v5/v6` when a `buf` argument is passed, and both `gaxios` and
+`teeny-request` call `uuid.v4()` with no arguments. Forcing a major bump of a
+transitive through a path no test exercises, to close a hole nothing can reach,
+trades a real risk for a smaller number. The app's `xcode`/`uuid` chain is
+`@expo/config-plugins`, which runs at prebuild and does not appear in the
+exported bundle; `decode-uri-component` comes through
+`@react-navigation/native` and has no fix published upstream.
+
 ## Things deliberately left out
 
 - **Facebook login** — removed. Google and email/phone remain.
