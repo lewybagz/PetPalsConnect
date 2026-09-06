@@ -11,12 +11,31 @@ loading for this project alone.
 
 ## Install
 
+Run from the **repository root**, not from your home directory — the paths below
+are relative to the repo.
+
+**Windows (PowerShell):**
+
+```powershell
+.\tools\claude-skills\install.ps1
+```
+
+**macOS / Linux:**
+
 ```bash
 bash tools/claude-skills/install.sh
 ```
 
-Copies every skill directory here into `~/.claude/skills/`, overwriting an
-existing copy of the same name. Restart Claude Code afterwards.
+Both copy every skill directory here into `~/.claude/skills/` (on Windows,
+`%USERPROFILE%\.claude\skills`), overwriting an existing copy of the same name.
+Restart Claude Code afterwards.
+
+Set `CLAUDE_SKILLS_DIR` to install somewhere else.
+
+**Do not run `install.sh` under WSL bash for a Windows install of Claude Code.**
+`$HOME` there is the Linux home directory, so the skill would land somewhere
+Windows Claude Code never reads while the script reports success. The script
+detects WSL and refuses unless `CLAUDE_SKILLS_DIR` says which one you meant.
 
 ## Skills
 
