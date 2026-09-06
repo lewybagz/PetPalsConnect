@@ -4,7 +4,7 @@ import { View, Linking, TouchableOpacity } from "react-native";
 import { Screen, Text, EmptyState, Skeleton } from "../../components/ui";
 import { useTailwind } from "../../styles/tailwind";
 import { hit, space } from "../../styles/tokens";
-import api from "../../api/axios";
+import { fetchArticle, fetchRelatedArticles, topicLabel } from "../../api/articles";
 
 /**
  * One article.
@@ -17,34 +17,36 @@ import api from "../../api/axios";
  * `sources` is the part that makes the health content answerable. An article
  * that says 59% of dogs are overweight and cannot say where that came from is
  * indistinguishable from one that made it up.
+ *
+ * Further reading is fetched separately and is allowed to fail: a related-
+ * articles strip that 500s should cost you the strip, not the article.
  */
-const ArticleDetailScreen = ({ route }) => {
+const ArticleDetailScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
   const { articleId } = route.params ?? {};
 
   const [article, setArticle] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [related, setRelated] = useState([]);
+  // Starts false when there is no id to fetch, so the effect never has to set
+  // state synchronously in its body just to stop a spinner that should not
+  // have started.
+  const [isLoading, setIsLoading] = useState(Boolean(articleId));
 
   useEffect(() => {
     let cancelled = false;
 
-    const fetchArticle = async () => {
-      if (!articleId) {
-        setIsLoading(false);
-        return;
-      }
-      try {
-        setIsLoading(true);
-        const response = await api.get(`/api/articles/${articleId}`);
-        if (!cancelled) setArticle(response.data);
-      } catch {
-        if (!cancelled) setArticle(null);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
+    if (!articleId) return undefined;
 
-    fetchArticle();
+    Promise.all([
+      fetchArticle(articleId).catch(() => null),
+      fetchRelatedArticles(articleId).catch(() => []),
+    ]).then(([body, others]) => {
+      if (cancelled) return;
+      setArticle(body);
+      setRelated(others);
+      setIsLoading(false);
+    });
+
     return () => {
       cancelled = true;
     };
@@ -133,6 +135,50 @@ const ArticleDetailScreen = ({ route }) => {
               <Text variant="caption" tone="faint">
                 {source.publisher}
               </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
+
+      {article.tags?.length ? (
+        <View style={tailwind("flex-row flex-wrap mt-xl")}>
+          {article.tags.map((topic) => (
+            <View
+              key={topic}
+              style={tailwind(
+                "mr-sm mb-sm px-md py-xs bg-surfaceAlt border border-border rounded-pill"
+              )}
+            >
+              <Text variant="caption" tone="muted">
+                {topicLabel(topic)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {related.length ? (
+        <View style={tailwind("mt-xl pt-lg border-t border-border")}>
+          <Text variant="label">Read next</Text>
+          {related.map((other) => (
+            <TouchableOpacity
+              key={String(other._id)}
+              accessibilityRole="button"
+              accessibilityLabel={other.title}
+              // `push` rather than `navigate`: navigating to the route you are
+              // already on is a no-op in React Navigation, so tapping further
+              // reading from an article would have done nothing at all.
+              onPress={() => navigation?.push?.("ArticleDetail", { articleId: other._id })}
+              style={[tailwind("mt-md justify-center"), { minHeight: hit.min }]}
+            >
+              <Text variant="body" tone="primary">
+                {other.title}
+              </Text>
+              {other.summary ? (
+                <Text variant="caption" tone="muted" numberOfLines={2}>
+                  {other.summary}
+                </Text>
+              ) : null}
             </TouchableOpacity>
           ))}
         </View>

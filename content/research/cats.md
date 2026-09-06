@@ -190,3 +190,145 @@ https://www.dvm360.com/view/osteoarthritis-cats-what-we-now-know-about-recogniti
 
 > **Editorial note.** Quote a range and say why it varies, rather than picking
 > the most dramatic number. The behavioural-signs list is the actionable part.
+
+---
+---
+
+# Wave two
+
+---
+
+## Body language
+
+**Tail.** A relaxed cat walks with the tail down in a loose U, or up with a
+slight hook — the upright tail is a friendly approach signal. A tail held
+tight to the body signals arousal or defensiveness; a tail whipping side to
+side is irritation, and it frequently precedes escalation.
+
+**Ears.** Upright and slightly forward or slightly to the side is relaxed.
+Rotating backward from a forward posture is a warning. Flattened fully back is
+extreme fear and readiness to strike.
+
+**Pupils.** Dilation means arousal, not emotion — it can be play, fear or
+aggression, so it must be read with the rest of the body. Constriction can
+accompany offensive aggression.
+
+**Petting-induced overstimulation.** Early signals are tail twitching, ear
+rotation, skin rippling along the back, and a sudden stillness. These come
+before the bite, and they come reliably.
+
+— Cat Care Society, *Decoding Cat Body Language*,
+https://www.catcaresociety.org/decoding-cat-body-language/ ;
+Animal Hospital of North Asheville, *Feline Body Language and Behavior*,
+https://www.ahna.net/site/blog-asheville-vet/2020/03/30/feline-body-language-and-behavior/ ;
+fear ethogram in Graham et al., *Tell-Tail Fear Behaviors in Kittens*, Animal
+Behavior and Cognition,
+https://www.animalbehaviorandcognition.org/uploads/journals/60/3%20Graham_et_al_ABC_11(4).pdf
+
+> **Editorial note.** The sudden stillness is the one owners miss, because it
+> reads as calm. It is the opposite. Lead the article with it.
+
+---
+
+## Scratching
+
+**Scratching is normal, necessary behaviour** — it conditions the claws by
+removing the outer husk, leaves a visual and scent territorial mark, allows
+self-defence, and stretches the body.
+— AAFP, *Declawing Position Statement*,
+https://catvets.com/wp-content/uploads/2024/01/2017-DeclawingStatement.pdf
+
+**What cats actually prefer.** Wilson and colleagues surveyed 4,331 owners
+across 39 countries. Of the traditionally recommended substrates offered —
+rope, cardboard, carpet, wood — **rope was used most often when offered**,
+although carpet was offered most commonly. Cats scratched the preferred
+substrate more when the post was a **simple upright type, or a cat tree with
+two or more levels, and at least 3 feet (about 90cm) tall.** Survey evidence
+generally favours narrow upright scratchers over flat horizontal ones, though
+individual preference varies and offering both is the safe approach.
+— Wilson, Bain, DePorter, Beck, Grassi & Landsberg (2016), *Owner observations
+regarding cat scratching behavior: an internet-based survey*, JFMS,
+https://pmc.ncbi.nlm.nih.gov/articles/PMC11112215/
+
+**Declawing.** The AAFP strongly opposes onychectomy as an elective procedure
+and states that veterinarians are obliged to offer alternatives; the AVMA
+strongly discourages elective declawing and supports non-surgical alternatives.
+The procedure is amputation of the third phalanx, is acutely painful, and may
+result in chronic pain, maladaptive behaviour and disability.
+— AAFP, as above; AVMA, *Declawing of domestic cats*,
+https://www.avma.org/resources-tools/avma-policies/declawing-domestic-cats
+
+---
+
+## Indoor, outdoor, and the middle
+
+**AAFP published a position statement on indoor/outdoor lifestyle in March
+2024**, and it is deliberately not a simple endorsement of either. Indoor-only
+may reduce risks of injury, predation, poisoning and infectious and parasitic
+agents. It may simultaneously **increase** risks of compromised welfare,
+illness, obesity and behaviour problems where environmental needs go unmet.
+— AAFP 2024 position statements,
+https://catvets.com/news/2024-position-statements/
+
+**Catios** — enclosed outdoor structures — are widely described as the
+compromise that keeps the enrichment and removes most of the risk.
+— as above.
+
+> **Editorial note.** The figure "indoor cats live 12–18 years, outdoor cats
+> 2–5" circulates everywhere and is **[weak]**. The low end appears to derive
+> from unowned or feral populations rather than owned indoor-outdoor cats, and
+> is not comparable. Do not quote it. The AAFP framing — a genuine trade-off
+> with obligations on both sides — is both more honest and more useful.
+
+---
+
+## Conflict between cats in one home
+
+**It is usually silent.** The visible fight is the rare form. The common form
+is passive: staring, blocking a doorway or a corridor, sitting in front of a
+resource, one cat confining itself to a small area, cats facing away from each
+other at close range.
+— International Cat Care / Cat Friendly Homes, *Intercat Tension*,
+https://catfriendly.com/be-a-cat-friendly-caregiver/intercat-tension/ ;
+AAHA, *Addressing Tension Among Cats*,
+https://www.aaha.org/resources/addressing-tension-among-cats/
+
+**Resource competition is the usual driver**, which is why the environmental
+guidelines emphasise separation as much as number.
+— AAFP/ISFM Environmental Needs Guidelines (see wave one).
+
+**Consequences are physical as well as behavioural**, including
+overgrooming, house-soiling, appetite change, and feline idiopathic cystitis.
+— Veterinary Practice, *Multicat households and aggression*,
+https://www.veterinary-practice.com/article/multicat-households-and-aggression
+
+**In a UK study of cats relinquished to rescue for behavioural problems,
+aggression between cats was the most commonly reported problem.**
+— as above.
+
+---
+
+## Feline idiopathic cystitis and the stress link
+
+**Environmental modification has real, measured effect.** Buffington and
+colleagues implemented multimodal environmental modification (MEMO) with cats
+that had idiopathic cystitis. Over roughly 300 days, **only 13 of 46 cats (28%)
+showed recurrence**, with median frequency of clinical signs falling from
+weekly to never. Clients also reported significant reductions in fearfulness,
+nervousness and upper respiratory signs.
+— Buffington, Westropp, Chew & Bolus (2006), *Clinical evaluation of multimodal
+environmental modification (MEMO) in the management of cats with idiopathic
+cystitis*, JFMS,
+https://journals.sagepub.com/doi/10.1016/j.jfms.2006.02.002
+
+**MEMO and therapeutic urinary diets currently carry the strongest evidence**
+for managing FIC and are described as the primary treatment approach.
+— Purina Institute summary,
+https://www.purinainstitute.com/centresquare/focused-nutrition/multimodal-approach-to-feline-idiopathic-cystitis ;
+systematic review,
+https://www.tandfonline.com/doi/full/10.1080/00480169.2025.2477542
+
+**Urethral obstruction is a separate emergency.** A cat — usually male —
+straining to urinate and producing nothing needs a vet immediately; blockage
+can be fatal within 24–48 hours.
+— see `cross-cutting.md`, emergencies.

@@ -16,7 +16,7 @@ import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateS
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
 import ArticlesScreen from "../../src/screens/misc/ArticlesScreen";
 import ArticleDetailScreen from "../../src/screens/misc/ArticleDetailScreen";
-import { ARTICLE, CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
+import { ARTICLE, ARTICLES, CANDIDATES, MY_PET, ROUTES, pending } from "./fixtures";
 
 /**
  * What the gallery can render, and the fixtures each board needs.
@@ -213,6 +213,14 @@ export const BOARDS = [
     render: () => <ArticlesScreen navigation={navigation} />,
   },
   {
+    // One topic selected: the chip row is the index over sixty articles, and
+    // the selected state is the only part of it a contrast test cannot check.
+    id: "articles-filtered",
+    label: "Articles - filtered by topic",
+    routes: { ...ROUTES, "/api/articles/latest": ARTICLES.slice(0, 2) },
+    render: () => <ArticlesScreen navigation={navigation} />,
+  },
+  {
     id: "articles-loading",
     label: "Articles - skeleton",
     routes: { ...ROUTES, "/api/articles/latest": pending },
@@ -221,7 +229,7 @@ export const BOARDS = [
   {
     id: "articles-empty",
     label: "Articles - empty",
-    routes: { ...ROUTES, "/api/articles/latest": [] },
+    routes: { ...ROUTES, "/api/articles/latest": [], "/api/articles/topics": [] },
     render: () => <ArticlesScreen navigation={navigation} />,
   },
   {

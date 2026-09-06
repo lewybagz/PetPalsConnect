@@ -132,10 +132,27 @@ export const ARTICLE = {
       url: "https://www.veterinaryirelandjournal.com/small-animal/392-guidelines-for-exercising-pups-separating-myths-from-science",
     },
   ],
-  tags: ["dogs", "enrichment", "play"],
+  tags: ["dogs", "enrichment", "play", "breeds"],
   publishedDate: new Date().toISOString(),
   lastReviewedDate: new Date().toISOString(),
 };
+
+/**
+ * The browse index. Counts are what makes the row an index rather than a set
+ * of buttons, and the species tags lead because "do you have a cat or a
+ * rabbit" is the first cut a reader makes.
+ */
+export const TOPICS = [
+  { tag: "dogs", count: 34 },
+  { tag: "cats", count: 14 },
+  { tag: "rabbits", count: 3 },
+  { tag: "birds", count: 3 },
+  { tag: "reptiles", count: 3 },
+  { tag: "health", count: 24 },
+  { tag: "behaviour", count: 21 },
+  { tag: "safety", count: 16 },
+  { tag: "playdates", count: 12 },
+];
 
 /** The list screen. Deliberately mixed: one with an image, one without. */
 export const ARTICLES = [
@@ -243,7 +260,12 @@ export const ROUTES = {
   "/api/pets/latest": [CANDIDATES[0].pet, CANDIDATES[1].pet, MY_PET],
   "/api/favorites": [{ _id: "fav-1", pet: CANDIDATES[0].pet }],
   "/api/articles/recent": ARTICLE,
+  // Registered before the shorter article paths: the gallery's interceptor
+  // matches longest-prefix-first, so "/api/articles/" must not swallow these.
+  [`/api/articles/${ARTICLE._id}/related`]: ARTICLES.slice(1),
+  "/api/articles/topics": TOPICS,
   "/api/articles/latest": ARTICLES,
+  [`/api/articles/${ARTICLE._id}`]: ARTICLE,
   "/api/chats": CHATS,
   "/api/blocklists": BLOCKED,
   "/api/reports/options": { reasons: [], targets: [] },

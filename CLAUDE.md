@@ -459,6 +459,14 @@ without inventing a fake person who would then appear in username search. The
 visible attribution is `byline`. An article posted through `POST /api/articles`
 still sets both, from the token.
 
+**A query string belongs in axios `params`, not in the path.** Beyond
+encoding, `contract.test.js` compares a call's path against declared routes by
+segment - and a `?` left in the path made
+`/api/articles/search?q=${term}` fail to match `/api/articles/search` and then
+*succeed* against `/api/articles/:id`, because a `:id` segment absorbs
+anything. The check now strips the query string, which closed a hole a
+mistyped path could have ridden through.
+
 **The seeder requires the backend's model and takes Mongoose from it.** A
 seeder with its own schema is a second definition that drifts, and strict mode
 drops what it does not recognise, so a renamed field would simply stop being
@@ -467,6 +475,19 @@ model registry - two copies of Mongoose in a process are two registries, and a
 model registered on one is invisible to a connection opened on the other.
 `--dry-run` validates the JSON with no dependencies and no database, so it can
 run as a content check before anything is deployed.
+
+**Sixty articles is a library, not a list, and the screen has to reflect
+that.** `/latest` was `.limit(20)` with no paging, so the twenty-first article
+ever published was unreachable from the app - visible only to somebody who
+guessed a word in its title. It pages now (`limit`/`skip`, clamped server-side,
+because an unbounded `limit` is a request to serialise the whole corpus), takes
+a `tag` filter, and `/topics` derives the browse index from the tags the
+articles actually carry - so a chip can never offer a topic with nothing behind
+it. `/:id/related` ranks by shared tags and projects the body away, since three
+full articles on the wire to render three headlines is the wrong trade.
+`backend/test/articles.test.js` also checks every article carries a species tag,
+because an article filed only under subject tags is invisible to somebody
+browsing by animal.
 
 **`/latest` is the list; `/recent` is the one article Home shows.**
 `getLatestArticle` existed from the start and `PUBLIC_READS` even described it

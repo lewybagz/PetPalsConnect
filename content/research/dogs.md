@@ -339,3 +339,286 @@ with the owner.
 — AVSAB, *Humane Dog Training Position Statement*,
 https://avsab.org/resources/position-statements/ ; AVMA coverage,
 https://www.avma.org/javma-news/2021-11-01/veterinary-behaviorists-no-role-aversive-dog-training-practices
+
+---
+---
+
+# Wave two
+
+Added alongside the second batch of articles. Same rules: a number gets a name
+attached, and **[weak]** marks a claim that is widely repeated and poorly
+evidenced.
+
+---
+
+## Adolescence
+
+**Dogs have a measurable teenage phase, and it is not a metaphor.** Asher and
+colleagues found a passing phase of carer-specific conflict-like behaviour
+during adolescence, with reduced trainability and responsiveness to commands.
+Dogs took longer to respond to "sit" at eight months — but **only when the cue
+came from their own caregiver, not from a stranger**. The effect was more
+pronounced in dogs whose behaviour indicated less secure attachment.
+— Asher, Harvey, Sommerville & England (2020), *Teenage dogs? Evidence for
+adolescent-phase conflict behaviour and an association between attachment to
+humans and pubertal timing in the domestic dog*, Biology Letters,
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7280042/
+
+**Adolescence runs roughly five months to two years**, varying by size and
+breed, and it coincides with the peak age at which dogs are relinquished to
+shelters for behavioural problems.
+— Asher et al., as above; Newcastle University press release,
+https://www.ncl.ac.uk/press/articles/archive/2020/05/teenagedogs
+
+> **Editorial note.** The selective disobedience finding is the one worth
+> leading with, because it directly contradicts what the owner concludes:
+> "he's fine for the trainer, so he's doing it on purpose." He is not. The
+> effect is specific to the attachment figure, which makes it a developmental
+> phenomenon rather than defiance.
+
+---
+
+## Separation-related behaviour
+
+**Reported prevalence varies widely** — commonly cited ranges run from around
+14–20% up to 13–38% of pet dogs depending on definition and method. It is
+routinely described as one of the most common canine behaviour problems.
+— Ogata (2016), *Separation anxiety in dogs: What progress has been made in
+our understanding of the most common behavioral problems in dogs?*, Journal of
+Veterinary Behavior,
+https://www.sciencedirect.com/science/article/abs/pii/S1558787816000216 ;
+de Assis et al., *Canine separation anxiety: strategies for treatment and
+management*, https://pubmed.ncbi.nlm.nih.gov/33062616/
+
+**Presentation:** vocalisation, escape attempts, destruction (usually at exit
+points), and elimination — all occurring specifically in the owner's absence
+and usually beginning within minutes of departure.
+— as above.
+
+**Treatment is multi-part**, not a single technique: management so the dog is
+not left over threshold while training, desensitisation and counterconditioning
+to very short absences that stay under the panic threshold, and, for moderate
+to severe cases, medication. Behavioural medication is typically a minimum of
+six to twelve months and sometimes lifelong.
+— *Algorithmic Approach: Separation Anxiety in Dogs*, Today's Veterinary
+Practice,
+https://todaysveterinarypractice.com/behavior/algorithmic-approach-separation-anxiety-in-dogs/
+
+> **Editorial note.** The popular advice to "desensitise the departure cues" —
+> pick up keys, put them down, repeatedly — is questioned by specialists in
+> this area, who point out that a dog with genuine separation distress panics
+> about the absence, not the keys. Report the graduated-absence protocol as the
+> core, and do not present cue desensitisation as the treatment.
+
+---
+
+## Reactivity on lead
+
+**Two distinct drivers, which look identical from the outside:** fear (the dog
+wants distance and is using noise to create it) and frustration (the dog wants
+to reach the other dog and cannot). A common tell is that frustration-driven
+reactivity often disappears entirely once the lead comes off and the greeting
+happens.
+— San Francisco SPCA, *Dog-Dog Aggression On Leash (Reactivity)*,
+https://www.sfspca.org/resource/dog-dog-aggression-on-leash-reactivity/ ;
+NYC Animal Care Centers, *On-Leash Reactivity and Barrier Frustration*,
+https://www.nycacc.org/wp-content/uploads/2023/10/On-Leash-Reactivity-and-Barrier-Frustration-1.pdf
+
+**Barrier frustration is the mechanism.** A lead removes a dog's ability to
+arc, to signal normally, and to leave. All three are how dogs de-escalate.
+— NYC ACC, as above.
+
+**Reactivity is not aggression.** Reactivity is a disproportionate emotional
+response to a trigger; aggression involves intent to do harm. Conflating them
+changes how owners are treated by other owners and how they treat their dog.
+— Best Friends Animal Society, *Dealing with leash reactivity*,
+https://bestfriends.org/network/resources-tools/dealing-leash-reactivity
+
+---
+
+## Resource guarding
+
+**Definition:** using avoidance, threat or aggression to retain control of an
+item in the presence of a person or another animal. Food and food-related items
+are the most commonly guarded, but the category includes toys, beds, furniture,
+resting places, doorways — and people.
+— Veterinary Partner, *Resource Guarding in Dogs*,
+https://veterinarypartner.vin.com/doc/?id=10464193&pid=19239
+
+**Treatment is desensitisation and counterconditioning**, with trading up as
+the practical form: the dog learns that a human approaching a valued item
+predicts something better, so giving it up becomes the profitable choice.
+Medication is sometimes appropriate where anxiety underlies it.
+— Veterinary Partner, as above; Preventive Vet, *Resource Guarding in Dogs:
+What to Do and NOT Do*,
+https://www.preventivevet.com/dogs/resource-guarding-in-dogs
+
+> **Editorial note.** The single most damaging piece of folk advice in this
+> area is to take food away from a puppy repeatedly "so it learns you're the
+> boss". That trains the dog to expect loss on approach, which is precisely the
+> contingency guarding is built on. Say so plainly.
+
+---
+
+## Predatory drift
+
+**What it is:** a normal social interaction — usually play — flipping into the
+predatory sequence, most often between a large dog and a much smaller one. The
+common trigger described is the smaller dog running fast and squealing, which
+resembles prey. The sequence can end in a grab-and-shake, which is frequently
+fatal to a small dog.
+
+The term is attributed to Ian Dunbar, derived from "instinctive drift"
+(Breland & Breland, 1961).
+
+**It is not aggression** and it is not predicted by temperament. This is why
+well-run daycares separate by size rather than by how friendly the dogs are.
+— *Predatory Drift*, Rescued By Training,
+https://rescuedbytraining.com/2023/05/01/predatory-drift/ ;
+*Why Your Dog Daycare Should Separate by Size*,
+https://www.biscuitsdoggiedaycare.com/why-your-doggie-daycare-should-separate-by-size-predatory-drift/
+
+> **Editorial note.** The evidence here is professional consensus and case
+> report rather than controlled study — there is no incidence figure worth
+> quoting. Present it as a low-frequency, high-severity risk that professionals
+> design around, not as a statistic. It is the strongest available reason for
+> the app's size weighting, and it belongs next to `sizeScore` in the
+> matching article.
+
+---
+
+## House-training
+
+**Full bladder control does not arrive until roughly five months.** Until then,
+frequency is physiological, not a training failure.
+— UC Davis Veterinary Medicine, *Housetraining Your Puppy*,
+https://www.vetmed.ucdavis.edu/sites/g/files/dgvnsk491/files/inline-files/Housetraining_Your_Puppy.pdf
+
+**Punishment after the fact does not work** and produces a dog that hides to
+eliminate — which reads to the owner as the dog "knowing it was wrong" and is
+actually the dog avoiding the human.
+— UC Davis, as above; AKC, *How to Potty Train a Puppy*,
+https://www.akc.org/expert-advice/training/how-to-potty-train-a-puppy/
+
+**Crate sizing:** large enough to stand, turn around and lie down, and no
+larger — a crate with a spare end becomes a bathroom. The crate must be
+introduced voluntarily and never used as punishment.
+— Small Door Veterinary, *Housetraining and Crate Training*,
+https://www.smalldoorvet.com/learning-center/puppies-kittens/housetraining-and-crate-training/
+
+**Persistent failure after consistent training is a veterinary question**
+before it is a training one.
+— UC Davis, as above.
+
+---
+
+## The socialisation checklist
+
+**The window is roughly 3 to 14–16 weeks**, during which novel experiences are
+accepted as normal with minimal fear response.
+— AVSAB puppy socialisation statement (see above); San Diego Humane Society,
+*Puppy Socialization Checklist*,
+https://sdhumane.org/resources/puppy-socialization-checklist/
+
+**Categories to cover:** surfaces (lino, wood, carpet, concrete, grass, gravel,
+sand, metal grates, wobbly things, stairs), people of different ages,
+appearances and gaits, sounds, handling of paws, ears and mouth, car travel,
+and the veterinary practice itself — including standing on the scales without
+anything else happening.
+— San Diego Humane Society, as above; Louisiana SPCA checklist,
+https://www.louisianaspca.org/wp-content/uploads/2020/09/Puppy-Socialization-Checklist.pdf
+
+> **Editorial note.** The widely circulated "meet 100 people by 16 weeks" is a
+> rule of thumb, not a finding, and it drives owners to prioritise headcount
+> over the puppy's actual emotional state. Quality of exposure — the puppy
+> stays under threshold and is free to retreat — is what the underlying
+> research is about. Say the number exists and why it is the wrong target.
+
+---
+
+## Gastric dilatation-volvulus (bloat)
+
+**What it is:** the stomach distends with gas and fluid and then rotates,
+cutting off its own blood supply. It is rapidly fatal without surgery.
+— Cornell Riney Canine Health Center,
+https://www.vet.cornell.edu/departments-centers-and-institutes/riney-canine-health-center/canine-health-topics/gastric-dilatation-volvulus-gdv-or-bloat
+
+**Risk is concentrated in large, deep-chested breeds:** Great Dane, German
+Shepherd, Standard Poodle, Saint Bernard, Doberman, Irish Setter, Weimaraner.
+Reported lifetime risk in large and giant breeds spans roughly **3.9% to
+36.7%**; dogs over 100lb are commonly cited at around 20%. Height-to-width
+ratio is the shape that matters.
+— American College of Veterinary Surgeons,
+https://www.acvs.org/small-animal/gastric-dilatation-volvulus/ ;
+*Updated Information on Gastric Dilatation and Volvulus and Gastropexy in
+Dogs*, https://pubmed.ncbi.nlm.nih.gov/35082096/
+
+**Signs:** a distended abdomen, unproductive retching — trying to vomit and
+producing nothing or only foam — restlessness, pacing, drooling, and evident
+abdominal pain. This is a same-hour emergency.
+— Cornell, as above; VCA,
+https://vcahospitals.com/know-your-pet/bloat-gastric-dilatation-and-volvulus-in-dogs
+
+**Prophylactic gastropexy** tacks the stomach to the body wall. It does not
+prevent dilatation but does prevent the twist in most cases, and is often done
+at the time of spay or neuter in high-risk breeds. Without gastropexy,
+recurrence after an episode has been reported as high as **75%**.
+— ACVS, as above.
+
+---
+
+## Respiratory disease where dogs gather
+
+**"Kennel cough" is a complex, not one organism.** Canine infectious
+respiratory disease complex (CIRDC) most commonly involves *Bordetella
+bronchiseptica*, canine parainfluenza virus, and several others.
+— AVMA, *Canine infectious respiratory disease complex*,
+https://www.avma.org/resources-tools/pet-owners/petcare/canine-infectious-respiratory-disease-complex-kennel-cough
+
+**Canine influenza:** virtually all exposed dogs become infected; roughly
+**80% develop clinical signs** and about 20% show none while still shedding.
+The characteristic cough persists **10 to 21 days**. H3N2 can be transmitted by
+direct contact or airborne particles for up to ten days after infection.
+— AVMA canine influenza resources,
+https://www.avma.org/resources-tools/animal-health-and-welfare/animal-health/canine-influenza-veterinary-resources ;
+VCA, https://vcahospitals.com/know-your-pet/canine-influenza-the-dog-flu
+
+**Vaccination reduces severity, duration and shedding rather than guaranteeing
+prevention.** An intranasal Bordetella/CAV-2/parainfluenza vaccine is
+recommended for dogs in multi-dog settings; injectable canine influenza vaccine
+where the virus is circulating.
+— AVMA, as above.
+
+> **Editorial note.** The 20%-asymptomatic-but-shedding figure is the one that
+> matters for this app: "he seems fine" is not evidence, which is why the
+> playdate etiquette is to postpone when either household has a coughing dog.
+
+---
+
+## Neutering age
+
+**The answer genuinely differs by breed and by sex, and popular summaries get
+it wrong.** Hart et al. examined 35 breeds over 15 years of teaching-hospital
+records, looking at joint disorders (hip dysplasia, cranial cruciate ligament
+tears, elbow dysplasia), cancers (lymphoma, haemangiosarcoma, mast cell tumour,
+osteosarcoma) and urinary incontinence against age at neutering.
+
+**In most breeds examined, risk was not affected by the age of neutering.**
+Where it was, vulnerability to joint disorders tracked body size: smaller
+breeds generally did not show the effect, while a majority of larger breeds
+did. The authors present the results as breed-and-sex-specific guidance rather
+than a single rule.
+
+— Hart, Hart, Thigpen & Willits (2020), *Assisting Decision-Making on Age of
+Neutering for 35 Breeds of Dogs*, Frontiers in Veterinary Science 7:388,
+https://www.frontiersin.org/journals/veterinary-science/articles/10.3389/fvets.2020.00388/full ;
+UC Davis summary,
+https://www.ucdavis.edu/health/news/when-should-you-neuter-your-dog-avoid-health-risks
+
+> **Editorial note.** This is the most misreported study in the popular dog
+> press, usually flattened into "never neuter early" or "neutering causes
+> cancer". Neither is what it says. The honest article says: the effect exists,
+> it is breed- and sex-specific, most breeds showed no effect, look up your own
+> breed in the table with your vet, and weigh it against the risks of *not*
+> neutering — which for females include mammary tumours and pyometra. Do not
+> give a recommendation; give the reader the shape of the decision.

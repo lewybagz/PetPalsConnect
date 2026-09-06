@@ -1,5 +1,18 @@
 const { Article } = require("../models/Content");
 
+/**
+ * A page size a client asked for, bounded.
+ *
+ * An unbounded `limit` from the query string is a way to ask the server to
+ * serialise the whole corpus - 60 articles of a thousand words each - in one
+ * response, which is a denial-of-service with extra steps.
+ */
+const clampLimit = (raw, fallback, max = 50) => {
+  const value = Number.parseInt(raw, 10);
+  if (!Number.isFinite(value) || value <= 0) return fallback;
+  return Math.min(value, max);
+};
+
 const ArticleController = {
   async getAllArticles(req, res) {
     try {
@@ -25,15 +38,86 @@ const ArticleController = {
     next();
   },
 
+  /**
+   * The article list: newest first, paged, optionally filtered to one topic.
+   *
+   * The limit used to be a hardcoded 20 with no way to ask for the next page,
+   * so the twenty-first article ever published became unreachable from the app
+   * - visible only to somebody who guessed a word in its title. A corpus that
+   * grows is a corpus that needs paging.
+   */
   async getLatestArticles(req, res) {
     try {
-      // The schema field is `publishedDate`. Sorting on `PublishedDate` sorts
-      // by a path no document has, which Mongo accepts and ignores - so
-      // "latest" was whatever order the collection happened to return.
-      const articles = await Article.find()
+      const limit = clampLimit(req.query.limit, 20);
+      const skip = Math.max(0, Number.parseInt(req.query.skip, 10) || 0);
+
+      // Tags are a controlled vocabulary written by the corpus, not free text,
+      // but it still arrives from a client, so it is matched exactly rather
+      // than as a pattern.
+      const filter = {};
+      const tag = typeof req.query.tag === "string" ? req.query.tag.trim() : "";
+      if (tag) filter.tags = tag;
+
+      const articles = await Article.find(filter)
         .sort({ publishedDate: -1 })
-        .limit(20);
+        .skip(skip)
+        .limit(limit);
       res.json(articles);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  /**
+   * The topics the corpus actually covers, with a count each.
+   *
+   * Derived from the articles rather than declared anywhere, so a tag cannot
+   * exist in the browse UI with nothing behind it, and a new tag appears the
+   * moment an article carrying it is seeded.
+   */
+  async getTopics(req, res) {
+    try {
+      const topics = await Article.aggregate([
+        { $match: { contentType: "Article" } },
+        { $unwind: "$tags" },
+        { $group: { _id: "$tags", count: { $sum: 1 } } },
+        { $sort: { count: -1, _id: 1 } },
+      ]);
+
+      res.json(topics.map(({ _id, count }) => ({ tag: _id, count })));
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  /**
+   * Other articles worth reading after this one.
+   *
+   * Ranked by how many tags they share, which is a crude measure and a good
+   * enough one for a corpus this size: the alternative is a hand-maintained
+   * list of relations that goes stale the first time somebody adds an article.
+   */
+  async getRelatedArticles(req, res) {
+    try {
+      const limit = clampLimit(req.query.limit, 3, 10);
+      const article = await Article.findById(req.params.id).select("tags");
+      if (!article) return res.status(404).json({ message: "Cannot find article" });
+
+      const tags = article.tags ?? [];
+      if (tags.length === 0) return res.json([]);
+
+      const related = await Article.aggregate([
+        { $match: { contentType: "Article", _id: { $ne: article._id }, tags: { $in: tags } } },
+        { $addFields: { shared: { $size: { $setIntersection: ["$tags", tags] } } } },
+        { $sort: { shared: -1, publishedDate: -1 } },
+        { $limit: limit },
+        // The card needs a title, a summary, an image and a date. Sending the
+        // body as well would put three full articles on the wire to render
+        // three headlines.
+        { $project: { title: 1, summary: 1, imageUrl: 1, publishedDate: 1, slug: 1, tags: 1 } },
+      ]);
+
+      res.json(related);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -60,7 +144,7 @@ const ArticleController = {
         ],
       })
         .sort({ publishedDate: -1 })
-        .limit(50);
+        .limit(clampLimit(req.query.limit, 50, 100));
       res.json(articles);
     } catch (error) {
       res.status(500).json({ message: error.message });

@@ -140,3 +140,151 @@ https://www.fda.gov/animal-veterinary/animal-health-literacy/pet-turtles-source-
 **Do not clean enclosures in the kitchen sink** or anywhere food is prepared;
 use a dedicated tub and disinfect afterwards.
 — CDC, as above.
+
+---
+---
+
+# Wave two
+
+---
+
+## Bonding rabbits
+
+**Both rabbits must be neutered first.** RWAF recommends castration at 10–12
+weeks or as soon as the testicles descend. Wait **2–4 weeks after surgery**
+before starting introductions so hormones settle; males can remain fertile for
+up to six weeks after neutering.
+— RWAF, *How to Bond Rabbits Together*,
+https://rabbitwelfare.co.uk/welfare-need/pairing-up-rabbits-bonding/
+
+**Typical duration: two weeks to two months.**
+— RWAF, as above.
+
+**The shape of it:** enclosures side by side but not touching, so they can see
+and smell but not reach each other; daily swapping of litter trays and toys to
+exchange scent; then short supervised sessions **in neutral territory neither
+rabbit has occupied**, extending as they settle.
+— RWAF, as above; Animal Humane Society, *Bunny bonding basics*,
+https://www.animalhumanesociety.org/resource/bunny-bonding-basics
+
+**RWAF does not support "stress bonding" methods** — the practice of putting
+rabbits together in a frightening situation (a car journey, a carrier) so they
+bond over shared fear.
+— RWAF, as above.
+
+---
+
+## Why an exotics vet, and why it is urgent
+
+**Prey species conceal illness.** Rabbits, guinea pigs and other small mammals
+mask signs until they can no longer do so — often described as the masking
+phenomenon. By the time an owner can see something is wrong, the animal is
+usually considerably further into the illness than it appears.
+— Texas Veterinary Medical Foundation,
+https://www.tvmf.org/articles/what-to-know-before-getting-an-exotic-pet/ ;
+UC Davis Companion Exotic Animal Medicine service,
+https://www.vetmed.ucdavis.edu/hospital/small-animal/exotics
+
+**This is why the threshold for a vet visit is much lower than for a dog or
+cat**, and why annual (and, past about five years old, twice-yearly) wellness
+exams matter more, not less, for animals that "seem healthy".
+— as above.
+
+**Species knowledge is not interchangeable.** Anatomy, physiology, nutritional
+requirements, disease patterns, safe drug choices and anaesthetic protocols all
+differ substantially from dogs and cats. Find the practice before the
+emergency.
+— as above.
+
+---
+
+## Reading a parrot
+
+**Most parrots warn before they bite.** The signals commonly described:
+stiffened posture, eye pinning (rapid pupil constriction and dilation), tail
+fanning, ruffled or slicked feathers, crouching with the head down, weaving
+side to side, an open beak, and repeated beak clicking.
+— Pamela Clark CPBC, *Reading Parrot Body Language*,
+https://pamelaclarkonline.com/2018/04/24/reading-parrot-body-language-an-essential-skill/ ;
+ExoticDirect, *Understanding your parrot's body language*,
+https://exoticdirect.co.uk/news/parrot-body-language/
+
+**Eye pinning is context-dependent, not a mood in itself.** Paired with a
+relaxed body it indicates interest and excitement; paired with ruffled feathers,
+a rigid body or beak clicking it is a warning.
+— as above.
+
+**A single beak click can be a greeting; repeated clicking is usually a
+warning.**
+— as above.
+
+> **Editorial note.** "My bird bit with no warning" almost always means the
+> warning was given in a modality the owner had not learned to read. That is
+> the article.
+
+---
+
+## Reptiles: the husbandry that causes the disease
+
+**Metabolic bone disease is among the most common and most preventable
+conditions in captive reptiles.** Causes are calcium deficiency, vitamin D3
+deficiency, an inappropriate calcium-to-phosphorus ratio, and inadequate UVB —
+usually in combination.
+— Washington State University Veterinary Teaching Hospital, *Metabolic bone
+disease in bearded dragons*,
+https://hospital.vetmed.wsu.edu/2026/01/02/metabolic-bone-disease-in-bearded-dragons/
+
+**UVB is not optional for the species that need it.** Without UVB a reptile
+cannot synthesise vitamin D3 in the skin, and without D3 it cannot absorb
+dietary calcium regardless of how much is supplied.
+— WSU, as above.
+
+**Early MBD can often be reversed by correcting husbandry. Skeletal deformity
+already present — bowed limbs, jaw malformation — is usually permanent.**
+— WSU, as above.
+
+**Thermal gradient, not a temperature.** Reptiles are ectothermic and
+thermoregulate by moving between warmer and cooler zones. Too cold and
+digestion stops, with food remaining undigested in the stomach — which leads to
+impaction and systemic illness.
+— WSU, as above.
+
+> **Editorial note.** UVB bulbs lose usable output long before they stop
+> emitting visible light, so they are replaced on a schedule rather than when
+> they fail. This is the single most common husbandry error that looks like
+> compliance.
+
+---
+
+## Fish: the nitrogen cycle is the whole game
+
+**The mechanism.** Fish excrete ammonia, which is toxic. One group of
+nitrifying bacteria oxidises ammonia to nitrite, which is also toxic. A second
+group converts nitrite to nitrate, which is far less toxic at reasonable
+concentrations and is removed by water changes. Establishing those bacterial
+colonies is "cycling".
+— FishLore, *Aquarium Nitrogen Cycle*,
+https://www.fishlore.com/NitrogenCycle.htm ;
+Dr Tim's Aquatics, *Fishless Cycling*,
+https://www.drtimsaquatics.com/resources/fishless-cycling/
+
+**New tank syndrome** is what happens when fish are added before those
+colonies exist: ammonia and nitrite spike to concentrations that kill. Signs
+include loss of colour, clamped fins, hiding, and lying near the bottom.
+— FishLore, as above; Wharf Aquatics,
+https://wharfaquatics.co.uk/blogs/aquarium-info/new-tank-syndrome-and-aquarium-cycling
+
+**Fishless cycling** adds an ammonia source to an empty tank to feed the
+bacteria. The cycle is complete when a full dose of ammonia (around 2–3 mg/L-N)
+is processed to nitrate overnight with no nitrite remaining.
+— Dr Tim's Aquatics, as above.
+
+**Timeframe: commonly 4–6 weeks, sometimes longer.** Seeding with live
+nitrifying bacteria can shorten it substantially. The active ammonia-and-nitrite
+phase typically runs 2–6 weeks.
+— FishLore and Dr Tim's, as above.
+
+> **Editorial note.** This is the single highest-value thing anybody can be
+> told before buying a first aquarium, and the pet trade routinely sells the
+> tank and the fish on the same afternoon. Frame it as: the tank is a filter
+> you are growing, and the fish come after it works.

@@ -27,6 +27,12 @@ have never met to meet, in a public place, usually outdoors, often in Arizona
 in summer. The content that earns its place answers the questions that
 arrangement raises.
 
+The second wave widened that deliberately, on the reasoning that the app's
+users own the animal for fifteen years and arrange playdates on a few dozen
+afternoons of it. Health, species breadth and the life course are what they
+search for the rest of the time, and a corpus that only covers the app's own
+feature surface is a corpus nobody opens twice.
+
 ## Priority tiers
 
 **Tier 1 — the app makes a promise the article has to keep.** Discovery says
@@ -42,79 +48,117 @@ reptiles; puppies, adoption, ageing.
 
 ---
 
-## Batch 1 (written — see `content/articles/articles.json`)
+## Written — see `content/articles/articles.json`
 
-| # | Slug | Tier | Ties to |
+60 articles, ~49,000 words, 224 citations. Tier 1 is content the app makes a
+promise about; tier 2 is health and safety a reader acts on; tier 3 is species
+and lifecycle breadth.
+
+| # | Slug | Tier | Tags |
 |---|---|---|---|
-| 1 | `reading-dog-play` | 1 | Playdates, `dog_park`, `playdates` activities |
-| 2 | `first-playdate-introductions` | 1 | `SchedulePlaydateScreen`, PetMatch |
-| 3 | `dog-park-or-playdate` | 1 | Location catalogue, `dog_park` activity |
-| 4 | `what-makes-a-good-match` | 1 | `matching/score.js` weights, `explainMatch` |
-| 5 | `play-styles-by-breed` | 1 | `BREED_AFFINITY`, `TEMPERAMENT_AFFINITY` |
-| 6 | `six-games-for-a-herding-dog` | 1 | `sniffari`, `puzzles`, `obstacle_course`, `frisbee` |
-| 7 | `the-sniffari` | 1 | `sniffari`, `walking` activities |
-| 8 | `tug-of-war-myth` | 1 | `tug_of_war` activity |
-| 9 | `playdates-in-the-heat` | 1 | AZ/CA locations, brachycephalic breeds |
-| 10 | `water-safety-for-dogs` | 1 | `swimming` activity, dog beaches |
-| 11 | `vaccines-before-a-playdate` | 2 | Playdate safety |
-| 12 | `parasites-at-the-park` | 2 | `dog_park` activity |
-| 13 | `body-condition-honestly` | 2 | Pet `weight` field, size scoring |
-| 14 | `the-poison-list` | 2 | All species |
-| 15 | `microchips-and-registration` | 2 | Lost pets, map |
-| 16 | `introducing-cats` | 3 | Multi-pet households |
-| 17 | `five-pillars-cat-home` | 3 | Cats |
-| 18 | `indoor-cat-hunting` | 3 | Cats, enrichment |
-| 19 | `rabbits-and-guinea-pigs` | 3 | Small pets |
-| 20 | `birds-and-reptiles-hazards` | 3 | Birds, reptiles |
-| 21 | `puppy-exercise-truth` | 3 | Puppies, `hiking`/`walking` |
-| 22 | `bringing-a-rescue-home` | 3 | New pets, onboarding |
-| 23 | `choosing-a-trainer` | 3 | Behaviour problems |
-| 24 | `kids-and-dogs` | 2 | Safety |
-| 25 | `senior-pets-hide-pain` | 2 | Ageing pets |
-
----
+| 1 | `reading-dog-play` | 1 | dogs, play, playdates |
+| 2 | `first-playdate-introductions` | 1 | dogs, playdates, behaviour |
+| 3 | `dog-park-or-playdate` | 1 | dogs, playdates, dog-park |
+| 4 | `what-makes-a-good-match` | 1 | dogs, matching, playdates |
+| 5 | `play-styles-by-breed` | 1 | dogs, play, playdates |
+| 6 | `six-games-for-a-herding-dog` | 1 | dogs, enrichment, play |
+| 7 | `the-sniffari` | 1 | dogs, enrichment, walking |
+| 8 | `tug-of-war-myth` | 1 | dogs, play, training |
+| 9 | `playdates-in-the-heat` | 1 | dogs, safety, heat |
+| 10 | `water-safety-for-dogs` | 1 | dogs, safety, swimming |
+| 11 | `reading-your-match-score` | 1 | dogs, matching, playdates |
+| 12 | `size-mismatch-playdates` | 1 | dogs, playdates, safety |
+| 13 | `first-five-minutes` | 1 | dogs, playdates, safety |
+| 14 | `small-dogs-big-parks` | 1 | dogs, dog-park, safety |
+| 15 | `beyond-the-dog-park` | 1 | dogs, playdates, behaviour |
+| 16 | `leash-reactivity` | 1 | dogs, behaviour, training |
+| 17 | `resource-guarding-playdates` | 1 | dogs, behaviour, playdates |
+| 18 | `hosting-a-playdate-at-home` | 1 | dogs, playdates, safety |
+| 19 | `coughing-dogs-and-playdates` | 1 | dogs, health, playdates |
+| 20 | `vaccines-before-a-playdate` | 2 | dogs, cats, health |
+| 21 | `parasites-at-the-park` | 2 | dogs, health, parasites |
+| 22 | `body-condition-honestly` | 2 | dogs, cats, health |
+| 23 | `the-poison-list` | 2 | dogs, cats, birds |
+| 24 | `microchips-and-registration` | 2 | dogs, cats, safety |
+| 25 | `kids-and-dogs` | 2 | dogs, safety, children |
+| 26 | `senior-pets-hide-pain` | 2 | dogs, cats, health |
+| 27 | `ticks-and-what-to-do` | 2 | dogs, cats, health |
+| 28 | `fleas-the-hidden-majority` | 2 | dogs, cats, health |
+| 29 | `leptospirosis-is-now-core` | 2 | dogs, health, vaccines |
+| 30 | `dental-disease` | 2 | dogs, cats, health |
+| 31 | `neutering-timing` | 2 | dogs, health, surgery |
+| 32 | `when-it-is-an-emergency` | 2 | dogs, cats, health |
+| 33 | `bloat-gdv` | 2 | dogs, health, emergency |
+| 34 | `heartworm-the-arithmetic` | 2 | dogs, cats, health |
+| 35 | `first-aid-kit-and-plan` | 2 | dogs, cats, small-pets |
+| 36 | `introducing-cats` | 3 | cats, introductions, behaviour |
+| 37 | `five-pillars-cat-home` | 3 | cats, environment, behaviour |
+| 38 | `indoor-cat-hunting` | 3 | cats, play, enrichment |
+| 39 | `rabbits-and-guinea-pigs` | 3 | rabbits, guinea-pigs, small-pets |
+| 40 | `birds-and-reptiles-hazards` | 3 | birds, reptiles, small-pets |
+| 41 | `puppy-exercise-truth` | 3 | dogs, puppies, health |
+| 42 | `bringing-a-rescue-home` | 3 | dogs, cats, adoption |
+| 43 | `choosing-a-trainer` | 3 | dogs, cats, training |
+| 44 | `cat-body-language` | 3 | cats, behaviour, safety |
+| 45 | `cat-scratching` | 3 | cats, behaviour, environment |
+| 46 | `multi-cat-tension` | 3 | cats, behaviour, multi-cat |
+| 47 | `indoor-outdoor-catio` | 3 | cats, environment, welfare |
+| 48 | `bonding-rabbits` | 3 | rabbits, small-pets, behaviour |
+| 49 | `exotics-vet-care` | 3 | rabbits, guinea-pigs, birds |
+| 50 | `reading-a-parrot` | 3 | birds, behaviour, small-pets |
+| 51 | `reptile-husbandry-basics` | 3 | reptiles, small-pets, health |
+| 52 | `aquarium-nitrogen-cycle` | 3 | fish, small-pets, health |
+| 53 | `puppy-first-sixteen-weeks` | 3 | dogs, puppies, behaviour |
+| 54 | `kitten-socialisation` | 3 | cats, kittens, behaviour |
+| 55 | `adolescent-dogs` | 3 | dogs, behaviour, training |
+| 56 | `house-training` | 3 | dogs, puppies, training |
+| 57 | `being-left-alone` | 3 | dogs, behaviour, training |
+| 58 | `cognitive-dysfunction` | 3 | dogs, cats, senior |
+| 59 | `quality-of-life` | 3 | dogs, cats, senior |
+| 60 | `pet-loss-and-grief` | 3 | dogs, cats, small-pets |
 
 ## Backlog — researched enough to brief, not yet written
 
+The first wave's backlog is written. What is left, in rough priority order.
+
 **Tier 1**
 
-- *When a match is not a match*: reading the app's own breakdown, and why a
-  62 with great temperament fit beats an 80 that is all breed and age. Needs
-  the weighted-points caveat from `src/api/discovery.js`.
-- *The first five minutes of a playdate*: arrival, leash management, gates,
-  and the decision to leave early. Nothing to research; needs writing.
-- *Playing with a size mismatch*: predatory drift, why `sizeScore` reaches
-  zero at a 1:3 weight ratio, and how to run a 15lb/45lb playdate safely.
-- *Small dogs at a big-dog park*, and why "small dog area" is not decoration.
-- *Playdates for a dog who does not like dog parks*: one-to-one, sniffari
-  walks, parallel hikes, private rentals.
+- *Daycare: how to choose one and what to ask.* Group size, staff ratio, size
+  separation, rest periods, and how they handle a scuffle. Ties directly to the
+  predatory-drift and play-style articles.
+- *Recall that works around other dogs*, which is the single skill that makes
+  every other playdate article easier to follow.
+- *Muzzle training as an ordinary skill*, not a mark of a dangerous dog — a
+  muzzle-trained dog can be seen by a vet in pain, and the stigma costs dogs
+  care.
+- *Two dogs in one house*: whether to get a second, and the honest version of
+  what changes.
 
 **Tier 2**
 
-- *Ticks, and what to do about the one you found*: needs CAPC regional
-  prevalence and current removal guidance.
-- *Leptospirosis in the city*: the 2024 core reclassification is a genuine
-  news hook; needs ACVIM consensus statement read directly.
-- *Fleas: the 95% you cannot see*, life-cycle and environmental treatment.
-- *Spay/neuter timing by breed and size*: contested; needs the UC Davis breed
-  studies (Hart et al.) read in full before writing, because the guidance
-  genuinely differs by breed and the popular summaries are wrong.
-- *Pet first-aid kit and an emergency plan*, incl. having the APCC number and
-  the nearest 24-hour hospital saved before you need them.
-- *Dental disease*: the most common diagnosis in adult dogs and cats and the
-  one owners most consistently ignore.
+- *Obesity, properly*: a weight-loss plan, calorie arithmetic, and why cats
+  must lose weight slowly (hepatic lipidosis). Currently one section inside
+  `body-condition-honestly` and worth its own piece.
+- *Arthritis management in dogs*, now that the feline side is covered.
+- *Chronic kidney disease in cats* — the most common serious diagnosis in older
+  cats and one owners are handed with almost no orientation.
+- *Vaccine reactions and what is actually normal afterwards.*
+- *Anaesthesia: what happens, and the pre-anaesthetic bloodwork question.*
+- *Pet insurance mechanics*, particularly pre-existing condition definitions,
+  which is where most disputes originate.
 
 **Tier 3**
 
-- *Cat body language*, tail, ears, pupils, and the difference between "I am
-  done" and "I am about to bite you".
-- *The indoor/outdoor question*, honestly, including catios.
-- *Old dogs: arthritis, cognitive dysfunction, and what "slowing down" hides.*
-- *Pet loss and grief.*
-- *What pet insurance actually covers*, and pre-existing condition mechanics.
-- *Travelling with a pet*: airline rules, car restraint, and the difference
-  between pet-friendly and dog-welcome.
-- *Rabbit and guinea pig vet care*: why an exotics vet, and the cost of not.
+- *Travelling with a pet*: airline rules, car restraint (Center for Pet Safety
+  certification is voluntary and there is no federal standard), and the gap
+  between "pet-friendly" and "your dog may come inside".
+- *Hamsters, gerbils and rats*, which are sold to children and researched by
+  almost nobody.
+- *Ferrets.*
+- *Backyard chickens*, now common and served mostly by folklore.
+- *Cat food: wet, dry, and what the evidence supports.*
+- *Adopting a senior*, and why they are the best-kept secret in rescue.
+- *When a household changes*: a new baby, a move, a bereavement, a breakup.
 
 ## What this corpus deliberately does not cover
 

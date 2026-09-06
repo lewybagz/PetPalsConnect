@@ -233,6 +233,143 @@ test("GET /api/articles/recent answers null rather than 404 on an empty shelf", 
   assert.equal(response.body, null);
 });
 
+test("GET /api/articles/latest pages, so the corpus cannot outgrow the screen", async () => {
+  const articles = await seed();
+  assert.ok(articles.length > 20, "the corpus should be big enough to need paging");
+
+  const first = await request(app)
+    .get("/api/articles/latest")
+    .set(...auth())
+    .expect(200);
+  assert.equal(first.body.length, 20, "the default page is twenty");
+
+  const second = await request(app)
+    .get("/api/articles/latest")
+    .set(...auth())
+    .query({ skip: 20 })
+    .expect(200);
+
+  // The bug this replaces: `.limit(20)` with no skip, so article 21 was
+  // reachable only by guessing a word in its title.
+  const firstIds = new Set(first.body.map((a) => a._id));
+  assert.ok(second.body.length > 0);
+  assert.ok(second.body.every((a) => !firstIds.has(a._id)), "page two repeats page one");
+});
+
+test("a client cannot ask for the whole corpus in one response", async () => {
+  await seed();
+
+  const response = await request(app)
+    .get("/api/articles/latest")
+    .set(...auth())
+    .query({ limit: 100000 })
+    .expect(200);
+
+  assert.ok(response.body.length <= 50, "limit is clamped");
+});
+
+test("GET /api/articles/latest filters to one topic", async () => {
+  await seed();
+
+  const response = await request(app)
+    .get("/api/articles/latest")
+    .set(...auth())
+    .query({ tag: "rabbits" })
+    .expect(200);
+
+  assert.ok(response.body.length > 0);
+  for (const article of response.body) {
+    assert.ok(article.tags.includes("rabbits"), `${article.slug} is not tagged rabbits`);
+  }
+});
+
+test("GET /api/articles/topics counts what the corpus actually carries", async () => {
+  const articles = await seed();
+
+  const response = await request(app)
+    .get("/api/articles/topics")
+    .set(...auth())
+    .expect(200);
+
+  const counts = Object.fromEntries(response.body.map((t) => [t.tag, t.count]));
+
+  // Every tag in the corpus appears, with the right count - a browse chip
+  // that offers a topic with nothing behind it is worse than no chip.
+  const expected = {};
+  for (const article of articles) {
+    for (const tag of article.tags) expected[tag] = (expected[tag] ?? 0) + 1;
+  }
+  assert.deepEqual(counts, expected);
+
+  const sorted = [...response.body].sort((a, b) => b.count - a.count);
+  assert.deepEqual(
+    response.body.map((t) => t.count),
+    sorted.map((t) => t.count),
+    "topics come back most-used first"
+  );
+});
+
+test("related articles share tags, exclude the article itself, and omit the body", async () => {
+  await seed();
+  const article = await Article.findOne({ slug: "bonding-rabbits" });
+
+  const response = await request(app)
+    .get(`/api/articles/${article._id}/related`)
+    .set(...auth())
+    .expect(200);
+
+  assert.ok(response.body.length > 0);
+  for (const other of response.body) {
+    assert.notEqual(other._id, String(article._id));
+    assert.ok(
+      other.tags.some((tag) => article.tags.includes(tag)),
+      `${other.slug} shares no tag with ${article.slug}`
+    );
+    // Three full articles would be several thousand words on the wire to
+    // render three headlines.
+    assert.equal(other.content, undefined, "related articles must not carry the body");
+  }
+});
+
+test("related articles are ranked by how many tags they share", async () => {
+  await seed();
+  const article = await Article.findOne({ slug: "the-poison-list" });
+
+  const response = await request(app)
+    .get(`/api/articles/${article._id}/related`)
+    .set(...auth())
+    .query({ limit: 5 })
+    .expect(200);
+
+  const shared = response.body.map(
+    (other) => other.tags.filter((tag) => article.tags.includes(tag)).length
+  );
+  assert.deepEqual(shared, [...shared].sort((a, b) => b - a));
+});
+
+test("related articles on an id that is not an article are a 404", async () => {
+  const mongoose = require("mongoose");
+  await request(app)
+    .get(`/api/articles/${new mongoose.Types.ObjectId()}/related`)
+    .set(...auth())
+    .expect(404);
+});
+
+test("every article's tags resolve to a topic somebody can browse", async () => {
+  // The app leads its browse row with species tags. A species article filed
+  // only under subject tags is an article no one browsing by animal can find.
+  const bySlug = Object.fromEntries(corpus().map((a) => [a.slug, a.tags]));
+  const SPECIES = [
+    "dogs", "cats", "rabbits", "guinea-pigs", "birds", "reptiles", "fish", "small-pets",
+  ];
+
+  const unfiled = Object.entries(bySlug)
+    .filter(([, tags]) => !tags.some((tag) => SPECIES.includes(tag)))
+    .map(([slug]) => slug);
+
+  assert.deepEqual(unfiled, [], "articles with no species tag");
+});
+
 test("createArticle takes the author from the token, not the body", async () => {
   const User = require("../models/User");
   const user = await User.create({

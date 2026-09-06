@@ -88,9 +88,14 @@ npx expo run:ios       # or: npx expo run:android
 
 The in-app Articles feature is backed by `content/`. `content/research/` holds
 the verified material — claims, numbers and the source each came from —
-and `content/articles/articles.json` is the batch built from it: 25 articles,
-~20,000 words, 93 citations, covering dogs, cats, rabbits, guinea pigs, birds
-and reptiles.
+and `content/articles/articles.json` is the batch built from it: 60 articles,
+~49,000 words, 224 citations, covering dogs, cats, rabbits, guinea pigs, birds,
+reptiles and fish — from playdate mechanics and preventive health through to
+cognitive decline, quality-of-life assessment and grief.
+
+In the app they are browsable by topic: `/api/articles/topics` derives the
+index from the tags the corpus carries, `/latest` pages and filters, and each
+article ends with further reading ranked by shared tags.
 
 `content/research/standards.md` is the sourcing and editorial policy, and
 `content/research/topics.md` maps every article to the app feature it supports
@@ -159,7 +164,7 @@ compiled into the app bundle and is public by definition — never put a secret 
 ## Tests
 
 ```bash
-cd backend && npm test     # 383 tests, ~35s, no database or credentials needed
+cd backend && npm test     # 391 tests, ~35s, no database or credentials needed
 ```
 
 The suite boots the real Express app against an in-memory MongoDB with a stubbed

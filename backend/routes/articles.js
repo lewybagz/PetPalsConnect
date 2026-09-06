@@ -16,7 +16,14 @@ router.get("/latest", ArticleController.getLatestArticles);
 // screen downloaded twenty article bodies to show one.
 router.get("/recent", ArticleController.getLatestArticle);
 router.get("/search", ArticleController.searchArticles);
+// The browse index: which topics exist and how much is behind each one.
+router.get("/topics", ArticleController.getTopics);
 router.post("/", ArticleController.createArticle);
+
+// Declared before "/:id" so the two-segment path is matched by its own
+// handler rather than depending on how strictly Express treats a single
+// parameter segment.
+router.get("/:id/related", ArticleController.getRelatedArticles);
 
 router.get("/:id", ArticleController.getArticleById, (req, res) => {
   res.json(res.article);
