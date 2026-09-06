@@ -35,6 +35,7 @@ const DOCUMENT_INTERFACES = {
   User: "User",
   Subscription: "Subscription",
   Location: "Location",
+  Article: "Article",
 };
 
 /** Fields that exist on the JSON but not as schema paths. */
@@ -44,6 +45,7 @@ require("../models/User");
 require("../models/Pet");
 require("../models/Subscription");
 require("../models/Location");
+require("../models/Article");
 
 /** Extracts `interface Name { ... }` bodies, ignoring comments. */
 const readInterfaces = () => {

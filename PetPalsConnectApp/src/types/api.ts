@@ -269,3 +269,42 @@ export interface ApiErrorBody {
    */
   code?: string;
 }
+
+/**
+ * A citation on an article.
+ *
+ * Its own interface rather than an inline object because `backend/test/
+ * types.test.js` parses interface bodies with a regex that stops at the first
+ * closing brace - a nested shape here would silently drop every field after it
+ * from the check, which is exactly the drift that check exists to catch.
+ */
+export interface ArticleSource {
+  title: string;
+  publisher: string;
+  url: string;
+}
+
+/**
+ * An editorial article: the Articles screen, its detail view, and the home
+ * screen's one-article shelf.
+ *
+ * `author` and `creator` are optional because articles are editorial. Seeded
+ * content is written by the publication and has no user account behind it; an
+ * article posted through `POST /api/articles` has both, taken from the token.
+ * The visible attribution is `byline`.
+ */
+export interface Article {
+  _id: string;
+  title: string;
+  summary?: string;
+  content: string;
+  byline: string;
+  imageUrl?: string;
+  tags?: string[];
+  sources?: ArticleSource[];
+  slug?: string;
+  author?: string;
+  creator?: string;
+  publishedDate: string;
+  lastReviewedDate: string;
+}

@@ -33,6 +33,8 @@ const PUBLIC_READS = {
   "ArticleController.getAllArticles": "editorial content, the same for everyone",
   "ArticleController.getLatestArticles": "the articles list screen",
   "ArticleController.getLatestArticle": "the home screen's article shelf",
+  "ArticleController.getTopics": "the topic index over editorial content",
+  "ArticleController.getRelatedArticles": "further reading, from the same editorial content",
   "LocationController.getAllLocations": "the shared catalogue of parks and meeting places",
   "PetController.getAllPets": "pets are the browsable content of the app",
   "PetController.getLatestPets": "the home screen's new-pets shelf",

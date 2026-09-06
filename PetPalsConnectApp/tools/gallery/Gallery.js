@@ -8,6 +8,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import store from "../../src/redux/store";
 import api from "../../src/api/axios";
 import { AppThemeProvider, useTokens } from "../../src/context/AppThemeContext";
+import { DevicePreferencesProvider } from "../../src/context/DevicePreferencesContext";
+import { SettingsProvider } from "../../src/context/SettingsContext";
 import { AuthSessionContext, AuthStatus } from "../../src/context/AuthSessionContext";
 import {
   Button,
@@ -22,7 +24,10 @@ import {
 import OnboardingProgress from "../../src/components/ui/OnboardingProgress";
 import { useAppFonts } from "../../src/styles/fonts";
 import { BOARDS, boardById } from "./boards";
-import { MY_PET, SECOND_PET, pending } from "./fixtures";
+import { MY_PET, SECOND_PET, SETTINGS, pending } from "./fixtures";
+
+/** Device preferences at their defaults, which is what most boards want. */
+const DEVICE_PREFERENCES = { reduceMotion: false, largerText: false, showMatchScore: true };
 
 /**
  * The real screens, on a page, so they can be looked at.
@@ -239,9 +244,20 @@ export default function Gallery() {
                 board?.id === "account-suspended" ? SUSPENDED_SESSION : SESSION
               }
             >
-              <NavigationContainer>
-                <Surface board={board} />
-              </NavigationContainer>
+              {/* Both settings layers, pinned rather than fetched: a board is
+                  one page load, and a switch that arrives a frame after the
+                  screenshot is a switch nobody sees. `board.preferences` is
+                  how "Appearance" and "Appearance, larger text" become two
+                  boards instead of a race with AsyncStorage. */}
+              <DevicePreferencesProvider
+                initialPreferences={board?.preferences ?? DEVICE_PREFERENCES}
+              >
+                <SettingsProvider initialSettings={board?.settings ?? SETTINGS}>
+                  <NavigationContainer>
+                    <Surface board={board} />
+                  </NavigationContainer>
+                </SettingsProvider>
+              </DevicePreferencesProvider>
             </AuthSessionContext.Provider>
           </ToastProvider>
         </SafeAreaProvider>

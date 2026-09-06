@@ -24,5 +24,7 @@ export const sendEmailVerification = noop;
 export const sendPasswordResetEmail = noop;
 export const signInWithCredential = noop;
 export const updatePassword = noop;
+export const reauthenticateWithCredential = noop;
+export const EmailAuthProvider = { credential: () => ({}) };
 export const GoogleAuthProvider = { credential: () => ({}) };
 export const PhoneAuthProvider = function PhoneAuthProvider() {};

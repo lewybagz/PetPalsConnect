@@ -16,16 +16,57 @@ const ContentSchema = new Schema(
 // Content model
 const Content = mongoose.model("Content", ContentSchema);
 
+// A citation on an article. Health-adjacent content that names a number has to
+// be able to say where the number came from, or a reader has no way to check it
+// and no way to tell a guideline from a blog post.
+const ArticleSourceSchema = new Schema(
+  {
+    title: { type: String, required: true },
+    publisher: { type: String, required: true },
+    url: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 // Article discriminator
 const ArticleSchema = new Schema({
-  author: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  /**
+   * `author` and `creator` are optional on an article, and required nowhere
+   * else this app writes content.
+   *
+   * Articles are editorial: `PUBLIC_READS` in `services/authAudit.js` describes
+   * them as "editorial content, the same for everyone", and all three article
+   * reads are unauthenticated for that reason. They are written by the
+   * publication, not by a user account, so there is no `User` document to point
+   * at - and requiring one meant seeded content could not be inserted without
+   * first inventing a fake person who would then turn up in username search.
+   *
+   * They stay on the schema because an article created through `POST
+   * /api/articles` by a signed-in author does have both, and `createArticle`
+   * still sets `creator` from `req.userId`.
+   */
+  author: { type: Schema.Types.ObjectId, ref: "User" },
+  creator: { type: Schema.Types.ObjectId, ref: "User" },
+
+  /** The visible byline. Editorial content is bylined to the publication. */
+  byline: { type: String, default: "PetPals Connect" },
+
   content: { type: String, required: true },
+  /**
+   * One or two sentences for the card. `ArticleCard` used to slice the first
+   * 100 characters of `content`, which cuts mid-word and mid-clause.
+   */
+  summary: { type: String },
+  imageUrl: { type: String },
   publishedDate: { type: Date, default: Date.now },
+  /** When a human last checked the article's claims against its sources. */
+  lastReviewedDate: { type: Date, default: Date.now },
+  sources: [ArticleSourceSchema],
   tags: [{ type: String }],
   title: { type: String, required: true },
-  creator: { type: Schema.Types.ObjectId, ref: "User", required: true },
   modifiedDate: { type: Date, default: Date.now },
-  slug: String,
+  /** Stable key for seeding: the seeder upserts on `slug`. */
+  slug: { type: String, index: true },
 });
 const Article = Content.discriminator("Article", ArticleSchema);
 

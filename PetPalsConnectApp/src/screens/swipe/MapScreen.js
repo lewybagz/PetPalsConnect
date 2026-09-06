@@ -10,6 +10,8 @@ import { darkMapStyle } from "../../styles/mapStyle";
 import { hit, radius, space } from "../../styles/tokens";
 import { Button, Card, EmptyState, Screen, Text, useToast } from "../../components/ui";
 import { fetchMapPets, fetchPlaces, importPlaces } from "../../api/maps";
+import { describeDistance } from "../../api/discovery";
+import { useUnits } from "../../context/SettingsContext";
 
 /**
  * Everyone near you, on a map.
@@ -48,6 +50,7 @@ const provider = Platform.select({
 const MapScreen = ({ navigation }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
+  const units = useUnits();
   const { isDark } = useAppTheme();
   const toast = useToast();
   const mapRef = useRef(null);
@@ -279,9 +282,7 @@ const MapScreen = ({ navigation }) => {
             ) : null}
             {selected.distanceMiles != null ? (
               <Text variant="caption" tone="faint" style={tailwind("mt-xs")}>
-                {selected.distanceMiles < 1
-                  ? "Less than a mile away"
-                  : `${Math.round(selected.distanceMiles)} miles away`}
+                {describeDistance(selected.distanceMiles, units)}
               </Text>
             ) : null}
 

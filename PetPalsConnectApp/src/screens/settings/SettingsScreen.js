@@ -1,101 +1,65 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Alert } from "react-native";
+import React, { useCallback } from "react";
+import { Alert } from "react-native";
 import { getAuth, signOut } from "@react-native-firebase/auth";
-import Slider from "@react-native-community/slider";
-import { useTailwind } from "../../styles/tailwind";
+
+import {
+  Button,
+  Screen,
+  SettingsRow,
+  SettingsSection,
+  Text,
+  useToast,
+} from "../../components/ui";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { useAuthSession } from "../../context/AuthSessionContext";
-import api from "../../api/axios";
-import { readCache, writeCache, CacheKeys } from "../../services/localCache";
-import { Button, Toggle, useToast } from "../../components/ui";
+import { useSettings } from "../../context/SettingsContext";
+import { useTailwind } from "../../styles/tailwind";
 import { resetAllWalkthroughs } from "../../components/walkthrough";
+import { distanceFromMiles, distanceLabel } from "../../utils/units";
 
+/**
+ * The settings hub.
+ *
+ * It used to be twenty-one bordered boxes in one flat column, each a
+ * `TouchableOpacity` 34pt tall with no chevron and no current value - so
+ * "Privacy Settings" and "Sign Out" looked identical, and nothing said what any
+ * of them was currently set to. Three of the controls on it also duplicated
+ * ones on the screens it linked to, with a different answer: a location switch
+ * that saved and a location switch on the Privacy screen that did not, a dark
+ * mode switch here and a theme choice nowhere, and a set of notification
+ * toggles built from whatever keys happened to be in the cache.
+ *
+ * This screen no longer holds any setting that has a home of its own. What it
+ * holds is the route to each one and the answer it currently gives, which is
+ * the thing a settings hub is for.
+ */
 const SettingsScreen = ({ navigation }) => {
   const tailwind = useTailwind();
   const toast = useToast();
   const auth = getAuth();
-  const { toggleAppTheme, isDark } = useAppTheme();
-  const { deleteAccount } = useAuthSession();
+  const { preference: themePreference } = useAppTheme();
+  const { deleteAccount, profile } = useAuthSession();
+  const { settings } = useSettings();
 
-  const [locationSharingEnabled, setLocationSharingEnabled] = useState(true);
-  const [playdateRange, setPlaydateRange] = useState(25);
-  const [notificationPreferences, setNotificationPreferences] = useState({
-    petPalsMapUpdates: false,
-    playdateReminders: false,
-    appUpdates: false,
-  });
+  const units = settings.units;
+  const range = settings.playdateRange ?? 0;
+  const rangeDetail =
+    range === 0
+      ? "No limit"
+      : `${Math.round(distanceFromMiles(range, units.distance))} ${distanceLabel(units)}`;
 
-  const darkMode = isDark;
-
-  // Settings were stored in Realm (end-of-life September 2025) using a schema
-  // imported from the backend package. They now live in AsyncStorage, and the
-  // shared axios instance attaches the auth token, so the manual token plumbing
-  // that used to wrap each of these handlers is gone.
-  useEffect(() => {
-    let cancelled = false;
-    readCache(CacheKeys.settings).then((settings) => {
-      if (cancelled || !settings) return;
-      setLocationSharingEnabled(settings.locationSharingEnabled ?? true);
-      setPlaydateRange(settings.playdateRange ?? 25);
-      if (settings.notificationPreferences) {
-        setNotificationPreferences(settings.notificationPreferences);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const persist = (overrides) =>
-    writeCache(CacheKeys.settings, {
-      locationSharingEnabled,
-      playdateRange,
-      notificationPreferences,
-      ...overrides,
-    });
-
-  const handlePlaydateRangeChange = async (value) => {
-    setPlaydateRange(value);
-    try {
-      await persist({ playdateRange: value });
-      await api.post("/api/users/settings", { playdateRange: value });
-    } catch (error) {
-      console.warn("[settings]", error.message);
-      toast.error("Couldn't save your playdate range.");
-    }
-  };
-
-  const toggleNotificationSetting = async (key) => {
-    const next = { ...notificationPreferences, [key]: !notificationPreferences[key] };
-    setNotificationPreferences(next);
-    try {
-      await persist({ notificationPreferences: next });
-      await api.post("/api/users/notification-preferences", { [key]: next[key] });
-    } catch (error) {
-      console.warn("[settings]", error.message);
-      setNotificationPreferences(notificationPreferences); // roll back
-      toast.error(`Couldn't save the setting for ${key}.`);
-    }
-  };
-
-  const toggleLocationSharing = async () => {
-    const next = !locationSharingEnabled;
-    setLocationSharingEnabled(next);
-    try {
-      await persist({ locationSharingEnabled: next });
-      await api.post("/api/users/settings", { locationSharingEnabled: next });
-    } catch (error) {
-      console.warn("[settings]", error.message);
-      setLocationSharingEnabled(!next); // roll back
-      toast.error("Couldn't save your location sharing setting.");
-    }
-  };
+  const THEME_LABELS = { system: "System", light: "Light", dark: "Dark" };
 
   // RootNavigator swaps to the auth stack as soon as Firebase reports a signed
   // out user, so there is no navigation call to make here.
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
     signOut(auth).catch((error) => toast.error(error.message));
-  };
+  }, [auth, toast]);
+
+  const replayTour = useCallback(async () => {
+    await resetAllWalkthroughs();
+    toast.success("The app tour will play again on your next visit.");
+  }, [toast]);
 
   /**
    * In-app account deletion.
@@ -104,7 +68,7 @@ const SettingsScreen = ({ navigation }) => {
    * creation to offer account deletion from inside the app, so this is a
    * shipping requirement. Two taps to confirm, because it cannot be undone.
    */
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = useCallback(() => {
     Alert.alert(
       "Delete your account?",
       "This permanently removes your profile, pets, playdates and messages. It cannot be undone.",
@@ -138,170 +102,138 @@ const SettingsScreen = ({ navigation }) => {
         },
       ]
     );
-  };
+  }, [deleteAccount, toast]);
 
   return (
-    <View style={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold")}>Settings</Text>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("SubscriptionManagement")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Manage Subscription</Text>
-      </TouchableOpacity>
-
-      {/* Location Sharing Setting */}
-      <View style={tailwind("flex-row justify-between py-2")}>
-        <Text>Share My Location On The PetPalsMap</Text>
-        <Toggle
-          onValueChange={toggleLocationSharing}
-          value={locationSharingEnabled}
-        />
-      </View>
-
-      <Text testID="playdate-range" style={tailwind("my-2")}>
-        PetPalsConnect Location Range: {playdateRange} miles
+    <Screen testID="settings" scroll>
+      <Text variant="display" style={tailwind("mb-lg")}>
+        Settings
       </Text>
-      <Text style={tailwind("text-center text-textMuted mb-2")}>
-        Discovery only shows you pets within this range - a playdate is
-        something you have to travel to.
-      </Text>
-      <Slider
-        style={{ width: "100%", height: 40 }}
-        minimumValue={5}
-        maximumValue={100}
-        step={5}
-        value={playdateRange}
-        onValueChange={handlePlaydateRangeChange}
-      />
 
-      <TouchableOpacity
-        onPress={() => navigation.navigate("ChangePassword")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Change Password</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("PaymentMethods")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Payment Methods</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("AccountInformation")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Account Information</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("SecuritySettings")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Security Settings</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("NotificationPreferences")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Notification Preferences</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("HelpSupport")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Help & Support</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("LegalPolicies")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Legal Policies</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("PrivacySettings")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Privacy Settings</Text>
-      </TouchableOpacity>
-
-      {/* A block you cannot see is a block you cannot take back. */}
-      <TouchableOpacity
-        testID="settings-blocked-accounts"
-        onPress={() => navigation.navigate("BlockedAccounts")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Blocked Accounts</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("AboutApp")}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>About PetPalsConnect</Text>
-      </TouchableOpacity>
-
-      {/* The tours play once, on a first visit, and are then remembered as
-          seen. Without this there is no way back to them - and the person most
-          likely to want one is somebody who skipped it in a hurry. */}
-      <TouchableOpacity
-        testID="settings-replay-tour"
-        accessibilityRole="button"
-        onPress={async () => {
-          await resetAllWalkthroughs();
-          toast.success("The app tour will play again on your next visit.");
-        }}
-        style={tailwind("my-2 p-2 border rounded border-border")}
-      >
-        <Text>Show the App Tour Again</Text>
-      </TouchableOpacity>
-
-      {Object.entries(notificationPreferences).map(([key, value]) => (
-        <View style={tailwind("flex-row justify-between py-2")} key={key}>
-          <Text>
-            {key.replace(/([A-Z])/g, " $1")}{" "}
-            {/* Make the key more user-friendly */}
-          </Text>
-          <Toggle
-            onValueChange={() => toggleNotificationSetting(key)}
-            value={value}
-          />
-        </View>
-      ))}
-
-      {/* Dark Mode Setting */}
-      <View style={tailwind("flex-row justify-between py-2")}>
-        <Text>Dark Mode</Text>
-        <Toggle
-          onValueChange={toggleAppTheme}
-          value={darkMode}
+      <SettingsSection title="Finding pets">
+        <SettingsRow
+          testID="settings-discovery"
+          icon="paw-outline"
+          label="Discovery"
+          description="Distance, size, age and species."
+          detail={rangeDetail}
+          onPress={() => navigation.navigate("DiscoveryPreferences")}
         />
-      </View>
+      </SettingsSection>
 
-      {/* Sign Out */}
-      <TouchableOpacity
+      <SettingsSection
+        title="Privacy and safety"
+        footer="Blocking is symmetric: neither of you appears to the other anywhere in the app."
+      >
+        <SettingsRow
+          testID="settings-privacy"
+          icon="lock-closed-outline"
+          label="Privacy"
+          description="Who can message you, find you and see where you are."
+          onPress={() => navigation.navigate("PrivacySettings")}
+        />
+        <SettingsRow
+          testID="settings-blocked-accounts"
+          icon="hand-left-outline"
+          label="Blocked accounts"
+          onPress={() => navigation.navigate("BlockedAccounts")}
+        />
+        <SettingsRow
+          testID="settings-security"
+          icon="shield-checkmark-outline"
+          label="Sign-in and security"
+          onPress={() => navigation.navigate("SecuritySettings")}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="Notifications">
+        <SettingsRow
+          testID="settings-notifications"
+          icon="notifications-outline"
+          label="Notifications"
+          description="What to be told about, and when to stay quiet."
+          onPress={() => navigation.navigate("NotificationPreferences")}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="Display">
+        <SettingsRow
+          testID="settings-display"
+          icon="color-palette-outline"
+          label="Appearance and accessibility"
+          description="Theme, text size and motion."
+          detail={THEME_LABELS[themePreference] ?? "System"}
+          onPress={() => navigation.navigate("DisplaySettings")}
+        />
+        <SettingsRow
+          testID="settings-replay-tour"
+          icon="school-outline"
+          label="Show the app tour again"
+          // The tours play once on a first visit and are then remembered as
+          // seen. Without this there is no way back to them, and the person
+          // most likely to want one is somebody who skipped it in a hurry.
+          description="Replays the guided tour on Home, More and Favourites."
+          onPress={replayTour}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="Account">
+        <SettingsRow
+          testID="settings-account-information"
+          icon="person-outline"
+          label="Account information"
+          detail={profile?.username ? `@${profile.username}` : undefined}
+          onPress={() => navigation.navigate("AccountInformation")}
+        />
+        <SettingsRow
+          testID="settings-subscription"
+          icon="star-outline"
+          label="Subscription"
+          detail={profile?.subscribed ? "Premium" : "Free"}
+          onPress={() => navigation.navigate("SubscriptionManagement")}
+        />
+        <SettingsRow
+          testID="settings-payment-methods"
+          icon="card-outline"
+          label="Payment methods"
+          onPress={() => navigation.navigate("PaymentMethods")}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="About">
+        <SettingsRow
+          icon="help-circle-outline"
+          label="Help and support"
+          onPress={() => navigation.navigate("HelpSupport")}
+        />
+        <SettingsRow
+          icon="document-text-outline"
+          label="Legal and policies"
+          onPress={() => navigation.navigate("LegalPolicies")}
+        />
+        <SettingsRow
+          icon="information-circle-outline"
+          label="About PetPalsConnect"
+          onPress={() => navigation.navigate("AboutApp")}
+        />
+      </SettingsSection>
+
+      <Button
+        testID="settings-sign-out"
+        title="Sign out"
+        variant="secondary"
         onPress={handleSignOut}
-        style={tailwind("mt-4 bg-danger py-2 px-4 rounded")}
-      >
-        <Text style={tailwind("text-onPrimary text-center")}>Sign Out</Text>
-      </TouchableOpacity>
+      />
 
       {/* Account deletion - required by App Store guideline 5.1.1(v) */}
       <Button
         testID="settings-delete-account"
-        title="Delete My Account"
+        title="Delete my account"
         variant="dangerOutline"
         onPress={handleDeleteAccount}
-        style={tailwind("mt-3 mb-8")}
+        style={tailwind("mt-md mb-xl")}
       />
-    </View>
+    </Screen>
   );
 };
 

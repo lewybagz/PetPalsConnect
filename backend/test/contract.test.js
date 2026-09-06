@@ -70,7 +70,15 @@ const readAppCalls = () => {
   for (const file of appSourceFiles()) {
     const src = fs.readFileSync(file, "utf8");
     for (const m of src.matchAll(/api\.(get|post|put|patch|delete)\(\s*[`"']([^`"']+)[`"']/g)) {
-      const normalised = m[2].replace(/\$\{[^}]+\}/g, ":param").replace(/\/$/, "");
+      // The query string is stripped before comparison. Left on, a call to
+      // "/api/articles/search?q=${term}" is three segments ending in
+      // "search?q=:param", which fails to match "/api/articles/search" and
+      // then *succeeds* against "/api/articles/:id" - because a ":id" segment
+      // absorbs anything. A typo'd path could ride through the check that way.
+      const normalised = m[2]
+        .replace(/\$\{[^}]+\}/g, ":param")
+        .replace(/\?.*$/, "")
+        .replace(/\/$/, "");
       const key = `${m[1].toUpperCase()} ${normalised}`;
       if (!calls.has(key)) calls.set(key, []);
       calls.get(key).push(path.relative(APP, file));

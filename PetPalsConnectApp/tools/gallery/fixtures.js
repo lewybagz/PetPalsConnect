@@ -101,12 +101,85 @@ export const BLOCKED = [
 
 export const ARTICLE = {
   _id: "article-1",
-  title: "Six games that tire a collie out",
+  slug: "six-games-for-a-herding-dog",
+  title: "Six games that tire a herding dog out",
+  byline: "PetPals Connect",
+  summary:
+    "Herding breeds need a job more than they need a longer walk. These six " +
+    "give them one, and most of them fit in a back garden.",
   content:
-    "Herding breeds need a job more than they need a long walk. These six " +
-    "games give them one, and most of them fit in a back garden.",
+    "If you have a Border Collie, an Australian Shepherd, a Kelpie or a " +
+    "Malinois, you have probably discovered the central problem: physical " +
+    "exercise makes them fitter, not tireder.\n\n" +
+    "One. Hide and seek with a person.\n\n" +
+    "Have someone hold the dog. Go and hide. Call once. Let the dog find " +
+    "you, and make a genuine fuss when they do. It uses scent and " +
+    "problem-solving, and it doubles as recall practice.\n\n" +
+    "Two. Scatter feeding and the sniffari.\n\n" +
+    "Stop using a bowl. Throw the meal across rough grass and let them hunt. " +
+    "A meal that took eleven seconds now takes fifteen minutes of work.",
+  // Long enough to prove the source list wraps and the tap targets clear the
+  // 44pt floor, which is the only reason this board exists.
+  sources: [
+    {
+      title: "Let me sniff! Nosework induces positive judgment bias in pet dogs",
+      publisher: "Applied Animal Behaviour Science",
+      url: "https://psychology.barnard.edu/sites/default/files/inline-files/Let%20me%20sniff.pdf",
+    },
+    {
+      title: "Guidelines for exercising pups: separating myths from science",
+      publisher: "Veterinary Ireland Journal",
+      url: "https://www.veterinaryirelandjournal.com/small-animal/392-guidelines-for-exercising-pups-separating-myths-from-science",
+    },
+  ],
+  tags: ["dogs", "enrichment", "play", "breeds"],
   publishedDate: new Date().toISOString(),
+  lastReviewedDate: new Date().toISOString(),
 };
+
+/**
+ * The browse index. Counts are what makes the row an index rather than a set
+ * of buttons, and the species tags lead because "do you have a cat or a
+ * rabbit" is the first cut a reader makes.
+ */
+export const TOPICS = [
+  { tag: "dogs", count: 34 },
+  { tag: "cats", count: 14 },
+  { tag: "rabbits", count: 3 },
+  { tag: "birds", count: 3 },
+  { tag: "reptiles", count: 3 },
+  { tag: "health", count: 24 },
+  { tag: "behaviour", count: 21 },
+  { tag: "safety", count: 16 },
+  { tag: "playdates", count: 12 },
+];
+
+/** The list screen. Deliberately mixed: one with an image, one without. */
+export const ARTICLES = [
+  ARTICLE,
+  {
+    _id: "article-2",
+    slug: "playdates-in-the-heat",
+    title: "Playdates in the heat: the seven-second test",
+    byline: "PetPals Connect",
+    summary:
+      "At 87F air temperature asphalt can hit 143F, and flat-faced dogs had " +
+      "over four times the odds of heat-related illness in a 2024 study.",
+    content: "This is the article to read before an August playdate.",
+    publishedDate: new Date(Date.now() - 3 * 86400000).toISOString(),
+  },
+  {
+    _id: "article-3",
+    slug: "microchips-and-registration",
+    title: "A microchip only works if the registration does",
+    byline: "PetPals Connect",
+    summary:
+      "Microchipped dogs went home 52.2% of the time against 21.9% unchipped; " +
+      "for cats it was 38.5% against 1.8%.",
+    content: "Save ten minutes today and check the registry.",
+    publishedDate: new Date(Date.now() - 6 * 86400000).toISOString(),
+  },
+];
 
 /**
  * A request that never resolves, for photographing a loading state.
@@ -310,6 +383,43 @@ export const CARE_PLACES = {
   ],
 };
 
+/**
+ * Account settings, as `GET /api/users/me/settings` answers them.
+ *
+ * `choices` travels with the values because the screens build their pickers
+ * from it rather than repeating the option lists - so a board that dropped it
+ * would render an empty segmented control and look like a bug in the design
+ * rather than a gap in the fixture.
+ */
+export const SETTINGS = {
+  playdateRange: 25,
+  locationSharingEnabled: true,
+  notificationsEnabled: true,
+  units: { distance: "mi", weight: "lb" },
+  discovery: {
+    minWeight: 10,
+    maxWeight: 80,
+    minAge: 0,
+    maxAge: 30,
+    species: ["dog"],
+    includeUnknownDistance: true,
+  },
+  privacy: {
+    profileVisibility: "everyone",
+    messagesFrom: "matches",
+    friendRequestsFrom: "everyone",
+    discoverableInSearch: true,
+    showOnMap: true,
+  },
+  choices: {
+    units: { distance: ["mi", "km"], weight: ["lb", "kg"] },
+    audiences: ["everyone", "matches", "friends"],
+    requestAudiences: ["everyone", "friendsOfFriends", "nobody"],
+    species: ["dog", "cat", "rabbit", "bird", "other"],
+  },
+
+};
+
 export const ROUTES = {
   "/api/petmatches/discover": {
     pet: MY_PET,
@@ -321,7 +431,13 @@ export const ROUTES = {
   },
   "/api/pets/latest": [CANDIDATES[0].pet, CANDIDATES[1].pet, MY_PET],
   "/api/favorites": [{ _id: "fav-1", pet: CANDIDATES[0].pet }],
-  "/api/articles/latest": ARTICLE,
+  "/api/articles/recent": ARTICLE,
+  // Registered before the shorter article paths: the gallery's interceptor
+  // matches longest-prefix-first, so "/api/articles/" must not swallow these.
+  [`/api/articles/${ARTICLE._id}/related`]: ARTICLES.slice(1),
+  "/api/articles/topics": TOPICS,
+  "/api/articles/latest": ARTICLES,
+  [`/api/articles/${ARTICLE._id}`]: ARTICLE,
   "/api/chats": CHATS,
   "/api/blocklists": BLOCKED,
   "/api/reports/options": { reasons: [], targets: [] },
@@ -415,5 +531,12 @@ export const ROUTES = {
       friendRequests: true,
       appUpdates: true,
     },
+    quietHours: {
+      enabled: true,
+      start: "22:00",
+      end: "07:00",
+      utcOffsetMinutes: 0,
+    },
   },
+  "/api/users/me/settings": SETTINGS,
 };

@@ -1,23 +1,27 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 
 import {
   EmptyState,
   ListSkeleton,
   Screen,
+  SettingsRow,
+  SettingsSection,
   Text,
-  Toggle,
+  TimeField,
   useToast,
 } from "../../components/ui";
 import {
+  DEFAULT_QUIET_HOURS,
   fetchCategories,
   fetchPreferences,
   savePreferences,
+  saveQuietHours,
 } from "../../api/preferences";
 import { useTailwind } from "../../styles/tailwind";
 
 /**
- * What to be told about.
+ * What to be told about, and when to stay quiet.
  *
  * This screen held two toggles in component state with
  * `// Update push notification settings in user preferences` where the save
@@ -29,6 +33,11 @@ import { useTailwind } from "../../styles/tailwind";
  * The categories come from the server rather than being listed here, so a
  * switch on this screen always governs a preference the server actually
  * consults.
+ *
+ * Quiet hours are the piece that was missing entirely. Everything else here
+ * answers "do you want to know about this at all", which is the wrong question
+ * to have to answer at two in the morning: the only lever for "not right now"
+ * was turning a category off and remembering to turn it back on.
  */
 const NotificationPreferencesScreen = () => {
   const tailwind = useTailwind();
@@ -36,18 +45,20 @@ const NotificationPreferencesScreen = () => {
 
   const [categories, setCategories] = useState([]);
   const [preferences, setPreferences] = useState(null);
+  const [quietHours, setQuietHours] = useState(DEFAULT_QUIET_HOURS);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [saving, setSaving] = useState(null);
 
   const load = useCallback(async () => {
     try {
-      const [loadedCategories, loadedPreferences] = await Promise.all([
+      const [loadedCategories, loaded] = await Promise.all([
         fetchCategories(),
         fetchPreferences(),
       ]);
       setCategories(loadedCategories);
-      setPreferences(loadedPreferences);
+      setPreferences(loaded.notificationPreferences);
+      setQuietHours(loaded.quietHours);
       setFailed(false);
     } catch (error) {
       console.warn("[preferences] Could not load:", error.message);
@@ -75,7 +86,8 @@ const NotificationPreferencesScreen = () => {
       setSaving(key);
 
       try {
-        setPreferences(await savePreferences({ [key]: next }));
+        const saved = await savePreferences({ [key]: next });
+        setPreferences(saved);
       } catch (error) {
         console.warn("[preferences] Could not save:", error.message);
         setPreferences((current) => ({ ...current, [key]: !next }));
@@ -85,6 +97,27 @@ const NotificationPreferencesScreen = () => {
       }
     },
     [preferences, toast]
+  );
+
+  const changeQuietHours = useCallback(
+    async (changes) => {
+      const previous = quietHours;
+      setQuietHours((current) => ({ ...current, ...changes }));
+      setSaving("quietHours");
+
+      try {
+        setQuietHours(await saveQuietHours(changes));
+      } catch (error) {
+        console.warn("[preferences] Could not save quiet hours:", error.message);
+        setQuietHours(previous);
+        toast.error(
+          error.response?.data?.message ?? "Couldn't save that. Try again."
+        );
+      } finally {
+        setSaving(null);
+      }
+    },
+    [quietHours, toast]
   );
 
   if (loading) {
@@ -112,45 +145,35 @@ const NotificationPreferencesScreen = () => {
   const pushOn = preferences.pushNotificationsEnabled !== false;
 
   const row = ({ key, label, description, disabled }) => (
-    <View
+    <SettingsRow
       key={key}
-      style={tailwind("flex-row items-center justify-between py-md")}
-    >
-      <View style={tailwind("flex-1 pr-lg")}>
-        <Text variant="body" tone={disabled ? "faint" : "default"}>
-          {label}
-        </Text>
-        {description ? (
-          <Text variant="caption" tone="muted" style={tailwind("mt-xs")}>
-            {description}
-          </Text>
-        ) : null}
-      </View>
-      <Toggle
-        testID={`preference-${key}`}
-        accessibilityLabel={label}
-        value={preferences[key] !== false}
-        disabled={disabled || saving === key}
-        onValueChange={() => toggle(key)}
-      />
-    </View>
+      testID={`preference-${key}`}
+      label={label}
+      description={description}
+      value={preferences[key] !== false}
+      disabled={disabled || saving === key}
+      onValueChange={() => toggle(key)}
+    />
   );
 
   return (
-    <Screen testID="notification-preferences">
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <Screen testID="notification-preferences" scroll>
+      <Text variant="display" style={tailwind("mb-lg")}>
+        Notifications
+      </Text>
+
+      <SettingsSection title="Push">
         {row({
           key: "pushNotificationsEnabled",
           label: "Push notifications",
           description: "Turn everything off in one place.",
         })}
+      </SettingsSection>
 
-        <View style={tailwind("border-t border-border my-md")} />
-
-        <Text variant="caption" tone="muted" style={tailwind("mb-sm")}>
-          What to be told about
-        </Text>
-
+      <SettingsSection
+        title="What to be told about"
+        footer={pushOn ? undefined : "Push notifications are off, so none of these apply."}
+      >
         {categories.map((category) =>
           row({
             key: category.key,
@@ -160,15 +183,66 @@ const NotificationPreferencesScreen = () => {
             disabled: !pushOn,
           })
         )}
+      </SettingsSection>
 
-        <View style={tailwind("border-t border-border my-md")} />
+      <SettingsSection
+        title="Quiet hours"
+        footer="Nothing is lost - a notification raised while you are quiet still appears in your list, it just does not light up your phone."
+      >
+        <SettingsRow
+          testID="quiet-hours-enabled"
+          label="Do not disturb"
+          description="Hold pushes back between two times each day."
+          value={quietHours.enabled}
+          disabled={saving === "quietHours"}
+          onValueChange={(value) => changeQuietHours({ enabled: value })}
+        />
 
+        {quietHours.enabled ? (
+          <SettingsRow
+            testID="quiet-hours-window"
+            label="From"
+            // A window that wraps midnight is the one everybody picks, and it
+            // is handled: `isQuiet` on the server treats start > end as
+            // "tonight into tomorrow" rather than as an empty range.
+            description="A window that runs past midnight is fine."
+          >
+            <View style={tailwind("flex-row items-center")}>
+              <View style={tailwind("flex-1")}>
+                <TimeField
+                  testID="quiet-hours-start"
+                  accessibilityLabel="Quiet hours start"
+                  value={quietHours.start}
+                  disabled={saving === "quietHours"}
+                  onChange={(start) => changeQuietHours({ start })}
+                />
+              </View>
+              <Text tone="muted" style={tailwind("mx-md")}>
+                to
+              </Text>
+              <View style={tailwind("flex-1")}>
+                <TimeField
+                  testID="quiet-hours-end"
+                  accessibilityLabel="Quiet hours end"
+                  value={quietHours.end}
+                  disabled={saving === "quietHours"}
+                  onChange={(end) => changeQuietHours({ end })}
+                />
+              </View>
+            </View>
+          </SettingsRow>
+        ) : null}
+      </SettingsSection>
+
+      <SettingsSection title="Email">
         {row({
           key: "emailNotificationsEnabled",
           label: "Email",
           description: "Occasional summaries rather than a push.",
         })}
-      </ScrollView>
+      </SettingsSection>
+
+      <View style={tailwind("mb-xl")} />
     </Screen>
   );
 };

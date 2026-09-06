@@ -129,7 +129,8 @@ node — `AnimatedButton` had padding on an outer `Animated.View` and `onPress`
 on a child with none, so taps in the visible blue did nothing. `Text` has six
 roles with a per-role Dynamic Type cap. `Screen` applies the safe-area insets,
 which no screen was doing. `Card`, `EmptyState`, `Skeleton` and `Toast` round
-it out.
+it out, and `SettingsRow`, `SettingsSection`, `SegmentedControl` and `TimeField`
+are what a settings screen is made of.
 
 **Feedback goes through `useToast()`; `Alert` is for destructive
 confirmations.** `Alert.alert` was the app's way of saying anything at all, 157
@@ -312,7 +313,13 @@ act on. `strict` and `noUncheckedIndexedAccess` are on for what is converted.
 Converted so far: `src/types/api.ts`, `src/config/env.ts`, `src/api/axios.ts`,
 `src/api/subscriptions.ts`, `src/utils/authErrors.ts`,
 `src/utils/passwordStrength.ts`, `src/services/localCache.ts`,
-`src/styles/tokens.ts`.
+`src/styles/tokens.ts`, `src/utils/units.ts`.
+
+A `.test.ts` has to import its own globals (`import { describe, expect, it }
+from "@jest/globals"`). `tsconfig` names only `expo/types`, so `describe` and
+`expect` are in scope for jest but not for the typechecker, and
+`npm run typecheck` stays at zero errors either way - which is the point of the
+gradual conversion.
 
 Convert leaves before branches — a pure module with no React and no native
 dependency costs nothing to convert and immediately types every caller.
@@ -451,6 +458,157 @@ converted file silently drops out of the check.
   present in the source. Nine create paths were dead this way. `npm run
   check:schemas` compares every create site to its model; it also runs as a
   test and warns at boot outside production.
+
+### Editorial content
+
+**`content/` is the source of the app's Articles feature, and the research is
+committed alongside the prose.** `content/articles/articles.json` is the batch
+that `data-fetch-scripts/articles/seedArticles.js` upserts; `content/research/`
+is the verified material behind it, one file per species cluster, every number
+attached to a named source. The research is the durable artefact and an article
+is a rendering of it - a claim in the JSON is a sentence with no evidence, and
+the same claim in `research/` names the study, the year and the figure. Update
+the research first.
+
+**`content/research/standards.md` is the sourcing policy**, and the two rules
+that matter most are that a number gets a name attached ("59% of dogs, 2022
+APOP survey", never "studies show"), and that where the evidence is thin the
+article says so. The puppy five-minute rule and the shelter 3-3-3 rule are both
+in the corpus, flagged, with the actual evidence next to them, because an
+article that quietly repeats folklore is worse than no article.
+
+**Health content describes published guidance and never prescribes.** No doses
+a reader could act on, no symptom-checker, no diagnosis; every health article
+ends pointing at a vet. `topics.md` lists what is deliberately excluded and
+why. Guidance moves - leptospirosis became a core canine vaccine in 2024 - so
+anything citing a guideline names its year and `lastReviewedDate` records when
+a human last checked it.
+
+**An article body is plain text.** `ArticleDetailScreen` splits `content` on
+blank lines into `Text` nodes; there is no markdown renderer anywhere in the
+app, so `**` and `## ` reach a device as literal characters. Both the seeder's
+`--dry-run` and `backend/test/articles.test.js` fail on markdown in a body, on
+a missing summary, and on an article with no `sources`.
+
+**`author` and `creator` are optional on an Article and required nowhere else
+content is written.** Articles are editorial - `PUBLIC_READS` calls them "the
+same for everyone" - so they are written by the publication and there is no
+`User` to point at. Requiring one meant seeded content could not be inserted
+without inventing a fake person who would then appear in username search. The
+visible attribution is `byline`. An article posted through `POST /api/articles`
+still sets both, from the token.
+
+**A query string belongs in axios `params`, not in the path.** Beyond
+encoding, `contract.test.js` compares a call's path against declared routes by
+segment - and a `?` left in the path made
+`/api/articles/search?q=${term}` fail to match `/api/articles/search` and then
+*succeed* against `/api/articles/:id`, because a `:id` segment absorbs
+anything. The check now strips the query string, which closed a hole a
+mistyped path could have ridden through.
+
+**The seeder requires the backend's model and takes Mongoose from it.** A
+seeder with its own schema is a second definition that drifts, and strict mode
+drops what it does not recognise, so a renamed field would simply stop being
+written. Taking `Article.base` rather than `require("mongoose")` guarantees one
+model registry - two copies of Mongoose in a process are two registries, and a
+model registered on one is invisible to a connection opened on the other.
+`--dry-run` validates the JSON with no dependencies and no database, so it can
+run as a content check before anything is deployed.
+
+**Sixty articles is a library, not a list, and the screen has to reflect
+that.** `/latest` was `.limit(20)` with no paging, so the twenty-first article
+ever published was unreachable from the app - visible only to somebody who
+guessed a word in its title. It pages now (`limit`/`skip`, clamped server-side,
+because an unbounded `limit` is a request to serialise the whole corpus), takes
+a `tag` filter, and `/topics` derives the browse index from the tags the
+articles actually carry - so a chip can never offer a topic with nothing behind
+it. `/:id/related` ranks by shared tags and projects the body away, since three
+full articles on the wire to render three headlines is the wrong trade.
+`backend/test/articles.test.js` also checks every article carries a species tag,
+because an article filed only under subject tags is invisible to somebody
+browsing by animal.
+
+**`/latest` is the list; `/recent` is the one article Home shows.**
+`getLatestArticle` existed from the start and `PUBLIC_READS` even described it
+as "the home screen's article shelf", but it was never routed - so Home called
+`/latest`, got an array of twenty full articles, and handed the array to a card
+that reads `.title` off it. The card rendered blank and the screen downloaded
+twenty article bodies to display one.
+### Settings
+
+**`backend/services/settings.js` is one schema, one validator, one writer.** A
+setting that is not in that file cannot be written; a setting that is in it is
+enforced somewhere, and `settingsEnforcement.test.js` is what keeps that true -
+every setting has a test there that changes an answer the API gives. Settings
+used to be three shapes that disagreed: `updateUserSettings` took three named
+fields and wrote all three on every call, so a client sending only
+`playdateRange` also overwrote `notificationsEnabled` and
+`locationSharingEnabled`, and the app's Privacy screen had two toggles that
+persisted nowhere at all, one of which duplicated a toggle on the Settings
+screen that did save.
+
+**A patch is validated into flat dotted paths, never a nested object.**
+`$set: { privacy: { showOnMap: false } }` replaces the whole `privacy`
+subdocument and silently drops every other key in it - the same class of bug as
+the old three-field update, one level down.
+
+**`GET` and `PATCH` answer in the same shape** (`settingsPayload`), so the app
+can replace what it holds with the response rather than modelling the write and
+the read separately - the second model is the one that goes stale. Both carry a
+`choices` object, and the screens build their pickers from it rather than
+repeating the option lists: a value the app can offer is always a value the
+validator accepts, for the same reason the notification screen fetches its
+categories.
+
+**`services/audience.js` is `blocking.js` one layer up.** Blocking answers "have
+these two refused each other"; this answers "has this person narrowed who may
+reach them at all". Both have to be consulted by every path that starts a
+conversation or files a request. An unknown audience fails closed, and a
+refusal says "not available" - the same wording as a block, because "they only
+accept messages from friends" tells a stranger exactly what to do next.
+
+**A setting stored and not honoured is the bug this whole area exists to stop.**
+Two drafted device switches (haptics, video autoplay) were cut rather than
+shipped, because the app has neither; `SecuritySettingsScreen`'s two-factor
+toggle and eleven security questions are gone for the same reason - the flag was
+written and no sign-in ever read it. A padlock connected to nothing is worse
+than no padlock, because somebody relies on it.
+
+**Account settings go through `SettingsContext`; device settings go through
+`DevicePreferencesContext` and never touch the network.** Theme, larger text and
+reduced motion are properties of a phone, not an account: syncing them would put
+a round trip and a failure mode in front of a switch that has to feel instant.
+The account half caches to AsyncStorage so weights and distances render in the
+right units on the first frame, and `update()` is optimistic with a rollback -
+a control that stays where it was put while the server disagrees is exactly the
+lie the old Privacy screen told.
+
+**Storage is canonical - miles, pounds, years - and `src/utils/units.ts` is the
+only place that converts.** Matching compares two pets' numbers, so a stored
+unit would make two pets incomparable if their owners had chosen differently.
+`formatDistance` and `formatWeight` return `null` rather than a zero for "we do
+not know", which is a real state: somebody who has never shared a position stays
+in the deck with no distance.
+
+**Quiet hours are a wall-clock window, not two instants.** `services/quietHours.js`
+handles the wrap past midnight - "22:00 to 07:00" is what everybody picks, and a
+naive `start <= now && now <= end` silences the nine hours somebody is awake. The
+device sends its own `utcOffsetMinutes` with every save, because the phone doing
+the saving is the one that knows where its owner currently is. Muting silences
+the push and still writes the row.
+
+**`SettingsRow`, `SettingsSection`, `SegmentedControl` and `TimeField` are where
+a settings screen comes from.** Every screen used to hand-roll
+`my-2 p-2 border rounded border-border` - eleven times on the Settings screen
+alone, each a 34pt target with no chevron, no current value and nowhere to put a
+sentence of explanation. `SegmentedControl` shows all the alternatives at once
+because for "who can message you: everyone / matches / friends" the alternatives
+*are* the explanation; `Picker` is not an option regardless, having been removed
+from React Native core in 0.62.
+
+**The Settings screen holds no setting that has a home of its own.** It holds
+the route to each one and the answer it currently gives. Three of its controls
+used to duplicate ones on the screens it linked to, with a different answer.
 
 ### Photos
 
@@ -880,6 +1038,9 @@ cd backend && npm run lint && npm run check:schemas && npm run check:auth && npm
 
 # App: lint, types, the colour ban, tests, then both bundles
 cd PetPalsConnectApp && npm run lint && npm run typecheck && npm run check:colours && npm test
+
+# Content: validates articles.json with no database and no dependencies
+node data-fetch-scripts/articles/seedArticles.js --dry-run
 
 # And look at it. Renders the real screens to screenshots/, light and dark.
 cd PetPalsConnectApp && npm run gallery && npm run screenshots

@@ -39,6 +39,12 @@ router.get(
 
 // --- Settings (all act on the caller) -------------------------------------
 router.put("/me/location", requireProfile, UserController.updateMyLocation);
+// Static before parameterised, and `/me/settings` before `/settings` only
+// matters for readability here - neither is a prefix of the other.
+router.get("/me/settings", requireProfile, UserController.getUserSettings);
+router.patch("/me/settings", requireProfile, UserController.updateUserSettings);
+// Kept: the app's older settings calls POST here, and both go through the same
+// validator now.
 router.post("/settings", requireProfile, UserController.updateUserSettings);
 router.post(
   "/settings/2fa",

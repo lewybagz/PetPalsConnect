@@ -19,7 +19,11 @@ const ArticleCard = ({ article, onPress }) => {
   if (!article) return null;
 
   const published = article.publishedDate ? new Date(article.publishedDate) : null;
-  const summary = (article.content ?? "").slice(0, 100);
+  // `summary` is a real field now. Slicing 100 characters off the body cuts
+  // mid-word and mid-clause, and the first sentence of an article is an
+  // opening, not a description of what it is about.
+  const summary = article.summary ?? (article.content ?? "").slice(0, 120);
+  const truncated = !article.summary && (article.content ?? "").length > 120;
 
   return (
     <TouchableOpacity onPress={onPress} style={styles.card}>
@@ -32,7 +36,7 @@ const ArticleCard = ({ article, onPress }) => {
         {summary ? (
           <Text numberOfLines={2} style={styles.content}>
             {summary}
-            {article.content.length > 100 ? "..." : ""}
+            {truncated ? "..." : ""}
           </Text>
         ) : null}
         {published && !Number.isNaN(published.valueOf()) ? (

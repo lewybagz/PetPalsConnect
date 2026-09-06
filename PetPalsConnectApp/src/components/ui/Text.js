@@ -2,6 +2,7 @@ import React from "react";
 import { Text as RNText } from "react-native";
 
 import { useTailwind } from "../../styles/tailwind";
+import { useDevicePreferences } from "../../context/DevicePreferencesContext";
 import { displayFamily } from "../../styles/fonts";
 import { type } from "../../styles/tokens";
 
@@ -42,6 +43,18 @@ const Text = ({
 }) => {
   const tailwind = useTailwind();
   const role = type[variant] ?? type.body;
+  const { preferences } = useDevicePreferences();
+
+  /**
+   * "Larger text" raises the floor, on top of Dynamic Type rather than instead
+   * of it.
+   *
+   * A fixed 15% because it has to be a step somebody notices without being a
+   * step that breaks a row - and `maxFontSizeMultiplier` is left where it is,
+   * so the OS setting still compounds on top and each role still caps its own
+   * growth. Line height scales with it or the leading collapses.
+   */
+  const scale = preferences.largerText ? 1.15 : 1;
 
   // Only the display roles carry the brand face, and only once it has loaded.
   // The family names the weight on Android, so a caller's `weight` override is
@@ -54,8 +67,8 @@ const Text = ({
       style={[
         tailwind(TONES[tone] ?? TONES.default),
         {
-          fontSize: role.fontSize,
-          lineHeight: role.lineHeight,
+          fontSize: Math.round(role.fontSize * scale),
+          lineHeight: Math.round(role.lineHeight * scale),
           ...(family
             ? { fontFamily: family }
             : { fontWeight: weight ?? role.fontWeight }),

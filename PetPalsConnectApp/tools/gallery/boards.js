@@ -9,6 +9,10 @@ import PetPhotosScreen from "../../src/screens/pets/PetPhotosScreen";
 import SettingsScreen from "../../src/screens/settings/SettingsScreen";
 import NotificationsScreen from "../../src/screens/bottomTab/NotificationsScreen";
 import NotificationPreferencesScreen from "../../src/screens/settings/NotificationPreferencesScreen";
+import PrivacySettingsScreen from "../../src/screens/settings/PrivacySettingsScreen";
+import DiscoveryPreferencesScreen from "../../src/screens/settings/DiscoveryPreferencesScreen";
+import DisplaySettingsScreen from "../../src/screens/settings/DisplaySettingsScreen";
+import SecuritySettingsScreen from "../../src/screens/settings/SecuritySettingsScreen";
 import HelpSupportScreen from "../../src/screens/settings/HelpSupportScreen";
 import PostPlaydateReviewScreen from "../../src/screens/playdate/PostPlaydateReviewScreen";
 import MapScreen from "../../src/screens/swipe/MapScreen";
@@ -16,7 +20,19 @@ import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateS
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
 import MoreScreen from "../../src/screens/bottomTab/MoreScreen";
 import PotentialPlaydateLocationScreen from "../../src/screens/playdate/PotentialPlaydateLocationScreen";
-import { CANDIDATES, CARE_PICKS, CARE_PLACES, MY_PET, ROUTES, pending } from "./fixtures";
+import ArticlesScreen from "../../src/screens/misc/ArticlesScreen";
+import ArticleDetailScreen from "../../src/screens/misc/ArticleDetailScreen";
+import {
+  ARTICLE,
+  ARTICLES,
+  CANDIDATES,
+  CARE_PICKS,
+  CARE_PLACES,
+  MY_PET,
+  ROUTES,
+  SETTINGS,
+  pending,
+} from "./fixtures";
 
 /**
  * What the gallery can render, and the fixtures each board needs.
@@ -233,7 +249,7 @@ export const BOARDS = [
     routes: {
       "/api/pets/latest": pending,
       "/api/favorites": pending,
-      "/api/articles/latest": pending,
+      "/api/articles/recent": pending,
     },
     render: () => (
       <HomeScreen
@@ -294,6 +310,43 @@ export const BOARDS = [
     label: "Chats - skeleton",
     routes: { ...ROUTES, "/api/chats": pending },
     render: () => <ChatsScreen navigation={navigation} />,
+  },
+  {
+    id: "articles",
+    label: "Articles",
+    routes: ROUTES,
+    render: () => <ArticlesScreen navigation={navigation} />,
+  },
+  {
+    // One topic selected: the chip row is the index over sixty articles, and
+    // the selected state is the only part of it a contrast test cannot check.
+    id: "articles-filtered",
+    label: "Articles - filtered by topic",
+    routes: { ...ROUTES, "/api/articles/latest": ARTICLES.slice(0, 2) },
+    render: () => <ArticlesScreen navigation={navigation} />,
+  },
+  {
+    id: "articles-loading",
+    label: "Articles - skeleton",
+    routes: { ...ROUTES, "/api/articles/latest": pending },
+    render: () => <ArticlesScreen navigation={navigation} />,
+  },
+  {
+    id: "articles-empty",
+    label: "Articles - empty",
+    routes: { ...ROUTES, "/api/articles/latest": [], "/api/articles/topics": [] },
+    render: () => <ArticlesScreen navigation={navigation} />,
+  },
+  {
+    // The body renders as plain text split on blank lines, and the citation
+    // list is the part that makes the health content answerable - both are
+    // only really checkable by looking at them.
+    id: "article-detail",
+    label: "Article",
+    routes: { ...ROUTES, [`/api/articles/${ARTICLE._id}`]: ARTICLE },
+    render: () => (
+      <ArticleDetailScreen route={{ params: { articleId: ARTICLE._id } }} />
+    ),
   },
   {
     id: "report",
@@ -387,6 +440,73 @@ export const BOARDS = [
     label: "Settings",
     routes: ROUTES,
     render: () => <SettingsScreen navigation={navigation} />,
+  },
+  {
+    id: "settings-privacy",
+    label: "Privacy",
+    routes: ROUTES,
+    render: () => <PrivacySettingsScreen />,
+  },
+  {
+    id: "settings-discovery",
+    label: "Discovery preferences",
+    routes: ROUTES,
+    render: () => <DiscoveryPreferencesScreen />,
+  },
+  {
+    id: "settings-discovery-metric",
+    label: "Discovery preferences - kilometres and kilograms",
+    // The whole point of the unit preference is that it changes what a screen
+    // reads, and a slider labelled in the wrong unit is the sort of thing only
+    // a picture catches.
+    settings: { ...SETTINGS, units: { distance: "km", weight: "kg" } },
+    routes: ROUTES,
+    render: () => <DiscoveryPreferencesScreen />,
+  },
+  {
+    id: "settings-display",
+    label: "Appearance",
+    routes: ROUTES,
+    render: () => <DisplaySettingsScreen />,
+  },
+  {
+    id: "settings-display-larger-text",
+    label: "Appearance - larger text",
+    // Pinned rather than tapped, so this and the board above are two pages
+    // rather than a race with a cache read - the same reason the walkthrough
+    // has `walkthroughAutoStart`.
+    preferences: { reduceMotion: false, largerText: true, showMatchScore: true },
+    routes: ROUTES,
+    render: () => <DisplaySettingsScreen />,
+  },
+  {
+    id: "settings-security",
+    label: "Sign-in and security",
+    routes: ROUTES,
+    // The web auth stub keeps `currentUser` null so no screen can claim a
+    // session it does not have, which would leave this board showing only the
+    // "no password on this account" branch. The account is passed in instead.
+    render: () => (
+      <SecuritySettingsScreen
+        user={{
+          email: "alex@example.com",
+          providerData: [{ providerId: "password" }],
+        }}
+      />
+    ),
+  },
+  {
+    id: "settings-security-google",
+    label: "Sign-in and security - no password to change",
+    routes: ROUTES,
+    render: () => (
+      <SecuritySettingsScreen
+        user={{
+          email: "alex@example.com",
+          providerData: [{ providerId: "google.com" }],
+        }}
+      />
+    ),
   },
 ];
 

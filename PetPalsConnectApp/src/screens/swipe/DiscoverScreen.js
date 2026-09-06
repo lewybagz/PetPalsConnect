@@ -4,6 +4,9 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
 import { useTokens } from "../../context/AppThemeContext";
+import { useDevicePreferences } from "../../context/DevicePreferencesContext";
+import { useUnits } from "../../context/SettingsContext";
+import { distanceFromMiles, distanceLabel, formatWeight } from "../../utils/units";
 import { hit } from "../../styles/tokens";
 import {
   Button,
@@ -64,6 +67,10 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
   const toast = useToast();
+  // A weight and a distance read in whatever units this owner chose. Storage
+  // stays in pounds and miles, because matching compares two pets' numbers.
+  const units = useUnits();
+  const { preferences } = useDevicePreferences();
 
   const [myPet, setMyPet] = useState(null);
   const [candidates, setCandidates] = useState([]);
@@ -227,7 +234,9 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
           message={
             range == null
               ? "New pets join all the time. Check back soon."
-              : `Nobody new within ${range} miles. Widen your range in Settings, or check back soon.`
+              : `Nobody new within ${Math.round(
+                  distanceFromMiles(range, units.distance)
+                )} ${distanceLabel(units)}. Widen your range in Settings, or check back soon.`
           }
           actionLabel="Refresh"
           onAction={load}
@@ -293,7 +302,7 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
               {current.pet.name}
             </Text>
             <View style={tailwind("flex-row items-center")}>
-              {preview ? null : (
+              {preview || !preferences.showMatchScore ? null : (
                 <View style={tailwind("bg-primarySoft rounded-pill px-md py-xs")}>
                   <Text testID="discover-score" variant="caption" tone="primary" weight="600">
                     {describeScore(current.score, threshold)}
@@ -313,14 +322,14 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
             </View>
           </View>
 
-          {describeDistance(current.distanceMiles) ? (
+          {describeDistance(current.distanceMiles, units) ? (
             <Text
               testID="discover-distance"
               variant="caption"
               tone="muted"
               style={tailwind("mt-xs")}
             >
-              {describeDistance(current.distanceMiles)}
+              {describeDistance(current.distanceMiles, units)}
             </Text>
           ) : null}
 
@@ -335,7 +344,7 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
               tailwind={tailwind}
               label="Weight"
               value={
-                current.pet.weight != null ? `${current.pet.weight} lb` : null
+                formatWeight(current.pet.weight, units)
               }
             />
           </View>

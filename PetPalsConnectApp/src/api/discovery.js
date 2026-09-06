@@ -1,4 +1,5 @@
 import api from "./axios";
+import { DEFAULT_UNITS, milesToKm } from "../utils/units";
 
 /**
  * Discovery: browsing candidate pets and saying yes or no.
@@ -38,8 +39,16 @@ export const fetchCandidates = async (petId) => {
  * Null means nobody knows: either they have not shared a position or we have
  * not. Saying "0 miles away" there would be a lie, and a strange one.
  */
-export const describeDistance = (miles) => {
+export const describeDistance = (miles, units = DEFAULT_UNITS) => {
   if (miles == null) return null;
+
+  if (units.distance === "km") {
+    const km = milesToKm(miles);
+    if (km < 1) return "Less than a kilometre away";
+    if (km < 1.5) return "About a kilometre away";
+    return `${Math.round(km)} km away`;
+  }
+
   if (miles < 1) return "Less than a mile away";
   if (miles < 1.5) return "About a mile away";
   return `${Math.round(miles)} miles away`;
