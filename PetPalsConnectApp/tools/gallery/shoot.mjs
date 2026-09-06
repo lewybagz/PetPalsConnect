@@ -74,6 +74,26 @@ const boards = () => {
   );
 };
 
+/**
+ * Where Chromium is.
+ *
+ * `PLAYWRIGHT_BROWSERS_PATH` points at a shared browser store in some CI and
+ * sandbox images; `undefined` lets playwright-core find the copy it installed
+ * itself. Either way the caller does not have to think about it.
+ */
+const resolveChromium = () => {
+  const store = process.env.PLAYWRIGHT_BROWSERS_PATH;
+  if (!store) return undefined;
+
+  const candidates = fs
+    .readdirSync(store, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith("chromium-"))
+    .map((entry) => path.join(store, entry.name, "chrome-linux", "chrome"))
+    .filter((file) => fs.existsSync(file));
+
+  return candidates[0];
+};
+
 const main = async () => {
   if (!fs.existsSync(DIST)) {
     console.error("No dist-gallery/. Run `npm run gallery` first.");
@@ -85,7 +105,12 @@ const main = async () => {
 
   const server = await serve();
   const browser = await chromium.launch({
-    executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+    // A pinned path when the environment provides one, and Playwright's own
+    // resolution otherwise. Hardcoding it meant this script only ran where
+    // that exact directory existed - which was true of the container it was
+    // written in and of nowhere else, including a contributor's laptop
+    // following the README.
+    executablePath: resolveChromium(),
     args: ["--no-sandbox", "--font-render-hinting=none"],
   });
 
