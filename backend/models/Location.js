@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+const { CATEGORIES } = require("../services/placeCategories");
+
 const PointSchema = new Schema(
   {
     type: { type: String, enum: ["Point"], default: "Point" },
@@ -54,6 +56,49 @@ const LocationSchema = new Schema({
   placeId: {
     type: String,
     required: true,
+  },
+  /**
+   * What kind of place this is: a park, a vet, a shop, a groomer, a boarder.
+   *
+   * An array because plenty of vets board and plenty of shops groom, and
+   * forcing one answer would make the hub hide half of them. The playdate
+   * pickers want `park`; the care hub wants the rest.
+   *
+   * Rows imported before this field existed have none, which is why the list
+   * endpoint only filters when asked to: an uncategorised row is a place we do
+   * not know the kind of, and quietly serving it as a vet would be worse than
+   * leaving it out. Re-running the import fills them in, since the upsert
+   * writes categories onto rows that already exist.
+   */
+  categories: {
+    type: [{ type: String, enum: CATEGORIES }],
+    default: undefined,
+    index: true,
+  },
+  /**
+   * Contact details, from Google's Place Details endpoint.
+   *
+   * A directory entry for a vet with no phone number on it is not a directory
+   * entry - "there is a vet somewhere near you" is not what anybody opened the
+   * app for. These are filled in lazily, the first time somebody opens the
+   * place, rather than during the import: an import covers five categories at
+   * twenty results each, and a Details call per result would be a hundred
+   * billed requests to populate a screen nobody has looked at yet.
+   */
+  phone: {
+    type: String,
+  },
+  website: {
+    type: String,
+  },
+  /** Google's own weekday text, one string per day, rendered as given. */
+  openingHours: {
+    type: [String],
+    default: undefined,
+  },
+  /** When the three fields above were last fetched, so they can go stale. */
+  detailsFetchedAt: {
+    type: Date,
   },
   modifiedDate: {
     type: Date,

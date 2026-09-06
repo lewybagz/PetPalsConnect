@@ -21,12 +21,16 @@ import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateS
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
 import FriendsListScreen from "../../src/screens/profile/FriendsListScreen";
 import FriendRequestsCard from "../../src/components/FriendRequestsCard";
+import MoreScreen from "../../src/screens/bottomTab/MoreScreen";
+import PotentialPlaydateLocationScreen from "../../src/screens/playdate/PotentialPlaydateLocationScreen";
 import ArticlesScreen from "../../src/screens/misc/ArticlesScreen";
 import ArticleDetailScreen from "../../src/screens/misc/ArticleDetailScreen";
 import {
   ARTICLE,
   ARTICLES,
   CANDIDATES,
+  CARE_PICKS,
+  CARE_PLACES,
   FRIEND_REQUESTS,
   MY_PET,
   ROUTES,
@@ -134,6 +138,95 @@ export const BOARDS = [
         // it unasked. That is the point of the tour and the wrong thing for a
         // board about the screen underneath.
         walkthroughAutoStart={false}
+      />
+    ),
+  },
+  {
+    id: "care-hub",
+    label: "Pet care hub",
+    routes: ROUTES,
+    // Two pets, so the pet picker is on screen, and the cat carries the
+    // `seeAVet` callout - the state where the hub has to look like care rather
+    // than like an error.
+    render: () => (
+      <MoreScreen
+        navigation={navigation}
+        route={{ params: {} }}
+        walkthroughAutoStart={false}
+      />
+    ),
+  },
+  {
+    id: "care-hub-empty",
+    label: "Pet care hub - nothing imported yet",
+    // What a fresh deployment looks like: no pets, no places, and the
+    // emergency numbers still there, which is the whole reason they are a
+    // table in the source rather than rows in a collection.
+    routes: {
+      ...ROUTES,
+      "/api/petcare/picks": { ...CARE_PICKS, pets: [] },
+      "/api/locations/care": {
+        ...CARE_PLACES,
+        places: [],
+        saved: [],
+        locationKnown: false,
+      },
+    },
+    render: () => (
+      <MoreScreen
+        navigation={navigation}
+        route={{ params: {} }}
+        walkthroughAutoStart={false}
+      />
+    ),
+  },
+  {
+    id: "care-hub-places",
+    label: "Pet care hub - saved places and what's nearby",
+    routes: ROUTES,
+    // The same screen, scrolled past the picks. Everything below the second
+    // section was invisible to this tool until now, which is most of it.
+    scrollY: 900,
+    render: () => (
+      <MoreScreen
+        navigation={navigation}
+        route={{ params: {} }}
+        walkthroughAutoStart={false}
+      />
+    ),
+  },
+  {
+    id: "place",
+    label: "A place - vet with contact details",
+    // The screen every card in the hub opens, and the one that had never been
+    // photographed: it fetched a duplicate endpoint with no contact details,
+    // so its whole reason to exist was missing.
+    routes: {
+      ...ROUTES,
+      "/api/locations/loc-1": {
+        _id: "loc-1",
+        name: "Averill Veterinary Clinic",
+        address: "1200 Averill Street",
+        categories: ["vet"],
+        phone: "(415) 555-0142",
+        website: "https://example.test/averill",
+        openingHours: [
+          "Monday: 8:00 AM – 6:00 PM",
+          "Tuesday: 8:00 AM – 6:00 PM",
+          "Wednesday: 8:00 AM – 6:00 PM",
+          "Thursday: 8:00 AM – 6:00 PM",
+          "Friday: 8:00 AM – 5:00 PM",
+          "Saturday: 9:00 AM – 1:00 PM",
+          "Sunday: Closed",
+        ],
+        geoLocation: { type: "Point", coordinates: [-122.4382, 37.7925] },
+      },
+      "/api/reviews/location/loc-1": [],
+    },
+    render: () => (
+      <PotentialPlaydateLocationScreen
+        navigation={navigation}
+        route={{ params: { locationId: "loc-1" } }}
       />
     ),
   },

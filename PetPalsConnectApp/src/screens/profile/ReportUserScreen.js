@@ -140,7 +140,7 @@ const ReportUserScreen = ({ route, navigation }) => {
       </Text>
       <TextInput
         testID="report-content"
-        style={tailwind("border border-border rounded-xl p-3 h-32 text-base")}
+        style={tailwind("border border-border rounded-xl p-3 h-32 text-base text-text")}
         placeholder="A sentence or two is plenty."
         value={content}
         onChangeText={setContent}

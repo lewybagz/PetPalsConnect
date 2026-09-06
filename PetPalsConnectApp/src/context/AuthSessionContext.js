@@ -64,6 +64,37 @@ const STATUS = {
 const profileHasPet = (profile) =>
   Array.isArray(profile?.pets) && profile.pets.length > 0;
 
+/**
+ * The species playdates are for. Mirrors `MATCHABLE_SPECIES` on the server.
+ */
+const MATCHABLE_SPECIES = "dog";
+
+/**
+ * Whether the profile holds a pet that can actually match.
+ *
+ * A profile can hold a cat, a rabbit or a bearded dragon - they are there so
+ * the care hub has something to work from - but playdates are dogs only, and
+ * the server's deck filters to `dog`. So `hasPet` is no longer the right
+ * question for a matching screen: a cat-only owner passes `hasPet`, walks into
+ * Discover and finds an empty deck with nothing explaining why. `hasDog` is
+ * what those screens gate on.
+ *
+ * A pet with no `species` is a dog: the field was added after rows existed, and
+ * at the time there was nothing else a pet could be. An id-only `pets` array
+ * (an older cached profile) is treated the same way rather than as "no dog",
+ * because walling a real dog owner out of the app on a stale cache is far worse
+ * than briefly showing a cat owner a deck they cannot swipe.
+ */
+const profileHasDog = (profile) =>
+  Array.isArray(profile?.pets) &&
+  profile.pets.some(
+    (pet) =>
+      typeof pet !== "object" ||
+      pet === null ||
+      !pet.species ||
+      pet.species === MATCHABLE_SPECIES
+  );
+
 /** Per-user, so skipping on one account does not silence the prompt on another. */
 const skipKey = (profile) => `pet-setup-skipped:${profile?._id ?? "unknown"}`;
 
@@ -251,6 +282,9 @@ export const AuthSessionProvider = ({ children }) => {
       isSignedIn: !!firebaseUser,
       // `ready` does not imply a pet exists - the prompt is skippable.
       hasPet: profileHasPet(profile),
+      // ...and `hasPet` does not imply a pet that can match. Matching screens
+      // want this one.
+      hasDog: profileHasDog(profile),
       skippedPetSetup,
       createProfile,
       createPet,

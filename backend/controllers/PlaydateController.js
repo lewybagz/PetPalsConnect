@@ -78,21 +78,6 @@ const PlaydateController = {
   },
 
   // In PlaydateController
-  async getLocationDetails(req, res) {
-    try {
-      const placeId = req.params.placeId;
-      const locationDetails = await Location.findById(placeId);
-
-      if (!locationDetails) {
-        return res.status(404).json({ message: "Location not found" });
-      }
-
-      res.json(locationDetails);
-    } catch (err) {
-      res.status(500).json({ message: err.message });
-    }
-  },
-
   async acceptPlaydate(req, res) {
     const { playdateId } = req.params;
     const userId = req.userId;

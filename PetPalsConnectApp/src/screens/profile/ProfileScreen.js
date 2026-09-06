@@ -142,11 +142,11 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={tailwind("p-4")}>
-      {/* The pets are the profile. This screen led with the abstract noun
+{/* The pets are the profile. This screen led with the abstract noun
           "Profile", an owner avatar and three lines of account data, and put
           the animals behind a "View My Pets" button - on the one screen in the
           app whose entire subject is a household of pets. */}
-      <Text style={tailwind("text-xl font-bold mb-4")}>
+      <Text style={tailwind("text-xl font-bold mb-4 text-text")}>
         {petNames ? `${petNames} and their human` : "Your profile"}
       </Text>
 
@@ -216,10 +216,10 @@ const ProfileScreen = ({ navigation }) => {
         )}
       </TouchableOpacity>
 
-      {/* The owner: still here, still legible, no longer the headline. */}
-      <Text style={tailwind("text-lg mb-2")}>{userInfo.name}</Text>
-      <Text style={tailwind("text-sm mb-2")}>{userInfo.email}</Text>
-      <Text style={tailwind("text-sm mb-4")}>{userInfo.phone}</Text>
+{/* The owner: still here, still legible, no longer the headline. */}
+      <Text style={tailwind("text-lg mb-2 text-text")}>{userInfo.name}</Text>
+      <Text style={tailwind("text-sm mb-2 text-text")}>{userInfo.email}</Text>
+      <Text style={tailwind("text-sm mb-4 text-text")}>{userInfo.phone}</Text>
       <TouchableOpacity
         onPress={navigateToEditProfile}
         style={tailwind("bg-primary py-2 px-4 rounded mb-4")}

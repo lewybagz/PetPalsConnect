@@ -19,6 +19,7 @@ import api from "../../api/axios";
 import { useToast } from "../../components/ui";
 import { setChatId } from "../../redux/actions";
 import { useTokens } from "../../context/AppThemeContext";
+import { speciesInfo } from "../../data/species";
 import { useUnits } from "../../context/SettingsContext";
 import { formatWeight } from "../../utils/units";
 
@@ -173,6 +174,14 @@ const PetDetailsScreen = ({ route, navigation }) => {
         </View>
       )}
       <Text style={styles.name}>{pet.name}</Text>
+      {/*
+        Named before the breed, because it is the fact that decides what the
+        rest means. A profile can hold a cat, a rabbit or a bearded dragon
+        now, and a screen that lists a breed and a weight and never says what
+        kind of animal it is describing reads as a dog by default - which it
+        no longer is.
+      */}
+      <Text style={styles.detail}>{speciesInfo(pet.species).shortLabel}</Text>
       {pet.breed ? <Text style={styles.detail}>Breed: {pet.breed}</Text> : null}
       {pet.age != null ? <Text style={styles.detail}>Age: {pet.age}</Text> : null}
       {pet.weight != null ? (

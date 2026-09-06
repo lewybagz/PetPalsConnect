@@ -122,7 +122,7 @@ const ChoosePlanScreen = ({ navigation }) => {
   if (!paymentsEnabled || purchasable.length === 0) {
     return (
       <View style={tailwind("flex-1 items-center justify-center p-8")}>
-        <Text style={tailwind("text-lg font-semibold text-center mb-2")}>
+        <Text style={tailwind("text-lg font-semibold text-center mb-2 text-text")}>
           Subscriptions are not available yet
         </Text>
         <Text style={tailwind("text-base text-textMuted text-center")}>
@@ -146,7 +146,7 @@ const ChoosePlanScreen = ({ navigation }) => {
             }`
           )}
         >
-          <Text style={tailwind("text-xl font-bold mb-1")}>{plan.name}</Text>
+          <Text style={tailwind("text-xl font-bold mb-1 text-text")}>{plan.name}</Text>
           <Text style={tailwind("text-base text-textMuted mb-4")}>
             {plan.description}
           </Text>

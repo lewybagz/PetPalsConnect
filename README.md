@@ -180,8 +180,8 @@ compiled into the app bundle and is public by definition — never put a secret 
 ## Tests
 
 ```bash
-cd backend && npm test               # 445 tests, ~35s, no database or credentials needed
-cd PetPalsConnectApp && npm test     # 520 tests, ~10s
+cd backend && npm test               # 503 tests, ~40s, no database or credentials needed
+cd PetPalsConnectApp && npm test     # 555 tests, ~10s
 ```
 
 The suite boots the real Express app against an in-memory MongoDB with a stubbed

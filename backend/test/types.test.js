@@ -34,6 +34,7 @@ const DOCUMENT_INTERFACES = {
   Pet: "Pet",
   User: "User",
   Subscription: "Subscription",
+  Location: "Location",
   Article: "Article",
 };
 
@@ -43,6 +44,7 @@ const SYNTHETIC = new Set(["_id"]);
 require("../models/User");
 require("../models/Pet");
 require("../models/Subscription");
+require("../models/Location");
 require("../models/Article");
 
 /** Extracts `interface Name { ... }` bodies, ignoring comments. */

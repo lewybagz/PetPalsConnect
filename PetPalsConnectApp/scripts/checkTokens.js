@@ -87,6 +87,37 @@ const colourlessText = (source) => {
   return found;
 };
 
+/**
+ * Tailwind class strings that set type but never a colour.
+ *
+ * The same blind spot as `colourlessText`, one syntax over - and the larger
+ * half of it. `tailwind("text-xl font-bold")` on a `Text` sets a size and
+ * leaves the colour to React Native's default, which is black: correct on the
+ * white surfaces this app used to have, invisible on a dark one. There were 46
+ * of them across 23 files, and the colour ban could not see a single one
+ * because a class name is not a hex literal and never was.
+ *
+ * `${...}` is skipped: a class string built from an expression usually carries
+ * its colour in the expression (`text-sm ${hintColour}`), and this check cannot
+ * evaluate it. That is a deliberate hole rather than a false positive - the
+ * alternative is a rule people learn to work around by interpolating.
+ */
+const SIZED = /\btext-(xs|sm|base|lg|xl|2xl|3xl)\b|\bfont-(bold|semibold|medium)\b/;
+const TONE = /text-(text|textMuted|textFaint|onPrimary|primary|danger|success|warning)\b/;
+const TAILWIND_CALL = /tailwind\((["`])([^"`]*)\1\)/g;
+
+const colourlessClasses = (source) => {
+  const found = [];
+
+  for (const [, , classes] of stripComments(source).matchAll(TAILWIND_CALL)) {
+    if (!SIZED.test(classes)) continue;
+    if (TONE.test(classes) || classes.includes("${")) continue;
+    found.push(classes.trim());
+  }
+
+  return found;
+};
+
 /** How many raw colour values each file still holds. */
 const count = () => {
   const counts = {};
@@ -117,11 +148,23 @@ const audit = () => {
     const relative = path.relative(ROOT, file);
     if (ALLOWED.has(relative)) continue;
 
-    const keys = colourlessText(fs.readFileSync(file, "utf8"));
+    const source = fs.readFileSync(file, "utf8");
+
+    const keys = colourlessText(source);
     if (keys.length > 0) {
       problems.push(
         `${relative}: ${keys.join(", ")} set type but no colour, so they ` +
           `inherit black and vanish on a dark surface. Add \`color: t.text\`.`
+      );
+    }
+
+    const classes = colourlessClasses(source);
+    if (classes.length > 0) {
+      problems.push(
+        `${relative}: ${classes.length} tailwind style${
+          classes.length === 1 ? "" : "s"
+        } set type but no colour, so they inherit black and vanish on a dark ` +
+          `surface - e.g. \`${classes[0]}\`. Add \`text-text\` (or another tone).`
       );
     }
   }
@@ -143,7 +186,15 @@ const audit = () => {
 /** Every file the check looks at, so a pass cannot mean "found no files". */
 const scanned = () => walk(SRC).map((file) => path.relative(ROOT, file));
 
-module.exports = { audit, count, colourlessText, scanned, readBaseline, BASELINE };
+module.exports = {
+  audit,
+  count,
+  colourlessText,
+  colourlessClasses,
+  scanned,
+  readBaseline,
+  BASELINE,
+};
 
 if (require.main === module) {
   const flag = process.argv[2];

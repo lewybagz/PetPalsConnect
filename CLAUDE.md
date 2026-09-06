@@ -37,6 +37,38 @@ an interruption between any two resumes at the next launch rather than
 stranding the user. Never assume "signed in" implies "has a profile", and keep
 `POST /api/users` idempotent.
 
+**A profile holds any species; playdates are dogs only.** `Pet.species` is one
+of `dog`, `cat`, `smallMammal`, `bird`, `reptile` or `fish`, and the two facts
+live in different places on purpose: the enum is open because the care hub
+recommends food, supplies and a vet from whatever somebody owns, and the
+matching query is narrow because `compatibility.js` scores size, temperament and
+activity in dog terms. `services/matching/eligibility.js` is the one place that
+rule is written - both candidate queries (`runMatching` and
+`reachableCandidates`) spread `matchableQuery()`, because a rule written twice is
+a rule one of them will end up missing. It matches a null species as well as
+`dog`: the field was added after rows existed, those rows have no key at all, and
+a plain `{ species: "dog" }` would have emptied the deck for every pet created
+before it. `breed` and `weight` are `required` functions rather than `true` -
+required for dogs and cats, meaningless for a fish - which is the idiom
+`Media.thumbnail` already uses and one `schemaAudit` deliberately skips.
+
+**`hasPet` does not imply `hasDog`.** This is the same trap as "`ready` does not
+imply a pet exists", one level down: a cat-only owner passes every `hasPet`
+check, walks into Discover, and finds a deck that is empty forever with nothing
+saying why. `withRequiredPet(Screen, { species: "dog" })` is what Map, PetSelection
+and SchedulePlaydate use, and `useAuthSession` exposes both flags. `/api/users/me`
+projects `species` onto `pets` for exactly this reason - drop it and every pet
+looks equally matchable to the client. The server's own answer to the same
+question is to fall through to preview mode: an owner with pets but no dog gets
+the browse deck, not an error, which is the experience already built for someone
+with no pet at all. Copy in that state names the species ("Add your dog"), because
+telling somebody to "add a pet" while they are looking at the cat they added
+reads as a bug.
+
+**The browsable pet lists are dogs only, and that is privacy, not matching.**
+`getAllPets` and `getLatestPets` filter through `matchableQuery()`. A cat is added
+to get food and a vet out of the hub, not published for strangers to browse.
+
 **Screens below the gate may assume a profile, but NOT a pet.** The add-a-pet
 step is a prompt, not a wall - it can be skipped, and the choice is remembered
 per user. So `ready` does not imply a pet exists. Screens that cannot function
@@ -50,6 +82,17 @@ directly.
 out all change Firebase auth state, and `RootNavigator` swaps the whole tree in
 response. A manual `navigation.navigate()` after those calls targets a route
 that no longer exists.
+
+**A user may only write their own account, and only some of it.**
+`getUserById` scopes what a stranger may *read*; nothing scoped the writes
+behind it, so `PUT`/`PATCH`/`DELETE /api/users/:id` acted on whatever account
+the URL named - any signed-in caller could edit anybody's email or delete their
+account outright. "A resource id is not an identity" was already the rule for
+reads; it is the same rule one verb over, and the audit could not see it because
+those handlers build no query at all, they mutate the document the middleware
+fetched. The writable set is an allowlist (`username`, `userPhoto`, `location`)
+rather than a denylist: `subscribed` is Stripe's, `verified` is a moderator's,
+and `pets`/`friendsList` belong to the endpoints that maintain them.
 
 **No passwords in the database.** Firebase Auth owns credentials. The `User`
 model has no password field, and `changeUserPassword` returns 410 by design —
@@ -118,6 +161,15 @@ showing what is queued and offering a second button. It now does.
 **A wait with predictable structure gets a skeleton, not a spinner.** Discover,
 Home and the chat list know their own shape before the response arrives, and
 they are the three screens a new user waits on first.
+
+**A text style has to name a colour, in a StyleSheet *and* in a class string.**
+A `Text` with a size and no colour inherits React Native's black: right while
+every surface was white, invisible on a dark one. `colourlessText` caught the
+`StyleSheet.create` half; the tailwind half went unseen for longer and was
+bigger - 46 styles across 23 files, because a class name is not a hex literal
+and the colour ban was only ever looking for literals. `colourlessClasses`
+covers it now. An interpolated class string is deliberately skipped, since the
+colour usually lives in the expression and this check cannot evaluate one.
 
 **`npm run check:colours` fails on any colour outside `tokens.ts`.** It began
 as a ratchet — a per-file count in `scripts/colour-baseline.json`, failing only
@@ -644,6 +696,87 @@ capped at `PHOTO_LIMIT` (6, the same both sides).
 `PetPhotosScreen` is where an owner adds, reorders and removes; it saves after
 every change so closing mid-edit cannot lose an upload already paid for.
 
+### The care hub
+
+**`MoreScreen` is the hub, and it is the half of the app for the pets somebody
+already has.** It was five unstyled buttons in a centred column; it is now
+emergency numbers, picks per pet, care places nearby, and the links it always
+had. Every section degrades on its own - no pets, no shared position, no
+imported places and no Google key are ordinary states here, not errors.
+
+**`services/petCare/picks.js` is a table in the source, not a collection.**
+Same reasoning as `notificationTypes.js` and `reportStates.js`: it is not user
+data, there is no admin console to edit it from, and changing what the app
+tells somebody to feed their dog should be a reviewed diff. Nothing writes it
+at runtime, so there is no create path and no spam surface. Every entry is a
+*category* of thing with a search link, not a named product with an affiliate
+tag - and if that ever changes, the fact belongs on screen next to the link.
+
+**`specialNeeds` never selects a product.** Life stage and size are shopping
+facts; "diabetic" is a conversation with a vet. `recommend.js` takes species,
+age and weight and nothing else, and an owner who wrote anything in that field
+gets `seeAVet` and their local vets instead. `petCare.test.js` asserts the two
+pick lists are identical with and without the note - that test is the rule.
+
+**An unknown age is unknown, not "adult".** `lifeStage` returns null rather
+than guessing, and a pick that depends on a stage is then left out: a
+recommendation for the wrong stage is worse than one not shown. Only dogs and
+cats have a `sizeBand`, because they are the only species the schema stores a
+weight for.
+
+**Empty is not the same as broken.** The hub tells three nothings apart, and
+each was a wrong answer at some point in writing it: no pets (`picks` came back
+with an empty list) invites you to add one; a failed fetch (`picks` is null)
+says so and offers a retry; and for places, "we do not know where you are",
+"your area has not been imported" and "there is nothing here" are three
+different sentences. Keying the first pair on `hasPet` from the session - which
+is what this did first - answers a petless owner with an apology for a bug that
+did not happen.
+
+**A place is a phone number and a route to it before it is anything else.**
+`PotentialPlaydateLocationScreen` fetched `/api/playdates/locations/:id` - a
+second endpoint returning the same Location by the same id, without the Places
+Details enrichment - so a vet opened from the hub showed an address and no way
+to ring them. That duplicate is deleted; the screen reads `/api/locations/:id`,
+which fills in phone, website and hours on first open.
+
+**The hub imports its own places.** Sending somebody to the map to fix an empty
+list on this screen is a dead end. It fires only when the list is genuinely
+empty, the position is known, the server reports Places configured, and it has
+not already tried this mount - an import is billed Google traffic, and a screen
+that retries on every pull-to-refresh turns a quota problem into a bill.
+
+**A favourite is of a pet or of a place, never both and never neither.**
+`Favorite` held only pets, with `pet` and `content` both `required`, so "this is
+my vet" did not fit. Both `required`s are functions now and a pre-validate hook
+enforces exactly one target, because each `required` excuses the other and a row
+with neither would otherwise save and be rendered by nothing. Saved places come
+back with the care list rather than from a second request, and are deliberately
+*not* filtered by category or range: somebody's own vet is the entry they opened
+the screen to find.
+
+**The gallery photographs a viewport, and react-native-web scrolls inside an
+element.** Playwright's `fullPage` is useless here - a ScrollView renders as a
+fixed-height div with its own overflow, so the document is always exactly one
+viewport tall however much is inside it. A board sets `scrollY` and `shoot.mjs`
+scrolls the element. Note that `shoot.mjs` *parses* `boards.js` rather than
+importing it (it is JSX only Metro can load), so a new per-board option has to
+be picked up by that parser too - `scrollY` was declared, ignored, and every
+scrolled screenshot came out silently unscrolled with nothing saying why.
+
+**A `__`-prefixed file under `src/` is a scratch file, and every source walker
+skips one.** `checkTokens.test.js` writes one to prove the colour ban still
+fires, and jest runs suites in parallel workers off a single working tree - so
+`store.test.js` listed it, it was deleted, and the read threw ENOENT in a suite
+about redux selectors. `store.test.js`, `walkthrough.test.js` and
+`tooling.test.js` skip the prefix, and the selector walk also tolerates a file
+that vanishes mid-walk.
+
+**`playwright-core` is a devDependency now.** `npm run screenshots` imports it
+and it was never in `package.json`, so the one tool CLAUDE.md tells you to run
+after a design change could not run from a clean install - and the missing
+import was also the repo's only lint error.
+
 ### Safety
 
 **A block is symmetric, and every list has to consult it.** `services/blocking.js`
@@ -786,6 +919,16 @@ one direction; only a like in both directions creates the PetMatch rows, the
 notifications and the `petMatch` event. One-sided interest is invisible to the
 other person.
 
+**A discovery preference narrows the deck; it never widens it.** The species
+preference in `discovery` and the dogs-only rule in `matchableQuery()` were
+written on separate branches, and the preference assigned `query.species`
+outright - overwriting the rule it was spread in beside, so a preference naming
+a cat put cats in the deck. Anything added to that query has to compose with
+what is already there, not replace it. The two species vocabularies still
+differ (`services/settings.js` offers `rabbit`/`other`, `Pet.species` has
+`smallMammal`/`reptile`/`fish`) - worth reconciling, and moot while only dogs
+match.
+
 **Distance filters, it does not score.** `services/matching/distance.js` drops
 candidates outside the owner's `playdateRange` and attaches `distanceMiles`.
 Scoring stays about the pets: you want the best fit among pets you can reach,
@@ -810,6 +953,50 @@ by name, so no screen has to remember that the stored pair is GeoJSON
 `[longitude, latitude]` - the order that puts a park in the sea. It applies the
 same block and suspension filters as discovery: a map says where somebody is,
 so forgetting the filter there is worse than forgetting it in the deck.
+
+**A place has categories, and there is one model for every kind of place.**
+`services/placeCategories.js` holds them - `park`, `vet`, `petStore`, `groomer`,
+`boarding` - and it is an array, because plenty of vets board and plenty of
+shops groom. There was a second model for this too: `Service`, a stub with a
+String address, no coordinates, an unconstrained `serviceType` and a create
+route any signed-in account could post to, whose `getAllServices` handed the
+lot to everybody. Nothing in the app ever called it, and the importer had been
+pulling `veterinary_care` and `pet_store` into `Location` all along - so the vet
+directory already half-existed in the model with the geo index and the unique
+`placeId`, while the wrong one sat there being a spam surface. It is deleted,
+with `Review.relatedService`, the way `PotentialPlaydateLocation` was.
+
+**A category filter only ever narrows when asked to.** Rows imported before the
+field existed have no categories, so `/api/locations` unfiltered still returns
+everything and the playdate pickers keep working untouched. A *filtered* query
+leaves uncategorised rows out on purpose: a row whose kind we do not know is not
+evidence of a vet, and serving one as a vet is worse than a short list. The
+filter is applied on `Array.isArray(categories)`, not `length > 0` - an empty
+array is a caller whose category names were all invalid, and `$in: []` correctly
+matches nothing, where treating it as "no filter" would answer a misspelling
+with parks in the vet list. Re-running the import backfills, since the upsert
+writes categories onto rows that already exist.
+
+**Google has no type for grooming or boarding**, so those two go out as a
+keyword against the nearest type that does exist, and the category *the search
+was for* is carried onto the row - a groomer comes back typed `pet_store` and is
+otherwise indistinguishable from a shop. `importNear` merges by `placeId` before
+writing, because a vet that boards answers two searches and per-search upserts
+would let the last one's categories replace the first's.
+
+**Contact details are fetched lazily, not on import.** An import covers five
+categories at twenty results each; a Details call per result is a hundred billed
+requests to fill a screen nobody has opened. `places.withDetails()` runs on
+`GET /api/locations/:id`, caches for `DETAILS_TTL_MS` (30 days) and never
+throws: an address and a route to it are useful without a phone number, and a
+missing key must not turn opening a place into an error.
+
+**`services/petCare/emergency.js` is the part of the hub that always works.** No
+shared location, no `GOOGLE_MAPS_API_KEY`, no rows: a hub whose entire content
+depends on an optional integration shows an empty screen on every fresh
+deployment, and this is also the half somebody needs most urgently. Every entry
+carries a `region`, because these are US and Canada services and the app never
+asks anybody where they live.
 
 **`Location` is the only place model, and `name` is required.** There was a
 second, `PotentialPlaydateLocation`, with the same fields, its own controller
@@ -1041,6 +1228,35 @@ to fail the build.
 
 Add a route, a field or a selector, and one of these tells you if the other side
 disagrees.
+
+## Dependencies and advisories
+
+**There are three packages, and the repo root is not one of them.**
+`PetPalsConnectApp/`, `backend/` and the seeding scripts. A fourth
+`package.json` sat at the repo root with no name, no scripts and no CI step -
+a stale copy of the app's dependency list, still pinning `react-native-copilot`
+and `nativewind` months after both were removed from the app. Nothing installed
+it and nothing could; it carried 43 advisories, two of them critical. Deleted.
+
+**`PetPalsConnectApp/functions/` is gone, and Firestore with it.** It was a
+Cloud Function triggering on `playdates/{playdateId}` in *Firestore* - a
+collection nothing has written since Mongo became the source of truth - so it
+could never fire. What it did, a playdate review reminder, is
+`pushPlaydateReviewReminderNotification` in `NotificationController`, on the
+Mongo path, and has been all along. It carried 42 advisories, three critical,
+and its `functions` block is out of `firebase.json` so a deploy does not go
+looking for it.
+
+**An advisory is triaged by reachability, not by its count.** The moderates
+left in the two packages that ship are transitive and their vulnerable code
+paths cannot be reached: the `uuid` advisory (GHSA-w5hq-g745-h8pq) is about
+`v3/v5/v6` when a `buf` argument is passed, and both `gaxios` and
+`teeny-request` call `uuid.v4()` with no arguments. Forcing a major bump of a
+transitive through a path no test exercises, to close a hole nothing can reach,
+trades a real risk for a smaller number. The app's `xcode`/`uuid` chain is
+`@expo/config-plugins`, which runs at prebuild and does not appear in the
+exported bundle; `decode-uri-component` comes through
+`@react-navigation/native` and has no fix published upstream.
 
 ## Things deliberately left out
 

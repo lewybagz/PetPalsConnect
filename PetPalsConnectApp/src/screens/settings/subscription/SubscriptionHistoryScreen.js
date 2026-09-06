@@ -64,7 +64,7 @@ const SubscriptionHistoryScreen = () => {
         <View
           style={tailwind("bg-surface border border-border rounded-2xl p-4 mb-3")}
         >
-          <Text style={tailwind("text-lg font-semibold mb-1")}>
+          <Text style={tailwind("text-lg font-semibold mb-1 text-text")}>
             {item.createdDate
               ? new Date(item.createdDate).toLocaleDateString()
               : "Unknown date"}

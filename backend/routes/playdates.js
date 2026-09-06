@@ -7,7 +7,6 @@ const PlaydateController = require("../controllers/PlaydateController");
 router.get("/", PlaydateController.getAllPlaydates);
 router.get("/upcoming", PlaydateController.getUpcomingPlaydates);
 router.get("/user", PlaydateController.getUserPlaydates);
-router.get("/locations/:placeId", PlaydateController.getLocationDetails);
 
 router.post("/", PlaydateController.createPlaydate);
 router.post("/accept/:playdateId", PlaydateController.acceptPlaydate);

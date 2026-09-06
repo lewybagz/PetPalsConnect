@@ -21,6 +21,9 @@ const ROOT = path.resolve(__dirname, "../..");
 const walk = (dir, found = []) => {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
+    // A `__`-prefixed file is a scratch file another suite writes and deletes
+    // while this one walks the same tree, in a parallel worker.
+    if (entry.name.startsWith("__")) continue;
     if (entry.isDirectory()) walk(full, found);
     else if (/\.(js|jsx|ts|tsx)$/.test(entry.name)) found.push(full);
   }

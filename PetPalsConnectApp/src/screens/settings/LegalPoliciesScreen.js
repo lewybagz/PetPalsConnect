@@ -19,7 +19,7 @@ const LegalPoliciesScreen = () => {
 
   return (
     <ScrollView style={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold mb-4")}>Legal Policies</Text>
+      <Text style={tailwind("text-xl font-bold mb-4 text-text")}>Legal Policies</Text>
 
       <View style={tailwind("flex-row mb-4")}>
         <TouchableOpacity

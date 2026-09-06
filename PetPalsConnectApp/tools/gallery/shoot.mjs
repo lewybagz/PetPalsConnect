@@ -66,12 +66,36 @@ const serve = () =>
     server.listen(PORT, () => resolve(server));
   });
 
-/** The board list, read from the same module the gallery renders from. */
+/**
+ * The board list, read from the same module the gallery renders from.
+ *
+ * Parsed rather than imported, because `boards.js` is JSX that only Metro can
+ * load - so this file reads the two or three fields it needs out of the source
+ * text. That cost a real hour: `scrollY` was added to a board, this parser kept
+ * only `id` and `label`, and every scrolled screenshot came out silently
+ * unscrolled with nothing anywhere saying why. Any new per-board option has to
+ * be picked up here as well as declared there.
+ */
 const boards = () => {
   const source = fs.readFileSync(path.join(HERE, "boards.js"), "utf8");
-  return [...source.matchAll(/^\s{4}id: "([\w-]+)",\n\s{4}label: "([^"]+)"/gm)].map(
-    ([, id, label]) => ({ id, label })
-  );
+  const matches = [
+    ...source.matchAll(/^\s{4}id: "([\w-]+)",\n\s{4}label: "([^"]+)"/gm),
+  ];
+
+  return matches.map((match, index) => {
+    // Everything between this board's `id:` and the next one's - the only
+    // reliable way to attribute an option to the board that declared it.
+    const start = match.index;
+    const end = matches[index + 1]?.index ?? source.length;
+    const block = source.slice(start, end);
+    const scrollY = block.match(/^\s{4}scrollY: (\d+),/m)?.[1];
+
+    return {
+      id: match[1],
+      label: match[2],
+      ...(scrollY ? { scrollY: Number(scrollY) } : {}),
+    };
+  });
 };
 
 /**
@@ -138,6 +162,45 @@ const main = async () => {
     await page.waitForSelector('[data-testid="board"]', { timeout: 15000 });
     // Let the fonts settle and the skeleton pulse reach a stable frame.
     await page.waitForTimeout(600);
+
+    /**
+     * Scrolled down first, when a board asks to be.
+     *
+     * A phone viewport is the honest frame for most screens, and for those the
+     * fold is exactly the thing worth reviewing. But the care hub is four
+     * stacked sections and everything below the second was simply never
+     * photographed - half of a screen this tool exists to make reviewable.
+     *
+     * Playwright's own `fullPage` cannot help: react-native-web renders a
+     * ScrollView as a fixed-height element with its own overflow, so the
+     * document is always exactly one viewport tall no matter how much content
+     * is inside it. The scrolling has to happen in the element, which is what
+     * this does - the deepest scrollable node, since `Screen` wraps its
+     * content in one.
+     */
+    if (board.scrollY) {
+      const scrolled = await page.evaluate((offset) => {
+        // Every scrollable node, not a guess at which one: the board is nested
+        // several levels deep and which element carries the overflow depends
+        // on whether the screen used `Screen scroll` or its own ScrollView.
+        // Scrolling all of them is harmless - the ones already at the bottom
+        // clamp - and it is the only version of this that is not brittle.
+        const nodes = [...document.querySelectorAll("*")].filter(
+          (node) => node.scrollHeight > node.clientHeight + 40
+        );
+        for (const node of nodes) node.scrollTop = offset;
+        return nodes.length;
+      }, board.scrollY);
+
+      if (scrolled === 0) {
+        failures.push(
+          `${board.id}/${theme}: asked to scroll to ${board.scrollY} but nothing ` +
+            `on the page scrolls - the screenshot is the top of the screen`
+        );
+      }
+      // The scroll is instant, but a re-render triggered by it is not.
+      await page.waitForTimeout(300);
+    }
 
     const file = path.join(OUT, `${board.id}-${theme}.png`);
     await page.screenshot({ path: file });

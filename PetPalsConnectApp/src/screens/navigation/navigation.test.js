@@ -26,6 +26,11 @@ const sourceFiles = () => {
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       if (entry.name === "node_modules") continue;
+      // A `__`-prefixed file is a scratch file another suite writes and
+      // deletes while this one walks the same tree, in a parallel worker.
+      // Without this the read below throws ENOENT in a suite that has nothing
+      // to do with whatever wrote it.
+      if (entry.name.startsWith("__")) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (/\.[jt]sx?$/.test(entry.name) && !/\.test\./.test(entry.name)) out.push(full);

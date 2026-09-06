@@ -36,7 +36,6 @@ const PUBLIC_READS = {
   "ArticleController.getTopics": "the topic index over editorial content",
   "ArticleController.getRelatedArticles": "further reading, from the same editorial content",
   "LocationController.getAllLocations": "the shared catalogue of parks and meeting places",
-  "ServiceController.getAllServices": "a directory of vets and groomers",
   "PetController.getAllPets": "pets are the browsable content of the app",
   "PetController.getLatestPets": "the home screen's new-pets shelf",
   "UserController.getAllUsers": "a username search, projected to public fields only",

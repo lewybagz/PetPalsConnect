@@ -1,6 +1,9 @@
 const Location = require("../models/Location");
 const places = require("../services/places");
 const { milesBetween, formatMiles } = require("../services/matching/distance");
+const { CATEGORIES, CARE_CATEGORIES } = require("../services/placeCategories");
+const { EMERGENCY_CONTACTS } = require("../services/petCare/emergency");
+const Favorite = require("../models/Favorite");
 
 /**
  * Places to meet.
@@ -19,17 +22,36 @@ const LocationController = {
    * personal. Listed as such in `services/authAudit.js`.
    */
   async getAllLocations(req, res) {
-    const { lat, lng, range, userLat, userLng } = req.query;
+    const { lat, lng, range, userLat, userLng, category } = req.query;
 
     // `userLat`/`userLng` are what the older screens send.
     const latitude = lat ?? userLat;
     const longitude = lng ?? userLng;
+
+    /**
+     * `?category=vet` or `?category=vet,groomer`, and unfiltered without it.
+     *
+     * An unknown name is dropped rather than 400d: this is a catalogue read,
+     * and a typo should narrow to nothing visible rather than fail the screen.
+     * An all-unknown list would otherwise read as "no filter" and quietly
+     * return parks to the vet list, so it filters on the empty set instead.
+     */
+    const requested = category
+      ? String(category)
+          .split(",")
+          .map((name) => name.trim())
+          .filter(Boolean)
+      : null;
+    const categories = requested
+      ? requested.filter((name) => CATEGORIES.includes(name))
+      : null;
 
     try {
       const locations = await places.nearby({
         latitude,
         longitude,
         radiusMiles: range,
+        categories,
       });
 
       const origin =
@@ -53,6 +75,19 @@ const LocationController = {
     }
   },
 
+  /**
+   * One place, with its contact details filled in.
+   *
+   * The Details lookup happens here rather than during the import because an
+   * import covers five categories at twenty results each and a Details call
+   * per result would be a hundred billed requests to populate a screen nobody
+   * has opened. Here it is one request, only for a place somebody is actually
+   * looking at, and the answer is cached on the row for a month.
+   *
+   * `withDetails` never throws and never blocks: a vet's address and a route
+   * to it are useful without a phone number, and a missing key must not turn
+   * opening a place into an error.
+   */
   async getLocationById(req, res, next) {
     let location;
     try {
@@ -60,6 +95,7 @@ const LocationController = {
       if (location == null) {
         return res.status(404).json({ message: "Cannot find location" });
       }
+      await places.withDetails(location);
     } catch (err) {
       return res.status(500).json({ message: err.message });
     }
@@ -115,6 +151,83 @@ const LocationController = {
         return res.status(200).json(existing);
       }
       res.status(400).json({ message: err.message });
+    }
+  },
+
+  /**
+   * The care hub's list: vets, shops, groomers and boarders near somebody.
+   *
+   * A thin wrapper over the same query the map uses, and deliberately so - it
+   * is the same collection, the same geo index and the same distance
+   * arithmetic. What it adds is a default: `/api/locations` with no category is
+   * everything, which is right for the map and wrong for a hub, so this one
+   * defaults to the care categories and never includes parks.
+   *
+   * `EMERGENCY_CONTACTS` rides along because it is the one part of the hub
+   * that works with no location, no Google key and no rows in the database,
+   * and it is the part somebody needs most urgently. A hub that shows nothing
+   * at all on a fresh deployment is a hub nobody opens twice.
+   */
+  async getCarePlaces(req, res) {
+    const { lat, lng, range, category } = req.query;
+
+    const requested = category
+      ? String(category)
+          .split(",")
+          .map((name) => name.trim())
+          .filter((name) => CARE_CATEGORIES.includes(name))
+      : CARE_CATEGORIES;
+
+    try {
+      /**
+       * The caller's saved places come back with the list, not from a second
+       * request, and are deliberately not filtered by category or distance.
+       * Somebody's own vet is the one entry they came here to find, and it
+       * stays findable whether or not it is inside their range today or
+       * matches the chip they happen to have tapped.
+       */
+      const [locations, saved] = await Promise.all([
+        places.nearby({
+          latitude: lat,
+          longitude: lng,
+          radiusMiles: range,
+          categories: requested,
+        }),
+        Favorite.find({ user: req.userId, location: { $exists: true } })
+          .populate("location")
+          .sort({ createdDate: -1 })
+          .lean(),
+      ]);
+
+      const origin =
+        Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+          ? [Number(lng), Number(lat)]
+          : null;
+
+      const withDistance = (location) => ({
+        ...location,
+        distanceMiles:
+          origin && location.geoLocation?.coordinates
+            ? formatMiles(milesBetween(origin, location.geoLocation.coordinates))
+            : null,
+      });
+
+      res.json({
+        locationKnown: Boolean(origin),
+        // A place deleted since it was saved leaves `location: null` on the
+        // row, so the populate result is filtered rather than assumed.
+        saved: saved
+          .map((favorite) => favorite.location)
+          .filter(Boolean)
+          .map(withDistance),
+        // Said plainly, so a short list reads as "we have not imported your
+        // area yet" rather than "there are no vets near you".
+        importable: places.isEnabled(),
+        emergency: EMERGENCY_CONTACTS,
+        places: locations.map(withDistance),
+      });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
     }
   },
 

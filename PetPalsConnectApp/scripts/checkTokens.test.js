@@ -42,6 +42,13 @@ describe("the colour ban", () => {
    * real source file here breaks whichever screen suite happens to import it at
    * that moment - which is exactly the intermittent, unreproducible failure
    * that wastes an afternoon.
+   *
+   * The scratch file traded that race for a smaller one: it lives under `src/`,
+   * because that is what the audit scans, and the other suites that walk `src/`
+   * list the files and then read them. A scratch file created after the listing
+   * and deleted before the read is an ENOENT in a suite that has nothing to do
+   * with colours - `store.test.js` failed exactly that way. Hence the `__`
+   * prefix, which every walker skips, and the ENOENT tolerance behind it.
    */
   const withScratchFile = (contents, assertion) => {
     const file = path.resolve(__dirname, "../src/__ratchet-scratch.js");
@@ -65,6 +72,47 @@ describe("the colour ban", () => {
     withScratchFile('export const S = { color: "gray" };\n', (problems, name) => {
       expect(problems.some((problem) => problem.includes(name))).toBe(true);
     });
+  });
+
+  it("fails on a tailwind text style with no colour", () => {
+    // The larger half of the dark-mode blind spot, and one the colour ban
+    // could not see: a class name is not a hex literal. 46 of these rendered
+    // black on a dark surface.
+    withScratchFile(
+      'export const S = () => tailwind("text-xl font-bold mb-4");\n',
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(true);
+      }
+    );
+  });
+
+  it("accepts a tailwind text style that names a tone", () => {
+    withScratchFile(
+      'export const S = () => tailwind("text-xl font-bold text-textMuted");\n',
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(false);
+      }
+    );
+  });
+
+  it("leaves an interpolated class string alone", () => {
+    // The colour usually lives in the expression, and this check cannot
+    // evaluate it - a deliberate hole rather than a false positive.
+    withScratchFile(
+      "export const S = (c) => tailwind(`text-sm ${c}`);\n",
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(false);
+      }
+    );
+  });
+
+  it("does not flag a class string with no type in it", () => {
+    withScratchFile(
+      'export const S = () => tailwind("flex-1 p-lg bg-surface");\n',
+      (problems, name) => {
+        expect(problems.some((problem) => problem.includes(name))).toBe(false);
+      }
+    );
   });
 
   it("does not flag an icon name that happens to be a colour word", () => {

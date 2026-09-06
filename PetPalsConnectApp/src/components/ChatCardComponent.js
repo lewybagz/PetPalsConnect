@@ -177,22 +177,22 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
           <View style={tailwind("bg-surface p-4 rounded-t-3xl")}>
             {/* Archive Chat */}
             <TouchableOpacity style={styles.option} onPress={handleArchiveChat}>
-              <Text style={tailwind("text-lg text-center")}>Archive Chat</Text>
+              <Text style={tailwind("text-lg text-center text-text")}>Archive Chat</Text>
             </TouchableOpacity>
 
             {/* Delete Chat */}
             <TouchableOpacity style={styles.option} onPress={handleDeleteChat}>
-              <Text style={tailwind("text-lg text-center")}>Delete Chat</Text>
+              <Text style={tailwind("text-lg text-center text-text")}>Delete Chat</Text>
             </TouchableOpacity>
 
             {/* Chat Details */}
             <TouchableOpacity style={styles.option} onPress={handleViewDetails}>
-              <Text style={tailwind("text-lg text-center")}>Chat Details</Text>
+              <Text style={tailwind("text-lg text-center text-text")}>Chat Details</Text>
             </TouchableOpacity>
 
             {/* Pin Chat */}
             <TouchableOpacity style={styles.option} onPress={handlePinChat}>
-              <Text style={tailwind("text-lg text-center")}>Pin Chat</Text>
+              <Text style={tailwind("text-lg text-center text-text")}>Pin Chat</Text>
             </TouchableOpacity>
 
             {/* Cancel Button */}
@@ -200,7 +200,7 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
               style={styles.cancelOption}
               onPress={handleCloseModal}
             >
-              <Text style={tailwind("text-lg text-center")}>Cancel</Text>
+              <Text style={tailwind("text-lg text-center text-text")}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

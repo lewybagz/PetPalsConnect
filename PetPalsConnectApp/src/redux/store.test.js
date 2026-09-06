@@ -21,6 +21,10 @@ const sourceFiles = () => {
     if (!fs.existsSync(dir)) return;
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       if (entry.name === "node_modules") continue;
+      // `__`-prefixed files are scratch files another suite writes and deletes
+      // while this one is walking. Skipping them by name is the deterministic
+      // half of the fix; the ENOENT tolerance below is the other half.
+      if (entry.name.startsWith("__")) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (/\.[jt]sx?$/.test(entry.name) && !/\.test\.[jt]sx?$/.test(entry.name))
@@ -29,6 +33,22 @@ const sourceFiles = () => {
   };
   SOURCE_ROOTS.forEach(walk);
   return out;
+};
+
+/**
+ * A file's contents, or "" if it vanished between the listing and the read.
+ *
+ * Jest runs these suites in parallel workers off one working tree, and a file
+ * that is no longer there is not a selector - it is a scratch file another
+ * suite has finished with.
+ */
+const readIfPresent = (file) => {
+  try {
+    return fs.readFileSync(file, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return "";
+    throw error;
+  }
 };
 
 /**
@@ -46,7 +66,7 @@ const withoutComments = (source) =>
 const selectorPaths = () => {
   const found = new Map();
   for (const file of sourceFiles()) {
-    const src = withoutComments(fs.readFileSync(file, "utf8"));
+    const src = withoutComments(readIfPresent(file));
     for (const match of src.matchAll(/\bstate\.([a-zA-Z_$][\w$]*)\.([a-zA-Z_$][\w$]*)/g)) {
       const key = `${match[1]}.${match[2]}`;
       if (!found.has(key)) found.set(key, []);

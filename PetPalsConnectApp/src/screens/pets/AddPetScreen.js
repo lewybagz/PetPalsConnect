@@ -14,7 +14,7 @@ import { useSelector, useDispatch } from "react-redux";
 import api from "../../api/axios";
 import { removeCache, CacheKeys } from "../../services/localCache";
 import { useAuthSession } from "../../context/AuthSessionContext";
-import { BREEDS } from "../../data/breeds";
+import { SPECIES, DEFAULT_SPECIES, speciesInfo } from "../../data/species";
 import { clearError } from "../../redux/actions";
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import { useToast } from "../../components/ui";
@@ -28,6 +28,7 @@ import { useToast } from "../../components/ui";
  */
 const EMPTY_PET = {
   name: "",
+  species: DEFAULT_SPECIES,
   breed: "",
   age: "",
   photos: [],
@@ -78,8 +79,11 @@ const AddPetScreen = ({ navigation }) => {
     { label: "Obstacle Course", value: "obstacle_course" },
   ]);
 
-  // Shared with onboarding so the two lists cannot drift apart.
-  const sortedBreeds = BREEDS;
+  // What this species is asked for. A dog gets the full breed registry and a
+  // weight because both feed matching; a fish gets neither, because there is
+  // no honest answer and a required field with no honest answer is how a form
+  // tells somebody it was not built for them.
+  const species = speciesInfo(currentPet.species);
   const temperaments = [
     "Calm",
     "Energetic",
@@ -142,12 +146,21 @@ const AddPetScreen = ({ navigation }) => {
    * of the flow rather than at the field.
    */
   const handleAddPet = () => {
-    if (!currentPet.name || !currentPet.breed || !currentPet.age) {
-      toast.show("Fill in the name, breed and age first.");
+    if (!currentPet.name || !currentPet.age) {
+      toast.show("Fill in the name and age first.");
       return;
     }
-    if (!currentPet.weight?.value) {
-      toast.show("Add a weight - matching compares size.");
+    if (species.breeds && !currentPet.breed) {
+      toast.show("Pick a breed - the closest one is fine.");
+      return;
+    }
+    // Only asked where the server requires it, which is the same two species.
+    if (species.weighed && !currentPet.weight?.value) {
+      toast.show(
+        species.matchable
+          ? "Add a weight - matching compares size."
+          : "Add a weight so food portions are right."
+      );
       return;
     }
 
@@ -213,7 +226,10 @@ const AddPetScreen = ({ navigation }) => {
       for (const pet of pets) {
         await api.post("/api/pets", {
           name: pet.name,
-          breed: pet.breed,
+          species: pet.species ?? DEFAULT_SPECIES,
+          // Sent only where the schema wants them. `undefined` is dropped by
+          // axios, so a fish arrives without a breed rather than with "".
+          breed: pet.breed || undefined,
           age: Number(pet.age),
           weight: pet.weight?.value ? Number(pet.weight.value) : undefined,
           photos: pet.photos ?? [],
@@ -248,21 +264,47 @@ const AddPetScreen = ({ navigation }) => {
         value={currentPet.name}
         onChangeText={(text) => setCurrentPet({ ...currentPet, name: text })}
       />
-      <Text>Breed:</Text>
-      <Text>
-        Close Enough Counts - if you don&rsquo;t find the exact breed, pick the
-        closest one.
-      </Text>
+      <Text>What kind of pet?</Text>
       <Picker
-        selectedValue={currentPet.breed}
+        testID="pet-species"
+        selectedValue={currentPet.species}
         onValueChange={(itemValue) =>
-          setCurrentPet({ ...currentPet, breed: itemValue })
+          // Breed and weight belong to the species that was chosen, so
+          // changing it clears them rather than carrying a Labrador breed onto
+          // a rabbit.
+          setCurrentPet({
+            ...currentPet,
+            species: itemValue,
+            breed: "",
+            weight: { value: 0, unit: "lbs" },
+          })
         }
       >
-        {sortedBreeds.map((breed) => (
-          <Picker.Item key={breed} label={breed} value={breed} />
+        {SPECIES.map((entry) => (
+          <Picker.Item key={entry.value} label={entry.label} value={entry.value} />
         ))}
       </Picker>
+
+      {species.breeds ? (
+        <>
+          <Text>Breed:</Text>
+          <Text>
+            Close Enough Counts - if you don&rsquo;t find the exact breed, pick
+            the closest one.
+          </Text>
+          <Picker
+            testID="pet-breed"
+            selectedValue={currentPet.breed}
+            onValueChange={(itemValue) =>
+              setCurrentPet({ ...currentPet, breed: itemValue })
+            }
+          >
+            {species.breeds.map((breed) => (
+              <Picker.Item key={breed} label={breed} value={breed} />
+            ))}
+          </Picker>
+        </>
+      ) : null}
       <TextInput
         placeholder="Age"
         value={currentPet.age}
@@ -301,24 +343,29 @@ const AddPetScreen = ({ navigation }) => {
         ))}
       </Picker>
 
-      <TextInput
-        placeholder="Weight"
-        value={String(currentPet.weight.value)}
-        onChangeText={handleWeightChange}
-        keyboardType="numeric"
-      />
-      <Picker
-        selectedValue={currentPet.weight.unit}
-        onValueChange={(unitValue) =>
-          setCurrentPet({
-            ...currentPet,
-            weight: { ...currentPet.weight, unit: unitValue },
-          })
-        }
-      >
-        <Picker.Item label="lbs" value="lbs" />
-        <Picker.Item label="kg" value="kg" />
-      </Picker>
+      {species.weighed ? (
+        <>
+          <TextInput
+            testID="pet-weight"
+            placeholder="Weight"
+            value={String(currentPet.weight.value)}
+            onChangeText={handleWeightChange}
+            keyboardType="numeric"
+          />
+          <Picker
+            selectedValue={currentPet.weight.unit}
+            onValueChange={(unitValue) =>
+              setCurrentPet({
+                ...currentPet,
+                weight: { ...currentPet.weight, unit: unitValue },
+              })
+            }
+          >
+            <Picker.Item label="lbs" value="lbs" />
+            <Picker.Item label="kg" value="kg" />
+          </Picker>
+        </>
+      ) : null}
 
       <Text>Activity Level:</Text>
       <Picker
@@ -336,7 +383,14 @@ const AddPetScreen = ({ navigation }) => {
         ))}
       </Picker>
 
-      {/* Socialization Level Dropdown */}
+      {/*
+        Socialisation and favourite activities exist to score a playdate, and
+        the list below is dog-park vocabulary - fetch, tug of war, sniffari. A
+        cat owner has no use for either, so a species that cannot match is not
+        asked. Everything above this point applies to any animal.
+      */}
+      {species.matchable ? (
+      <>
       <Text>Socialization Level:</Text>
       <Picker
         selectedValue={currentPet.socializationLevel}
@@ -352,6 +406,8 @@ const AddPetScreen = ({ navigation }) => {
           />
         ))}
       </Picker>
+      </>
+      ) : null}
 
       <TextInput
         placeholder="Health Information"
@@ -366,26 +422,30 @@ const AddPetScreen = ({ navigation }) => {
         won&rsquo;t be used for pet matching.
       </Text>
 
-      <DropDownPicker
-        open={open}
-        value={currentPet.favoriteActivities}
-        items={activities}
-        setOpen={setOpen}
-        setValue={onActivitySelect}
-        setItems={setActivities}
-        multiple={true}
-        mode="BADGE"
-      />
-      <View>
-        {currentPet.favoriteActivities.map((activity, index) => (
-          <TouchableOpacity
-            key={index}
-            onPress={() => removeActivity(activity)}
-          >
-            <Text>{activity} x</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {species.matchable ? (
+        <>
+          <DropDownPicker
+            open={open}
+            value={currentPet.favoriteActivities}
+            items={activities}
+            setOpen={setOpen}
+            setValue={onActivitySelect}
+            setItems={setActivities}
+            multiple={true}
+            mode="BADGE"
+          />
+          <View>
+            {currentPet.favoriteActivities.map((activity, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => removeActivity(activity)}
+              >
+                <Text>{activity} x</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      ) : null}
       <TouchableOpacity onPress={handleAddPet} disabled={submitting}>
         <Text>Add Pet</Text>
       </TouchableOpacity>

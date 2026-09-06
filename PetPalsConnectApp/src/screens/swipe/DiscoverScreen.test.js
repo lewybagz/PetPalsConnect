@@ -271,7 +271,7 @@ describe("browsing without a pet", () => {
 
     await waitFor(() => expect(screen.getByTestId("discover-preview")).toBeTruthy());
     // A better moment to ask than a wall before anything is shown.
-    expect(screen.getByText(/Add your pet to say hello to Bo/)).toBeTruthy();
+    expect(screen.getByText(/Add your dog to say hello to Bo/)).toBeTruthy();
   });
 
   it("routes the call to action at adding a pet", async () => {

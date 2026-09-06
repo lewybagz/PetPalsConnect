@@ -30,7 +30,7 @@ const ChangePasswordScreen = () => {
 
   return (
     <View style={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold mb-4")}>Change Password</Text>
+      <Text style={tailwind("text-xl font-bold mb-4 text-text")}>Change Password</Text>
 
       <TextInput
         style={tailwind("border border-border p-2 rounded mb-4")}
