@@ -33,6 +33,24 @@ const GroupChatSchema = new Schema({
   // filters `participants: req.userId` and the notification fan-out looks them
   // up in `User` - but the ref said "Pet", so `.populate("participants")`
   // resolved user ids against the pet collection and produced nulls.
+  /**
+   * The pets in the group.
+   *
+   * `GroupChatCreationScreen` has always asked for pets - "With", then a list
+   * of animals - and derived their owners silently to send to this endpoint,
+   * so the pets were the user's choice and the owners were the plumbing. Only
+   * the plumbing was stored, which is why the group header could say
+   * "4 Members" and nothing about whose dogs they were.
+   *
+   * `participants` remains the authorisation surface: membership, muting,
+   * leaving and blocking are all about people.
+   */
+  pets: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Pet",
+    },
+  ],
   participants: [
     {
       type: Schema.Types.ObjectId,

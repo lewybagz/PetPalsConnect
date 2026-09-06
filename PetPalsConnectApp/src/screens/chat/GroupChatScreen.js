@@ -123,7 +123,12 @@ const GroupChatScreen = ({ route, navigation }) => {
     setSearchQuery("");
   };
   const handleReply = (message) => {
-    const replyString = `@${message.sender}: `;
+    // `message.sender` is a user id. Quoting it put a raw ObjectId at the
+      // top of the reply; a group is a group of pets, so the pet is named.
+      const senderPet = (groupInfo?.pets ?? []).find(
+        (pet) => String(pet?.owner?._id ?? pet?.owner) === String(message.sender?._id ?? message.sender)
+      );
+      const replyString = `@${senderPet?.name ?? "them"}: `;
     setReplyTo(replyString);
     setNewMessage(replyString);
     messageInputRef.current.focus();
@@ -256,7 +261,7 @@ const GroupChatScreen = ({ route, navigation }) => {
         />
         <Text style={tailwind("text-lg font-bold")}>{groupInfo?.groupName}</Text>
         <Text style={tailwind("text-sm")}>
-          {groupInfo?.participants?.length ?? 0} Members
+          {groupInfo?.pets?.length ?? groupInfo?.participants?.length ?? 0} pets
         </Text>
 
         <TouchableOpacity

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,6 +18,7 @@ import api from "../../api/axios";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { addProfilePhoto } from "../../services/photos";
 import { useTokens } from "../../context/AppThemeContext";
+import { petPhoto } from "../../utils/petIdentity";
 import { useToast } from "../../components/ui";
 
 const ProfileScreen = ({ navigation }) => {
@@ -32,6 +33,25 @@ const ProfileScreen = ({ navigation }) => {
   const { profile, userId, refresh } = useAuthSession();
   const [photo, setPhoto] = useState(profile?.userPhoto ?? null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  // The household. `useAuthSession` already populates the profile's pets - the
+  // onboarding gate reads that array to decide whether you have one.
+  // Hoisted, so the dependency is the array itself rather than `profile` -
+  // React Compiler widens `profile?.pets` in a dependency list to the whole
+  // object and then declines to memoize around it.
+  const profilePets = profile?.pets;
+  const pets = useMemo(
+    () => (Array.isArray(profilePets) ? profilePets.filter(Boolean) : []),
+    [profilePets]
+  );
+  const petNames = useMemo(
+    () =>
+      pets
+        .map((pet) => pet?.name)
+        .filter(Boolean)
+        .join(" and "),
+    [pets]
+  );
 
   useEffect(() => {
     // Fetch user information
@@ -122,7 +142,53 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={tailwind("p-4")}>
-      <Text style={tailwind("text-xl font-bold mb-4")}>Profile</Text>
+      {/* The pets are the profile. This screen led with the abstract noun
+          "Profile", an owner avatar and three lines of account data, and put
+          the animals behind a "View My Pets" button - on the one screen in the
+          app whose entire subject is a household of pets. */}
+      <Text style={tailwind("text-xl font-bold mb-4")}>
+        {petNames ? `${petNames} and their human` : "Your profile"}
+      </Text>
+
+      {pets.length > 0 ? (
+        <FlatList
+          data={pets}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(pet) => String(pet._id)}
+          style={tailwind("mb-4")}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`${item.name ?? "A pet"}, open profile`}
+              onPress={() =>
+                navigation.navigate("PetDetails", { petId: String(item._id) })
+              }
+              style={tailwind("items-center mr-md")}
+            >
+              {petPhoto(item) ? (
+                <Image
+                  source={{ uri: petPhoto(item) }}
+                  style={tailwind("h-24 w-24 rounded-full")}
+                />
+              ) : (
+                <View
+                  style={tailwind(
+                    "h-24 w-24 rounded-full bg-surfaceAlt items-center justify-center"
+                  )}
+                >
+                  <Ionicons name="paw" size={34} color={tokens.textFaint} />
+                </View>
+              )}
+              <Text style={tailwind("mt-2 text-text")}>{item.name}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      ) : null}
+
+      <Text style={tailwind("text-sm text-textMuted mb-2")}>
+        {pets.length > 0 ? "Brought to you by" : "Add a pet to get started"}
+      </Text>
 
       <TouchableOpacity
         testID="profile-photo"
@@ -138,7 +204,7 @@ const ProfileScreen = ({ navigation }) => {
               "h-24 w-24 rounded-full bg-surfaceAlt items-center justify-center"
             )}
           >
-            <Ionicons name="person-outline" size={36} color={tokens.textFaint} />
+            <Ionicons name="person-outline" size={30} color={tokens.textFaint} />
           </View>
         )}
         {uploadingPhoto ? (
@@ -150,7 +216,7 @@ const ProfileScreen = ({ navigation }) => {
         )}
       </TouchableOpacity>
 
-      {/* User Info */}
+      {/* The owner: still here, still legible, no longer the headline. */}
       <Text style={tailwind("text-lg mb-2")}>{userInfo.name}</Text>
       <Text style={tailwind("text-sm mb-2")}>{userInfo.email}</Text>
       <Text style={tailwind("text-sm mb-4")}>{userInfo.phone}</Text>
@@ -164,7 +230,7 @@ const ProfileScreen = ({ navigation }) => {
         onPress={navigateToPetList}
         style={tailwind("bg-primary py-2 px-4 rounded mb-4")}
       >
-        <Text style={tailwind("text-onPrimary text-center")}>View My Pets</Text>
+        <Text style={tailwind("text-onPrimary text-center")}>Manage my pets</Text>
       </TouchableOpacity>
       <FlatList
         data={recentPlaydates}

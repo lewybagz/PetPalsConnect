@@ -30,7 +30,7 @@ const PlaydateModificationConfirmationScreen = ({ route, navigation }) => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      toast.success("Updated - everyone invited has been told.");
+      toast.success("Updated - the other owners have been told.");
       navigation.popToTop();
     } catch (error) {
       console.error("Error confirming modifications:", error);

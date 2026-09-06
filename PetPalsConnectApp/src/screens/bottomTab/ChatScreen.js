@@ -22,6 +22,7 @@ import SafetyMenu from "../../components/SafetyMenu";
 import { useToast } from "../../components/ui";
 import api from "../../api/axios";
 import { useTokens } from "../../context/AppThemeContext";
+import { otherPet } from "../../utils/petIdentity";
 
 /** You block a person, not a dog. `owner` may be an id or a populated user. */
 const ownerId = (pet) => {
@@ -44,6 +45,10 @@ const ChatScreen = ({ route, navigation }) => {
   const [chatId, setChatId] = useState(route?.params?.chatId ?? null);
   const [otherUserId, setOtherUserId] = useState(null);
   const [petInfo, setPetInfo] = useState(route?.params?.pet ?? null);
+  // Read once, as a value: naming `route?.params?.myPetId` in a dependency
+  // array makes React Compiler infer the whole `route` object instead, which
+  // it then refuses to memoize around.
+  const routeMyPetId = route?.params?.myPetId ?? null;
   const petId = petInfo?._id;
   const flatListRef = useRef(null);
   const dispatch = useDispatch();
@@ -51,6 +56,10 @@ const ChatScreen = ({ route, navigation }) => {
   const toast = useToast();
 
   const userId = useSelector((state) => state.user.userId);
+  // Whichever of your pets this conversation is on your side. Taken from the
+  // route when the caller knows (the deck knows exactly which pet swiped), and
+  // otherwise left for the server to infer.
+  const myPetId = useSelector((state) => state.user.user?.pets?.[0]?._id ?? null);
   const isLoading = useSelector((state) => state.chat.isLoading);
   const error = useSelector((state) => state.chat.error);
 
@@ -85,12 +94,25 @@ const ChatScreen = ({ route, navigation }) => {
     try {
       // Arriving from a notification we already have the conversation; ask for
       // it rather than trying to derive it from a pet we were not given.
+      //
+      // `myPetId` says which of the caller's pets is doing the talking. A
+      // conversation is between two animals, so an owner with several has to
+      // name one - the screen is reached from a match, a pet profile or the
+      // deck, all of which know. The server fills it in when there is only one
+      // pet and no question to ask.
       const { data } = petId
-        ? await api.post("/api/chats/findOrCreate", { petId })
+        ? await api.post("/api/chats/findOrCreate", {
+            petId,
+            myPetId: routeMyPetId ?? myPetId ?? undefined,
+          })
         : await api.get(`/api/chats/${chatId}`);
 
       setChatId(data._id);
-      if (!petInfo && data.petId) setPetInfo(data.petId);
+      if (!petInfo) {
+        // The other animal in the thread - the one whose owner is not you.
+        const theirs = otherPet(data, userId);
+        if (theirs) setPetInfo(theirs);
+      }
 
       // The person on the other end, for the block-and-report menu. Taken from
       // the chat rather than the pet, because a pet reached through the match
@@ -109,7 +131,7 @@ const ChatScreen = ({ route, navigation }) => {
           : "Could not open this conversation."
       );
     }
-  }, [petId, userId, petInfo, toast]);
+  }, [petId, userId, petInfo, myPetId, routeMyPetId, chatId, toast]);
 
   // Messages come from the API. This was a Firestore onSnapshot subscription;
   // the socket hook above delivers live updates now that Mongo is the store.

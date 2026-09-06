@@ -28,7 +28,7 @@ const MoreScreen = ({ route, start, navigation }) => {
     <View style={styles.container}>
       {/* Copilot Steps for each feature on the More screen */}
       <CopilotStep
-        text="Create a group chat for pet lovers here."
+        text="Start a group for your pets and their pals here."
         order={1}
         name="groupChatCreation"
       >

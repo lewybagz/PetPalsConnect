@@ -34,10 +34,27 @@ const chatSchema = new Schema({
       ref: "User",
     },
   ],
-  petId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Pet",
+  /**
+   * The two pets the conversation is between, and what identifies it.
+   *
+   * This used to be a single `petId` - whichever pet the caller happened to tap
+   * to start the thread - while `chatId` was hashed from the two *owners*. So
+   * one person with three dogs had one conversation with you regardless of
+   * which dog either of you was talking about, and the pet recorded on it was
+   * only ever the one that opened it. A conversation in this app is between two
+   * animals, so it is keyed by them: `chatId` is the hash of the sorted pet
+   * pair, and two of your pets talking to the same person are two threads.
+   *
+   * `participants` stays, and is still what every read is scoped by: blocking,
+   * muting and account suspension are all properties of a person, not a dog.
+   */
+  pets: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Pet" }],
     required: true,
+    validate: {
+      validator: (pets) => pets.length === 2,
+      message: "A one-to-one chat is between exactly two pets",
+    },
   },
   lastMessage: {
     type: mongoose.Schema.Types.ObjectId,

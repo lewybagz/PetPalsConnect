@@ -12,6 +12,12 @@ import { useSelector } from "react-redux";
 import { useTailwind } from "../styles/tailwind";
 import api from "../api/axios";
 import { useTokens } from "../context/AppThemeContext";
+import {
+  broughtBy,
+  otherParticipant,
+  otherPet,
+  petPhoto,
+} from "../utils/petIdentity";
 import { hit } from "../styles/tokens";
 
 /**
@@ -25,8 +31,14 @@ import { hit } from "../styles/tokens";
  * exist either, so the row showed a blank title, no photo and "Invalid Date".
  *
  * The real shape: `participants` (populated with username and userPhoto),
- * `petId` (populated with name and photos), `lastMessage.contentText`, and
- * `updatedAt`. The other participant is whoever is not you.
+ * `pets` (both animals, populated with name, photos and owner),
+ * `lastMessage.contentText`, and `updatedAt`.
+ *
+ * The row is titled with the *pet* you are talking to, not their owner. A
+ * conversation in this app exists because two animals matched; an inbox listing
+ * usernames is listing the people who happen to be holding the leads. The owner
+ * is still there, on the second line, because you may be about to arrange to
+ * meet them in a park.
  *
  * Every id is `_id`; `chat.id` is undefined on a Mongo document, so archive,
  * delete, pin and details all posted to `/api/chats/undefined/...`.
@@ -41,19 +53,25 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
 
   const chatId = chat?._id;
 
-  // The conversation is with whoever is not you. A group chat has its own name.
-  const other = (chat?.participants ?? []).find(
-    (participant) => String(participant?._id ?? participant) !== String(userId)
-  );
+  // The pet the conversation is with, and the person bringing them.
+  const other = otherParticipant(chat, userId);
+  const pet = isGroupChat ? null : otherPet(chat, userId);
 
-  const title =
-    (isGroupChat ? chat?.name : other?.username) ??
-    chat?.petId?.name ??
-    "Conversation";
+  const title = isGroupChat
+    ? chat?.name ?? chat?.groupName ?? "Group"
+    : pet?.name ?? other?.username ?? "Conversation";
+
+  // In a group, the members are pets too - the creation screen picks animals
+  // and derives their owners silently.
+  const subtitle = isGroupChat
+    ? (chat?.pets ?? []).length
+      ? `${chat.pets.length} pets`
+      : null
+    : broughtBy(other);
 
   const photo =
+    (isGroupChat ? chat?.groupImage : petPhoto(pet)) ??
     other?.userPhoto ??
-    (Array.isArray(chat?.petId?.photos) ? chat.petId.photos[0] : null) ??
     null;
 
   const preview = chat?.lastMessage?.contentText ?? "No messages yet";
@@ -127,7 +145,9 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
     <TouchableOpacity
       testID={`chat-${chatId}`}
       accessibilityRole="button"
-      accessibilityLabel={`Conversation with ${title}`}
+      accessibilityLabel={
+        subtitle ? `Conversation with ${title}, ${subtitle}` : `Conversation with ${title}`
+      }
       onPress={() => onPress(chat)}
       onLongPress={handleLongPress}
     >
@@ -141,6 +161,11 @@ const ChatCard = ({ chat, onPress, isGroupChat, setChats, navigation }) => {
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
+          {subtitle ? (
+            <Text style={styles.owner} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
           <Text style={styles.messagePreview} numberOfLines={1}>
             {preview}
           </Text>
@@ -211,6 +236,11 @@ const makeStyles = (t) => StyleSheet.create({
     color: t.text,
     fontSize: 16,
     fontWeight: "bold",
+  },
+  owner: {
+    fontSize: 12,
+    color: t.textFaint,
+    marginBottom: 2,
   },
   messagePreview: {
     fontSize: 14,

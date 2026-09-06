@@ -51,7 +51,11 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
         }
       );
 
-      toast.success("Accepted - the organiser has been told.");
+      toast.success(
+        playdateDetails?.petName
+          ? `Accepted - ${playdateDetails.petName}'s owner has been told.`
+          : "Accepted - the organiser has been told."
+      );
       navigation.navigate("UpcomingPlaydate");
     } catch (error) {
       console.warn("[playdaterequest]", error.message);
@@ -72,7 +76,11 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      toast.success("Declined - the organiser has been told.");
+      toast.success(
+        playdateDetails?.petName
+          ? `Declined - ${playdateDetails.petName}'s owner has been told.`
+          : "Declined - the organiser has been told."
+      );
       navigation.goBack();
     } catch (error) {
       console.warn("[playdaterequest]", error.message);
@@ -109,7 +117,7 @@ const PlaydateRequestScreen = ({ route, navigation }) => {
         style={styles.petImage}
       />
       <Text style={styles.petName}>{playdateDetails.petName}</Text>
-      <Text style={styles.ownerName}>Owner: {playdateDetails.ownerName}</Text>
+      <Text style={styles.ownerName}>with {playdateDetails.ownerName}</Text>
       <Text style={styles.location}>Location: {playdateDetails.location}</Text>
       <Text style={styles.dateTime}>
         {new Date(playdateDetails.date).toLocaleString()}

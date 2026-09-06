@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
 
 import store from "../../src/redux/store";
+import { setUserId } from "../../src/redux/actions";
 import api from "../../src/api/axios";
 import { AppThemeProvider, useTokens } from "../../src/context/AppThemeContext";
 import { DevicePreferencesProvider } from "../../src/context/DevicePreferencesContext";
@@ -183,6 +184,17 @@ const Surface = ({ board }) => {
  * which is the one thing the stubs deliberately do not do - so the gallery
  * supplies the value instead, and it is obvious from here that it is a fixture.
  */
+/**
+ * The viewer, in the Redux store as well as in the session context.
+ *
+ * Components that need to know which side of something is yours read
+ * `state.user.userId`, not the session - the inbox row picks the pet whose
+ * owner is *not* you that way. With the store left at its default the id was
+ * null, so every chat row titled itself with the first pet in the pair, which
+ * happened to be the viewer's own dog.
+ */
+store.dispatch(setUserId("user-me"));
+
 const SESSION = {
   status: AuthStatus.ready,
   error: null,

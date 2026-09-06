@@ -6,6 +6,7 @@ import { useSocketFriendRequest } from "../../hooks/useSocketEvents";
 import SwipeableUserPetCard from "../swipe/SwipeableUserPetCard";
 import { EmptyState, ListSkeleton, Screen } from "../../components/ui";
 import { fetchFriends, otherSide } from "../../api/friends";
+import { friendPet } from "../../utils/petIdentity";
 import { staleWhileRevalidate, CacheKeys } from "../../services/localCache";
 import { useTailwind } from "../../styles/tailwind";
 
@@ -52,11 +53,22 @@ const FriendsListScreen = ({ navigation }) => {
   // Refresh when a friend request is accepted elsewhere.
   useSocketFriendRequest(loadFriends);
 
+  /**
+   * One row per friendship: the pal, and the person bringing them.
+   *
+   * The row used to be the other *user*, with `pets[0]` picked arbitrarily
+   * from their household - so a friend with three dogs showed whichever one
+   * the array happened to start with, and not necessarily the one your pet
+   * actually made friends with. The friendship records both pets now.
+   */
   const friends = useMemo(
     () =>
       friendships
-        .map((friendship) => otherSide(friendship, myUserId))
-        .filter((friend) => friend && typeof friend === "object"),
+        .map((friendship) => ({
+          user: otherSide(friendship, myUserId),
+          pet: friendPet(friendship, myUserId),
+        }))
+        .filter((row) => row.user && typeof row.user === "object"),
     [friendships, myUserId]
   );
 
@@ -84,10 +96,10 @@ const FriendsListScreen = ({ navigation }) => {
       <Screen testID="friends-screen">
         <EmptyState
           icon={error ? "cloud-offline-outline" : "people-outline"}
-          title={error ? "Couldn't load your friends" : "No friends yet"}
+          title={error ? "Couldn't load your pals" : "No pals yet"}
           message={
             error ??
-            "Match with a pet, say hello, and send their owner a friend request."
+            "Match with a pet, say hello, and ask if they'd like to be pals."
           }
           actionLabel={error ? "Try again" : "Find pets"}
           onAction={() =>
@@ -103,20 +115,20 @@ const FriendsListScreen = ({ navigation }) => {
       <FlatList
         data={friends}
         contentContainerStyle={tailwind("p-lg")}
-        keyExtractor={(item, index) => String(item._id ?? index)}
+        keyExtractor={(item, index) => String(item.user?._id ?? index)}
         onRefresh={loadFriends}
         refreshing={false}
         renderItem={({ item }) => (
           <SwipeableUserPetCard
-            user={item}
-            pet={item.pets?.[0] ?? null}
+            user={item.user}
+            pet={item.pet}
             isFriend
             navigation={navigation}
             onRemoved={onRemoved}
             onPress={() =>
-              item.pets?.[0] &&
+              item.pet &&
               navigation.navigate("PetDetails", {
-                petId: String(item.pets[0]?._id ?? item.pets[0]),
+                petId: String(item.pet?._id ?? item.pet),
               })
             }
           />

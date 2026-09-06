@@ -26,9 +26,9 @@ const receiverId = (friendRequest) => idOf(friendRequest.receiver);
  * Friend row either, so accepting a friend request has never made two people
  * friends: the request went to "accepted" and the friends list stayed empty.
  */
-async function updateFriendStatus(sender, receiver) {
+async function updateFriendStatus(sender, receiver, pets) {
   try {
-    await FriendController.linkFriends(sender, receiver);
+    await FriendController.linkFriends(sender, receiver, pets);
   } catch (err) {
     console.error("Failed to update friend status:", err);
   }
@@ -43,7 +43,9 @@ const FriendRequestController = {
         $or: [{ sender: req.userId }, { receiver: req.userId }],
       })
         .populate("sender")
-        .populate("receiver");
+        .populate("receiver")
+        .populate("senderPet", "name photos breed")
+        .populate("receiverPet", "name photos breed");
       res.json(friendRequests);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -54,7 +56,9 @@ const FriendRequestController = {
     try {
       const friendRequest = await FriendRequest.findById(req.params.id)
         .populate("sender")
-        .populate("receiver");
+        .populate("receiver")
+        .populate("senderPet", "name photos breed")
+        .populate("receiverPet", "name photos breed");
       if (!friendRequest) {
         return res.status(404).json({ message: "Friend request not found" });
       }
@@ -100,7 +104,20 @@ const FriendRequestController = {
         return res.status(404).json({ message: "Requester not found" });
       }
 
-      const petName = requester.pets[0]?.name || "Unknown Pet";
+      // The pet that was asked is the one accepting. Falling back to the
+      // requester's own pet name would have told them their own dog had
+      // accepted their request.
+      const accepter = await User.findById(req.userId).populate("pets");
+      const acceptingPet =
+        accepter?.pets?.find(
+          (pet) => String(pet._id) === String(res.friendRequest.receiverPet)
+        ) ?? accepter?.pets?.[0];
+      const askingPet =
+        requester?.pets?.find(
+          (pet) => String(pet._id) === String(res.friendRequest.senderPet)
+        ) ?? requester?.pets?.[0];
+
+      const petName = acceptingPet?.name || "Your new pal";
 
       res.friendRequest.status = "accepted";
       res.friendRequest.modifiedDate = Date.now();
@@ -112,7 +129,9 @@ const FriendRequestController = {
       // which is not a type the app routes on, so the push went nowhere.
       await Promise.all([
         notify({
-          content: `${petName} accepted your friend request!`,
+          content: askingPet?.name
+            ? `${petName} and ${askingPet.name} are now pals!`
+            : `${petName} accepted your request!`,
           recipientId: requester._id,
           type: "friendAccepted",
           creatorId: req.userId,
@@ -120,7 +139,11 @@ const FriendRequestController = {
         }),
         updateFriendStatus(
           senderId(res.friendRequest),
-          receiverId(res.friendRequest)
+          receiverId(res.friendRequest),
+          {
+            [String(senderId(res.friendRequest))]: askingPet?._id,
+            [String(receiverId(res.friendRequest))]: acceptingPet?._id,
+          }
         ),
       ]);
 
@@ -165,7 +188,7 @@ const FriendRequestController = {
     // missed it because the field was destructured first and then written in
     // shorthand, which is why it now checks the destructure too.
     const sender = req.userId;
-    const { receiver } = req.body;
+    const { receiver, senderPet, receiverPet } = req.body;
 
     if (!receiver) {
       return res.status(400).json({ message: "receiver is required" });
@@ -189,26 +212,49 @@ const FriendRequestController = {
       return res.status(500).json({ message: "Could not send that request" });
     }
 
-    const newFriendRequest = new FriendRequest({
-      sender,
-      receiver,
-      status: "pending",
-    });
-
     try {
-      const savedFriendRequest = await newFriendRequest.save();
       const senderUser = await User.findById(sender).populate("pets");
       const receiverUser = await User.findById(receiver).populate("pets");
 
-      const senderPetName = senderUser.pets[0]?.name || "Your pet";
-      const receiverPetName = receiverUser.pets[0]?.name || "Your pet";
+      // Which animals this is about. The client names them when it knows -
+      // a request sent from a match knows exactly which two pets met - and
+      // falls back to each side's first pet otherwise. A pet named here has to
+      // belong to the side claiming it, or the row would file the friendship
+      // under somebody else's animal.
+      const ownedBy = (user, petId) =>
+        petId && (user.pets ?? []).some((pet) => String(pet._id) === String(petId));
+
+      if (senderPet && !ownedBy(senderUser, senderPet)) {
+        return res.status(403).json({ message: "That is not your pet" });
+      }
+      if (receiverPet && !ownedBy(receiverUser, receiverPet)) {
+        return res.status(400).json({ message: "That pet is not theirs" });
+      }
+
+      const fromPet =
+        (senderPet && senderUser.pets.find((p) => String(p._id) === String(senderPet))) ||
+        senderUser.pets[0];
+      const toPet =
+        (receiverPet && receiverUser.pets.find((p) => String(p._id) === String(receiverPet))) ||
+        receiverUser.pets[0];
+
+      const savedFriendRequest = await new FriendRequest({
+        sender,
+        receiver,
+        senderPet: fromPet?._id,
+        receiverPet: toPet?._id,
+        status: "pending",
+      }).save();
+
+      const senderPetName = fromPet?.name || "Your pet";
+      const receiverPetName = toPet?.name || "Your pet";
 
       // `sendPushNotification(notificationData)` put the payload where the
       // recipient goes, so Mongoose was handed an object to cast to an
       // ObjectId and threw - inside the `Promise.all` of the create path,
       // which turned every friend request into a 400.
       await notify({
-        content: `${senderPetName} wants to be friends with ${receiverPetName}!`,
+        content: `${senderPetName} wants to be pals with ${receiverPetName}!`,
         recipientId: receiver,
         type: "friendRequest",
         creatorId: sender,

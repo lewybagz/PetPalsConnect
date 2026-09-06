@@ -578,6 +578,50 @@ from React Native core in 0.62.
 the route to each one and the answer it currently gives. Three of its controls
 used to duplicate ones on the screens it linked to, with a different answer.
 
+### The pet is the subject
+
+**The pet leads, the owner is the line underneath.** This app arranges for two
+animals to meet, and it used to model almost all of that as a relationship
+between two accounts: an inbox of usernames, a friends list of usernames, a
+playdate card headlined "Upcoming". `SchedulePlaydateScreen` already had the
+right shape - "Who" is the pets, "Bringing" is your pet - and the rest of the
+app now matches it. The owner is never hidden: you are arranging to meet a
+stranger in a park, so their name sits under the pet's as "with @alex".
+
+**`src/utils/petIdentity.js` is the one place that resolves who a thing is
+about.** `otherPet`, `friendPet`, `broughtBy` and `ownerOf` are the same five
+lines of logic that were about to be written into five components, and the
+failure mode when they drift is a screen quietly naming a person again.
+
+**A conversation is between two pets, and `chatId` is the hash of the sorted
+pet pair.** It used to be the hash of the sorted *owner* pair, with a single
+`petId` recording whichever pet the caller happened to tap - so somebody with
+three dogs had one thread with you no matter which dog either of you meant, and
+the pet on it never changed after the first message. `findOrCreateChat` takes
+`myPetId` as well as `petId`; an owner with exactly one pet is not asked.
+
+**A friendship is between two pets.** `Friend.pet1`/`pet2` line up with
+`user1`/`user2`, and `linkFriends` takes its pets keyed by owner rather than
+positionally - `pairFor` sorts the two users, so a positional pair silently
+attaches each pet to the wrong side whenever the sort swaps them.
+
+**What stays about people: everything to do with safety and identity.**
+Blocking, reporting, suspension, audience settings, account and payment
+screens, and the scoping of every read. You do not block a dog. `SafetyMenu`
+takes the owner, and its callers name them as `ownerOf(pet)` - "Sky's owner" -
+which is recognisable without making an account name the headline.
+
+**A refusal must not vary with anything else about the caller.**
+`findOrCreateChat` resolves the caller's own pet *after* the block and audience
+checks, because ordering it the other way gave a blocked person with no pet
+"Add a pet before starting a conversation" instead of the standard refusal -
+and a different answer to the same forbidden action is itself a signal.
+
+**Notifications name pets, and two of them did not.** `chatController` and
+`GroupChatController` both read `req.user?.username`, which is not something
+the middleware sets - it sets `req.userId` and `req.firebaseUser` - so every
+message notification this app ever sent began with the literal word "Someone".
+
 ### Photos
 
 **One path in: `src/services/photos.js`.** It picks, compresses (longest edge

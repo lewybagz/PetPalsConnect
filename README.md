@@ -84,6 +84,22 @@ it will not run in Expo Go:
 npx expo run:ios       # or: npx expo run:android
 ```
 
+## Migrations
+
+Conversations moved from being keyed by the pair of owners to the pair of pets,
+and friendships gained the two animals they are about. Existing data needs
+backfilling once:
+
+```bash
+cd backend
+node scripts/migrate-to-pets.js --dry-run   # prints what it would change
+node scripts/migrate-to-pets.js
+```
+
+It is idempotent and skips rows that already carry their pets. A conversation
+whose pets cannot be resolved is left exactly as it is rather than given a
+wrong key.
+
 ## Content
 
 The in-app Articles feature is backed by `content/`. `content/research/` holds
@@ -164,8 +180,8 @@ compiled into the app bundle and is public by definition — never put a secret 
 ## Tests
 
 ```bash
-cd backend && npm test               # 431 tests, ~35s, no database or credentials needed
-cd PetPalsConnectApp && npm test     # 504 tests, ~10s
+cd backend && npm test               # 445 tests, ~35s, no database or credentials needed
+cd PetPalsConnectApp && npm test     # 520 tests, ~10s
 ```
 
 The suite boots the real Express app against an in-memory MongoDB with a stubbed

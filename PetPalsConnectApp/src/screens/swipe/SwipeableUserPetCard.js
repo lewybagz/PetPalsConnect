@@ -9,6 +9,7 @@ import { removeFriend, sendFriendRequest } from "../../api/friends";
 import { addFavorite } from "../../api/favorites";
 import { useTailwind } from "../../styles/tailwind";
 import { useTokens } from "../../context/AppThemeContext";
+import { broughtBy, petPhoto } from "../../utils/petIdentity";
 import { radius } from "../../styles/tokens";
 
 /**
@@ -41,7 +42,11 @@ const SwipeableUserPetCard = ({
 
   const userId = user?._id ? String(user._id) : null;
   const petId = pet?._id ? String(pet._id) : null;
-  const photo = user?.userPhoto ?? pet?.photos?.[0] ?? null;
+  // The pet leads. A friends list of usernames is a list of the people
+  // holding the leads, and the friendship in this app is between the animals.
+  const photo = petPhoto(pet) ?? user?.userPhoto ?? null;
+  const title = pet?.name ?? user?.username ?? "A pal";
+  const caption = [pet?.breed, broughtBy(user)].filter(Boolean).join(" · ");
 
   const handleBlock = async () => {
     if (!userId) return;
@@ -99,8 +104,8 @@ const SwipeableUserPetCard = ({
     if (!userId) return;
 
     Alert.alert(
-      "Remove friend?",
-      "You can send them a friend request again later.",
+      title === "A pal" ? "Remove this pal?" : `Remove ${title}?`,
+      "You can ask to be pals again later.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -132,7 +137,7 @@ const SwipeableUserPetCard = ({
       <TouchableOpacity
         testID={`remove-friend-${userId}`}
         accessibilityRole="button"
-        accessibilityLabel={`Remove ${user?.username ?? "friend"}`}
+        accessibilityLabel={`Remove ${title} from your pals`}
         style={[
           tailwind("bg-danger items-center justify-center"),
           { width: 100, borderRadius: radius.card },
@@ -165,15 +170,15 @@ const SwipeableUserPetCard = ({
               { width: 48, height: 48, borderRadius: radius.pill },
             ]}
           >
-            <Icon name="account" size={26} color={tokens.textFaint} />
+            <Icon name="paw" size={26} color={tokens.textFaint} />
           </View>
         )}
 
         <View style={tailwind("flex-1 ml-md")}>
-          <Text variant="label">{user?.username ?? "Someone"}</Text>
-          {pet?.name ? (
+          <Text variant="label">{title}</Text>
+          {caption ? (
             <Text variant="caption" tone="muted">
-              {pet.breed ? `${pet.name} · ${pet.breed}` : pet.name}
+              {caption}
             </Text>
           ) : null}
         </View>
@@ -182,7 +187,7 @@ const SwipeableUserPetCard = ({
           <TouchableOpacity
             testID={`add-friend-${userId}`}
             accessibilityRole="button"
-            accessibilityLabel="Add friend"
+            accessibilityLabel={`Become pals with ${title}`}
             onPress={handleAddFriend}
             style={tailwind("p-sm")}
           >
@@ -205,7 +210,7 @@ const SwipeableUserPetCard = ({
         testID="friend-options-sheet"
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
-        title={user?.username}
+        title={title}
         items={[
           {
             label: "Add pet to favourites",

@@ -8,6 +8,7 @@ import { sendFriendRequest } from "../api/friends";
 import { addFavorite } from "../api/favorites";
 import { useTailwind } from "../styles/tailwind";
 import { useTokens } from "../context/AppThemeContext";
+import { broughtBy, ownerOf, petPhoto } from "../utils/petIdentity";
 import { radius } from "../styles/tokens";
 
 /**
@@ -46,9 +47,24 @@ const UserPetCard = ({ data, petData, type, onPress, navigation }) => {
   const owner = isPet ? item?.owner : item;
   const ownerId = owner?._id ? String(owner._id) : owner ? String(owner) : null;
 
-  const photo = isPet ? item?.photos?.[0] : item?.userPhoto;
-  const title = isPet ? item?.name : item?.username;
-  const subtitle = isPet ? item?.breed : item?.location;
+  /**
+   * Even the "user" branch leads with an animal.
+   *
+   * The two callers that pass `type="user"` - a chat's roster and a playdate's
+   * participants - are listing people whose reason for being on the screen is
+   * their pet. So the headline is the pet where there is one, and the owner
+   * moves to the caption beside the breed. Where a person genuinely has no
+   * pet, their username is still the title rather than a blank row.
+   */
+  const shownPet = isPet ? item : item?.pets?.[0] ?? null;
+
+  const photo = petPhoto(shownPet) ?? (isPet ? null : item?.userPhoto) ?? null;
+  const title = shownPet?.name ?? (isPet ? null : item?.username);
+  const subtitle = isPet
+    ? [item?.breed, broughtBy(item?.owner)].filter(Boolean).join(" · ") || null
+    : [shownPet?.breed, broughtBy(item)].filter(Boolean).join(" · ") ||
+      item?.location ||
+      null;
 
   if (!item) return null;
 
@@ -76,7 +92,7 @@ const UserPetCard = ({ data, petData, type, onPress, navigation }) => {
 
   const handleAddFriend = async () => {
     if (!ownerId) {
-      toast.error("This pet has no owner to add.");
+      toast.error("There is nobody to ask about that pet.");
       return;
     }
     try {
@@ -112,7 +128,7 @@ const UserPetCard = ({ data, petData, type, onPress, navigation }) => {
             ]}
           >
             <Icon
-              name={isPet ? "paw" : "account"}
+              name={shownPet ? "paw" : "account"}
               size={28}
               color={tokens.textFaint}
             />
@@ -121,6 +137,7 @@ const UserPetCard = ({ data, petData, type, onPress, navigation }) => {
 
         <View style={tailwind("flex-1 ml-md")}>
           <Text variant="label">{title ?? (isPet ? "A pet" : "Someone")}</Text>
+
           {subtitle ? (
             <Text variant="caption" tone="muted">
               {subtitle}
@@ -153,8 +170,8 @@ const UserPetCard = ({ data, petData, type, onPress, navigation }) => {
             disabled: !pet?._id,
           },
           {
-            label: "Add friend",
-            icon: "person-add-outline",
+            label: "Become pals",
+            icon: "paw-outline",
             testID: "card-option-friend",
             onPress: handleAddFriend,
             disabled: !ownerId,
@@ -163,7 +180,13 @@ const UserPetCard = ({ data, petData, type, onPress, navigation }) => {
             label: "Report",
             icon: "flag-outline",
             testID: "card-option-report",
-            onPress: () => navigation?.navigate("ReportUser", { userId: ownerId }),
+            onPress: () =>
+              navigation?.navigate("ReportUser", {
+                userId: ownerId,
+                // You report a person, not a dog - but they are far easier to
+                // recognise as "Sky's owner" than by an account name.
+                name: shownPet ? ownerOf(shownPet) : owner?.username,
+              }),
             disabled: !ownerId || !navigation,
           },
           {

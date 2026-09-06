@@ -39,11 +39,10 @@ const PlaydateDetailsScreen = ({ route, navigation }) => {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.subtitle}>Participants</Text>
-      {playdateDetails.participants.map((user) => (
-        <UserPetCard key={user._id} data={user} type="user" />
-      ))}
-      <Text style={styles.subtitle}>Pets Involved</Text>
+      {/* The pets are who is meeting; the owners are who is bringing them.
+          This had the owners first under the heading "Participants", which
+          made the playdate look like an appointment between two people. */}
+      <Text style={styles.subtitle}>Who&apos;s meeting</Text>
       {playdateDetails.petsInvolved.map((pet) => (
         <UserPetCard
           key={pet._id}
@@ -51,6 +50,10 @@ const PlaydateDetailsScreen = ({ route, navigation }) => {
           type="pet"
           onPress={() => navigateToPetDetails(pet._id)}
         />
+      ))}
+      <Text style={styles.subtitle}>Coming along</Text>
+      {playdateDetails.participants.map((user) => (
+        <UserPetCard key={user._id} data={user} type="user" />
       ))}
       <Text style={styles.title}>Playdate Details</Text>
       <Text>Date: {new Date(playdateDetails.date).toLocaleDateString()}</Text>

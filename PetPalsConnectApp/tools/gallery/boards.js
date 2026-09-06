@@ -1,4 +1,5 @@
 import React from "react";
+import { View } from "react-native";
 
 import DiscoverScreen from "../../src/screens/swipe/DiscoverScreen";
 import HomeScreen from "../../src/screens/bottomTab/HomeScreen";
@@ -18,9 +19,20 @@ import PostPlaydateReviewScreen from "../../src/screens/playdate/PostPlaydateRev
 import MapScreen from "../../src/screens/swipe/MapScreen";
 import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateScreen";
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
+import FriendsListScreen from "../../src/screens/profile/FriendsListScreen";
+import FriendRequestsCard from "../../src/components/FriendRequestsCard";
 import ArticlesScreen from "../../src/screens/misc/ArticlesScreen";
 import ArticleDetailScreen from "../../src/screens/misc/ArticleDetailScreen";
-import { ARTICLE, ARTICLES, CANDIDATES, MY_PET, ROUTES, SETTINGS, pending } from "./fixtures";
+import {
+  ARTICLE,
+  ARTICLES,
+  CANDIDATES,
+  FRIEND_REQUESTS,
+  MY_PET,
+  ROUTES,
+  SETTINGS,
+  pending,
+} from "./fixtures";
 
 /**
  * What the gallery can render, and the fixtures each board needs.
@@ -245,6 +257,40 @@ export const BOARDS = [
     routes: { ...ROUTES, [`/api/articles/${ARTICLE._id}`]: ARTICLE },
     render: () => (
       <ArticleDetailScreen route={{ params: { articleId: ARTICLE._id } }} />
+    ),
+  },
+  {
+    // The pal is the pet; the owner is the line underneath. This list used to
+    // be usernames with an arbitrary pet from the household as the caption.
+    id: "friends",
+    label: "Pals",
+    routes: ROUTES,
+    render: () => <FriendsListScreen navigation={navigation} />,
+  },
+  {
+    id: "friends-empty",
+    label: "Pals - empty",
+    routes: { ...ROUTES, "/api/friends": [] },
+    render: () => <FriendsListScreen navigation={navigation} />,
+  },
+  {
+    // One request received and one sent. `isSender` compared a pet id against
+    // a user id, so it was always false and both rendered as received - with
+    // Accept and Decline under your own outgoing request.
+    id: "friend-requests",
+    label: "Pal requests",
+    routes: ROUTES,
+    render: () => (
+      <View style={{ padding: 16 }}>
+        {FRIEND_REQUESTS.map((request) => (
+          <FriendRequestsCard
+            key={request._id}
+            friendRequest={request}
+            onAccept={() => {}}
+            onDecline={() => {}}
+          />
+        ))}
+      </View>
     ),
   },
   {

@@ -83,7 +83,7 @@ const ChatDetailsScreen = ({ route, navigation }) => {
       {isGroupChat && (
         <>
           <Text>
-            Number of Participants: {chatDetails.participants?.length}
+            {chatDetails.pets?.length ?? chatDetails.participants?.length ?? 0} pets
           </Text>
           <FlatList
             data={chatDetails.participants?.slice(0, 5)}

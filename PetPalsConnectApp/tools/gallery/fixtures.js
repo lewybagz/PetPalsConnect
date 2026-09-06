@@ -78,20 +78,89 @@ export const CANDIDATES = [
   },
 ];
 
+/**
+ * The inbox.
+ *
+ * `pets` carries both animals, with owners, because the row is titled by the
+ * pet whose owner is not you - a conversation is between two pets, and an
+ * inbox listing usernames is listing the people holding the leads. `me` is the
+ * gallery's own user id, so one of each pair belongs to the viewer.
+ */
 export const CHATS = [
   {
     _id: "chat-1",
-    participants: [{ _id: "user-1", username: "maya", userPhoto: PHOTOS.me }],
+    participants: [
+      { _id: "user-me", username: "you", userPhoto: PHOTOS.me },
+      { _id: "user-1", username: "maya", userPhoto: PHOTOS.me },
+    ],
     lastMessage: { contentText: "Bo would love that! Saturday morning?" },
-    petId: { _id: "pet-1", name: "Bo", photos: [PHOTOS.bo] },
+    pets: [
+      { _id: "pet-mine", name: "Rex", photos: [PHOTOS.me], owner: "user-me" },
+      { _id: "pet-1", name: "Bo", photos: [PHOTOS.bo], owner: "user-1" },
+    ],
     updatedAt: new Date().toISOString(),
   },
   {
     _id: "chat-2",
-    participants: [{ _id: "user-2", username: "dev", userPhoto: PHOTOS.me }],
+    participants: [
+      { _id: "user-me", username: "you", userPhoto: PHOTOS.me },
+      { _id: "user-2", username: "dev", userPhoto: PHOTOS.me },
+    ],
     lastMessage: { contentText: "Sky is a bit shy around bigger dogs" },
-    petId: { _id: "pet-2", name: "Sky", photos: [PHOTOS.sky] },
+    pets: [
+      { _id: "pet-mine", name: "Rex", photos: [PHOTOS.me], owner: "user-me" },
+      { _id: "pet-2", name: "Sky", photos: [PHOTOS.sky], owner: "user-2" },
+    ],
     updatedAt: new Date().toISOString(),
+  },
+];
+
+/**
+ * Friendships, as `/api/friends` returns them: Friend rows with both owners
+ * and both pets. `pet1`/`pet2` line up with `user1`/`user2`, which is what
+ * lets the list show the pal your pet actually made friends with rather than
+ * whichever animal happened to be first in that household.
+ */
+export const FRIENDS = [
+  {
+    _id: "friend-1",
+    status: true,
+    user1: { _id: "user-me", username: "sam", userPhoto: PHOTOS.me },
+    user2: { _id: "user-1", username: "maya", userPhoto: PHOTOS.me },
+    pet1: { _id: "pet-mine", name: "Rex", breed: "Beagle", photos: [PHOTOS.me] },
+    pet2: { _id: "pet-1", name: "Bo", breed: "Border Collie", photos: [PHOTOS.bo] },
+  },
+  {
+    _id: "friend-2",
+    status: true,
+    // The other way round, so the list is exercised from both sides of the
+    // pair - `pairFor` sorts the owners, so either can be `user1`.
+    user1: { _id: "user-2", username: "dev", userPhoto: PHOTOS.me },
+    user2: { _id: "user-me", username: "sam", userPhoto: PHOTOS.me },
+    pet1: { _id: "pet-2", name: "Sky", breed: "Whippet", photos: [PHOTOS.sky] },
+    pet2: { _id: "pet-mine", name: "Rex", breed: "Beagle", photos: [PHOTOS.me] },
+  },
+];
+
+/** Pending pal requests: one you received, one you sent. */
+export const FRIEND_REQUESTS = [
+  {
+    _id: "req-1",
+    status: "pending",
+    createdDate: new Date().toISOString(),
+    sender: { _id: "user-1", username: "maya" },
+    receiver: { _id: "user-me", username: "sam" },
+    senderPet: { _id: "pet-1", name: "Bo", photos: [PHOTOS.bo] },
+    receiverPet: { _id: "pet-mine", name: "Rex", photos: [PHOTOS.me] },
+  },
+  {
+    _id: "req-2",
+    status: "pending",
+    createdDate: new Date(Date.now() - 86400000).toISOString(),
+    sender: { _id: "user-me", username: "sam" },
+    receiver: { _id: "user-2", username: "dev" },
+    senderPet: { _id: "pet-mine", name: "Rex", photos: [PHOTOS.me] },
+    receiverPet: { _id: "pet-2", name: "Sky", photos: [PHOTOS.sky] },
   },
 ];
 
@@ -303,6 +372,8 @@ export const ROUTES = {
   "/api/articles/latest": ARTICLES,
   [`/api/articles/${ARTICLE._id}`]: ARTICLE,
   "/api/chats": CHATS,
+  "/api/friends": FRIENDS,
+  "/api/friendrequests": FRIEND_REQUESTS,
   "/api/blocklists": BLOCKED,
   "/api/reports/options": { reasons: [], targets: [] },
   "/api/petmatches/map": {

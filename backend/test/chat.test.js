@@ -198,7 +198,14 @@ test("the recipient gets a notification they can actually read", async () => {
 
   const notification = await Notification.findOne({ recipient: bob.user._id }).lean();
   assert.ok(notification, "no notification reached the recipient");
-  assert.match(notification.content, /sent you a message/i);
+
+  // Both pets by name. This used to read `req.user?.username`, and `req.user`
+  // is not something the middleware sets - it sets `req.userId` and
+  // `req.firebaseUser` - so every message notification this app ever sent
+  // began with the literal word "Someone". The old assertion passed anyway,
+  // because it only looked at the half of the sentence that was not broken.
+  assert.match(notification.content, /notify-alice-pet sent notify-bob-pet a message/i);
+  assert.doesNotMatch(notification.content, /someone/i);
   // The type is what decides where tapping it goes, so it has to be one the
   // app knows - not a free string invented at the call site.
   assert.equal(notification.type, "message");

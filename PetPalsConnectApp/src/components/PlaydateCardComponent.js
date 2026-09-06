@@ -33,12 +33,32 @@ const PlaydateCardComponent = ({ playdate, navigation }) => {
   };
 
   const renderPetCard = ({ item }) => (
-    <UserPetCardComponent petData={item} navigation={navigation} />
+    <UserPetCardComponent data={item} type="pet" navigation={navigation} />
   );
 
-  const displayCreatorName = () => {
-    return playdate.creator === currentUser ? "You" : playdate.creator;
+  /**
+   * Who organised it, as a pet.
+   *
+   * This rendered `playdate.creator` directly when it was not you - a raw
+   * ObjectId printed onto the card - and "You" when it was. A playdate is
+   * arranged between animals, so the organiser is named by theirs.
+   */
+  const organiser = () => {
+    const creatorId = String(playdate.creator?._id ?? playdate.creator ?? "");
+    if (creatorId && creatorId === String(currentUser)) return "you";
+
+    const theirs = (playdate.petsInvolved ?? []).find(
+      (pet) => String(pet?.owner?._id ?? pet?.owner ?? "") === creatorId
+    );
+    return theirs?.name ?? playdate.creator?.username ?? "someone";
   };
+
+  // The pets are the headline. "Upcoming" is a state, not a subject.
+  const meeting =
+    (playdate.petsInvolved ?? [])
+      .map((pet) => pet?.name)
+      .filter(Boolean)
+      .join(" and ") || "A playdate";
 
   const isUpcoming = new Date(playdate.date) > new Date();
 
@@ -49,9 +69,10 @@ const PlaydateCardComponent = ({ playdate, navigation }) => {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{isUpcoming ? "Upcoming" : "Past"}</Text>
-      {/* Additional components for participants, pets involved, etc. */}
-      <Text style={styles.sectionTitle}>Pets Involved:</Text>
+      <Text style={styles.title}>{meeting}</Text>
+      <Text style={styles.sectionTitle}>
+        {isUpcoming ? "Coming up" : "Already happened"}
+      </Text>
       <FlatList
         data={playdate.petsInvolved}
         renderItem={renderPetCard}
@@ -66,7 +87,7 @@ const PlaydateCardComponent = ({ playdate, navigation }) => {
       )}
       <Text>Notes: {playdate.notes || "N/A"}</Text>
       <Text>Date: {formatDate(playdate.date)}</Text>
-      <Text>Creator: {displayCreatorName()}</Text>{" "}
+      <Text>Organised by {organiser()}</Text>
     </View>
   );
 };

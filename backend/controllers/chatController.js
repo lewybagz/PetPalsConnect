@@ -41,7 +41,7 @@ const ChatController = {
       })
         .populate("participants", "username userPhoto")
         .populate("lastMessage")
-        .populate("petId", "name photos")
+        .populate("pets", "name photos owner")
         .sort({ isPinned: -1, updatedAt: -1 });
 
       res.json(chats);
@@ -112,12 +112,24 @@ const ChatController = {
    * elsewhere - a client could open a chat as somebody else. The caller comes
    * from the token now, and the second participant from the pet's owner.
    *
-   * The chat key is derived from the two user ids *sorted*. `${userId}-${petId}`
-   * is asymmetric, so A messaging B's pet and B messaging A's pet produced two
-   * different threads for the same conversation.
+   * The key was then derived from the two user *ids*, sorted - which fixed an
+   * asymmetry (A messaging B's pet and B messaging A's pet made two threads)
+   * and introduced a different one, described below.
+   */
+  /**
+   * The conversation between two pets, created if it does not exist.
+   *
+   * `petId` is the pet being written to; `myPetId` is the one doing the
+   * writing. Both are required in spirit - a conversation is between two
+   * animals - but an owner with exactly one pet should not have to say which,
+   * so a single pet is filled in for them.
+   *
+   * The key is the sorted pet pair rather than the owner pair, which is what
+   * makes two of your dogs talking to the same person two threads instead of
+   * one thread that quietly recorded whichever pet opened it.
    */
   async findOrCreateChat(req, res) {
-    const { petId } = req.body;
+    const { petId, myPetId } = req.body;
 
     if (!petId) {
       return res.status(400).json({ message: "petId is required" });
@@ -152,17 +164,51 @@ const ChatController = {
           .json({ message: "This conversation is not available" });
       }
 
-      const pair = [String(req.userId), String(pet.owner)].sort().join("-");
-      const chatId = SHA256(pair);
+      // Resolving the caller's own pet happens *after* the block and audience
+      // checks, not before. Ordered the other way, somebody who had been
+      // blocked and happened to have no pet got "Add a pet before starting a
+      // conversation" instead of the refusal - a different answer for the same
+      // forbidden action, which is exactly the kind of difference that tells
+      // somebody something about an account they have been kept away from.
+      const mine = await Pet.find({ owner: req.userId }).select("_id").lean();
+      if (mine.length === 0) {
+        return res
+          .status(409)
+          .json({ message: "Add a pet before starting a conversation" });
+      }
 
-      let chat = await Chat.findOne({ chatId }).populate("messages");
+      let ownPetId = myPetId ? String(myPetId) : null;
+      if (ownPetId && !mine.some((p) => String(p._id) === ownPetId)) {
+        // The caller named a pet that is not theirs. Not an authorisation hole
+        // - the chat is still scoped to them - but it would file the thread
+        // under somebody else's animal.
+        return res.status(403).json({ message: "That is not your pet" });
+      }
+      if (!ownPetId) {
+        if (mine.length > 1) {
+          return res
+            .status(400)
+            .json({ message: "myPetId is required when you have more than one pet" });
+        }
+        ownPetId = String(mine[0]._id);
+      }
+
+      const pets = [ownPetId, String(petId)].sort();
+      const chatId = SHA256(pets.join("-"));
+
+      let chat = await Chat.findOne({ chatId })
+        .populate("messages")
+        .populate("pets", "name photos owner");
 
       if (!chat) {
         chat = await Chat.create({
           chatId,
           participants: [req.userId, pet.owner],
-          petId,
+          pets,
         });
+        chat = await Chat.findById(chat._id)
+          .populate("messages")
+          .populate("pets", "name photos owner");
       }
 
       res.status(200).json(chat);
@@ -188,7 +234,9 @@ const ChatController = {
       const chat = await Chat.findOne({
         _id: chatId,
         participants: req.userId,
-      }).populate("participants", "username pets");
+      })
+        .populate("participants", "username pets")
+        .populate("pets", "name owner");
 
       if (!chat) {
         return res.status(404).json({ message: "Chat not found" });
@@ -223,9 +271,25 @@ const ChatController = {
       emitToUser(recipient?._id, "message", message);
 
       if (recipient) {
-        const senderName = req.user?.username ?? "Someone";
+        // The sender is a pet, not a person. This read `req.user?.username`,
+        // and `req.user` is not a thing the middleware sets - it sets
+        // `req.userId` and `req.firebaseUser` - so every message notification
+        // this app has ever sent said "Someone sent you a message."
+        const senderPet = (chat.pets ?? []).find(
+          (pet) => String(pet?.owner) === String(req.userId)
+        );
+        const theirPet = (chat.pets ?? []).find(
+          (pet) => String(pet?.owner) === String(recipient._id)
+        );
+
+        const content = senderPet?.name
+          ? theirPet?.name
+            ? `${senderPet.name} sent ${theirPet.name} a message.`
+            : `${senderPet.name} sent you a message.`
+          : "You have a new message.";
+
         await notify({
-          content: `${senderName} sent you a message.`,
+          content,
           recipientId: recipient._id,
           type: "message",
           creatorId: req.userId,

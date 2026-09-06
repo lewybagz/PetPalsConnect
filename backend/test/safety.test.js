@@ -173,6 +173,10 @@ test("a blocked person cannot open a chat with you", async () => {
   const me = await signUp("target");
   const them = await signUp("pest");
   const mine = await givePet(me, "Bo");
+  // Given a pet deliberately: the refusal has to be the *block*, not "you have
+  // no pet". A blocked person who happens to have no pet must still get the
+  // same vague answer as one who does, or the difference is itself a signal.
+  await givePet(them, "Sky");
 
   await request(app)
     .post("/api/blocklists")
@@ -194,6 +198,10 @@ test("a blocked person cannot send into a chat that already exists", async () =>
   const me = await signUp("author");
   const them = await signUp("replier");
   const mine = await givePet(me, "Bo");
+  // A conversation is between two pets, so both sides need one - which is
+  // what `withRequiredPet` has always told the app ("Chats in PetPals happen
+  // between pets, so you'll need one first").
+  await givePet(them, "Sky");
 
   const chat = await request(app)
     .post("/api/chats/findOrCreate")
@@ -224,6 +232,7 @@ test("a blocked conversation leaves the inbox", async () => {
   const me = await signUp("owner-a");
   const them = await signUp("owner-b");
   const mine = await givePet(me, "Bo");
+  await givePet(them, "Sky");
 
   await request(app)
     .post("/api/chats/findOrCreate")

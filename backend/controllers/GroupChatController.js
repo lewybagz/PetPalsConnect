@@ -1,4 +1,5 @@
 const GroupChat = require("../models/GroupChat");
+const Pet = require("../models/Pet");
 const Media = require("../models/Media");
 const Message = require("../models/Message");
 const {
@@ -20,6 +21,24 @@ const SHA256 = (value) => createHash("sha256").update(String(value)).digest("hex
  */
 const memberChat = (chatId, userId) =>
   GroupChat.findOne({ _id: chatId, participants: userId });
+
+/**
+ * The name of the pet posting, for a notification.
+ *
+ * A group in this app is a group of pets - `GroupChatCreationScreen` picks
+ * pets and derives their owners silently - so "Rex posted in Park Crew" is
+ * what a member expects to read, not an account name they may never have seen.
+ */
+const senderPetName = async (userId, groupChat) => {
+  const inGroup = (groupChat?.pets ?? []).map(String);
+  const pets = await Pet.find({ owner: userId }).select("name").lean();
+  if (pets.length === 0) return "Someone";
+
+  // Prefer the pet that is actually in this group - an owner with three dogs
+  // is in the group as one of them.
+  const theirs = pets.find((pet) => inGroup.includes(String(pet._id)));
+  return (theirs ?? pets[0]).name ?? "Someone";
+};
 
 const GroupChatController = {
   async getAllGroupChats(req, res) {
@@ -110,7 +129,10 @@ const GroupChatController = {
       groupChat.messages.push(message._id);
       await groupChat.save();
 
-      const senderName = req.user?.username ?? "Someone";
+      // The sender is a pet. `req.user` is not something the middleware sets -
+      // it sets `req.userId` and `req.firebaseUser` - so this always resolved
+      // to the literal string "Someone".
+      const senderName = await senderPetName(req.userId, groupChat);
       const members = await fetchGroupParticipants(groupId, req.userId);
 
       const io = req.app.get("io");
@@ -429,6 +451,9 @@ const GroupChatController = {
     const participants = Array.isArray(req.body.participants)
       ? req.body.participants.map(String)
       : [];
+    // The pets the group is of. The screen already asks for these; they were
+    // being converted to owners and thrown away.
+    const petIds = Array.isArray(req.body.pets) ? req.body.pets.map(String) : [];
 
     const groupChat = new GroupChat({
       groupName: req.body.groupName,
@@ -438,6 +463,7 @@ const GroupChatController = {
       participants: [...new Set([...participants, String(req.userId)])],
       // Identity comes from the token, never the body.
       creator: req.userId,
+      pets: petIds,
       media: req.body.media || [],
     });
 

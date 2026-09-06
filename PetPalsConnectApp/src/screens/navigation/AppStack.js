@@ -144,8 +144,8 @@ export default function AppStack() {
       <Stack.Screen name="AccountInformation" component={AccountInformationScreen} options={{ title: "Account" }} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: "Change Password" }} />
       <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ title: "Favorites" }} />
-      <Stack.Screen name="FriendRequests" component={FriendRequestsScreen} options={{ title: "Friend Requests" }} />
-      <Stack.Screen name="FriendsList" component={FriendsListScreen} options={{ title: "Friends" }} />
+      <Stack.Screen name="FriendRequests" component={FriendRequestsScreen} options={{ title: "Pal requests" }} />
+      <Stack.Screen name="FriendsList" component={FriendsListScreen} options={{ title: "Pals" }} />
       <Stack.Screen name="ReportUser" component={ReportUserScreen} options={{ title: "Report" }} />
 
       {/* Settings */}

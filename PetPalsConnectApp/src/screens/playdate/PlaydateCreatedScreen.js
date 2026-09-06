@@ -56,7 +56,9 @@ const PlaydateCreatedScreen = ({ route, navigation }) => {
       {photo ? (
         <Image source={{ uri: photo }} style={styles.petImage} />
       ) : null}
-      <Text style={styles.header}>Playdate Scheduled Successfully!</Text>
+      <Text style={styles.header}>
+        {pet?.name ? `You're meeting ${pet.name}!` : "Playdate scheduled"}
+      </Text>
       <View style={styles.detailsContainer}>
         <Text style={styles.label}>Date & Time:</Text>
         <Text style={styles.detail}>{formatDate(playdate.date)}</Text>

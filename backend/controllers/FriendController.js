@@ -21,14 +21,25 @@ const Pet = require("../models/Pet");
 const pairFor = (a, b) =>
   [String(a), String(b)].sort().map((id) => id);
 
-/** Marks two people friends. Idempotent - accepting twice is one friendship. */
-const linkFriends = async (a, b) => {
+/**
+ * Marks two pets - and so their people - pals. Idempotent.
+ *
+ * `petByOwner` maps a user id to the pet of theirs this friendship is about,
+ * keyed by owner rather than positionally, because `pairFor` sorts the two
+ * users and a positional pair would silently attach each pet to the wrong
+ * side whenever the sort happened to swap them.
+ */
+const linkFriends = async (a, b, petByOwner = {}) => {
   const [user1, user2] = pairFor(a, b);
+
+  const pets = {};
+  if (petByOwner[user1]) pets.pet1 = petByOwner[user1];
+  if (petByOwner[user2]) pets.pet2 = petByOwner[user2];
 
   return Friend.findOneAndUpdate(
     { user1, user2 },
     {
-      $set: { status: true, modifiedDate: new Date() },
+      $set: { status: true, modifiedDate: new Date(), ...pets },
       $setOnInsert: { creator: user1, createdDate: new Date() },
     },
     { upsert: true, new: true }
@@ -58,7 +69,11 @@ const FriendController = {
           path: "user2",
           select: "username userPhoto pets",
           populate: { path: "pets", select: "name breed photos" },
-        });
+        })
+        // The two animals this friendship is actually about, so the list can
+        // lead with them rather than picking each owner's first pet and hoping.
+        .populate("pet1", "name breed photos owner")
+        .populate("pet2", "name breed photos owner");
       res.json(friends);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -85,7 +100,11 @@ const FriendController = {
           path: "user2",
           select: "username userPhoto pets",
           populate: { path: "pets", select: "name breed photos" },
-        });
+        })
+        // The two animals this friendship is actually about, so the list can
+        // lead with them rather than picking each owner's first pet and hoping.
+        .populate("pet1", "name breed photos owner")
+        .populate("pet2", "name breed photos owner");
       if (friend == null) {
         return res
           .status(404)
