@@ -1,0 +1,3 @@
+# These are consumed by Claude Code and by bash. CRLF breaks both:
+# frontmatter matched on \n, and \r in a shell script.
+* text eol=lf

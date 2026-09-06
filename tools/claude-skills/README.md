@@ -32,6 +32,13 @@ Restart Claude Code afterwards.
 
 Set `CLAUDE_SKILLS_DIR` to install somewhere else.
 
+Both installers **verify** what they wrote and exit non-zero if it will not
+load. A skill Claude Code cannot parse is skipped in silence — no error, it
+simply never appears — so the checks cover the three ways that happens: a
+UTF-8 BOM, a stray CR, and a frontmatter block that is not `---` on line 1
+with single-line `name:` and `description:` fields. A YAML block scalar
+(`description: >-`) is valid YAML and still will not load; it is rejected too.
+
 **Do not run `install.sh` under WSL bash for a Windows install of Claude Code.**
 `$HOME` there is the Linux home directory, so the skill would land somewhere
 Windows Claude Code never reads while the script reports success. The script

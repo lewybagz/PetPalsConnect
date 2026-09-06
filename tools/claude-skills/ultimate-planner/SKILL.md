@@ -1,16 +1,6 @@
 ---
 name: ultimate-planner
-description: >-
-  Plans features and refactors grounded in the current repository — maps routes, data
-  models, APIs, and conventions before proposing work. Discovers and installs relevant
-  Claude Code plugins/skills by domain (UI/UX, Stripe, Firebase, testing, Three.js
-  game/arena, 2D characters/sprites/cosmetics, etc.) so implementation follows
-  specialized workflows. Uses Context7 for library API docs and web search for
-  live external facts when plans need current information. Use when the user asks
-  to plan a feature, design an implementation, write a spec, break work into phases,
-  choose architecture, scope an MVP, or says "how should we build", "plan this",
-  "/plan", or "ultimate planner".
-allowed-tools: Read, Glob, Grep, Bash, Write, WebSearch, WebFetch, Skill, TodoWrite, TaskCreate, TaskUpdate
+description: "Plans features and refactors grounded in the current repository — maps routes, data models, APIs, and conventions before proposing work. Discovers and installs relevant Claude Code plugins/skills by domain (UI/UX, Stripe, Firebase, testing, Three.js game/arena, 2D characters/sprites/cosmetics, etc.) so implementation follows specialized workflows. Uses Context7 for library API docs and web search for live external facts when plans need current information. Use when the user asks to plan a feature, design an implementation, write a spec, break work into phases, choose architecture, scope an MVP, or says \"how should we build\", \"plan this\", \"/plan\", or \"ultimate planner\"."
 ---
 
 # Ultimate Planner
