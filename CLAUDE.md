@@ -855,6 +855,16 @@ one direction; only a like in both directions creates the PetMatch rows, the
 notifications and the `petMatch` event. One-sided interest is invisible to the
 other person.
 
+**A discovery preference narrows the deck; it never widens it.** The species
+preference in `discovery` and the dogs-only rule in `matchableQuery()` were
+written on separate branches, and the preference assigned `query.species`
+outright - overwriting the rule it was spread in beside, so a preference naming
+a cat put cats in the deck. Anything added to that query has to compose with
+what is already there, not replace it. The two species vocabularies still
+differ (`services/settings.js` offers `rabbit`/`other`, `Pet.species` has
+`smallMammal`/`reptile`/`fish`) - worth reconciling, and moot while only dogs
+match.
+
 **Distance filters, it does not score.** `services/matching/distance.js` drops
 candidates outside the owner's `playdateRange` and attaches `distanceMiles`.
 Scoring stays about the pets: you want the best fit among pets you can reach,

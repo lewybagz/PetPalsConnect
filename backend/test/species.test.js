@@ -186,6 +186,50 @@ test("asking to browse as a cat says why rather than silently swapping pets", as
   assert.match(res.body.message, /dog/i);
 });
 
+test("a species preference cannot put a cat back in the deck", async () => {
+  /**
+   * The regression this exists for. The dogs-only filter and the owner's
+   * discovery species preference were written on separate branches, and the
+   * preference assigned `query.species` outright - overwriting the rule rather
+   * than narrowing it. A preference naming a cat would have served cats.
+   */
+  const me = await makeOwner("pref-me");
+  await givePet(me);
+  await User.updateOne(
+    { _id: me._id },
+    { $set: { "discovery.species": ["cat"] } }
+  );
+
+  const them = await makeOwner("pref-them");
+  await givePet(them, { name: "Mog", species: "cat", breed: "Tabby", weight: 9 });
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("pref-me"))
+    .expect(200);
+
+  assert.deepEqual(res.body.candidates, []);
+});
+
+test("a preference that includes dogs still sees dogs", async () => {
+  const me = await makeOwner("pref-dog-me");
+  await givePet(me);
+  await User.updateOne(
+    { _id: me._id },
+    { $set: { "discovery.species": ["dog", "cat"] } }
+  );
+
+  const them = await makeOwner("pref-dog-them");
+  await givePet(them);
+
+  const res = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("pref-dog-me"))
+    .expect(200);
+
+  assert.equal(res.body.candidates.length, 1);
+});
+
 // --- Deciding ---------------------------------------------------------------
 
 test("a decision involving a cat is refused", async () => {

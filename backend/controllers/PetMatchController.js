@@ -13,6 +13,7 @@ const { notify } = require("../services/NotificationService");
 const { emitToUser } = require("../services/realtime");
 const blocking = require("../services/blocking");
 const {
+  MATCHABLE_SPECIES,
   matchableQuery,
   isMatchable,
 } = require("../services/matching/eligibility");
@@ -133,9 +134,23 @@ const reachableCandidates = async ({
   if (minAge > 0 || maxAge < 30) {
     query.age = { $gte: minAge, $lte: maxAge };
   }
-  // Empty means "no preference", which is not the same as "none of them".
-  if (species.length > 0) {
-    query.species = { $in: species };
+  /**
+   * The owner's species preference can only ever *narrow* what is already
+   * matchable - never widen it.
+   *
+   * This read `query.species = { $in: species }`, which overwrote the
+   * dogs-only filter spread in from `matchableQuery()` a few lines above: a
+   * preference naming a cat would have put cats in the deck and quietly
+   * undone the rule the whole matching path is built on. The two changes were
+   * written on separate branches and each was correct alone, which is exactly
+   * how an assignment like this survives review.
+   *
+   * Empty means "no preference", which is not the same as "none of them". A
+   * preference that excludes the one matchable species matches nothing, which
+   * is what the owner asked for.
+   */
+  if (species.length > 0 && !species.includes(MATCHABLE_SPECIES)) {
+    query.species = { $in: [] };
   }
 
   const candidates = await Pet.find(query).limit(limit).lean();
