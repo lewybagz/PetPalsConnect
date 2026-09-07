@@ -11,10 +11,31 @@ const FEATURE_VARS = {
   maps: ["GOOGLE_MAPS_API_KEY"],
 };
 
+// dotenv reads the file as UTF-8. PowerShell's `>` and pre-6 `Set-Content`
+// write UTF-16, which parses to nothing at all - so a .env that visibly holds
+// every setting reports every setting missing, with nothing saying why.
+const encodingHint = () => {
+  const envFile = require("node:path").resolve(process.cwd(), ".env");
+  let head;
+  try {
+    head = require("node:fs").readFileSync(envFile).subarray(0, 2);
+  } catch {
+    return "";
+  }
+  const utf16 =
+    (head[0] === 0xff && head[1] === 0xfe) ||
+    (head[0] === 0xfe && head[1] === 0xff) ||
+    (head[1] === 0x00 && head[0] !== 0x00);
+  return utf16
+    ? `[config] ${envFile} is UTF-16, which dotenv cannot read. Re-save it as UTF-8.\n`
+    : "";
+};
+
 const missing = REQUIRED.filter((key) => !process.env[key]);
 if (missing.length > 0) {
   console.error(
     `\n[config] Missing required environment variable(s): ${missing.join(", ")}\n` +
+      encodingHint() +
       `[config] Copy backend/.env.example to backend/.env and fill it in.\n`
   );
   process.exit(1);

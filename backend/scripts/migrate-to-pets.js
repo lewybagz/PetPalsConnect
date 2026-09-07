@@ -34,23 +34,53 @@ const SHA256 = (value) => createHash("sha256").update(String(value)).digest("hex
 
 const ROOT = path.resolve(__dirname, "..");
 
+/**
+ * Decodes a .env that may not be UTF-8. PowerShell's `>` redirection and
+ * `Set-Content` before PowerShell 6 write UTF-16LE, which read as UTF-8 is a
+ * NUL between every letter - so `MONGODB_URI=` matches nothing and the file
+ * looks empty to a parser that never says why.
+ */
+const decodeEnv = (buffer) => {
+  if (buffer[0] === 0xff && buffer[1] === 0xfe) return buffer.subarray(2).toString("utf16le");
+  if (buffer[0] === 0xfe && buffer[1] === 0xff) return buffer.subarray(2).swap16().toString("utf16le");
+  // No BOM, but UTF-16LE ASCII still puts a NUL in every second byte.
+  if (buffer.length > 1 && buffer[1] === 0x00 && buffer[0] !== 0x00) return buffer.toString("utf16le");
+  return buffer.toString("utf8").replace(/^\ufeff/, "");
+};
+
 const readMongoUri = () => {
-  if (process.env.MONGODB_URI) return process.env.MONGODB_URI;
+  if (process.env.MONGODB_URI) return { uri: process.env.MONGODB_URI };
   const envFile = path.join(ROOT, ".env");
-  if (!fs.existsSync(envFile)) return null;
-  for (const line of fs.readFileSync(envFile, "utf8").split("\n")) {
-    const match = line.match(/^\s*MONGODB_URI\s*=\s*(.*)$/);
-    if (match) return match[1].trim().replace(/^["']|["']$/g, "");
+  if (!fs.existsSync(envFile)) return { error: `No MONGODB_URI in the environment, and no file at ${envFile}.` };
+
+  const text = decodeEnv(fs.readFileSync(envFile));
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.match(/^\s*(?:export\s+)?MONGODB_URI\s*=\s*(.*)$/);
+    if (match) {
+      const uri = match[1].trim().replace(/^["']|["']$/g, "");
+      if (uri) return { uri };
+      return { error: `MONGODB_URI is empty in ${envFile}.` };
+    }
   }
-  return null;
+
+  const keys = text
+    .split(/\r?\n/)
+    .map((line) => line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/))
+    .filter(Boolean)
+    .map((match) => match[1]);
+  return {
+    error: keys.length
+      ? `No MONGODB_URI in ${envFile}. It defines: ${keys.join(", ")}.`
+      : `No MONGODB_URI in ${envFile}, and no settings could be read from it at all - check its encoding is UTF-8.`,
+  };
 };
 
 const main = async () => {
   const dryRun = process.argv.includes("--dry-run");
 
-  const uri = readMongoUri();
+  const { uri, error } = readMongoUri();
   if (!uri) {
-    console.error("No MONGODB_URI. Set it in the environment or in backend/.env.");
+    console.error(error);
     process.exit(1);
   }
 
@@ -184,11 +214,17 @@ const main = async () => {
   return mongoose;
 };
 
-main()
-  .then(async (mongoose) => {
-    if (mongoose?.connection?.readyState !== 0) await mongoose.disconnect();
-  })
-  .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
+// Exported so the decoder can be tested on buffers. A test must never write
+// the real backend/.env to exercise it.
+module.exports = { decodeEnv, readMongoUri };
+
+if (require.main === module) {
+  main()
+    .then(async (mongoose) => {
+      if (mongoose?.connection?.readyState !== 0) await mongoose.disconnect();
+    })
+    .catch((error) => {
+      console.error(error);
+      process.exitCode = 1;
+    });
+}

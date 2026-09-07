@@ -297,3 +297,33 @@ test("a migrated conversation is the one findOrCreateChat then reuses", async ()
 
   assert.equal(String(res.body._id), String(_id));
 });
+
+// PowerShell's `>` and pre-6 Set-Content write UTF-16. Read as UTF-8 that is a
+// NUL between every letter, so the file parses to nothing and a .env visibly
+// holding the URI reports it missing. Tested on buffers: a test must never
+// write the real backend/.env to exercise this.
+const { decodeEnv } = require("../scripts/migrate-to-pets.js");
+
+test("the connection string is read whatever encoding the shell wrote", () => {
+  const line = "MONGODB_URI=mongodb+srv://u:p@host.mongodb.net/?appName=X";
+  const utf16le = (text) => Buffer.from(text, "utf16le");
+  const withBom = (bom, buffer) => Buffer.concat([Buffer.from(bom), buffer]);
+
+  const shapes = {
+    "utf-8": Buffer.from(line, "utf8"),
+    "utf-8 with a BOM": withBom([0xef, 0xbb, 0xbf], Buffer.from(line, "utf8")),
+    "utf-16le with a BOM": withBom([0xff, 0xfe], utf16le(line)),
+    "utf-16le with no BOM": utf16le(line),
+    "utf-16be with a BOM": withBom([0xfe, 0xff], utf16le(line).swap16()),
+  };
+  for (const [shape, buffer] of Object.entries(shapes)) {
+    assert.equal(decodeEnv(buffer), line, `${shape} did not decode`);
+  }
+});
+
+test("a UTF-8 body is left alone rather than guessed at", () => {
+  const body = "PORT=3000\r\nMONGODB_URI=mongodb://localhost/x";
+  assert.equal(decodeEnv(Buffer.from(body, "utf8")), body);
+  // A leading NUL is not UTF-16LE ASCII and must not be treated as one.
+  assert.equal(decodeEnv(Buffer.from(" oops", "utf8")), " oops");
+});
