@@ -1,40 +1,119 @@
-import api from "./axios";
+import { Linking, Platform } from "react-native";
+import Purchases, {
+  LOG_LEVEL,
+  type CustomerInfo,
+  type PurchasesPackage,
+} from "react-native-purchases";
 
-import { STRIPE_PUBLISHABLE_KEY } from "../config/env";
-import type {
-  PaymentSheetSession,
-  Plan,
-  Subscription,
-  SubscriptionStatus,
-} from "../types/api";
+import api from "./axios";
+import { REVENUECAT_API_KEY } from "../config/env";
+import type { Subscription, SubscriptionStatus } from "../types/api";
 
 /**
  * The subscription half of the API surface.
  *
- * Every one of these paths used to be something else: the app called
- * `/api/subscriptions/create-checkout-session` (a browser flow a native app
- * cannot complete), `/api/subscriptions/:userId` (identity comes from the
- * token, never the URL), and `/renew` and `/change-plan`, neither of which the
- * server has ever implemented. Keeping the paths in one module means the
- * backend contract test has a single place to check.
+ * Buying happens against the store - StoreKit on iOS, Play Billing on
+ * Android - through RevenueCat, which validates the receipt and tells the
+ * server what happened over a webhook. So the server has nothing to create,
+ * cancel or resume: those are the store's, and this module only reads back
+ * what the server was told.
+ *
+ * Stripe's PaymentSheet was here before. A subscription that unlocks in-app
+ * features has to use native IAP (Apple 3.1.1, Play's payments policy), so
+ * however well it worked it could not ship on either store.
  */
 
-/** True when this build was given a publishable key to talk to Stripe with. */
-export const paymentsConfigured = (): boolean =>
-  typeof STRIPE_PUBLISHABLE_KEY === "string" &&
-  STRIPE_PUBLISHABLE_KEY.startsWith("pk_");
+/** The one entitlement the app sells. Mirrors `ENTITLEMENT` on the server. */
+export const ENTITLEMENT = "premium";
 
 /**
- * The plans the server is willing to sell, each with `available` resolved.
- * Prices live in Stripe, so the app never hardcodes an amount - the old
- * screen's "$4.99/month" was decoration with nothing behind it.
+ * True when this build was given a RevenueCat key. RevenueCat keys are
+ * prefixed by platform (`appl_`, `goog_`) or `test_` for its test store, so
+ * a placeholder left in `.env` does not count as configured.
  */
-export const fetchPlans = async (): Promise<{ plans: Plan[]; paymentsEnabled: boolean }> => {
-  const { data } = await api.get("/api/subscriptions/plans");
-  return {
-    plans: data?.plans ?? [],
-    paymentsEnabled: Boolean(data?.paymentsEnabled) && paymentsConfigured(),
-  };
+export const purchasesConfigured = (): boolean =>
+  typeof REVENUECAT_API_KEY === "string" && /^(appl|goog|test)_/.test(REVENUECAT_API_KEY);
+
+let configuredFor: string | null = null;
+
+/**
+ * Points the SDK at the signed-in person, or at nobody.
+ *
+ * The app user id is the Firebase uid, which is what the server's webhook
+ * resolves to a profile. Configuring once and logging in on later changes is
+ * what the SDK asks for; configuring twice is an error.
+ */
+export const syncPurchasesUser = async (uid: string | null): Promise<void> => {
+  if (!purchasesConfigured()) return;
+  if (uid === configuredFor) return;
+
+  if (configuredFor === null) {
+    if (!uid) return;
+    if (__DEV__) Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    Purchases.configure({ apiKey: REVENUECAT_API_KEY as string, appUserID: uid });
+    configuredFor = uid;
+    return;
+  }
+
+  if (uid) {
+    await Purchases.logIn(uid);
+  } else {
+    // Signing out of an account the SDK identified by uid; an anonymous
+    // session has nothing to log out of and the SDK says so with a throw.
+    await Purchases.logOut().catch(() => {});
+  }
+  configuredFor = uid;
+};
+
+/** The packages on the current offering, in the order the dashboard lists them. */
+export const fetchPackages = async (): Promise<PurchasesPackage[]> => {
+  if (!purchasesConfigured()) return [];
+  const offerings = await Purchases.getOfferings();
+  return offerings.current?.availablePackages ?? [];
+};
+
+export const hasPremium = (info: CustomerInfo | null | undefined): boolean =>
+  Boolean(info?.entitlements.active[ENTITLEMENT]);
+
+/**
+ * Buys a package. Resolves to whether the person now holds the entitlement,
+ * or `null` when they closed the sheet - which is a normal thing to do, not
+ * an error to report.
+ */
+export const purchase = async (pkg: PurchasesPackage): Promise<boolean | null> => {
+  try {
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    return hasPremium(customerInfo);
+  } catch (error) {
+    if ((error as { userCancelled?: boolean })?.userCancelled) return null;
+    throw error;
+  }
+};
+
+/** Apple requires this wherever purchases are offered: a reinstall gets its subscription back. */
+export const restore = async (): Promise<boolean> =>
+  hasPremium(await Purchases.restorePurchases());
+
+/**
+ * Opens the store's own subscription management page.
+ *
+ * The SDK knows the exact page for the account that bought; without one the
+ * store's general subscriptions page is the next best thing.
+ */
+export const openManagement = async (): Promise<void> => {
+  let url: string | null = null;
+  try {
+    url = (await Purchases.getCustomerInfo()).managementURL;
+  } catch {
+    // Fall through to the store page.
+  }
+  await Linking.openURL(
+    url ??
+      Platform.select({
+        ios: "https://apps.apple.com/account/subscriptions",
+        default: "https://play.google.com/store/account/subscriptions",
+      })
+  );
 };
 
 /** The caller's current subscription, or null. */
@@ -43,37 +122,21 @@ export const fetchCurrentSubscription = async (): Promise<Subscription | null> =
   return data ?? null;
 };
 
-/** Starts a subscription. Returns the parameters PaymentSheet needs. */
-export const createSubscription = async (planId: string): Promise<PaymentSheetSession> => {
-  const { data } = await api.post("/api/subscriptions", { planId });
-  return data;
-};
-
-/** Cancels at period end - the user keeps the time they already paid for. */
-export const cancelSubscription = async (): Promise<Subscription> => {
-  const { data } = await api.post("/api/subscriptions/cancel");
-  return data;
-};
-
-/** Undoes a pending cancellation. */
-export const resumeSubscription = async (): Promise<Subscription> => {
-  const { data } = await api.post("/api/subscriptions/resume");
-  return data;
-};
-
 /** Every subscription this account has had, newest first. */
 export const fetchSubscriptionHistory = async (): Promise<Subscription[]> => {
-  const { data } = await api.get("/api/subscription-history");
+  const { data } = await api.get("/api/subscriptions/history");
   return Array.isArray(data) ? data : [];
 };
 
-/** Statuses that mean "this person is entitled to paid features right now". */
-export const LIVE_STATUSES: SubscriptionStatus[] = ["active", "trialing"];
+/** Statuses that mean "entitled right now", subject to `endDate`. */
+export const LIVE_STATUSES: SubscriptionStatus[] = ["active", "trialing", "past_due"];
 
 export const isLive = (subscription?: Subscription | null): boolean =>
-  Boolean(subscription) && LIVE_STATUSES.includes(subscription!.status);
+  Boolean(subscription) &&
+  LIVE_STATUSES.includes(subscription!.status) &&
+  (!subscription!.endDate || new Date(subscription!.endDate) > new Date());
 
-/** Human wording for a Stripe status, so screens do not each invent their own. */
+/** Human wording for a status, so screens do not each invent their own. */
 export const describeStatus = (subscription?: Subscription | null): string => {
   if (!subscription) return "No subscription";
   if (subscription.status === "active" && subscription.cancelAtPeriodEnd) {
@@ -81,13 +144,11 @@ export const describeStatus = (subscription?: Subscription | null): string => {
   }
   return (
     ({
-      incomplete: "Waiting for payment",
-      incomplete_expired: "Payment was not completed",
       trialing: "Free trial",
       active: "Active",
-      past_due: "Payment failed - please update your card",
+      past_due: "Payment failed - check your payment method in the store",
+      paused: "Paused",
       canceled: "Cancelled",
-      unpaid: "Unpaid",
     } as Record<SubscriptionStatus, string>)[subscription.status] ?? subscription.status
   );
 };
@@ -104,4 +165,9 @@ export const formatPrice = (amount?: number | null, currency: string = "usd"): s
     // Some Hermes builds ship without full ICU data for every currency.
     return `${amount} ${currency.toUpperCase()}`;
   }
+};
+
+/** Test seam: forget which account the SDK was configured for. */
+export const __resetPurchasesForTests = (): void => {
+  configuredFor = null;
 };

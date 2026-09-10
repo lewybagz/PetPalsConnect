@@ -26,6 +26,7 @@ import { GOOGLE_WEB_CLIENT_ID } from "../../config/env";
 import { describeAuthError } from "../../utils/authErrors";
 import { passwordRules, scorePassword } from "../../utils/passwordStrength";
 import { useTokens } from "../../context/AppThemeContext";
+import AppleSignInButton from "../../components/AppleSignInButton";
 
 GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
 
@@ -264,6 +265,8 @@ export default function RegisterScreen({ navigation }) {
           <Text style={tailwind("mx-3 text-textFaint text-sm")}>or</Text>
           <View style={tailwind("flex-1 h-px bg-surfaceAlt")} />
         </View>
+
+        <AppleSignInButton disabled={submitting} onError={setErrorMessage} />
 
         <Pressable
           onPress={onGoogleButtonPress}

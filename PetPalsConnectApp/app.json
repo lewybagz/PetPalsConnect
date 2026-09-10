@@ -12,6 +12,7 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "usesAppleSignIn": true,
       "bundleIdentifier": "com.petpalsconnect.app",
       "buildNumber": "1",
       "googleServicesFile": "./GoogleService-Info.plist",

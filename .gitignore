@@ -47,3 +47,6 @@ yarn-error.*
 
 # EAS
 .eas/
+
+# Machine-local Claude Code plugin overrides
+.claude/settings.local.json

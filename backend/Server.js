@@ -34,21 +34,17 @@ app.use(
 );
 app.use(morgan(env.isProduction ? "combined" : "dev"));
 
-// Stripe signature verification needs the raw body, so this route is mounted
-// BEFORE the JSON parser and is deliberately not behind `authenticate`
-// (Stripe calls it directly and authenticates via webhook signature).
-app.use(
-  "/api/stripe-webhooks",
-  express.raw({ type: "application/json" }),
-  require("./routes/stripeWebhooks")
-);
-
 app.use(express.json({ limit: "1mb" }));
 // `extended: false` because nothing here sends nested form data, and the
 // extended parser is what turns `?filter[$ne]=` into an object in the first
 // place. `middleware/sanitize` is the belt to this pair of braces.
 app.use(express.urlencoded({ extended: false }));
 app.use(sanitize);
+
+// RevenueCat calls this directly, so it sits outside `authenticate` and the
+// per-account rate limit; it authenticates by a shared header the route
+// checks itself.
+app.use("/api/revenuecat-webhooks", require("./routes/revenuecatWebhooks"));
 
 app.use("/api", limits.general);
 
@@ -82,7 +78,6 @@ const routes = {
   media: "medias",
   messages: "messages",
   notifications: "notifications",
-  payments: "payments",
   petcare: "petCare",
   petmatches: "petMatches",
   pets: "pets",

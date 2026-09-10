@@ -20,6 +20,19 @@ jest.mock("@react-native-firebase/auth", () => {
 
   const auth = () => ({ currentUser });
 
+  // `new OAuthProvider("apple.com").credential({...})` is what Sign in with
+  // Apple builds; the spy is hung off the class so a test can assert on it.
+  const oauthCredential = jest.fn(() => ({}));
+  class OAuthProvider {
+    constructor(providerId) {
+      this.providerId = providerId;
+    }
+    credential(options) {
+      return oauthCredential(options);
+    }
+  }
+  OAuthProvider.__credential = oauthCredential;
+
   // One object, not a fresh one per call, so a test can reach for
   // `getAuth().__setToken(...)` and have it apply to what the code under test
   // sees. The socket handshake asks for a token on every reconnect.
@@ -56,6 +69,8 @@ jest.mock("@react-native-firebase/auth", () => {
     sendPasswordResetEmail: jest.fn(),
     signInWithCredential: jest.fn(),
     GoogleAuthProvider: { credential: jest.fn(() => ({})) },
+    OAuthProvider,
+    revokeToken: jest.fn(),
     PhoneAuthProvider: jest.fn(),
     __setCurrentUser: (user) => {
       currentUser = user;
@@ -100,6 +115,29 @@ jest.mock("@react-native-google-signin/google-signin", () => ({
     signIn: jest.fn(),
   },
 }));
+
+jest.mock("@invertase/react-native-apple-authentication", () => {
+  const React = require("react");
+  const { Pressable, Text } = require("react-native");
+  const AppleButton = ({ onPress, style, testID }) =>
+    React.createElement(
+      Pressable,
+      { onPress, style, testID, accessibilityRole: "button" },
+      React.createElement(Text, null, "Continue with Apple")
+    );
+  AppleButton.Style = { WHITE: "White", BLACK: "Black" };
+  AppleButton.Type = { SIGN_IN: "SignIn", CONTINUE: "Continue" };
+  return {
+    appleAuth: {
+      isSupported: true,
+      performRequest: jest.fn(),
+      Operation: { LOGIN: 1, REFRESH: 2, LOGOUT: 3 },
+      Scope: { EMAIL: 0, FULL_NAME: 1 },
+      Error: { CANCELED: "1001", UNKNOWN: "1000" },
+    },
+    AppleButton,
+  };
+});
 
 jest.mock("expo-image-picker", () => ({
   requestMediaLibraryPermissionsAsync: jest.fn(async () => ({ granted: true })),

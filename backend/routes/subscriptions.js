@@ -1,15 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const SubscriptionController = require("../controllers/SubscriptionController");
-const { requireProfile } = require("../middleware/authenticate");
 
-// Mounted at /api/subscriptions. Static paths before parameterised ones.
-router.get("/plans", SubscriptionController.getPlans);
+// Mounted at /api/subscriptions. Read-only: buying, cancelling and resuming
+// happen in the store, and RevenueCat reports the result to
+// /api/revenuecat-webhooks, which is the only writer.
 router.get("/me", SubscriptionController.getCurrentSubscription);
 router.get("/history", SubscriptionController.getSubscriptionHistory);
-
-router.post("/", requireProfile, SubscriptionController.createSubscription);
-router.post("/cancel", requireProfile, SubscriptionController.cancelSubscription);
-router.post("/resume", requireProfile, SubscriptionController.resumeSubscription);
 
 module.exports = router;

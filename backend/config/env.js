@@ -7,7 +7,6 @@ const REQUIRED = ["MONGODB_URI"];
 // Required only when the corresponding feature is actually used.
 const FEATURE_VARS = {
   firebase: ["FIREBASE_PROJECT_ID", "FIREBASE_CLIENT_EMAIL", "FIREBASE_PRIVATE_KEY"],
-  stripe: ["STRIPE_SECRET_KEY"],
   maps: ["GOOGLE_MAPS_API_KEY"],
 };
 
@@ -64,10 +63,10 @@ const env = {
     privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
   },
 
-  stripe: {
-    enabled: has("stripe"),
-    secretKey: process.env.STRIPE_SECRET_KEY,
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  revenuecat: {
+    // The exact value configured as the webhook's Authorization header in the
+    // RevenueCat dashboard. Empty means the webhook route answers 503.
+    webhookSecret: process.env.REVENUECAT_WEBHOOK_SECRET || "",
   },
 
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,

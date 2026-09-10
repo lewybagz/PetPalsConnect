@@ -393,8 +393,9 @@ const UserController = {
    * over, and the audit could not see it because this handler builds no query
    * at all - it mutates the document the middleware fetched.
    *
-   * The second was the field list. `subscribed` is Stripe's, written only by
-   * `syncFromStripe`, and a client that can set it walks through the paywall.
+   * The second was the field list. `subscribed` is the store's, written only
+   * by the RevenueCat webhook, and a client that can set it walks through the
+   * paywall.
    * `verified` is a moderation fact. `friendsList` and `pets` are maintained
    * by the endpoints that own them, and letting a body replace them wholesale
    * is how somebody claims a pet that is not theirs. None of them are a user's

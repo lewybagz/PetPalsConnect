@@ -72,8 +72,8 @@ test("you cannot edit somebody else's account", async () => {
 });
 
 test("you cannot make yourself a subscriber", async () => {
-  // Stripe is the source of truth for billing and `syncFromStripe` is the only
-  // writer. A client that can set this walks straight through the paywall.
+  // The store is the source of truth for billing and the RevenueCat webhook is
+  // the only writer. A client that can set this walks straight through the paywall.
   const me = await makeUser("freeloader");
 
   await request(app)

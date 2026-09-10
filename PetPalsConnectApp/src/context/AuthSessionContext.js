@@ -11,6 +11,7 @@ import { getAuth, onAuthStateChanged } from "@react-native-firebase/auth";
 
 import api from "../api/axios";
 import { onSessionInvalidated } from "../api/sessionEvents";
+import { isAppleAccount, revokeAppleAccess } from "../api/appleAuth";
 import { readCache, writeCache, removeCache, CacheKeys } from "../services/localCache";
 
 /**
@@ -263,6 +264,11 @@ export const AuthSessionProvider = ({ children }) => {
 
   /** Permanently deletes the profile and the Firebase account. */
   const deleteAccount = useCallback(async () => {
+    // Apple requires the Sign in with Apple grant revoked when the account
+    // goes (5.1.1(v)). It prompts once more; a dismissed prompt rejects here
+    // and the account stays, because deleting without revoking is the thing
+    // the rule exists to stop.
+    if (isAppleAccount(getAuth().currentUser)) await revokeAppleAccess();
     await api.delete("/api/users/me");
     await removeCache(CacheKeys.userData);
     try {

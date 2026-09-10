@@ -1,58 +1,58 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useStripe } from "@stripe/stripe-react-native";
 
 import { useTailwind } from "../../../styles/tailwind";
-import { createSubscription, fetchPlans } from "../../../api/subscriptions";
+import {
+  fetchPackages,
+  purchase,
+  purchasesConfigured,
+  restore,
+} from "../../../api/subscriptions";
+import { useAuthSession } from "../../../context/AuthSessionContext";
 import { useTokens } from "../../../context/AppThemeContext";
 import { useToast } from "../../../components/ui";
+
+const STORE = Platform.OS === "ios" ? "the App Store" : "Google Play";
 
 /**
  * Plan picker.
  *
- * The previous version listed three hardcoded tiers with hardcoded prices, then
- * POSTed to `/api/subscriptions/create-checkout-session` and tried to open
- * `https://checkout.stripe.com/pay/<sessionId>` in a browser. Checkout is a web
- * flow: a native app has no way to come back from it with a completed session,
- * and that URL shape has not been valid for years. Prices also disagreed with
- * whatever Stripe actually charged, because nothing connected the two.
+ * The plans are the current offering in RevenueCat, so the name, description
+ * and price on each card are the store's own - the app never hardcodes an
+ * amount, and a plan not on the offering is not on this screen. Buying goes
+ * through the store's sheet; RevenueCat tells the server over a webhook a
+ * moment later, which is why the confirmation says "a few seconds".
  *
- * Plans now come from the server (which reads them from Stripe), and payment
- * uses PaymentSheet, the native flow: the server creates an incomplete
- * subscription, we collect the card, Stripe finishes it and tells the server
- * over a webhook.
+ * "Restore purchases" is an Apple requirement wherever purchases are offered:
+ * a reinstall, or a second device, gets its subscription back without paying
+ * again.
  */
 const ChoosePlanScreen = ({ navigation }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
   const toast = useToast();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { refresh } = useAuthSession();
 
-  const [plans, setPlans] = useState([]);
-  const [paymentsEnabled, setPaymentsEnabled] = useState(true);
+  const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [busyPlanId, setBusyPlanId] = useState(null);
+  const [busy, setBusy] = useState(null); // a package identifier, or "restore"
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const result = await fetchPlans();
-        if (cancelled) return;
-        setPlans(result.plans);
-        setPaymentsEnabled(result.paymentsEnabled);
+        const available = await fetchPackages();
+        if (!cancelled) setPackages(available);
       } catch (error) {
-        if (!cancelled) {
-          console.warn("[plans]", error.message);
-          setPaymentsEnabled(false);
-        }
+        if (!cancelled) console.warn("[plans]", error.message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -63,51 +63,46 @@ const ChoosePlanScreen = ({ navigation }) => {
     };
   }, []);
 
-  const subscribe = useCallback(
-    async (plan) => {
-      setBusyPlanId(plan.id);
+  const buy = useCallback(
+    async (pkg) => {
+      setBusy(pkg.identifier);
       try {
-        const session = await createSubscription(plan.id);
+        const entitled = await purchase(pkg);
+        if (entitled === null) return; // closed the sheet
 
-        if (!session.clientSecret) {
-          throw new Error("The server did not return a payment to complete");
-        }
-
-        const { error: initError } = await initPaymentSheet({
-          merchantDisplayName: "PetPals Connect",
-          customerId: session.customerId,
-          customerEphemeralKeySecret: session.ephemeralKey,
-          paymentIntentClientSecret: session.clientSecret,
-          allowsDelayedPaymentMethods: false,
-          returnURL: "petpalsconnect://stripe-redirect",
-        });
-        if (initError) throw new Error(initError.message);
-
-        const { error: sheetError } = await presentPaymentSheet();
-        if (sheetError) {
-          // Closing the sheet is a normal thing to do, not an error to report.
-          if (sheetError.code !== "Canceled") {
-            toast.show(sheetError.message);
-          }
-          return;
-        }
-
+        // The server learns from the webhook; re-reading the profile picks
+        // the flag up once it lands, and the confirmation screen says so.
+        refresh().catch(() => {});
         navigation.navigate("SubscriptionConfirmation", {
-          action: "started",
-          planName: plan.name,
+          action: entitled ? "started" : "received",
+          planName: pkg.product.title,
         });
       } catch (error) {
-        const message =
-          error.response?.status === 409
-            ? "You already have an active subscription."
-            : error.response?.data?.message || error.message;
-        toast.error(message);
+        toast.error(error.message ?? "That purchase didn't go through.");
       } finally {
-        setBusyPlanId(null);
+        setBusy(null);
       }
     },
-    [initPaymentSheet, presentPaymentSheet, navigation, toast]
+    [navigation, refresh, toast]
   );
+
+  const onRestore = useCallback(async () => {
+    setBusy("restore");
+    try {
+      const entitled = await restore();
+      if (entitled) {
+        refresh().catch(() => {});
+        toast.success("Your subscription is back.");
+        navigation.navigate("SubscriptionManagement");
+      } else {
+        toast.show(`No subscription found for your ${STORE} account.`);
+      }
+    } catch (error) {
+      toast.error(error.message ?? "Couldn't restore purchases.");
+    } finally {
+      setBusy(null);
+    }
+  }, [navigation, refresh, toast]);
 
   if (loading) {
     return (
@@ -117,9 +112,7 @@ const ChoosePlanScreen = ({ navigation }) => {
     );
   }
 
-  const purchasable = plans.filter((plan) => plan.available);
-
-  if (!paymentsEnabled || purchasable.length === 0) {
+  if (!purchasesConfigured() || packages.length === 0) {
     return (
       <View style={tailwind("flex-1 items-center justify-center p-8")}>
         <Text style={tailwind("text-lg font-semibold text-center mb-2 text-text")}>
@@ -134,42 +127,60 @@ const ChoosePlanScreen = ({ navigation }) => {
 
   return (
     <ScrollView contentContainerStyle={tailwind("p-4")}>
-      {purchasable.map((plan) => (
+      {packages.map((pkg) => (
         <TouchableOpacity
-          key={plan.id}
-          testID={`plan-${plan.id}`}
-          disabled={busyPlanId !== null}
-          onPress={() => subscribe(plan)}
+          key={pkg.identifier}
+          testID={`package-${pkg.identifier}`}
+          disabled={busy !== null}
+          onPress={() => buy(pkg)}
           style={tailwind(
             `bg-surface border border-border rounded-2xl p-5 mb-4 ${
-              busyPlanId !== null && busyPlanId !== plan.id ? "opacity-50" : ""
+              busy !== null && busy !== pkg.identifier ? "opacity-50" : ""
             }`
           )}
         >
-          <Text style={tailwind("text-xl font-bold mb-1 text-text")}>{plan.name}</Text>
-          <Text style={tailwind("text-base text-textMuted mb-4")}>
-            {plan.description}
+          <Text style={tailwind("text-xl font-bold mb-1 text-text")}>
+            {pkg.product.title}
           </Text>
+          {pkg.product.description ? (
+            <Text style={tailwind("text-base text-textMuted mb-4")}>
+              {pkg.product.description}
+            </Text>
+          ) : null}
 
-          <View
-            style={tailwind(
-              "bg-primary rounded-xl py-3 items-center justify-center"
-            )}
-          >
-            {busyPlanId === plan.id ? (
+          <View style={tailwind("bg-primary rounded-xl py-3 items-center justify-center")}>
+            {busy === pkg.identifier ? (
               <ActivityIndicator color={tokens.surface} />
             ) : (
               <Text style={tailwind("text-onPrimary font-semibold text-base")}>
-                Subscribe {plan.interval === "year" ? "yearly" : "monthly"}
+                {pkg.product.priceString}
+                {pkg.packageType === "ANNUAL"
+                  ? " / year"
+                  : pkg.packageType === "MONTHLY"
+                    ? " / month"
+                    : ""}
               </Text>
             )}
           </View>
         </TouchableOpacity>
       ))}
 
+      <TouchableOpacity
+        testID="restore-purchases"
+        disabled={busy !== null}
+        onPress={onRestore}
+        style={tailwind("py-3 items-center")}
+      >
+        {busy === "restore" ? (
+          <ActivityIndicator color={tokens.primary} />
+        ) : (
+          <Text style={tailwind("text-primary font-semibold")}>Restore purchases</Text>
+        )}
+      </TouchableOpacity>
+
       <Text style={tailwind("text-xs text-textMuted text-center mt-2")}>
-        Payments are handled by Stripe. Your card details never reach our
-        servers. You can cancel any time from Settings.
+        Billed through {STORE}. Renews automatically until you cancel, which you
+        can do any time in your {STORE} account settings.
       </Text>
     </ScrollView>
   );

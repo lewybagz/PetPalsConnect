@@ -1,38 +1,32 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Platform, Text, TouchableOpacity, View } from "react-native";
 
 import { useTailwind } from "../../../styles/tailwind";
 import {
-  cancelSubscription,
   describeStatus,
   fetchCurrentSubscription,
   formatPrice,
-  resumeSubscription,
+  openManagement,
 } from "../../../api/subscriptions";
-import { useTokens } from "../../../context/AppThemeContext";
 import { useToast } from "../../../components/ui";
 
+const STORE = Platform.OS === "ios" ? "App Store" : "Google Play";
+
 /**
- * Shows and manages the current subscription.
+ * Shows the current subscription and hands off to the store to change it.
  *
- * Everything this screen did before was broken in a way bundling cannot see:
- * `handleRenew` and friends were used as `onPress` handlers, so their `token`
- * parameter was actually the press event, and the `getToken()` call above it
- * threw the real token away (the shared API client attaches it anyway). It read
- * `subscription.PlanType` / `.StartDate` / `.Status` - none of which the schema
- * has - they are lowercase - so every field rendered blank. It called `/renew`
- * and `/change-plan`, which the server does not implement, and it rendered a
- * permanent loading spinner for anyone without a subscription, since `null` is
- * falsy and there was no empty state.
+ * Cancelling and resuming used to be buttons here that called the server.
+ * A store subscription is the store's: the only place it can be cancelled,
+ * paused or resumed is the store's own subscriptions page, and RevenueCat
+ * reports the result back over the webhook. So the one action is "Manage",
+ * which opens that page for this account.
  */
 const SubscriptionManagementScreen = ({ navigation }) => {
   const tailwind = useTailwind();
-  const tokens = useTokens();
   const toast = useToast();
 
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,33 +49,6 @@ const SubscriptionManagementScreen = ({ navigation }) => {
       cancelled = true;
     };
   }, [toast]);
-
-  const run = async (action, confirmation) => {
-    setBusy(true);
-    try {
-      setSubscription(await action());
-      toast.success(confirmation);
-    } catch (error) {
-      toast.error(error.response?.data?.message || error.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const confirmCancel = () =>
-    Alert.alert(
-      "Cancel subscription?",
-      "You’ll keep your benefits until the end of the period you've already paid for.",
-      [
-        { text: "Keep it", style: "cancel" },
-        {
-          text: "Cancel subscription",
-          style: "destructive",
-          onPress: () =>
-            run(cancelSubscription, "Your subscription will end at the period end."),
-        },
-      ]
-    );
 
   if (loading) {
     return (
@@ -111,7 +78,9 @@ const SubscriptionManagementScreen = ({ navigation }) => {
     );
   }
 
-  const renews = subscription.endDate ? new Date(subscription.endDate) : null;
+  const ends = subscription.endDate ? new Date(subscription.endDate) : null;
+  const endsNotRenews =
+    subscription.cancelAtPeriodEnd || subscription.status === "canceled";
 
   return (
     <View testID="subscription-detail" style={tailwind("flex-1 p-6")}>
@@ -127,43 +96,24 @@ const SubscriptionManagementScreen = ({ navigation }) => {
             ? ` - ${formatPrice(subscription.amount, subscription.currency)}`
             : ""}
         </Text>
-        {renews ? (
+        {ends ? (
           <Text style={tailwind("text-base text-text")}>
-            {subscription.cancelAtPeriodEnd ? "Ends" : "Renews"}:{" "}
-            {renews.toLocaleDateString()}
+            {endsNotRenews ? "Ends" : "Renews"}: {ends.toLocaleDateString()}
           </Text>
         ) : null}
       </View>
 
-      {subscription.cancelAtPeriodEnd ? (
-        <TouchableOpacity
-          testID="resume-subscription"
-          disabled={busy}
-          onPress={() => run(resumeSubscription, "Your subscription will continue.")}
-          style={tailwind("bg-primary rounded-xl py-3 items-center")}
-        >
-          {busy ? (
-            <ActivityIndicator color={tokens.surface} />
-          ) : (
-            <Text style={tailwind("text-onPrimary font-semibold")}>Resume subscription</Text>
-          )}
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          testID="cancel-subscription"
-          disabled={busy}
-          onPress={confirmCancel}
-          style={tailwind("border border-danger rounded-xl py-3 items-center")}
-        >
-          {busy ? (
-            <ActivityIndicator color={tokens.danger} />
-          ) : (
-            <Text style={tailwind("text-danger font-semibold")}>
-              Cancel subscription
-            </Text>
-          )}
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        testID="manage-subscription"
+        onPress={() => openManagement().catch(() => toast.error(`Couldn't open ${STORE}.`))}
+        style={tailwind("bg-primary rounded-xl py-3 items-center")}
+      >
+        <Text style={tailwind("text-onPrimary font-semibold")}>Manage in {STORE}</Text>
+      </TouchableOpacity>
+      <Text style={tailwind("text-xs text-textMuted text-center mt-2")}>
+        Cancel, pause or change your plan there. Changes show here a few seconds
+        later.
+      </Text>
 
       <TouchableOpacity
         testID="subscription-history"
