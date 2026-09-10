@@ -29,7 +29,7 @@ const PlaydateController = {
       })
         .populate("participants")
         .populate("petsInvolved")
-        .populate("creator", "name");
+        .populate("creator", "username");
       res.json(playdates);
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -39,10 +39,16 @@ const PlaydateController = {
   async getPlaydateById(req, res) {
     try {
       const playdate = await Playdate.findById(req.params.id)
-        .populate("location") // Assuming 'location' is a simple reference in Playdate
+        .populate("location")
         .populate("participants")
         .populate("petsInvolved")
-        .populate("creator", "name locationSharingEnabled");
+        // `reviews` is rendered by ReviewComponent, which reads .rating,
+        // .comment and .date - unpopulated it was handed raw ObjectIds, so the
+        // stars were empty and every review was dated "Invalid Date".
+        .populate("reviews")
+        // `name` is not a field on User; it is `username`. Harmless while
+        // nothing rendered it, and wrong the moment something does.
+        .populate("creator", "username locationSharingEnabled");
 
       if (!playdate) {
         return res.status(404).json({ message: "Playdate not found" });
@@ -68,9 +74,41 @@ const PlaydateController = {
         status: "accepted",
         participants: req.userId,
       })
+        // The Playdates tab renders `location.name`; unpopulated this is an
+        // ObjectId, so every row read "Location: undefined".
+        .populate("location")
         .populate("participants")
         .populate("petsInvolved")
-        .populate("creator", "name");
+        .populate("creator", "username");
+      res.json(playdates);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  /**
+   * The playdates that have already happened, newest first.
+   *
+   * Scoped to the caller's own for the same reason `getUpcomingPlaydates` is.
+   * "Past" is every terminal state, not only `completed`: a playdate that was
+   * cancelled or declined still happened to somebody, and a history that hides
+   * them cannot explain why a date in the diary never took place.
+   */
+  async getPastPlaydates(req, res) {
+    try {
+      const now = new Date();
+      const playdates = await Playdate.find({
+        participants: req.userId,
+        $or: [
+          { date: { $lt: now } },
+          { status: { $in: ["completed", "cancelled", "declined"] } },
+        ],
+      })
+        .sort({ date: -1 })
+        .populate("location")
+        .populate("participants")
+        .populate("petsInvolved")
+        .populate("creator", "username");
       res.json(playdates);
     } catch (err) {
       res.status(500).json({ message: err.message });

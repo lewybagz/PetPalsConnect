@@ -313,3 +313,50 @@ test("upcoming playdates are only your own", async () => {
     .expect(200);
   assert.equal(mine.body.length, 1);
 });
+
+test("past playdates are the caller's own, and include cancelled ones", async () => {
+  const { playdateId } = await scheduledBetween();
+  await request(app).post(`/api/playdates/accept/${playdateId}`).set(...auth("flow-bob")).expect(200);
+
+  // Still in the future, so not history yet.
+  const before = await request(app)
+    .get("/api/playdates/past")
+    .set(...auth("flow-bob"))
+    .expect(200);
+  assert.deepEqual(before.body, []);
+
+  await Playdate.updateOne(
+    { _id: playdateId },
+    { $set: { date: new Date(Date.now() - 86400000) } }
+  );
+
+  const mine = await request(app)
+    .get("/api/playdates/past")
+    .set(...auth("flow-bob"))
+    .expect(200);
+  assert.equal(mine.body.length, 1);
+
+  // "past" used to reach GET /:id, where guardObjectIdParams answered 404.
+  await makeOwnerWithPet("history-stranger");
+  const theirs = await request(app)
+    .get("/api/playdates/past")
+    .set(...auth("history-stranger"))
+    .expect(200);
+  assert.deepEqual(theirs.body, []);
+});
+
+test("a cancelled playdate is history even with a future date", async () => {
+  const { playdateId } = await scheduledBetween();
+  await request(app).post(`/api/playdates/accept/${playdateId}`).set(...auth("flow-bob")).expect(200);
+  await request(app)
+    .patch(`/api/playdates/${playdateId}/cancel`)
+    .send({ message: "raining" })
+    .set(...auth("flow-alice"))
+    .expect(200);
+
+  const res = await request(app)
+    .get("/api/playdates/past")
+    .set(...auth("flow-bob"))
+    .expect(200);
+  assert.equal(res.body.length, 1, "a cancelled playdate should still appear in history");
+});

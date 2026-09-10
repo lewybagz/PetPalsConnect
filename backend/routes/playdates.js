@@ -6,6 +6,7 @@ const PlaydateController = require("../controllers/PlaydateController");
 // after "/:id", so both were swallowed and returned a cast error instead.
 router.get("/", PlaydateController.getAllPlaydates);
 router.get("/upcoming", PlaydateController.getUpcomingPlaydates);
+router.get("/past", PlaydateController.getPastPlaydates);
 router.get("/user", PlaydateController.getUserPlaydates);
 
 router.post("/", PlaydateController.createPlaydate);

@@ -1,22 +1,27 @@
 // MyPlaydatesScreen.js
 
-import React, { useState, useEffect } from "react";
-import {
-  createMaterialTopTabNavigator,
-  Text,
-} from "@react-navigation/material-top-tabs";
-import { StyleSheet, FlatList, TouchableOpacity } from "react-native";
+import React, { useState, useEffect, useMemo } from "react";
+// `Text` is not exported by material-top-tabs - it never was. Importing it
+// here made every empty list render `undefined` as a component, which is a
+// crash on the one state a new user is guaranteed to see first.
+import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import { FlatList, TouchableOpacity } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import PlaydateCardComponent from "../../components/PlaydateCardComponent";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPlaydates , clearError } from "../../redux/actions";
 
 import LoadingScreen from "../../components/LoadingScreenComponent";
-import { useToast } from "../../components/ui";
+import { EmptyState, useToast } from "../../components/ui";
+import { useTokens } from "../../context/AppThemeContext";
 const Tab = createMaterialTopTabNavigator();
 
-const PlaydateList = ({ type, navigation }) => {
+const PlaydateList = ({ type }) => {
   const dispatch = useDispatch();
   const toast = useToast();
+  // `<Tab.Screen>{() => <PlaydateList .../>}</Tab.Screen>` passes no props, so
+  // tapping a card called navigate() on undefined.
+  const navigation = useNavigation();
   const playdates = useSelector((state) => state.playdate.playdates);
   const isLoading = useSelector((state) => state.playdate.isLoading);
   const error = useSelector((state) => state.playdate.error);
@@ -74,23 +79,37 @@ const PlaydateList = ({ type, navigation }) => {
         onRefresh={onRefresh}
         refreshing={refreshing}
       />
-      {playdates.length === 0 && (
-        <Text style={styles.emptyMessage}>No {type} playdates to show.</Text>
+      {filteredPlaydates.length === 0 && (
+        <EmptyState
+          title={type === "upcoming" ? "Nothing planned yet" : "No playdates yet"}
+          message={
+            type === "upcoming"
+              ? "When you arrange a playdate, it'll show up here."
+              : "Playdates you've already had will be listed here."
+          }
+        />
       )}
     </>
   );
 };
 
 const MyPlaydatesScreen = () => {
+  const tokens = useTokens();
+  // A colour in a StyleSheet cannot follow a theme, so these are built from
+  // the tokens. `tabBarActiveTintColor` was the literal string "#yourColor".
+  const tabStyles = useMemo(
+    () => ({
+      tabBarIndicatorStyle: { backgroundColor: tokens.primary },
+      tabBarActiveTintColor: tokens.primary,
+      tabBarInactiveTintColor: tokens.textMuted,
+      tabBarStyle: { backgroundColor: tokens.surface },
+      tabBarLabelStyle: { fontSize: 14, fontWeight: "600" },
+    }),
+    [tokens]
+  );
+
   return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarIndicatorStyle: styles.tabIndicator,
-        tabBarActiveTintColor: "#yourColor",
-        tabBarLabelStyle: styles.tabLabel,
-        // Other styling properties
-      }}
-    >
+    <Tab.Navigator screenOptions={tabStyles}>
       <Tab.Screen name="Upcoming">
         {() => <PlaydateList type="upcoming" />}
       </Tab.Screen>
@@ -98,11 +117,5 @@ const MyPlaydatesScreen = () => {
     </Tab.Navigator>
   );
 };
-
-const styles = StyleSheet.create({
-  list: {
-    padding: 10,
-  },
-});
 
 export default MyPlaydatesScreen;

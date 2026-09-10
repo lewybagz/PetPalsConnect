@@ -23,6 +23,7 @@ import FriendsListScreen from "../../src/screens/profile/FriendsListScreen";
 import FriendRequestsCard from "../../src/components/FriendRequestsCard";
 import MoreScreen from "../../src/screens/bottomTab/MoreScreen";
 import PotentialPlaydateLocationScreen from "../../src/screens/playdate/PotentialPlaydateLocationScreen";
+import PlaydateDetailsScreen from "../../src/screens/playdate/PlaydateDetailsScreen";
 import ArticlesScreen from "../../src/screens/misc/ArticlesScreen";
 import ArticleDetailScreen from "../../src/screens/misc/ArticleDetailScreen";
 import {
@@ -274,6 +275,33 @@ export const BOARDS = [
       <SchedulePlaydateScreen
         navigation={navigation}
         route={{ params: { pet: CANDIDATES[0].pet } }}
+      />
+    ),
+  },
+  {
+    id: "playdate-invitation",
+    label: "Playdate - an invitation to answer",
+    // The state this screen could not reach: an invitation could not be
+    // accepted or declined from anywhere in the app, because the only screen
+    // offering the pair was one nothing navigated to.
+    routes: {
+      ...ROUTES,
+      "/api/playdates/pd-1": {
+        _id: "pd-1",
+        status: "pending",
+        creator: { _id: "user-them", username: "alex" },
+        date: "2026-10-01T10:00:00.000Z",
+        location: { _id: "loc-1", name: "Dolores Park" },
+        notes: "By the tennis courts",
+        participants: [{ _id: "user-me", username: "sam" }],
+        petsInvolved: [CANDIDATES[0].pet, MY_PET],
+        reviews: [],
+      },
+    },
+    render: () => (
+      <PlaydateDetailsScreen
+        navigation={navigation}
+        route={{ params: { playdateId: "pd-1" } }}
       />
     ),
   },

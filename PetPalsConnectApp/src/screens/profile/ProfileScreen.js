@@ -102,7 +102,9 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const navigateToPetList = () => {
-    navigation.navigate("PetList");
+    // "Manage my pets" went to PetList, which fetches /api/pets - every
+    // browsable pet in the app, with a delete button beside each.
+    navigation.navigate("UsersPets");
   };
 
   /**

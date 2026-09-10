@@ -1,58 +1,74 @@
-import React, { useState, useEffect, useMemo } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { View, FlatList, StyleSheet, Alert } from "react-native";
 import api from "../../api/axios";
-import { getAuth } from "@react-native-firebase/auth";
 import UserPetCard from "../../components/UserPetCardComponent";
-import { getStoredToken } from "../../../utils/tokenutil";
+import { Button, EmptyState, useToast } from "../../components/ui";
 import { useTokens } from "../../context/AppThemeContext";
-import { useToast } from "../../components/ui";
+import { space } from "../../styles/tokens";
 
-const UsersPetsScreen = (navigation) => {
+/**
+ * The pets this account owns - "Manage my pets" from the profile.
+ *
+ * Profile's button pointed at `PetList`, which fetches `/api/pets`: every
+ * browsable pet in the app, not yours. So "manage my pets" opened a directory
+ * of strangers' dogs with a delete button next to each.
+ *
+ * This screen was also unreachable and would have thrown if reached - it was
+ * declared `(navigation)` rather than `({ navigation })`, binding the whole
+ * props object, so every tap called `navigate` on something that has no such
+ * method. It passed a Firebase uid to a route whose parameter is a Mongo id
+ * too; harmless only because `getUserPets` ignores the parameter and scopes to
+ * `req.userId`, which is the id that actually decides whose pets come back.
+ */
+const UsersPetsScreen = ({ navigation }) => {
   const tokens = useTokens();
   const toast = useToast();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
 
-  const auth = getAuth();
-  const currentUser = auth.currentUser;
-  const [userPets, setUserPets] = useState([]);
+  const [pets, setPets] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      // The API client attaches the Firebase token; a hand-rolled
+      // Authorization header here is a second way to get that wrong.
+      const response = await api.get("/api/users/pets");
+      setPets(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.warn("[userspets]", error.message);
+      toast.error("Couldn't load your pets.");
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
-    const fetchUserPets = async () => {
-      if (currentUser) {
-        try {
-          const token = await getStoredToken();
-          const response = await api.get(
-            `/api/users/pets/${currentUser.uid}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          setUserPets(response.data);
-        } catch (error) {
-          console.warn("[userspets]", error.message);
-          toast.error("Couldn't load your pets.");
-        }
-      }
-    };
+    const unsubscribe = navigation.addListener("focus", load);
+    return unsubscribe;
+  }, [navigation, load]);
 
-    fetchUserPets();
-  }, [currentUser, toast]);
-
-  const handleNavigateToPetDetails = (petId) => {
-    navigation.navigate("PetDetails", { petId });
+  const confirmDelete = (pet) => {
+    // Removing a pet takes its matches, chats and playdates with it, so this
+    // is one of the few things that earns an Alert rather than a toast.
+    Alert.alert(
+      `Remove ${pet.name}?`,
+      "This takes their matches and playdates with them.",
+      [
+        { text: "Keep", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => remove(pet._id),
+        },
+      ]
+    );
   };
 
-  const handleDelete = async (petId) => {
+  const remove = async (petId) => {
     try {
-      const token = await getStoredToken();
-      await api.delete(`/api/users/pets/${petId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUserPets(userPets.filter((pet) => pet._id !== petId));
+      await api.delete(`/api/users/pets/${petId}`);
+      setPets((current) => current.filter((pet) => pet._id !== petId));
+      toast.success("Pet removed");
     } catch (error) {
       console.warn("[userspets]", error.message);
       toast.error("Couldn't remove that pet.");
@@ -62,43 +78,41 @@ const UsersPetsScreen = (navigation) => {
   return (
     <View style={styles.container}>
       <FlatList
-        data={userPets}
+        data={pets}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
-          <View>
-            <TouchableOpacity
-              onPress={() => handleNavigateToPetDetails(item._id)}
-            >
-              <UserPetCard data={item} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleDelete(item._id)}
-              style={styles.deleteButton}
-            >
-              <Text style={styles.buttonText}>Delete</Text>
-            </TouchableOpacity>
+          <View style={styles.row}>
+            <UserPetCard
+              data={item}
+              onPress={() => navigation.navigate("PetDetails", { petId: item._id })}
+            />
+            <Button
+              title="Remove"
+              variant="danger"
+              onPress={() => confirmDelete(item)}
+            />
           </View>
         )}
+        ListEmptyComponent={
+          loading ? null : (
+            <EmptyState
+              title="No pets yet"
+              message="Add a pet and they'll show up here."
+            />
+          )
+        }
       />
     </View>
   );
 };
 
-const makeStyles = (t) => StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    padding: space.md,
   },
-  deleteButton: {
-    backgroundColor: t.danger,
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: t.surface,
-    fontSize: 16,
+  row: {
+    marginBottom: space.lg,
   },
 });
 

@@ -19,7 +19,12 @@ test.before(async () => {
   User = require("../models/User");
   Subscription = require("../models/Subscription");
 
+  // Both halves are set deliberately. "yearly" is the unconfigured plan these
+  // tests assert against, and leaving that to chance meant inheriting whatever
+  // the developer's own .env happened to hold - a real STRIPE_PRICE_YEARLY made
+  // two tests assert the opposite of the truth and fail on a clean checkout.
   process.env.STRIPE_PRICE_MONTHLY = "price_monthly_test";
+  delete process.env.STRIPE_PRICE_YEARLY;
 });
 
 test.after(async () => {

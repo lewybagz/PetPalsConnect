@@ -18,7 +18,7 @@ import {
   otherPet,
   petPhoto,
 } from "../utils/petIdentity";
-import { hit } from "../styles/tokens";
+import { hit, space } from "../styles/tokens";
 
 /**
  * One row in the inbox.
@@ -228,6 +228,21 @@ const makeStyles = (t) => StyleSheet.create({
   },
   placeholder: {
     backgroundColor: t.surfaceAlt,
+  },
+  // Referenced by the five menu rows and never defined, so each was a bare
+  // text node - no padding and well under the 44pt tap floor.
+  option: {
+    minHeight: hit.min,
+    justifyContent: "center",
+    paddingVertical: space.md,
+    borderBottomWidth: 1,
+    borderBottomColor: t.border,
+  },
+  cancelOption: {
+    minHeight: hit.min,
+    justifyContent: "center",
+    paddingVertical: space.md,
+    marginTop: space.sm,
   },
   details: {
     flex: 1,

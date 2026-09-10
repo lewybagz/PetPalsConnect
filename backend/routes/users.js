@@ -68,6 +68,10 @@ router.post(
 
 // --- Collections ----------------------------------------------------------
 router.get("/", UserController.getAllUsers);
+// `getUserPets` scopes to req.userId and ignores the parameter, so the
+// parameterised form promised something it never did - a URL naming somebody
+// else's id returned your own pets. Static first, per the ordering rule.
+router.get("/pets", UserController.getUserPets);
 router.get("/pets/:userId", UserController.getUserPets);
 router.get("/favorites/:userId", UserController.getUserFavorites);
 router.delete("/pets/:petId", requireProfile, UserController.deleteUserPet);

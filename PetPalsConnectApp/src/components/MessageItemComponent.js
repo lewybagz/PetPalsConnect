@@ -6,6 +6,7 @@ import { Swipeable } from "react-native-gesture-handler";
 import CustomActionSheet from "./CustomActionSheet";
 import ReactionSelectorComponent from "./ReactionSelectorComponent";
 import { useTokens } from "../context/AppThemeContext";
+import { hit } from "../styles/tokens";
 
 const MessageItemComponent = ({
   message,
@@ -129,6 +130,15 @@ const MessageItemComponent = ({
   );
 };
 const makeStyles = (t) => StyleSheet.create({
+  // Never defined, so both swipe actions were a transparent box behind an
+  // onPrimary-coloured icon: invisible on light, and no tap target to speak of.
+  swipeAction: {
+    backgroundColor: t.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 64,
+    minHeight: hit.min,
+  },
   container: {
     marginVertical: 4,
     padding: 10,

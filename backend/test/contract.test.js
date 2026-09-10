@@ -87,13 +87,28 @@ const readAppCalls = () => {
   return calls;
 };
 
-/** A call matches a route when segment counts line up and params absorb values. */
+/**
+ * A call matches a route when segment counts line up and params absorb values.
+ *
+ * A `:param` slot absorbs only an *interpolated* segment - one the app built
+ * from a `${...}` expression, normalised to ":param" above. It deliberately
+ * does not absorb a literal: `GET /api/playdates/past` names a route that does
+ * not exist, and letting ":id" swallow "past" reported it as served while
+ * `guardObjectIdParams` answered 404 at runtime, which is precisely the
+ * "compiles fine, 404s at runtime" bug this file exists to catch. The query
+ * string above is stripped for the same reason; this is the same absorption one
+ * segment over.
+ *
+ * A literal call segment therefore has to match a literal route segment. That
+ * is stricter than Express, which really would route "past" to "/:id" - the
+ * point is that doing so is a mistake worth failing on, not a feature.
+ */
 const matchesRoute = (callPath, routePath) => {
   const a = callPath.split("/").filter(Boolean);
   const b = routePath.split("/").filter(Boolean);
   if (a.length !== b.length) return false;
   return a.every((seg, i) =>
-    b[i].startsWith(":") ? true : seg !== ":param" && seg.toLowerCase() === b[i].toLowerCase()
+    b[i].startsWith(":") ? seg === ":param" : seg !== ":param" && seg.toLowerCase() === b[i].toLowerCase()
   );
 };
 
@@ -174,6 +189,50 @@ test("every route file exports an Express router", () => {
     assert.equal(typeof router, "function", `${file} does not export a router`);
     assert.ok(router.stack, `${file} export is not an Express router`);
   }
+});
+
+test("Firebase Admin initialises when it is actually configured", () => {
+  // config/firebase.js only runs its initialisation when the FIREBASE_*
+  // variables are present, and the suite deliberately runs without them - so
+  // the one line that talks to firebase-admin was never executed by any test.
+  // It was broken for exactly that reason: v13 removed `admin.credential` from
+  // the default export, and the namespaced call threw at require time in every
+  // environment that had credentials, which is all of them except this suite.
+  const { generateKeyPairSync } = require("node:crypto");
+  const { privateKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: "pkcs8", format: "pem" },
+    publicKeyEncoding: { type: "spki", format: "pem" },
+  });
+
+  const probe =
+    "const fb = require('./config/firebase');" +
+    "if (!fb.isEnabled()) { console.error('not enabled'); process.exit(2); }" +
+    "for (const fn of ['verifyIdToken', 'sendMessage', 'deleteUser']) {" +
+    "  if (typeof fb[fn] !== 'function') { console.error('missing ' + fn); process.exit(3); }" +
+    "}";
+
+  const result = require("node:child_process").spawnSync(
+    process.execPath,
+    ["-e", probe],
+    {
+      cwd: BACKEND,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        FIREBASE_PROJECT_ID: "demo-project",
+        FIREBASE_CLIENT_EMAIL: "demo@demo-project.iam.gserviceaccount.com",
+        FIREBASE_PRIVATE_KEY: privateKey,
+      },
+    }
+  );
+
+  assert.equal(
+    result.status,
+    0,
+    `config/firebase.js failed to initialise with credentials set:
+${result.stderr}`
+  );
 });
 
 test("the app never imports backend source", () => {

@@ -100,8 +100,19 @@ const makeStyles = (t) => StyleSheet.create({
     elevation: 2,
     backgroundColor: t.primary,
   },
+  // Referenced and never defined, so the upgrade call-to-action rendered as
+  // bare text with no button behind it.
+  subscribeButton: {
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+    marginBottom: 8,
+    backgroundColor: t.primary,
+  },
   buttonText: {
-    color: t.surface,
+    // `surface` is the *background* token; on a filled button the label is
+    // onPrimary. They happen to coincide in light and diverge in dark.
+    color: t.onPrimary,
     fontWeight: "bold",
     textAlign: "center",
   },

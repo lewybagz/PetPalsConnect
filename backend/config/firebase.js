@@ -2,14 +2,22 @@
 //
 // Credentials come from environment variables, never from a committed
 // serviceAccountKey.json. Initialise exactly once and share the instance.
-const admin = require("firebase-admin");
+// Imported from the modular entry points rather than the default namespace.
+// firebase-admin v13 stopped exposing `admin.credential`, `admin.auth()` and
+// `admin.messaging()` off the default export, so the old namespaced form threw
+// "Cannot read properties of undefined (reading 'cert')" at load - and only
+// when the FIREBASE_* variables were set, which is every environment that
+// actually uses Firebase and none of the ones the suite runs in.
+const { initializeApp, cert } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { getMessaging } = require("firebase-admin/messaging");
 const env = require("./env");
 
 let app = null;
 
 if (env.firebase.enabled) {
-  app = admin.initializeApp({
-    credential: admin.credential.cert({
+  app = initializeApp({
+    credential: cert({
       projectId: env.firebase.projectId,
       clientEmail: env.firebase.clientEmail,
       privateKey: env.firebase.privateKey,
@@ -32,7 +40,7 @@ const isEnabled = () => app !== null;
  */
 const verifyIdToken = (token, { checkRevoked = false } = {}) => {
   if (!app) throw new Error("Firebase Admin is not configured");
-  return admin.auth().verifyIdToken(token, checkRevoked);
+  return getAuth(app).verifyIdToken(token, checkRevoked);
 };
 
 /** Send a single FCM message. Resolves to null when Firebase is not configured. */
@@ -41,7 +49,7 @@ const sendMessage = async (message) => {
     console.warn("[firebase] Push skipped - Firebase Admin is not configured");
     return null;
   }
-  return admin.messaging().send(message);
+  return getMessaging(app).send(message);
 };
 
 /**
@@ -54,7 +62,7 @@ const sendMessage = async (message) => {
  */
 const deleteUser = async (uid) => {
   if (!app) throw new Error("Firebase Admin is not configured");
-  return admin.auth().deleteUser(uid);
+  return getAuth(app).deleteUser(uid);
 };
 
-module.exports = { admin, isEnabled, verifyIdToken, sendMessage, deleteUser };
+module.exports = { isEnabled, verifyIdToken, sendMessage, deleteUser };

@@ -445,7 +445,10 @@ describe("the care hub", () => {
       "AddPet",
       "Favorites",
       "Notifications",
-      "GroupChatCreation",
+      // The group-chat tile goes to PetSelection, not straight to
+      // GroupChatCreation: arriving there with no pets selected refused with
+      // "choose at least one pet" and offered no way to choose one.
+      "PetSelection",
       "Settings",
     ]) {
       expect(screen.getByTestId(`shortcut-${route_}`)).toBeTruthy();

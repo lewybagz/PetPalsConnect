@@ -98,6 +98,17 @@ and `pets`/`friendsList` belong to the endpoints that maintain them.
 model has no password field, and `changeUserPassword` returns 410 by design —
 clients call Firebase's `updatePassword()`.
 
+**`config/firebase.js` imports from the modular entry points, never the default
+namespace.** `firebase-admin` v13 removed `admin.credential`, `admin.auth()`
+and `admin.messaging()` from the default export, so `admin.credential.cert(...)`
+throws "Cannot read properties of undefined" at require time - and only where
+the `FIREBASE_*` variables are set, which is every real environment and none of
+the ones the suite ran in. It was broken in the tree with nothing failing.
+Use `require("firebase-admin/app")`, `.../auth` and `.../messaging`, and pass
+the app explicitly (`getAuth(app)`). `contract.test.js` now loads the module in
+a subprocess with generated credentials, because a branch no test enters is a
+branch that is only tested in production.
+
 ## Conventions
 
 ### App
@@ -177,6 +188,15 @@ on an increase — because a ban would have had to be disabled in 67 files, whic
 is the same as not having one. The migration is finished, so the baseline is
 empty and the same code is now a ban. `-- --update` still exists; needing it
 means you are adding a colour, and the answer is almost always a token.
+
+**A reported path is an identifier, so `checkTokens.js` writes one in POSIX
+separators on every OS.** `path.relative` answers in the platform's separator,
+and on Windows that made every finding read `src\styles\tokens.ts`. The
+baseline is keyed by these strings, `ALLOWED` is matched against them, and the
+tests look for `src/__ratchet-scratch.js` - so the scratch-file tests could
+never match the file they had just written. Five failed outright; worse, the
+four asserting an *absence* passed vacuously and would have kept passing with
+the ban entirely broken, which is the one thing this check exists not to do.
 
 **A switch is the one control that cannot borrow its colours.** Everything else
 is a surface, a text tone or a fill; a switch is a knob on a track on a
@@ -1247,27 +1267,39 @@ Mongo path, and has been all along. It carried 42 advisories, three critical,
 and its `functions` block is out of `firebase.json` so a deploy does not go
 looking for it.
 
-**An advisory is triaged by reachability, not by its count.** As of the last
-audit there are **no critical and no high advisories** in any of the three
-packages: 6 moderates in `backend`, 25 in `PetPalsConnectApp`, 0 in the seeding
-scripts. They are two distinct advisories between them, both transitive, and
-both with vulnerable code paths that cannot be reached from here:
+**An advisory is triaged by reachability, and closed by an override when the
+override is provably safe.** As of the last audit there are **no critical and no
+high advisories** in any of the three packages: **0 in `backend`**, 8 moderates
+in `PetPalsConnectApp`, 0 in the seeding scripts. Those 8 are one advisory
+counted once per package that depends on it.
 
-- **`uuid` (GHSA-w5hq-g745-h8pq)** is about `v3/v5/v6` when a `buf` argument is
-  passed. The backend reaches it through `gaxios` and `teeny-request`, which
-  call `uuid.v4()` with no arguments. The app reaches it through
-  `expo-splash-screen -> @expo/config-plugins -> xcode -> uuid@7.0.3`, and
-  config-plugins runs at prebuild - it is not in the exported bundle.
-- **`decode-uri-component` (GHSA-vcc3-ghjq-m6fr)** arrives as
-  `@react-navigation/native -> core -> query-string@7.1.3 ->
-  decode-uri-component@0.2.2`. A fixed version *is* published (0.5.0), but
-  `query-string@7.1.3` declares `^0.2.2`, which caps at `<0.3.0` - so the fix
-  is unreachable until React Navigation bumps `query-string`. Forcing it with
-  an override would swap a denial-of-service nobody can trigger for a change to
-  how every deep link in the app is parsed.
+- **`uuid` (GHSA-w5hq-g745-h8pq) is fixed**, by `"overrides": { "uuid":
+  "^11.1.1" }` in both `backend` and `PetPalsConnectApp`. The advisory is about
+  `v3/v5/v6` when a `buf` argument is passed, and every consumer here calls
+  `uuid.v4()` with no arguments - `gaxios` and `teeny-request` for a multipart
+  boundary, `xcode` for a pbxproj id - so the hole was unreachable *and* the
+  bump is behaviourally inert: `v4()` is unchanged from v7 through v11. uuid 11
+  is `"type": "module"` but still ships a CJS entry (`require` resolves to
+  `dist/cjs/index.js`), which is what makes the override safe for these three
+  CommonJS callers. Both parents are already at their latest published version
+  and still declare the vulnerable range, so an override was the only route.
+- **`decode-uri-component` (GHSA-vcc3-ghjq-m6fr) is accepted, not fixed.** It
+  arrives as `@react-navigation/native -> core -> query-string@7.1.3 ->
+  decode-uri-component@0.2.2`, and `@react-navigation/core@latest` still
+  declares `query-string: ^7.1.3`, so there is no upstream fix to upgrade to.
+  Neither override target works: **0.5.0 (the only fixed version) is ESM-only** -
+  no `main`, `exports` resolves to one ESM file - and `query-string` does
+  `require('decode-uri-component')`, so the override trades a DoS nobody can
+  trigger for `ERR_REQUIRE_ESM` in the code path that parses every deep link.
+  **0.3.0 is a trap**: it is still CommonJS, but it is *older* code that predates
+  the `+`-handling, and it carries the same exponential decoder - so it does not
+  fix the advisory and it silently stops decoding `+` as a space in query
+  strings (verified: `decode("a+b")` is `"a b"` on 0.2.2 and `"a+b"` on 0.3.0).
+  Revisit when React Navigation bumps `query-string`.
 
 Forcing a major bump of a transitive through a path no test exercises, to close
-a hole nothing can reach, trades a real risk for a smaller number.
+a hole nothing can reach, trades a real risk for a smaller number - but where
+the bump is verifiably a no-op for every caller, as with `uuid`, take it.
 
 **GitHub's push warning counts the whole default branch history and lags.** It
 reported 197 advisories with 8 critical immediately after the two dead packages

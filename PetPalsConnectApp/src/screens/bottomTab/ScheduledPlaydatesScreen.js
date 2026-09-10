@@ -1,5 +1,5 @@
 // ScheduledPlaydatesScreen.js
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect } from "react";
 import {
   Text,
   FlatList,
@@ -41,6 +41,22 @@ const ScheduledPlaydatesScreen = (navigation) => {
     await fetchPlaydates();
     setRefreshing(false);
   }, []);
+
+  // "History" had no way in from anywhere in the app; this tab is where
+  // somebody looking for a past playdate would start.
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate("PlaydateHistory")}
+          style={tailwind("px-md py-sm")}
+          accessibilityRole="button"
+        >
+          <Text style={tailwind("text-primary")}>History</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, tailwind]);
 
   const navigateToDetails = (playdateId) => {
     navigation.navigate("PlaydateDetails", { playdateId });

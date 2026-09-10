@@ -28,16 +28,13 @@ import PlaydateDetailsScreen from "../playdate/PlaydateDetailsScreen";
 import PlaydateHistoryScreen from "../playdate/PlaydateHistoryScreen";
 import PlaydateModificationConfirmationScreen from "../playdate/PlaydateModificationConfirmationScreen";
 import PlaydateModificationScreen from "../playdate/PlaydateModificationScreen";
-import PlaydateRequestScreen from "../playdate/PlaydateRequestScreen";
 import PostPlaydateReviewScreen from "../playdate/PostPlaydateReviewScreen";
 import PotentialPlaydateLocationScreen from "../playdate/PotentialPlaydateLocationScreen";
 import PotentialPlaydateLocationsScreen from "../playdate/PotentialPlaydateLocationsScreen";
 import SchedulePlaydateScreen from "../playdate/SchedulePlaydateScreen";
-import UpcomingPlaydateScreen from "../playdate/UpcomingPlaydateScreen";
 
 // Profile
 import AccountInformationScreen from "../profile/AccountInformationScreen";
-import ChangePasswordScreen from "../profile/ChangePasswordScreen";
 import FavoritesScreen from "../profile/FavoritesScreen";
 import FriendRequestsScreen from "../profile/FriendRequestsScreen";
 import FriendsListScreen from "../profile/FriendsListScreen";
@@ -137,7 +134,6 @@ export default function AppStack() {
       <Stack.Screen name="MyPlaydates" component={MyPlaydatesScreen} options={{ title: "My Playdates" }} />
       <Stack.Screen name="PlaydateDetails" component={PlaydateDetailsScreen} options={{ title: "Playdate" }} />
       <Stack.Screen name="PlaydateHistory" component={PlaydateHistoryScreen} options={{ title: "History" }} />
-      <Stack.Screen name="PlaydateRequest" component={PlaydateRequestScreen} options={{ title: "Request" }} />
       <Stack.Screen name="PlaydateCreated" component={PlaydateCreatedScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlaydateModification" component={PlaydateModificationScreen} options={{ title: "Modify" }} />
       <Stack.Screen name="PlaydateModificationConfirmation" component={PlaydateModificationConfirmationScreen} options={{ headerShown: false }} />
@@ -146,12 +142,10 @@ export default function AppStack() {
       <Stack.Screen name="PotentialPlaydateLocation" component={PotentialPlaydateLocationScreen} options={{ title: "Location" }} />
       <Stack.Screen name="PotentialPlaydateLocations" component={PotentialPlaydateLocationsScreen} options={{ title: "Locations" }} />
       <Stack.Screen name="SchedulePlaydate" component={SchedulePlaydateWithPet} options={{ title: "Schedule" }} />
-      <Stack.Screen name="UpcomingPlaydate" component={UpcomingPlaydateScreen} options={{ title: "Upcoming" }} />
 
       {/* Profile */}
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
       <Stack.Screen name="AccountInformation" component={AccountInformationScreen} options={{ title: "Account" }} />
-      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: "Change Password" }} />
       <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ title: "Favorites" }} />
       <Stack.Screen name="FriendRequests" component={FriendRequestsScreen} options={{ title: "Pal requests" }} />
       <Stack.Screen name="FriendsList" component={FriendsListScreen} options={{ title: "Pals" }} />

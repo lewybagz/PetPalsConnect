@@ -63,7 +63,11 @@ const SHORTCUTS = [
   },
   {
     label: "New group chat",
-    route: "GroupChatCreation",
+    // Straight to GroupChatCreation with no params meant `selectedPets` was
+    // empty and the screen refused with "choose at least one pet" while
+    // offering no way to choose one. PetSelection is that missing step, and it
+    // navigates onward with the pets it collected.
+    route: "PetSelection",
     icon: "people-outline",
     step: "groupChatCreation",
     order: 1,

@@ -77,7 +77,14 @@ const serve = () =>
  * be picked up here as well as declared there.
  */
 const boards = () => {
-  const source = fs.readFileSync(path.join(HERE, "boards.js"), "utf8");
+  // Normalised to LF first. The `id:`/`label:` pattern below spans a line
+  // break, and on Windows git checks this file out with CRLF - so the
+  // newline in that pattern matched nothing, every board was skipped, and
+  // `npm run screenshots` reported "0 screenshots" and exited 0. A review
+  // tool that silently photographs nothing is worse than one that fails.
+  const source = fs
+    .readFileSync(path.join(HERE, "boards.js"), "utf8")
+    .replace(/\r\n/g, "\n");
   const matches = [
     ...source.matchAll(/^\s{4}id: "([\w-]+)",\n\s{4}label: "([^"]+)"/gm),
   ];
@@ -209,8 +216,19 @@ const main = async () => {
     return file;
   };
 
+  const declared = boards();
+  // Zero boards means the parser stopped matching, not that there is nothing
+  // to photograph - and with no boards there are no failures either, so this
+  // exited 0 having produced nothing.
+  if (declared.length === 0) {
+    await browser.close();
+    server.close();
+    console.error("Parsed no boards from boards.js - the parser is out of date.");
+    process.exit(1);
+  }
+
   const taken = [];
-  for (const board of boards()) {
+  for (const board of declared) {
     for (const theme of ["light", "dark"]) {
       try {
         taken.push(await shot(board, theme));

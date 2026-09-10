@@ -26,8 +26,20 @@ const ROOT = path.resolve(__dirname, "..");
 const SRC = path.join(ROOT, "src");
 const BASELINE = path.join(__dirname, "colour-baseline.json");
 
+/**
+ * A reported path is an identifier, so it is written one way on every OS.
+ *
+ * `path.relative` answers in the platform's separator, which made every message
+ * and every scanned entry read `src\styles\tokens.ts` on Windows. The baseline
+ * is keyed by these strings and the tests match on them, so a backslash meant
+ * the ban's own scratch-file tests could never match the file they had just
+ * written - four of them asserted an *absence* and so passed vacuously, which is
+ * the one failure this check exists to not have.
+ */
+const relative = (file) => path.relative(ROOT, file).split(path.sep).join("/");
+
 /** Colour lives here by definition. */
-const ALLOWED = new Set([path.join("src", "styles", "tokens.ts")]);
+const ALLOWED = new Set(["src/styles/tokens.ts"]);
 
 const HEX = /#[0-9a-fA-F]{3,8}\b/g;
 
@@ -123,14 +135,14 @@ const count = () => {
   const counts = {};
 
   for (const file of walk(SRC)) {
-    const relative = path.relative(ROOT, file);
-    if (ALLOWED.has(relative)) continue;
+    const name = relative(file);
+    if (ALLOWED.has(name)) continue;
 
     const source = stripComments(fs.readFileSync(file, "utf8"));
     const total =
       (source.match(HEX) ?? []).length + (source.match(KEYWORD) ?? []).length;
 
-    if (total > 0) counts[relative] = total;
+    if (total > 0) counts[name] = total;
   }
 
   return counts;
@@ -145,15 +157,15 @@ const audit = () => {
   const problems = [];
 
   for (const file of walk(SRC)) {
-    const relative = path.relative(ROOT, file);
-    if (ALLOWED.has(relative)) continue;
+    const name = relative(file);
+    if (ALLOWED.has(name)) continue;
 
     const source = fs.readFileSync(file, "utf8");
 
     const keys = colourlessText(source);
     if (keys.length > 0) {
       problems.push(
-        `${relative}: ${keys.join(", ")} set type but no colour, so they ` +
+        `${name}: ${keys.join(", ")} set type but no colour, so they ` +
           `inherit black and vanish on a dark surface. Add \`color: t.text\`.`
       );
     }
@@ -161,7 +173,7 @@ const audit = () => {
     const classes = colourlessClasses(source);
     if (classes.length > 0) {
       problems.push(
-        `${relative}: ${classes.length} tailwind style${
+        `${name}: ${classes.length} tailwind style${
           classes.length === 1 ? "" : "s"
         } set type but no colour, so they inherit black and vanish on a dark ` +
           `surface - e.g. \`${classes[0]}\`. Add \`text-text\` (or another tone).`
@@ -184,7 +196,7 @@ const audit = () => {
 };
 
 /** Every file the check looks at, so a pass cannot mean "found no files". */
-const scanned = () => walk(SRC).map((file) => path.relative(ROOT, file));
+const scanned = () => walk(SRC).map(relative);
 
 module.exports = {
   audit,

@@ -26,7 +26,7 @@ const MessageController = {
       message = await Message.findById(req.params.id)
         .populate("receiver")
         .populate("sender")
-        .populate("creator", "name");
+        .populate("creator", "username");
       if (message == null) {
         return res.status(404).json({ message: "Cannot find message" });
       }
