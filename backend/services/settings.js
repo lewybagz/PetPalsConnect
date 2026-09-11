@@ -109,6 +109,10 @@ const SCHEMA = {
     // Somebody who has never shared a position has a null distance. Excluding
     // them empties the deck early on, so it is a choice rather than a default.
     includeUnknownDistance: bool,
+    // Only pets whose owner has shared current vaccination records. Off by
+    // default: early on almost nobody has entered any, and a preference that
+    // empties the deck is one nobody keeps.
+    requireVaccinationShared: bool,
   },
 
   privacy: {
@@ -130,6 +134,7 @@ const DEFAULTS = {
     maxAge: 30,
     species: [],
     includeUnknownDistance: true,
+    requireVaccinationShared: false,
   },
   privacy: {
     profileVisibility: "everyone",

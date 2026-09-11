@@ -235,6 +235,11 @@ const AddPetScreen = ({ navigation }) => {
           photos: pet.photos ?? [],
           specialNeeds: pet.specialNeeds,
           temperament: pet.temperament,
+          // Both were collected below and never sent, so two of the signals
+          // the matcher scores on never reached it. `|| undefined` because an
+          // untouched picker is "", which the schema's enum rejects.
+          activityLevel: pet.activityLevel || undefined,
+          socialisation: pet.socializationLevel || undefined,
           favoriteActivities: pet.favoriteActivities ?? [],
         });
       }
@@ -369,6 +374,7 @@ const AddPetScreen = ({ navigation }) => {
 
       <Text>Activity Level:</Text>
       <Picker
+        testID="pet-activity"
         selectedValue={currentPet.activityLevel}
         onValueChange={(itemValue) =>
           setCurrentPet({ ...currentPet, activityLevel: itemValue })
@@ -393,6 +399,7 @@ const AddPetScreen = ({ navigation }) => {
       <>
       <Text>Socialization Level:</Text>
       <Picker
+        testID="pet-socialisation"
         selectedValue={currentPet.socializationLevel}
         onValueChange={(itemValue) =>
           setCurrentPet({ ...currentPet, socializationLevel: itemValue })
@@ -409,17 +416,15 @@ const AddPetScreen = ({ navigation }) => {
       </>
       ) : null}
 
-      <TextInput
-        placeholder="Health Information"
-        value={currentPet.healthInformation}
-        onChangeText={(text) =>
-          setCurrentPet({ ...currentPet, healthInformation: text })
-        }
-        multiline
-      />
-      <Text style={{ marginTop: 5, fontStyle: "italic", fontSize: 12 }}>
-        Note: This info is just to keep other pet owners informed and
-        won&rsquo;t be used for pet matching.
+      {/*
+        A free-text "Health Information" box stood here. It was never sent and
+        had no schema field, so everything typed into it was dropped - while
+        the note beneath promised other owners would see it. Vaccinations are
+        structured records now, added from the pet's profile after saving.
+      */}
+      <Text>
+        You can add vaccination records from {currentPet.name || "your pet"}&rsquo;s
+        profile once saved.
       </Text>
 
       {species.matchable ? (

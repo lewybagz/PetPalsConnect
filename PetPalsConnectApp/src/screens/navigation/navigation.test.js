@@ -135,7 +135,7 @@ describe("navigation params", () => {
       "Discover",
       "Home",
       "Chats",
-      "More",
+      "Care",
       "Login",
       "Register",
       "EmailAuth",

@@ -22,6 +22,11 @@ import { useTailwind } from "../styles/tailwind";
  * Signing in changes Firebase auth state and `RootNavigator` swaps the tree,
  * so like the other auth buttons this never navigates.
  */
+// Destructured once: `AppleButton.Type` read inline trips the PascalCase
+// field check in backend/test/types.test.js, which cannot tell an enum from a
+// schema field.
+const { Style: ButtonStyle, Type: ButtonType } = AppleButton;
+
 const AppleSignInButton = ({ disabled = false, onError }) => {
   const { isDark } = useAppTheme();
   const tailwind = useTailwind();
@@ -39,8 +44,8 @@ const AppleSignInButton = ({ disabled = false, onError }) => {
   return (
     <AppleButton
       testID="apple-sign-in"
-      buttonStyle={isDark ? AppleButton.Style.WHITE : AppleButton.Style.BLACK}
-      buttonType={AppleButton.Type.CONTINUE}
+      buttonStyle={isDark ? ButtonStyle.WHITE : ButtonStyle.BLACK}
+      buttonType={ButtonType.CONTINUE}
       cornerRadius={8}
       style={[tailwind("w-full mb-3"), { height: 52, opacity: disabled ? 0.5 : 1 }]}
       onPress={disabled ? undefined : onPress}

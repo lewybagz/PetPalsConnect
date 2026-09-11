@@ -22,6 +22,7 @@ import { useTokens } from "../../context/AppThemeContext";
 import { speciesInfo } from "../../data/species";
 import { useUnits } from "../../context/SettingsContext";
 import { formatWeight } from "../../utils/units";
+import VaccinationBadge from "../../components/VaccinationBadge";
 
 /**
  * One pet's profile, and the three things you can do from it.
@@ -193,6 +194,8 @@ const PetDetailsScreen = ({ route, navigation }) => {
       {pet.temperament ? (
         <Text style={styles.detail}>Temperament: {pet.temperament}</Text>
       ) : null}
+      {/* The status everybody sees; the records only the owner can open. */}
+      <VaccinationBadge testID="pet-vaccination" petId={pet._id} style={styles.badge} />
 
       <View style={styles.buttonsContainer}>
         <TouchableOpacity testID="pet-chat" onPress={handleChat} style={styles.iconButton}>
@@ -227,6 +230,16 @@ const PetDetailsScreen = ({ route, navigation }) => {
           </Text>
         </TouchableOpacity>
       ) : null}
+      {isMine ? (
+        <TouchableOpacity
+          testID="pet-health"
+          onPress={() => navigation.navigate("PetHealth", { pet })}
+          style={styles.secondaryButton}
+        >
+          <Icon name="medkit" size={16} color={tokens.primary} />
+          <Text style={styles.secondaryButtonText}>Vaccination records</Text>
+        </TouchableOpacity>
+      ) : null}
     </ScrollView>
   );
 };
@@ -248,6 +261,9 @@ const makeStyles = (t) => StyleSheet.create({
   },
   dotActive: {
     backgroundColor: t.primary,
+  },
+  badge: {
+    marginTop: 8,
   },
   placeholderText: {
     color: t.textMuted,

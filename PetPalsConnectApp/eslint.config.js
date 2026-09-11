@@ -17,7 +17,7 @@ module.exports = [
   },
   {
     // Build-time checks that run under Node, not the app runtime or Metro.
-    files: ["scripts/**/*.js"],
+    files: ["scripts/**/*.js", "app.config.js"],
     languageOptions: {
       globals: {
         require: "readonly",

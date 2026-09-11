@@ -76,6 +76,36 @@ const own = async (user, pet) => {
 };
 
 // ---------------------------------------------------------------------------
+// Vaccinations
+// ---------------------------------------------------------------------------
+
+test("discovery.requireVaccinationShared leaves out a pet with no records", async () => {
+  const me = await makeUser("me", { discovery: { requireVaccinationShared: true } });
+  const other = await makeUser("other");
+  await own(me, await makePet(me, { name: "Rex" }));
+  await own(other, await makePet(other, { name: "Sky" }));
+
+  const strict = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("me"))
+    .expect(200);
+  assert.deepEqual(strict.body.candidates, []);
+
+  // Off, the same pet is in the deck - so the setting is what removed it.
+  await User.findByIdAndUpdate(me._id, {
+    $set: { "discovery.requireVaccinationShared": false },
+  });
+  const open = await request(app)
+    .get("/api/petmatches/discover")
+    .set(...auth("me"))
+    .expect(200);
+  assert.deepEqual(
+    open.body.candidates.map((candidate) => candidate.pet.name),
+    ["Sky"]
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Who may message
 // ---------------------------------------------------------------------------
 

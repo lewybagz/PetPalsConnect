@@ -92,7 +92,7 @@ const UserController = {
    * One user's profile.
    *
    * This returned the whole document to anyone who asked - email address,
-   * Firebase uid, FCM device token, security questions, Stripe customer id -
+   * Firebase uid, FCM device token, security questions -
    * and pet records hand out their owner's id freely, so the browsable half of
    * the app led straight to everybody's personal data.
    *

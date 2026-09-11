@@ -164,10 +164,13 @@ Both stores use the bundle identifier `com.petpalsconnect.app`.
       `storage.rules` and are wired in `PetPalsConnectApp/firebase.json`)
 - [ ] Restrict the Google Maps API key by platform and API
 - [ ] Fill in Apple privacy nutrition labels and Play data-safety declarations
-- [ ] Create the two recurring prices in Stripe and set `STRIPE_PRICE_MONTHLY`
-      and `STRIPE_PRICE_YEARLY`; a plan with no price id is hidden in the app
-- [ ] Add the Stripe webhook endpoint (`/api/stripe-webhooks`) in the dashboard
-      and set `STRIPE_WEBHOOK_SECRET` from it
+- [ ] RevenueCat: create the project, a `premium` entitlement, one
+      auto-renewing product per store attached to the current offering, and
+      set `EXPO_PUBLIC_REVENUECAT_IOS_KEY` / `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`
+- [ ] Add the RevenueCat webhook (`/api/revenuecat-webhooks`) with an
+      Authorization header, and set `REVENUECAT_WEBHOOK_SECRET` to the same value
+- [ ] Enable the Apple sign-in provider in Firebase Authentication and the
+      Sign in with Apple capability on the app id
 
 ## Security
 
@@ -244,9 +247,8 @@ Firebase credential. Apple requires this of any app offering account creation.
 ## Known gaps
 
 - Facebook login was removed; Google and email/phone remain
-- Apple Pay and Google Pay are off; subscriptions take a card through Stripe's
-  PaymentSheet. Turning Apple Pay on needs a registered merchant ID (see
-  `PetPalsConnectApp/.env.example`)
+- Subscriptions are store purchases through RevenueCat; there is no card
+  entry in the app and no Stripe
 - The app is part TypeScript and part JavaScript, converting a module at a
   time; `checkJs` is off, so unconverted files are not typechecked. The backend
   is plain CommonJS JavaScript

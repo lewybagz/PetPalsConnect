@@ -20,7 +20,10 @@ const ICONS = {
   Discover: ["heart", "heart-outline"],
   Chats: ["chatbubbles", "chatbubbles-outline"],
   Playdates: ["paw", "paw-outline"],
-  More: ["menu", "menu-outline"],
+  // "More" until the hub was built. It is the half of the app for the pets
+  // somebody already has - emergency numbers, picks, vets, vaccinations - and
+  // a tab called "More" tells nobody that.
+  Care: ["medkit", "medkit-outline"],
 };
 
 export default function BottomTabNavigator() {
@@ -49,7 +52,7 @@ export default function BottomTabNavigator() {
           tabBarIcon: ({ focused }) => <NotificationTabIcon focused={focused} />,
         }}
       />
-      <Tab.Screen name="More" component={MoreScreen} />
+      <Tab.Screen name="Care" component={MoreScreen} />
     </Tab.Navigator>
   );
 }

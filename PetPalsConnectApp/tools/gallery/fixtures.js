@@ -61,6 +61,7 @@ export const CANDIDATES = [
     score: 82,
     breakdown: { temperament: 27, size: 21, activities: 22, breed: 8, age: 4 },
     distanceMiles: 2.4,
+    vaccination: "current",
   },
   {
     pet: {
@@ -489,7 +490,35 @@ export const SETTINGS = {
 
 };
 
+/** Rex's vaccination records: two of three core vaccines, one with a certificate. */
+export const HEALTH = {
+  status: "partial",
+  kinds: ["rabies", "dhpp", "bordetella", "influenza", "leptospirosis", "other"],
+  coreKinds: ["rabies", "dhpp", "bordetella"],
+  records: [
+    {
+      _id: "rec-1",
+      pet: MY_PET._id,
+      kind: "rabies",
+      administeredAt: "2026-03-14T00:00:00.000Z",
+      expiresAt: "2029-03-14T00:00:00.000Z",
+      verification: "documented",
+      certificatePhoto: PHOTOS.rex,
+    },
+    {
+      _id: "rec-2",
+      pet: MY_PET._id,
+      kind: "dhpp",
+      administeredAt: "2026-03-14T00:00:00.000Z",
+      expiresAt: "2027-03-14T00:00:00.000Z",
+      verification: "selfReported",
+    },
+  ],
+};
+
 export const ROUTES = {
+  [`/api/pets/${MY_PET._id}/health`]: HEALTH,
+  "/api/pets/pet-1/health/status": { status: "current", shared: true },
   "/api/petmatches/discover": {
     pet: MY_PET,
     preview: false,

@@ -77,6 +77,11 @@ const TYPES = {
     screen: "PostPlaydateReview",
     param: "playdateId",
   },
+  vaccinationDue: {
+    title: "Vaccination due soon",
+    screen: "PetHealth",
+    param: "petId",
+  },
   general: {
     title: "PetPals Connect",
     screen: "Notifications",
@@ -125,6 +130,7 @@ const CATEGORY_OF = {
   playdateDeclined: "playdateReminders",
   playdateCancelled: "playdateReminders",
   reviewReminder: "playdateReminders",
+  vaccinationDue: "playdateReminders",
   general: "appUpdates",
 };
 

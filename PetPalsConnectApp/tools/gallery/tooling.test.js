@@ -4,7 +4,7 @@ const path = require("node:path");
 /**
  * The screenshot tooling must not reach the app.
  *
- * `tools/web-stubs` contains a Firebase that cannot authenticate and a Stripe
+ * `tools/web-stubs` contains a Firebase that cannot authenticate and a RevenueCat
  * that cannot take a payment. They are safe because they are unreachable from a
  * device build: Metro swaps them in only when `platform === "web"`, and the
  * gallery is behind an `EXPO_PUBLIC_GALLERY` check that Metro inlines away.

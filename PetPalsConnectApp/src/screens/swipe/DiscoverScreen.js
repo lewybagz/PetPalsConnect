@@ -17,6 +17,7 @@ import {
   useToast,
 } from "../../components/ui";
 import SafetyMenu from "../../components/SafetyMenu";
+import VaccinationBadge from "../../components/VaccinationBadge";
 import SwipeableCard from "./SwipeableCard";
 import {
   decide,
@@ -332,6 +333,14 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
               {describeDistance(current.distanceMiles, units)}
             </Text>
           ) : null}
+
+          {/* You are deciding whether to meet this dog in a park. The server
+              attaches the status to every candidate, so there is no fetch. */}
+          <VaccinationBadge
+            testID="discover-vaccination"
+            status={current.vaccination}
+            style={tailwind("mt-sm")}
+          />
 
           <View style={tailwind("flex-row mt-lg")}>
             <Stat tailwind={tailwind} label="Breed" value={current.pet.breed} />

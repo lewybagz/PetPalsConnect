@@ -18,6 +18,7 @@ const {
   isMatchable,
 } = require("../services/matching/eligibility");
 const settings = require("../services/settings");
+const vaccinations = require("../services/vaccinations");
 
 /**
  * Pet matching.
@@ -181,11 +182,23 @@ const reachableCandidates = async ({
 
   // Somebody who has never shared a position has a null distance. Dropping
   // them empties the deck early on, so it is opt-out rather than the default.
-  if (!discovery.includeUnknownDistance) {
-    return reachable.filter((entry) => entry.distanceMiles !== null);
-  }
+  const inRange = discovery.includeUnknownDistance
+    ? reachable
+    : reachable.filter((entry) => entry.distanceMiles !== null);
 
-  return reachable;
+  // Every card carries the pet's vaccination status, and the owner's
+  // preference can narrow to pets whose owner has shared current records.
+  // A narrowing filter, like the rest: it is applied to the list the rules
+  // above already built and can only ever remove from it.
+  const statuses = await vaccinations.statusForPets(inRange.map((entry) => entry.pet._id));
+  const withStatus = inRange.map((entry) => ({
+    ...entry,
+    vaccination: statuses.get(String(entry.pet._id)),
+  }));
+
+  return discovery.requireVaccinationShared
+    ? withStatus.filter((entry) => vaccinations.isShared(entry.vaccination))
+    : withStatus;
 };
 
 const PetMatchController = {
@@ -394,6 +407,7 @@ const PetMatchController = {
             score: null,
             breakdown: null,
             distanceMiles: formatMiles(entry.distanceMiles),
+            vaccination: entry.vaccination,
           })),
         });
       }
@@ -428,6 +442,9 @@ const PetMatchController = {
       const distanceByPet = new Map(
         reachable.map((entry) => [String(entry.pet._id), entry.distanceMiles])
       );
+      const vaccinationByPet = new Map(
+        reachable.map((entry) => [String(entry.pet._id), entry.vaccination])
+      );
       const byId = new Map(
         reachable.map((entry) => [String(entry.pet._id), entry.pet])
       );
@@ -451,6 +468,7 @@ const PetMatchController = {
             score: match.score,
             breakdown: match.breakdown,
             distanceMiles: formatMiles(distanceByPet.get(String(match.petId))),
+            vaccination: vaccinationByPet.get(String(match.petId)),
           }))
           .filter((candidate) => candidate.pet),
       });

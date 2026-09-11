@@ -82,6 +82,16 @@ describe("DiscoverScreen", () => {
     expect(screen.getByText("Bo")).toBeTruthy();
   });
 
+  it("shows what the candidate's owner has shared about vaccinations", async () => {
+    // You are deciding whether to meet this dog in a park. The server attaches
+    // the status to every candidate; the card says "shared", never "safe".
+    respondWith([candidate("pet-1", "Bo", { vaccination: "current" })]);
+    render(<DiscoverScreen navigation={navigation} />);
+
+    await waitFor(() => expect(screen.getByTestId("discover-vaccination")).toBeTruthy());
+    expect(screen.getByText("Vaccinations shared")).toBeTruthy();
+  });
+
   it("shows an empty state when nobody is left", async () => {
     respondWith([]);
     render(<DiscoverScreen navigation={navigation} />);

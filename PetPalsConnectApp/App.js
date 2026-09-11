@@ -13,7 +13,7 @@ import { AuthSessionProvider } from "./src/context/AuthSessionContext";
 import { DevicePreferencesProvider } from "./src/context/DevicePreferencesContext";
 import { SettingsProvider } from "./src/context/SettingsContext";
 import RootNavigator from "./src/screens/navigation/RootNavigator";
-import PaymentsProvider from "./src/components/PaymentsProvider";
+import PurchasesProvider from "./src/components/PurchasesProvider";
 import { navigationRef } from "./src/navigation/navigationRef";
 import { useAppFonts } from "./src/styles/fonts";
 
@@ -67,7 +67,7 @@ export default function App() {
                   session gate; every screen under it reads units, privacy and
                   discovery from one fetch rather than four. */}
               <SettingsProvider>
-                <PaymentsProvider>
+                <PurchasesProvider>
                   <SafeAreaProvider>
                     {/* Inside the safe-area provider because the toast
                         positions itself above the home indicator, and outside
@@ -79,7 +79,7 @@ export default function App() {
                       </NavigationContainer>
                     </ToastProvider>
                   </SafeAreaProvider>
-                </PaymentsProvider>
+                </PurchasesProvider>
               </SettingsProvider>
             </AuthSessionProvider>
           </DevicePreferencesProvider>

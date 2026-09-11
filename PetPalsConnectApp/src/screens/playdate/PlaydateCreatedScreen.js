@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, ScrollView, Image, Button } from "react-native";
 import messaging from "@react-native-firebase/messaging";
 import { useTokens } from "../../context/AppThemeContext";
+import VaccinationBadge from "../../components/VaccinationBadge";
 
 const PlaydateCreatedScreen = ({ route, navigation }) => {
   const tokens = useTokens();
@@ -44,7 +45,7 @@ const PlaydateCreatedScreen = ({ route, navigation }) => {
       });
 
     return unsubscribe;
-  }, []);
+  }, [navigation]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -59,6 +60,10 @@ const PlaydateCreatedScreen = ({ route, navigation }) => {
       <Text style={styles.header}>
         {pet?.name ? `You're meeting ${pet.name}!` : "Playdate scheduled"}
       </Text>
+      {/* The last thing to know before the park: what their owner has shared. */}
+      {pet?._id ? (
+        <VaccinationBadge testID="playdate-vaccination" petId={pet._id} style={styles.badge} />
+      ) : null}
       <View style={styles.detailsContainer}>
         <Text style={styles.label}>Date & Time:</Text>
         <Text style={styles.detail}>{formatDate(playdate.date)}</Text>
@@ -108,6 +113,10 @@ const makeStyles = (t) => StyleSheet.create({
     borderRadius: 50,
     alignSelf: "center",
     marginBottom: 10,
+  },
+  badge: {
+    alignSelf: "center",
+    marginBottom: 16,
   },
   detailsContainer: {
     padding: 10,

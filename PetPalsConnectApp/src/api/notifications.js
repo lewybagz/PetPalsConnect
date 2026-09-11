@@ -33,6 +33,7 @@ export const TYPES = {
   playdateDeclined: { screen: "PlaydateDetails", param: "playdateId" },
   playdateCancelled: { screen: "MyPlaydates", param: null },
   reviewReminder: { screen: "PostPlaydateReview", param: "playdateId" },
+  vaccinationDue: { screen: "PetHealth", param: "petId" },
   general: { screen: "Notifications", param: null },
 };
 

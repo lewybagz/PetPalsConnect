@@ -192,12 +192,6 @@ const SettingsScreen = ({ navigation }) => {
           detail={profile?.subscribed ? "Premium" : "Free"}
           onPress={() => navigation.navigate("SubscriptionManagement")}
         />
-        <SettingsRow
-          testID="settings-payment-methods"
-          icon="card-outline"
-          label="Payment methods"
-          onPress={() => navigation.navigate("PaymentMethods")}
-        />
       </SettingsSection>
 
       <SettingsSection title="About">

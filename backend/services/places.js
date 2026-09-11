@@ -12,7 +12,7 @@ const { IMPORTS, categoriesFor } = require("./placeCategories");
  * is broken" - which it also was: the near-query used a PascalCase path against
  * a schema with a lowercase one, so it matched nothing even with rows present.
  *
- * Google Places is optional in the same way Stripe is. Without a key the import
+ * Google Places is optional in the same way payments are. Without a key the import
  * reports 503 and the rest of the map works on whatever rows exist; a missing
  * key must never stop the app from opening.
  */

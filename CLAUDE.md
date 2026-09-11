@@ -91,7 +91,7 @@ account outright. "A resource id is not an identity" was already the rule for
 reads; it is the same rule one verb over, and the audit could not see it because
 those handlers build no query at all, they mutate the document the middleware
 fetched. The writable set is an allowlist (`username`, `userPhoto`, `location`)
-rather than a denylist: `subscribed` is Stripe's, `verified` is a moderator's,
+rather than a denylist: `subscribed` is the store's, `verified` is a moderator's,
 and `pets`/`friendsList` belong to the endpoints that maintain them.
 
 **No passwords in the database.** Firebase Auth owns credentials. The `User`
@@ -797,6 +797,63 @@ and it was never in `package.json`, so the one tool CLAUDE.md tells you to run
 after a design change could not run from a clean install - and the missing
 import was also the repo's only lint error.
 
+### Health records
+
+**A vaccination record is what an owner typed, and every screen says so.**
+The app arranged for strangers' dogs to meet with no health information at all
+- the one thing every daycare, boarder and group class asks to see first.
+`HealthRecord` is its own model rather than an array on `Pet`: the deck reads
+`Pet` whole and wants a status per pet, not every certificate; the reminder
+sweep wants an index on `expiresAt`. `owner` is stored beside `pet` so every
+read is scoped to the caller without a join that would eventually be skipped.
+`verification` names three states - `selfReported`, `documented` (a certificate
+photo is attached), `verified` (a person checked) - and nothing can write the
+third yet. It exists so the UI never has to pretend `documented` is stronger
+than it is, and so real verification later is not a migration. The stranger's
+pill reads "Vaccinations shared · owner-reported" and never "safe" or
+"verified"; `VaccinationBadge.test.js` and `PetHealthScreen.test.js` assert
+the word does not appear.
+
+**`services/vaccinations.js` is the one place "is this pet current?" is
+answered.** The owner's screen, the deck card and the reminder job all ask, and
+a rule written three times is a rule one of them gets wrong. `statusOf()` is
+pure: `unknown` (no records), `partial` (a core vaccine missing), `expired`,
+`expiringSoon`, `current`. Expired outranks partial - a lapsed rabies
+certificate is the thing to say whether or not Bordetella was ever entered. A
+record with no `expiresAt` never lapses: the owner chose not to enter a date,
+and inventing one would be prescribing. The core three are rabies, DHPP and
+Bordetella (2022 AAHA guidelines; Bordetella is "core for the individual" once
+a dog is in regular group contact), and `SHARED_STATUSES` is `current` and
+`expiringSoon` only - one certificate out of three is not what a facility would
+accept either.
+
+**It stores what a vet did and remembers a date. It never recommends.** Same
+rule as the articles: no schedule, no "your dog needs", nothing a reader could
+act on without a vet. The reminder fires 30 days before `expiresAt` through
+`services/scheduler` - the lead is judgement (the only sourced number is
+Bordetella's "at least 7 days before arrival") and is marked as such - and the
+handler re-reads the record, so one removed after the job was queued raises
+nothing. `vaccinationDue` opens `PetHealth` with the pet's id, which
+`types.test.js` checks like every other destination.
+
+**The status travels with the deck; the records never leave the owner.**
+`reachableCandidates` attaches `vaccination` to every candidate in one query,
+so the card has no fetch of its own, and `GET /api/pets/:petId/health/status`
+answers the same derived word for any pet - it is what a swipe would show
+anyway. `discovery.requireVaccinationShared` narrows to shared statuses and is
+off by default: early on almost nobody has entered any, and a preference that
+empties the deck is one nobody keeps. Like every discovery preference it can
+only remove from the list the safety rules already built.
+
+**The add-a-pet form sends what it collects.** It had a free-text "Health
+Information" box that was never posted and had no schema field - so everything
+typed there was dropped while the note beneath promised other owners would see
+it - and it collected `activityLevel` and `socialisation`, two signals the
+matcher scores on, without sending either. `check:schemas` audits backend write
+sites for missing required fields; an app-side field that never leaves the
+device is invisible to it. `AddPetScreen.test.js` asserts the payload against
+the form, which is the gate that was missing.
+
 ### Safety
 
 **A block is symmetric, and every list has to consult it.** `services/blocking.js`
@@ -1030,7 +1087,7 @@ coordinates is stored as `{ type: "Point" }` - which a 2dsphere index rejects
 outright, and the save fails talking about geo keys on a document nobody meant
 to put on a map.
 
-**Google Places is optional, like Stripe.** `services/places.js` imports nearby
+**Google Places is optional, like payments.** `services/places.js` imports nearby
 parks and pet shops so a fresh deployment is not an empty map; without
 `GOOGLE_MAPS_API_KEY` the import reports 503 and everything else still works.
 The importer upserts on `placeId`, which is also uniquely indexed, so two users
@@ -1090,36 +1147,52 @@ recorded.
 
 ### Subscriptions
 
-**Stripe is the source of truth for billing; Mongo mirrors it.** The only
-writer of `Subscription` is `syncFromStripe`, which upserts on
-`stripeSubscriptionId` and then sets `user.subscribed`. Nothing else may set a
-status - a status we invented and one Stripe holds will drift apart, and Stripe
-wins every time.
+**The store is the source of truth for billing; RevenueCat relays it; Mongo
+mirrors it.** Premium widens the matching deck, which is in-app digital
+content, so Apple 3.1.1 and Play's payments policy both require native IAP -
+the Stripe PaymentSheet flow this replaced could not have shipped on either
+store. The app buys through StoreKit / Play Billing via `react-native-purchases`;
+RevenueCat validates the receipt and posts every lifecycle event to
+`POST /api/revenuecat-webhooks`. `services/subscriptions/revenuecat.syncFromEvent`
+is the only writer of `Subscription` and the only thing that sets
+`user.subscribed`. Nothing else may set a status - one we invented and one the
+store holds will drift apart, and the store wins every time.
 
-**The price never comes from the client.** `services/subscriptions/plans.js`
-maps plan ids onto `STRIPE_PRICE_*` env vars, and `createSubscription` looks the
-price up there. A plan with no configured price id is reported `available:
-false` rather than half-working.
+**The app user id is the Firebase uid.** `PurchasesProvider` configures the SDK
+with it once somebody is signed in and logs out on sign-out, so the webhook's
+`app_user_id` resolves to a profile by the field that is already unique, and
+the next account on a shared phone does not inherit an entitlement.
 
-**Mobile pays through PaymentSheet, not Checkout.** Checkout is a browser
-redirect a native app cannot return from. The server creates the subscription
-with `payment_behavior: "default_incomplete"` and hands back a client secret,
-an ephemeral key and the customer id; the SDK collects the card; the webhook
-confirms it moments later. So a successful sheet does **not** mean the record
-says `active` yet - never block the UI on that.
+**The webhook authenticates by a shared header, compared in constant time.**
+RevenueCat sends whatever is configured as the webhook's Authorization header
+in its dashboard; it has to equal `REVENUECAT_WEBHOOK_SECRET` exactly. The route
+is mounted outside `authenticate` and the per-account rate limit in Server.js.
+Every acknowledged event is a 200 - an unknown type, a TEST from the dashboard,
+an account that has since been deleted - because RevenueCat retries anything
+else for days. Retries reuse the event id and every write is an upsert keyed on
+`originalTransactionId`, so a duplicate delivery lands on the same row.
 
-**Cancelling sets `cancel_at_period_end`.** Deleting immediately takes away time
-the user has paid for. `resumeSubscription` undoes it.
+**A cancellation is auto-renew turning off, not the entitlement ending.**
+`CANCELLATION` sets `cancelAtPeriodEnd` and leaves the status alone;
+`EXPIRATION` is what ends it. A refund (`cancel_reason: CUSTOMER_SUPPORT`) ends
+it now. `BILLING_ISSUE` is `past_due` and still entitled until `endDate`, which
+the store moves to the end of its grace period. `subscribed` is "any live row
+with a future end date", so a lapsed monthly beside a fresh yearly reads as
+subscribed.
 
-**`/api/stripe-webhooks` is mounted before the JSON parser and outside
-`authenticate`** (Server.js). Signature verification needs the raw body, and
-Stripe authenticates by signature, not by token. Acknowledge unknown event types
-with a 200 or Stripe retries them for days.
+**There is nothing on the server that creates, cancels or resumes.** The
+store's own subscriptions page is the only place that can, and
+`SubscriptionManagementScreen` opens it (`customerInfo.managementURL`, falling
+back to the store's general page). "Restore purchases" is on the plan picker
+because Apple requires it wherever purchases are offered. A successful sheet
+does **not** mean the record says `active` yet - the webhook lands a moment
+later, and the confirmation screen says so; never block the UI on it.
 
-**Payments are optional everywhere.** No `STRIPE_SECRET_KEY` and the routes
-report 503; no `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` and `PaymentsProvider`
-renders its children untouched and the plan picker shows an empty state. A
-missing key must never stop the app from opening.
+**Payments are optional everywhere.** No `EXPO_PUBLIC_REVENUECAT_*_KEY` and
+`purchasesConfigured()` is false, the SDK is never configured and the plan
+picker shows an empty state; no `REVENUECAT_WEBHOOK_SECRET` and the webhook
+answers 503. A missing key must never stop the app from opening. Real purchases
+need a development build - in Expo Go the SDK runs in preview mode.
 
 ## Verifying a change
 

@@ -17,6 +17,7 @@ import PetSelectionScreen from "../chat/PetSelectionScreen";
 // Pets
 import AddPetScreen from "../pets/AddPetScreen";
 import PetDetailsScreen from "../pets/PetDetailsScreen";
+import PetHealthScreen from "../pets/PetHealthScreen";
 import PetPhotosScreen from "../pets/PetPhotosScreen";
 import PetListScreen from "../pets/PetListScreen";
 
@@ -44,11 +45,9 @@ import UsersPetsScreen from "../profile/UsersPetsScreen";
 
 // Settings
 import AboutAppScreen from "../settings/AboutAppScreen";
-import AddPaymentMethodScreen from "../settings/AddPaymentMethodScreen";
 import HelpSupportScreen from "../settings/HelpSupportScreen";
 import LegalPoliciesScreen from "../settings/LegalPoliciesScreen";
 import NotificationPreferencesScreen from "../settings/NotificationPreferencesScreen";
-import PaymentMethodsScreen from "../settings/PaymentMethodsScreen";
 import DiscoveryPreferencesScreen from "../settings/DiscoveryPreferencesScreen";
 import DisplaySettingsScreen from "../settings/DisplaySettingsScreen";
 import PrivacySettingsScreen from "../settings/PrivacySettingsScreen";
@@ -127,6 +126,7 @@ export default function AppStack() {
       <Stack.Screen name="AddPet" component={AddPetScreen} options={{ title: "Add Pet" }} />
       <Stack.Screen name="PetDetails" component={PetDetailsScreen} options={{ title: "Pet" }} />
       <Stack.Screen name="PetPhotos" component={PetPhotosScreen} options={{ title: "Photos" }} />
+      <Stack.Screen name="PetHealth" component={PetHealthScreen} options={{ title: "Vaccinations" }} />
       <Stack.Screen name="PetList" component={PetListScreen} options={{ title: "Pets" }} />
       <Stack.Screen name="UsersPets" component={UsersPetsScreen} options={{ title: "Their Pets" }} />
 
@@ -162,8 +162,6 @@ export default function AppStack() {
       <Stack.Screen name="DisplaySettings" component={DisplaySettingsScreen} options={{ title: "Appearance" }} />
       <Stack.Screen name="BlockedAccounts" component={BlockedAccountsScreen} options={{ title: "Blocked Accounts" }} />
       <Stack.Screen name="SecuritySettings" component={SecuritySettingsScreen} options={{ title: "Security" }} />
-      <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} options={{ title: "Payment Methods" }} />
-      <Stack.Screen name="AddPaymentMethod" component={AddPaymentMethodScreen} options={{ title: "Add Payment" }} />
       <Stack.Screen name="ChoosePlan" component={ChoosePlanScreen} options={{ title: "Choose a Plan" }} />
       <Stack.Screen name="SubscriptionConfirmation" component={SubscriptionConfirmationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SubscriptionHistory" component={SubscriptionHistoryScreen} options={{ title: "Subscription History" }} />

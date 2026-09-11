@@ -51,7 +51,7 @@ const SubscriptionHistoryScreen = () => {
   return (
     <FlatList
       data={history}
-      keyExtractor={(item) => String(item._id ?? item.stripeSubscriptionId)}
+      keyExtractor={(item) => String(item._id ?? item.originalTransactionId)}
       contentContainerStyle={tailwind("p-4 flex-grow")}
       ListEmptyComponent={
         <View style={tailwind("flex-1 items-center justify-center p-8")}>

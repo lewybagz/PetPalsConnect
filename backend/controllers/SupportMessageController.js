@@ -28,7 +28,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-/** Email is optional in the same way Stripe is: no credentials, no send. */
+/** Email is optional in the same way payments are: no credentials, no send. */
 const emailEnabled = () =>
   Boolean(process.env.GMAIL_EMAIL && process.env.GMAIL_APP_PASSWORD);
 

@@ -330,6 +330,17 @@ const DiscoveryPreferencesScreen = () => {
             commit({ discovery: { includeUnknownDistance: value } })
           }
         />
+
+        <SettingsRow
+          testID="discovery-requireVaccinationShared"
+          label="Only dogs with vaccinations shared"
+          description="Shows only dogs whose owner has recorded current rabies, DHPP and Bordetella dates. As they entered them - nobody checks certificates."
+          value={discovery.requireVaccinationShared === true}
+          disabled={saving}
+          onValueChange={(value) =>
+            commit({ discovery: { requireVaccinationShared: value } })
+          }
+        />
       </SettingsSection>
 
       <SettingsSection title="What kind of pet">

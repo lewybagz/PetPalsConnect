@@ -36,6 +36,7 @@ const DOCUMENT_INTERFACES = {
   Subscription: "Subscription",
   Location: "Location",
   Article: "Article",
+  HealthRecord: "HealthRecord",
 };
 
 /** Fields that exist on the JSON but not as schema paths. */
@@ -46,6 +47,7 @@ require("../models/Pet");
 require("../models/Subscription");
 require("../models/Location");
 require("../models/Article");
+require("../models/HealthRecord");
 
 /** Extracts `interface Name { ... }` bodies, ignoring comments. */
 const readInterfaces = () => {
@@ -130,7 +132,7 @@ test("the subscription status union matches the schema's enum exactly", () => {
   const declared = [...union.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).sort();
   const schemaEnum = [...mongoose.model("Subscription").schema.path("status").enumValues].sort();
 
-  // Stripe owns these values; a status in one list and not the other means the
+  // The store owns these values; a status in one list and not the other means the
   // app cannot describe a state a subscription can actually be in.
   assert.deepEqual(declared, schemaEnum);
 });
@@ -186,6 +188,9 @@ test("no screen reads a PascalCase version of a real schema field", () => {
   const files = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      // A `__`-prefixed file under src/ is another suite's scratch file, and the
+      // app's jest workers write and delete one while this runs.
+      if (entry.name.startsWith("__")) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (/\.[jt]sx?$/.test(entry.name) && !/\.test\./.test(entry.name)) files.push(full);
@@ -325,6 +330,9 @@ test("no screen writes a PascalCase version of a real schema field", () => {
   const files = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      // A `__`-prefixed file under src/ is another suite's scratch file, and the
+      // app's jest workers write and delete one while this runs.
+      if (entry.name.startsWith("__")) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (/\.[jt]sx?$/.test(entry.name) && !/\.test\./.test(entry.name)) files.push(full);

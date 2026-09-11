@@ -91,6 +91,7 @@ const UserSchema = new Schema({
     // Empty means "no preference", which is not the same as "none of them".
     species: { type: [String], default: () => [] },
     includeUnknownDistance: { type: Boolean, default: true },
+    requireVaccinationShared: { type: Boolean, default: false },
   },
 
   /**

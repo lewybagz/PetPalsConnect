@@ -304,7 +304,7 @@ test("adding the same place twice returns the one that exists", async () => {
 test("importing reports 503 when Google is not configured", async () => {
   await signUp("importer");
 
-  // Optional in the same way Stripe is: a missing key must never look like a
+  // Optional in the same way payments are: a missing key must never look like a
   // bug, and must never stop the rest of the map working.
   assert.equal(places.isEnabled(), false);
 

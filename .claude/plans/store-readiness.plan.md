@@ -1,6 +1,6 @@
 # Store readiness — closing the gaps in existing features
 
-Status: **proposal** (not approved). Written 2026-09-09 against `main` @ `34d232b`.
+Status: **in progress** - Phases 0, 1 and 2 done (billing decision: RevenueCat). Written 2026-09-09 against `main` @ `34d232b`.
 Source: the end-to-end gap audit of the same day (screen → API client → route → controller, plus `app.json` against each platform's requirements).
 
 ## Overview and goal
@@ -64,19 +64,19 @@ No new abstractions. Each item below names the helper that already exists and is
 
 Each phase is one PR. Phase 0 unblocks device testing of everything after it; Phase 2 is independent of the rest and can slot anywhere once the billing decision is made.
 
-### Phase 0 — config-only store blockers (½ session)
+### Phase 0 — config-only store blockers (done 2026-09-10)
 
 Files: [PetPalsConnectApp/app.json](../../PetPalsConnectApp/app.json), [PetPalsConnectApp/.env.example](../../PetPalsConnectApp/.env.example), new `PetPalsConnectApp/app.config.test.js`.
 
 | id | todo | status |
 | --- | --- | --- |
-| 0.1 | Add `ios.entitlements["aps-environment"] = "production"` and `ios.infoPlist.UIBackgroundModes = ["remote-notification"]` (RNFB docs: required since SDK 51; without them `getToken()` throws on every iPhone) | todo |
-| 0.2 | Add `["@react-native-google-signin/google-signin", { "iosUrlScheme": "<REVERSED_CLIENT_ID from GoogleService-Info.plist>" }]` to `plugins` — read it from the plist at config time via `app.config.js` rather than committing it | todo |
-| 0.3 | Set `ios.requireFullScreen: true` (keeps `supportsTablet`; the alternative is dropping iPad) | todo |
-| 0.4 | Remove `NSLocationAlwaysAndWhenInUseUsageDescription` and `NSPhotoLibraryAddUsageDescription` — neither capability is used, and reviewers read them | todo |
-| 0.5 | Remove `expo-secure-store` from `plugins` and `dependencies` (0 imports) | todo |
-| 0.6 | Add `app.config.test.js`: asserts the entitlement, the background mode, the google-signin plugin, `requireFullScreen`, and that no `NS*UsageDescription` key names a capability with no matching `plugins` entry — the gate that stops 0.1–0.4 regressing | todo |
-| 0.7 | Note in `.env.example` that `EXPO_PUBLIC_FIREBASE_*` are unused (RNFB reads the native config files) and delete them | todo |
+| 0.1 | Add `ios.entitlements["aps-environment"] = "production"` and `ios.infoPlist.UIBackgroundModes = ["remote-notification"]` (RNFB docs: required since SDK 51; without them `getToken()` throws on every iPhone) | done |
+| 0.2 | Add `["@react-native-google-signin/google-signin", { "iosUrlScheme": "<REVERSED_CLIENT_ID from GoogleService-Info.plist>" }]` to `plugins` — read it from the plist at config time via `app.config.js` rather than committing it | done |
+| 0.3 | Set `ios.requireFullScreen: true` (keeps `supportsTablet`; the alternative is dropping iPad) | done |
+| 0.4 | Remove `NSLocationAlwaysAndWhenInUseUsageDescription` and `NSPhotoLibraryAddUsageDescription` — neither capability is used, and reviewers read them | done |
+| 0.5 | Remove `expo-secure-store` from `plugins` and `dependencies` (0 imports) | done |
+| 0.6 | Add `app.config.test.js`: asserts the entitlement, the background mode, the google-signin plugin, `requireFullScreen`, and that no `NS*UsageDescription` key names a capability with no matching `plugins` entry — the gate that stops 0.1–0.4 regressing | done |
+| 0.7 | Note in `.env.example` that `EXPO_PUBLIC_FIREBASE_*` are unused (RNFB reads the native config files) and delete them | done |
 
 Prerequisite outside the repo: `eas init` (the `projectId` is all zeros), APNs auth key uploaded to Firebase → Cloud Messaging.
 
@@ -86,28 +86,28 @@ Files: [LoginScreen.js](../../PetPalsConnectApp/src/screens/auth/LoginScreen.js)
 
 | id | todo | status |
 | --- | --- | --- |
-| 1.1 | `npm i @invertase/react-native-apple-authentication`; `ios.usesAppleSignIn: true` in `app.json`; extend `app.config.test.js` | todo |
-| 1.2 | `src/api/appleAuth.js`: `signInWithApple()` — `performRequest` → `OAuthProvider("apple.com").credential({ idToken, rawNonce })` → `signInWithCredential`. One function, used by both auth screens (the Google handler is already duplicated across them; do not add a third copy) | todo |
-| 1.3 | `AppleButton` (the lib's HIG-compliant control) on Login and Register, `Platform.OS === "ios"` only, above Google | todo |
-| 1.4 | `deleteAccount` in `AuthSessionContext`: if `providerData` includes `apple.com`, re-run `performRequest` and `revokeToken(authorizationCode)` before `DELETE /api/users/me` | todo |
-| 1.5 | Test: `appleAuth.test.js` with the lib mocked in `jest.setup.js` — asserts the credential is built from `identityToken` + `nonce` and that a missing token throws before any Firebase call | todo |
+| 1.1 | `npm i @invertase/react-native-apple-authentication`; `ios.usesAppleSignIn: true` in `app.json`; extend `app.config.test.js` | done |
+| 1.2 | `src/api/appleAuth.js`: `signInWithApple()` — `performRequest` → `OAuthProvider("apple.com").credential({ idToken, rawNonce })` → `signInWithCredential`. One function, used by both auth screens (the Google handler is already duplicated across them; do not add a third copy) | done |
+| 1.3 | `AppleButton` (the lib's HIG-compliant control) on Login and Register, `Platform.OS === "ios"` only, above Google | done |
+| 1.4 | `deleteAccount` in `AuthSessionContext`: if `providerData` includes `apple.com`, re-run `performRequest` and `revokeToken(authorizationCode)` before `DELETE /api/users/me` | done |
+| 1.5 | Test: `appleAuth.test.js` with the lib mocked in `jest.setup.js` — asserts the credential is built from `identityToken` + `nonce` and that a missing token throws before any Firebase call | done |
 
 Console: Firebase → Authentication → Apple provider enabled; Apple Developer → identifier → Sign in with Apple capability.
 
-### Phase 2 — billing on RevenueCat (2 sessions; **blocked on decision**)
+### Phase 2 — billing on RevenueCat (done; decision: RevenueCat)
 
 Backend files: new `routes/revenuecatWebhooks.js`, [SubscriptionController.js](../../backend/controllers/SubscriptionController.js), [models/Subscription.js](../../backend/models/Subscription.js), [services/subscriptions/plans.js](../../backend/services/subscriptions/plans.js), [Server.js](../../backend/Server.js), [test/subscriptions.test.js](../../backend/test/subscriptions.test.js). App files: [PaymentsProvider.js](../../PetPalsConnectApp/src/components/PaymentsProvider.js), [subscriptions.ts](../../PetPalsConnectApp/src/api/subscriptions.ts), the four `settings/subscription/*` screens, [types/api.ts](../../PetPalsConnectApp/src/types/api.ts).
 
 | id | todo | status |
 | --- | --- | --- |
-| 2.1 | `Subscription` model: replace `stripe*` fields with `store` (`app_store`/`play_store`), `productId`, `rcOriginalTransactionId`; keep `status` enum but map RC events onto it (`active`, `trialing`, `past_due` for BILLING_ISSUE, `canceled` for EXPIRATION). `schemaAudit` + `types.test.js` enforce the rename on both sides | todo |
-| 2.2 | `syncFromRevenueCat(event)` next to where `syncFromStripe` was: resolve `User` by `firebaseUid = app_user_id`, upsert, set `user.subscribed`; unit-tested with fixture events including a duplicate delivery | todo |
-| 2.3 | `routes/revenuecatWebhooks.js` mounted before `authenticate`; constant-time compare of the `Authorization` header with `REVENUECAT_WEBHOOK_SECRET`; unknown types → 200 | todo |
-| 2.4 | Delete: `config/stripe.js`, `routes/stripeWebhooks.js`, `routes/payments.js`, `PaymentController.js`, `POST /subscriptions`, `/cancel`, `/resume`, `stripe` dep, `STRIPE_*` env keys and their `.env.example` entries; `plans.js` becomes a list of `{ id, entitlement, productIds }` | todo |
-| 2.5 | App: `PurchasesProvider` replaces `PaymentsProvider` — `Purchases.configure({ apiKey: Platform.select(...), appUserID: uid })` when the session has a Firebase user, `logOut()` when it doesn't; renders children untouched when no key (same "payments are optional" rule) | todo |
-| 2.6 | `ChoosePlanScreen`: `getOfferings()` → packages → `purchasePackage()`; **Restore purchases** button; on success `refresh()` the session and navigate to confirmation. `SubscriptionManagementScreen`: opens `managementURL`; history stays on `/api/subscriptions/history` | todo |
-| 2.7 | Delete `AddPaymentMethodScreen`, `PaymentMethodsScreen`, their `AppStack` entries and the Settings row; `@stripe/stripe-react-native` and its plugin go | todo |
-| 2.8 | Test: `subscriptions.test.js` rewritten for the webhook (signature, idempotency, `user.subscribed` flip both ways); `contract.test.js` must still pass with the deleted routes | todo |
+| 2.1 | `Subscription` model: replace `stripe*` fields with `store` (`app_store`/`play_store`), `productId`, `rcOriginalTransactionId`; keep `status` enum but map RC events onto it (`active`, `trialing`, `past_due` for BILLING_ISSUE, `canceled` for EXPIRATION). `schemaAudit` + `types.test.js` enforce the rename on both sides | done |
+| 2.2 | `syncFromRevenueCat(event)` next to where `syncFromStripe` was: resolve `User` by `firebaseUid = app_user_id`, upsert, set `user.subscribed`; unit-tested with fixture events including a duplicate delivery | done |
+| 2.3 | `routes/revenuecatWebhooks.js` mounted before `authenticate`; constant-time compare of the `Authorization` header with `REVENUECAT_WEBHOOK_SECRET`; unknown types → 200 | done |
+| 2.4 | Delete: `config/stripe.js`, `routes/stripeWebhooks.js`, `routes/payments.js`, `PaymentController.js`, `POST /subscriptions`, `/cancel`, `/resume`, `stripe` dep, `STRIPE_*` env keys and their `.env.example` entries; `plans.js` becomes a list of `{ id, entitlement, productIds }` | done |
+| 2.5 | App: `PurchasesProvider` replaces `PaymentsProvider` — `Purchases.configure({ apiKey: Platform.select(...), appUserID: uid })` when the session has a Firebase user, `logOut()` when it doesn't; renders children untouched when no key (same "payments are optional" rule) | done |
+| 2.6 | `ChoosePlanScreen`: `getOfferings()` → packages → `purchasePackage()`; **Restore purchases** button; on success `refresh()` the session and navigate to confirmation. `SubscriptionManagementScreen`: opens `managementURL`; history stays on `/api/subscriptions/history` | done |
+| 2.7 | Delete `AddPaymentMethodScreen`, `PaymentMethodsScreen`, their `AppStack` entries and the Settings row; `@stripe/stripe-react-native` and its plugin go | done |
+| 2.8 | Test: `subscriptions.test.js` rewritten for the webhook (signature, idempotency, `user.subscribed` flip both ways); `contract.test.js` must still pass with the deleted routes | done |
 
 Console: RevenueCat project, `premium` entitlement, one monthly product on each store, webhook URL + secret, public API keys → `EXPO_PUBLIC_REVENUECAT_IOS_KEY` / `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`. Real purchases need a dev build (Expo Go runs the SDK in preview mode).
 
@@ -193,7 +193,7 @@ node data-fetch-scripts/articles/seedArticles.js --dry-run
 cd PetPalsConnectApp && npm run gallery && npm run screenshots   # after Phases 3, 5, 6
 ```
 
-New tests per phase are named in the todo tables. Every phase leaves at least one that fails if the fix regresses (repo rule: new logic gets a test).
+New tests per phase are named in the done tables. Every phase leaves at least one that fails if the fix regresses (repo rule: new logic gets a test).
 
 Manual smoke on devices (there is no simulator here — needs a dev build on real hardware):
 
@@ -205,7 +205,7 @@ Manual smoke on devices (there is no simulator here — needs a dev build on rea
 
 ## Risks and open questions
 
-- **Billing decision** is the blocker for Phase 2 and for deleting the Stripe surface in 2.4/2.7. Everything else proceeds without it.
+- ~~Billing decision~~ RevenueCat, done. Not yet verified live: a sandbox purchase end to end, and the webhook against RevenueCat's real payloads (event names came from its docs, not a live delivery).
 - Apple token revocation (1.4) needs a live Apple sign-in to test; can't be covered by jest beyond the branch logic.
 - Phone auth on iOS relies on silent APNs — Phase 0's entitlement is a prerequisite, and the reCAPTCHA fallback needs the plist's `REVERSED_CLIENT_ID` URL scheme, which 0.2 adds for Google anyway.
 - `handleSendMedia`'s request shape was not read during the audit; 6.4 starts by reading it.

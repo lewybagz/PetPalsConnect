@@ -9,7 +9,7 @@ import { useTailwind } from "../../../styles/tailwind";
  * It previously destructured `route.params` unconditionally, so arriving
  * without params - which is what a deep link or a `navigate("...")` with no
  * arguments does - threw. It also printed a start and end date the payment flow
- * never had: Stripe confirms the subscription over a webhook a moment later, so
+ * never had: RevenueCat confirms the subscription over a webhook a moment later, so
  * the dates are not known at this point. The management screen is the place
  * that shows real state.
  */

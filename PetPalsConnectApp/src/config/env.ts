@@ -19,8 +19,13 @@ export const API_URL: string = process.env.EXPO_PUBLIC_API_URL || devFallbackHos
 export const GOOGLE_WEB_CLIENT_ID: string | undefined =
   process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
-export const STRIPE_PUBLISHABLE_KEY: string | undefined =
-  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+// RevenueCat's public SDK key for this platform. Each variable is named in
+// full because Metro inlines `process.env.EXPO_PUBLIC_*` by exact reference.
+export const REVENUECAT_API_KEY: string | undefined = Platform.select({
+  ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY,
+  android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY,
+  default: undefined,
+});
 
 if (__DEV__ && !process.env.EXPO_PUBLIC_API_URL) {
   console.warn(

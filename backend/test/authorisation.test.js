@@ -127,7 +127,7 @@ test("fetching a user by id does not hand over their email or device token", asy
     .expect(200);
 
   // The whole document used to come back: email, Firebase uid, FCM token,
-  // security questions, Stripe customer id.
+  // security questions.
   assert.equal(res.body.username, "owner");
   assert.equal(res.body.email, undefined);
   assert.equal(res.body.firebaseUid, undefined);

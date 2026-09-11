@@ -23,9 +23,9 @@ const mongoose = require("mongoose");
 /**
  * Parameters that name a Mongo document.
  *
- * `placeId` (a Google Places id) and `paymentMethodId` (a Stripe `pm_…`) are
- * deliberately absent - they are ids, but not ours, and validating them as
- * ObjectIds would reject every legitimate value.
+ * `placeId` (a Google Places id) is
+ * deliberately absent - it is an id, but not ours, and validating it as an
+ * ObjectId would reject every legitimate value.
  */
 const OBJECT_ID_PARAMS = [
   "id",

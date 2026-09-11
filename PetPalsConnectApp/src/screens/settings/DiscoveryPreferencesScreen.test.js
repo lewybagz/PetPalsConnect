@@ -98,6 +98,23 @@ describe("DiscoveryPreferencesScreen", () => {
     );
   });
 
+  it("saves the vaccinations-only preference, off by default", async () => {
+    await renderScreen();
+
+    const toggle = await waitFor(() =>
+      screen.getByTestId("discovery-requireVaccinationShared-switch")
+    );
+    expect(toggle.props.value).toBe(false);
+
+    await fireEvent(toggle, "valueChange", true);
+
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith("/api/users/me/settings", {
+        discovery: { requireVaccinationShared: true },
+      })
+    );
+  });
+
   it("a range set in kilometres is stored in miles", async () => {
     await renderScreen(withSettings({ units: { distance: "km" } }));
 

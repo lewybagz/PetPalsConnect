@@ -41,7 +41,8 @@ describe("PetDetailsScreen", () => {
     renderScreen({ pet });
 
     await waitFor(() => expect(screen.getByTestId("pet-details")).toBeTruthy());
-    expect(api.get).not.toHaveBeenCalled();
+    // The vaccination badge asks for its status; the pet itself is not re-fetched.
+    expect(api.get).not.toHaveBeenCalledWith("/api/pets/pet-1");
   });
 
   it("fetches when given only an id", async () => {

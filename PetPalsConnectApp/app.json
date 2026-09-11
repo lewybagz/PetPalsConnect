@@ -18,11 +18,16 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app uses your location to find nearby matches for your pet.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location in the background to find nearby matches for your pet.",
         "NSCameraUsageDescription": "This app uses your camera so you can take photos of you and your pet.",
         "NSPhotoLibraryUsageDescription": "This app uses your Photos so you can upload images of you and your pet.",
-        "NSPhotoLibraryAddUsageDescription": "This app saves images to your camera roll.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      },
+      "requireFullScreen": true,
+      "entitlements": {
+        "aps-environment": "production"
       }
     },
     "android": {
@@ -54,7 +59,6 @@
         }
       ],
       "expo-system-ui",
-      "expo-secure-store",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       [
@@ -68,7 +72,10 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "This app uses your location to find nearby matches for your pet."
+          "locationWhenInUsePermission": "This app uses your location to find nearby matches for your pet.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "motionUsagePermission": false
         }
       ],
       [
@@ -82,14 +89,11 @@
         "expo-image-picker",
         {
           "photosPermission": "This app uses your Photos so you can upload images of you and your pet.",
-          "cameraPermission": "This app uses your camera so you can take photos of you and your pet."
+          "cameraPermission": "This app uses your camera so you can take photos of you and your pet.",
+          "microphonePermission": false
         }
       ],
-      "expo-font",
-      [
-        "@stripe/stripe-react-native",
-        {}
-      ]
+      "expo-font"
     ],
     "extra": {
       "eas": {

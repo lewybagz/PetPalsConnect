@@ -7,6 +7,7 @@ import ChatsScreen from "../../src/screens/chat/ChatsScreen";
 import ReportUserScreen from "../../src/screens/profile/ReportUserScreen";
 import BlockedAccountsScreen from "../../src/screens/settings/BlockedAccountsScreen";
 import PetPhotosScreen from "../../src/screens/pets/PetPhotosScreen";
+import PetHealthScreen from "../../src/screens/pets/PetHealthScreen";
 import SettingsScreen from "../../src/screens/settings/SettingsScreen";
 import NotificationsScreen from "../../src/screens/bottomTab/NotificationsScreen";
 import NotificationPreferencesScreen from "../../src/screens/settings/NotificationPreferencesScreen";
@@ -33,6 +34,7 @@ import {
   CARE_PICKS,
   CARE_PLACES,
   FRIEND_REQUESTS,
+  HEALTH,
   MY_PET,
   ROUTES,
   SETTINGS,
@@ -443,6 +445,22 @@ export const BOARDS = [
     routes: ROUTES,
     render: () => (
       <PetPhotosScreen navigation={navigation} route={{ params: { pet: MY_PET } }} />
+    ),
+  },
+  {
+    id: "pet-health",
+    label: "Vaccination records",
+    routes: ROUTES,
+    render: () => (
+      <PetHealthScreen navigation={navigation} route={{ params: { pet: MY_PET } }} />
+    ),
+  },
+  {
+    id: "pet-health-empty",
+    label: "Vaccination records - empty",
+    routes: { ...ROUTES, [`/api/pets/${MY_PET._id}/health`]: { ...HEALTH, status: "unknown", records: [] } },
+    render: () => (
+      <PetHealthScreen navigation={navigation} route={{ params: { pet: MY_PET } }} />
     ),
   },
   {

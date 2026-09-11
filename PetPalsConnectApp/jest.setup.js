@@ -116,6 +116,21 @@ jest.mock("@react-native-google-signin/google-signin", () => ({
   },
 }));
 
+jest.mock("react-native-purchases", () => ({
+  __esModule: true,
+  LOG_LEVEL: { DEBUG: "DEBUG" },
+  default: {
+    configure: jest.fn(),
+    logIn: jest.fn(async () => ({})),
+    logOut: jest.fn(async () => ({})),
+    setLogLevel: jest.fn(async () => {}),
+    getOfferings: jest.fn(async () => ({ current: null })),
+    purchasePackage: jest.fn(),
+    restorePurchases: jest.fn(),
+    getCustomerInfo: jest.fn(),
+  },
+}));
+
 jest.mock("@invertase/react-native-apple-authentication", () => {
   const React = require("react");
   const { Pressable, Text } = require("react-native");
@@ -142,12 +157,6 @@ jest.mock("@invertase/react-native-apple-authentication", () => {
 jest.mock("expo-image-picker", () => ({
   requestMediaLibraryPermissionsAsync: jest.fn(async () => ({ granted: true })),
   launchImageLibraryAsync: jest.fn(async () => ({ canceled: true })),
-}));
-
-jest.mock("expo-secure-store", () => ({
-  getItemAsync: jest.fn(async () => null),
-  setItemAsync: jest.fn(async () => {}),
-  deleteItemAsync: jest.fn(async () => {}),
 }));
 
 /**

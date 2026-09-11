@@ -70,6 +70,54 @@ export interface Pet {
 }
 
 /**
+ * A vaccine an owner can record. Mirrors `KINDS` in
+ * `backend/services/vaccinations.js`; the three core ones are what a daycare
+ * or boarder asks to see.
+ */
+export type VaccinationKind =
+  | "rabies"
+  | "dhpp"
+  | "bordetella"
+  | "influenza"
+  | "leptospirosis"
+  | "other";
+
+/**
+ * How much a record has been checked.
+ *
+ * `selfReported` is what the owner typed; `documented` means a certificate
+ * photo is attached; `verified` means a person checked it - and nothing writes
+ * that yet. The UI must never show `documented` as though it were `verified`.
+ */
+export type VaccinationVerification = "selfReported" | "documented" | "verified";
+
+/**
+ * The derived answer to "is this pet current", from `statusOf()` on the server.
+ * `unknown` is no records at all; `partial` is some core vaccines missing.
+ */
+export type VaccinationStatus =
+  | "unknown"
+  | "partial"
+  | "expired"
+  | "expiringSoon"
+  | "current";
+
+/** One vaccination, recorded by the owner. Only the owner ever receives these. */
+export interface HealthRecord {
+  _id: ObjectId;
+  pet: ObjectId;
+  owner: ObjectId;
+  kind: VaccinationKind;
+  administeredAt: IsoDate;
+  /** When the next dose is due, from the certificate. Optional. */
+  expiresAt?: IsoDate;
+  verification: VaccinationVerification;
+  certificatePhoto?: string;
+  notes?: string;
+  createdDate?: IsoDate;
+}
+
+/**
  * What kind of place a `Location` is.
  *
  * `park` is where a playdate happens; the rest are the care hub. A place can
@@ -183,7 +231,6 @@ export interface User {
   locationSharingEnabled?: boolean;
   fcmToken?: string;
   subscribed?: boolean;
-  stripeCustomerId?: string;
   /**
    * Hidden pending review. The session gate reads this and renders the
    * suspended tree; the API refuses a suspended account nearly every route.
@@ -195,54 +242,32 @@ export interface User {
   modifiedDate?: IsoDate;
 }
 
-/** Stripe's own subscription statuses; our records mirror them exactly. */
-export type SubscriptionStatus =
-  | "incomplete"
-  | "incomplete_expired"
-  | "trialing"
-  | "active"
-  | "past_due"
-  | "canceled"
-  | "unpaid";
+/**
+ * What the store reports through RevenueCat, mapped by the webhook. `past_due`
+ * is a billing issue inside the store's grace period - still entitled until
+ * `endDate`.
+ */
+export type SubscriptionStatus = "trialing" | "active" | "past_due" | "paused" | "canceled";
 
 export interface Subscription {
   _id: ObjectId;
   user: ObjectId;
   status: SubscriptionStatus;
-  /** Stripe's billing interval, so "month" or "year". */
+  /** "month" or "year", derived from the store product id. */
   planType: string;
-  /** Major units (9.99), not cents - the server divides on the way in. */
+  /** Major units (4.99) as RevenueCat reports them. */
   amount?: number;
   currency?: string;
+  /** Auto-renew is off in the store; the entitlement lasts to `endDate`. */
   cancelAtPeriodEnd?: boolean;
   startDate?: IsoDate;
   endDate?: IsoDate;
   createdDate?: IsoDate;
-  stripeSubscriptionId?: string;
-  stripeCustomerId?: string;
-  stripePriceId?: string;
-}
-
-/**
- * A plan as the server offers it (`services/subscriptions/plans.js`). Not a
- * Mongo document, so the schema check does not apply to it. Prices live in
- * Stripe; the app never sends an amount.
- */
-export interface Plan {
-  id: string;
-  name: string;
-  description: string;
-  interval: "month" | "year";
-  /** False when no Stripe price id is configured for it. */
-  available: boolean;
-}
-
-/** What `POST /api/subscriptions` hands back for Stripe's PaymentSheet. */
-export interface PaymentSheetSession {
-  subscriptionId: string;
-  clientSecret: string | null;
-  ephemeralKey: string;
-  customerId: string;
+  /** app_store, play_store, promotional... lowercased from RevenueCat. */
+  store?: string;
+  productId?: string;
+  originalTransactionId?: string;
+  environment?: string;
 }
 
 /**

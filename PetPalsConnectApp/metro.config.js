@@ -24,7 +24,7 @@ const WEB_STUBS = {
   "@react-native-firebase/messaging": "tools/web-stubs/firebase-messaging.js",
   "@react-native-google-signin/google-signin": "tools/web-stubs/google-signin.js",
   "react-native-maps": "tools/web-stubs/maps.js",
-  "@stripe/stripe-react-native": "tools/web-stubs/stripe.js",
+  "react-native-purchases": "tools/web-stubs/purchases.js",
   "@gorhom/bottom-sheet": "tools/web-stubs/bottom-sheet.js",
   "expo-location": "tools/web-stubs/location.js",
 };

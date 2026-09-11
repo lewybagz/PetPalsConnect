@@ -98,7 +98,6 @@ describe("SettingsScreen", () => {
       "settings-display": "DisplaySettings",
       "settings-account-information": "AccountInformation",
       "settings-subscription": "SubscriptionManagement",
-      "settings-payment-methods": "PaymentMethods",
     };
 
     for (const [testID, route] of Object.entries(routes)) {
