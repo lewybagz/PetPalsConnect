@@ -20,6 +20,7 @@ import PostPlaydateReviewScreen from "../../src/screens/playdate/PostPlaydateRev
 import MapScreen from "../../src/screens/swipe/MapScreen";
 import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateScreen";
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
+import WaitlistScreen from "../../src/screens/auth/WaitlistScreen";
 import FriendsListScreen from "../../src/screens/profile/FriendsListScreen";
 import FriendRequestsCard from "../../src/components/FriendRequestsCard";
 import MoreScreen from "../../src/screens/bottomTab/MoreScreen";
@@ -317,6 +318,14 @@ export const BOARDS = [
         route={{ params: { locationId: "loc-1" } }}
       />
     ),
+  },
+  {
+    id: "waitlist",
+    label: "Outside the launch area",
+    routes: { ...ROUTES, "/api/waitlist/me": { joined: false, since: null } },
+    // The first screen somebody outside Arizona sees. It has to read as "not
+    // yet", never as "no".
+    render: () => <WaitlistScreen />,
   },
   {
     id: "account-suspended",

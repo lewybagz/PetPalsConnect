@@ -83,6 +83,20 @@ export type VaccinationKind =
   | "other";
 
 /**
+ * Everything a `HealthRecord` can be. The vaccines above, plus the things an
+ * owner remembers by date: the monthly preventatives, a check-up, a medication
+ * by name. Mirrors `KIND_CATEGORIES` in `backend/services/vaccinations.js`.
+ */
+export type HealthKind =
+  | VaccinationKind
+  | "fleaTick"
+  | "heartworm"
+  | "vetVisit"
+  | "medication";
+
+export type HealthCategory = "vaccine" | "prevention" | "visit" | "medication";
+
+/**
  * How much a record has been checked.
  *
  * `selfReported` is what the owner typed; `documented` means a certificate
@@ -107,12 +121,16 @@ export interface HealthRecord {
   _id: ObjectId;
   pet: ObjectId;
   owner: ObjectId;
-  kind: VaccinationKind;
+  kind: HealthKind;
   administeredAt: IsoDate;
   /** When the next dose is due, from the certificate. Optional. */
   expiresAt?: IsoDate;
   verification: VaccinationVerification;
   certificatePhoto?: string;
+  /** Days between doses, for the kinds that repeat. "Done" re-arms from it. */
+  intervalDays?: number;
+  /** A medication's name. There is no field for how much, on purpose. */
+  label?: string;
   notes?: string;
   createdDate?: IsoDate;
 }
@@ -201,6 +219,18 @@ export interface CarePicksForPet {
   shelves: { category: string; picks: CarePick[] }[];
 }
 
+/**
+ * The pet-insurance comparison link, when a partner exists.
+ *
+ * Not a document - it comes from two env vars on the server, set together or
+ * not at all. `partner` is what the card says it opens; a link that cannot
+ * name its partner is refused at boot, so this is never half-filled.
+ */
+export interface InsuranceOffer {
+  url: string;
+  partner: string;
+}
+
 /** A number to call when something has gone wrong. */
 export interface EmergencyContact {
   id: string;
@@ -221,6 +251,10 @@ export interface User {
   usernameLower?: string;
   userPhoto?: string;
   verified?: boolean;
+  /** Asked once at profile creation. Absent on profiles from before the field. */
+  zip?: string;
+  /** Derived from `zip` on the server: a state code, or "other". The launch fence reads this. */
+  region?: string;
   /** Ids, or populated documents, depending on the endpoint. */
   pets?: (ObjectId | Pet)[];
   friendsList?: ObjectId[];
@@ -280,6 +314,7 @@ export type SessionState =
   | "needsProfile"
   | "needsPet"
   | "suspended"
+  | "waitlisted"
   | "ready"
   | "error";
 

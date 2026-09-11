@@ -3,7 +3,9 @@ const settings = require("../services/settings");
 const { toCoordinates, rangeToMiles } = require("../services/matching/distance");
 const { sanitisePhoto } = require("../services/photos");
 const firebase = require("../config/firebase");
+const { deleteAccountData } = require("../services/accountDeletion");
 const usernames = require("../services/usernames");
+const regions = require("../services/regions");
 const blocking = require("../services/blocking");
 const { scrypt, randomBytes, timingSafeEqual } = require("node:crypto");
 const { promisify } = require("node:util");
@@ -271,10 +273,19 @@ const UserController = {
         return res.status(400).json({ message: problem, field: "username" });
       }
 
+      // Optional on the wire so builds from before the field keep working; a
+      // profile without one is let in, which is the rule for rows that predate
+      // a field. A ZIP that is sent has to be one, or the fence learns nothing.
+      const zip = req.body.zip == null || req.body.zip === "" ? undefined : String(req.body.zip).trim();
+      if (zip !== undefined && !regions.isValidZip(zip)) {
+        return res.status(400).json({ message: "Enter a five-digit ZIP code.", field: "zip" });
+      }
+
       const user = new User({
         firebaseUid: uid,
         email: email ?? req.body.email,
         username: String(req.body.username).trim(),
+        zip,
         // A profile photo is shown to everyone who sees this account, so it
         // has to be a file we stored, not any URL a client sends.
         userPhoto: sanitisePhoto(req.body.userPhoto),
@@ -325,7 +336,10 @@ const UserController = {
     }
 
     try {
-      await User.deleteOne({ _id: req.user._id });
+      // Everything the account owns goes with it - pets, photos, messages,
+      // playdates, health records. Both stores require it, and the privacy
+      // policy promises it. `services/accountDeletion` says what is kept.
+      await deleteAccountData(req.user, req.firebaseUser.uid);
 
       try {
         await firebase.deleteUser(req.firebaseUser.uid);

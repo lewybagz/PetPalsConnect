@@ -4,11 +4,17 @@ import { Ionicons } from "@expo/vector-icons";
 
 import api from "../../api/axios";
 import {
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  DEFAULT_INTERVALS,
   KIND_LABELS,
   addHealthRecord,
+  categoryOf,
   describeForOwner,
   fetchHealth,
+  markDone,
   removeHealthRecord,
+  repeats,
 } from "../../api/health";
 import { addPetPhoto } from "../../services/photos";
 import { useTailwind } from "../../styles/tailwind";
@@ -29,19 +35,24 @@ import VaccinationBadge from "../../components/VaccinationBadge";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 
 /**
- * A pet's vaccination records: what the owner has entered, and what that adds
- * up to.
+ * A pet's health records: what the owner has entered, and what that adds up
+ * to.
  *
  * The app arranged for strangers' dogs to meet with no health information at
  * all - the one thing every daycare, boarder and group class asks to see
- * before a dog walks in. This is where an owner records it. What it is *not*
- * is verification: the words on this screen say "as you entered it", the
- * status somebody else sees says "owner-reported", and nothing here ever says
- * "verified", because nothing checked.
+ * before a dog walks in. This is where an owner records it, and it is also the
+ * app's recurring reason to open: the monthly preventatives are the reminders
+ * people actually forget, and "Log today's dose" is what re-arms the next one.
  *
- * It also stores no advice. Which vaccines a dog needs, and when, is a
+ * What it is *not* is verification: the words on this screen say "as you
+ * entered it", the status somebody else sees says "owner-reported", and nothing
+ * here ever says "verified", because nothing checked.
+ *
+ * It also stores no advice. Which vaccines a dog needs, how often a
+ * preventative is given, what a medication is for - all of that is a
  * conversation with a vet; this screen records the answer and remembers the
- * date.
+ * date. A medication has a name and a date and deliberately no field for how
+ * much.
  */
 
 const startOfToday = () => {
@@ -57,7 +68,7 @@ const formatDate = (value) =>
     day: "numeric",
   });
 
-/** One selectable vaccine. A multi-way choice, so a radio rather than a checkbox. */
+/** One selectable kind. A multi-way choice, so a radio rather than a checkbox. */
 const KindChip = ({ label, selected, onPress, testID }) => {
   const tailwind = useTailwind();
   return (
@@ -96,12 +107,15 @@ const PetHealthScreen = ({ route, navigation }) => {
   const [administeredAt, setAdministeredAt] = useState(startOfToday);
   const [hasExpiry, setHasExpiry] = useState(false);
   const [expiresAt, setExpiresAt] = useState(startOfToday);
+  const [intervalDays, setIntervalDays] = useState("");
+  const [label, setLabel] = useState("");
   const [certificatePhoto, setCertificatePhoto] = useState(null);
   const [notes, setNotes] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  // Bumped after a save or a delete, so the list is re-read from the server
-  // rather than patched locally - the status is computed there.
+  const [busyRecord, setBusyRecord] = useState(null);
+  // Bumped after a save, a delete or a dose, so the list is re-read from the
+  // server rather than patched locally - the status is computed there.
   const [version, setVersion] = useState(0);
   const load = useCallback(() => setVersion((current) => current + 1), []);
 
@@ -144,6 +158,17 @@ const PetHealthScreen = ({ route, navigation }) => {
     };
   }, [petId, pet]);
 
+  const category = categoryOf(kind);
+  const repeating = repeats(kind);
+
+  const chooseKind = (next) => {
+    setKind(next);
+    // A repeating kind starts with the common cycle filled in; the owner
+    // changes it rather than invents it.
+    setIntervalDays(repeats(next) ? String(DEFAULT_INTERVALS[next] ?? "") : "");
+    if (categoryOf(next) !== "medication") setLabel("");
+  };
+
   const attachCertificate = async () => {
     setUploading(true);
     try {
@@ -162,23 +187,43 @@ const PetHealthScreen = ({ route, navigation }) => {
   };
 
   const save = async () => {
+    const interval = repeating ? Number(intervalDays) : null;
+    if (repeating && !(interval >= 1 && interval <= 730)) {
+      toast.show("Enter how many days between doses, 1 to 730.");
+      return;
+    }
+    if (category === "medication" && !label.trim()) {
+      toast.show("Give the medication a name.");
+      return;
+    }
     if (hasExpiry && expiresAt <= administeredAt) {
       toast.show("The next due date has to be after the date it was given.");
       return;
     }
+
+    // A repeating record is due one interval after it was given; a vaccine or
+    // a visit is due when the owner says, if they say.
+    const due = repeating
+      ? new Date(administeredAt.getTime() + interval * 24 * 60 * 60 * 1000)
+      : hasExpiry
+        ? expiresAt
+        : null;
 
     setSaving(true);
     try {
       await addHealthRecord(petId, {
         kind,
         administeredAt: administeredAt.toISOString(),
-        expiresAt: hasExpiry ? expiresAt.toISOString() : undefined,
+        expiresAt: due ? due.toISOString() : undefined,
+        intervalDays: repeating ? interval : undefined,
+        label: category === "medication" ? label.trim() : undefined,
         certificatePhoto: certificatePhoto ?? undefined,
         notes: notes.trim() || undefined,
       });
-      toast.success(`${KIND_LABELS[kind]} recorded`);
+      toast.success(`${category === "medication" ? label.trim() : KIND_LABELS[kind]} recorded`);
       setCertificatePhoto(null);
       setNotes("");
+      setLabel("");
       setHasExpiry(false);
       load();
     } catch (error) {
@@ -188,8 +233,21 @@ const PetHealthScreen = ({ route, navigation }) => {
     }
   };
 
+  const logDose = async (record) => {
+    setBusyRecord(record._id);
+    try {
+      await markDone(petId, record._id);
+      toast.success(`${nameOf(record)} logged for today`);
+      load();
+    } catch (error) {
+      toast.error(error.response?.data?.message ?? "Couldn't log that.");
+    } finally {
+      setBusyRecord(null);
+    }
+  };
+
   const remove = (record) =>
-    Alert.alert(`Remove this ${KIND_LABELS[record.kind]} record?`, undefined, [
+    Alert.alert(`Remove this ${nameOf(record)} record?`, undefined, [
       { text: "Keep", style: "cancel" },
       {
         text: "Remove",
@@ -224,16 +282,27 @@ const PetHealthScreen = ({ route, navigation }) => {
   const records = health?.records ?? [];
   const kinds = health?.kinds ?? Object.keys(KIND_LABELS);
 
+  /**
+   * Grouped by what they are, newest first inside each group, so the section
+   * a stranger's card reads from - vaccinations - is on top and a monthly
+   * preventative does not sit between two certificates.
+   */
+  const grouped = CATEGORY_ORDER.map((entry) => ({
+    category: entry,
+    records: records.filter((record) => categoryOf(record.kind) === entry),
+  })).filter((group) => group.records.length > 0);
+
   const describeRecord = (record) => {
     const parts = [`Given ${formatDate(record.administeredAt)}`];
     if (record.expiresAt) parts.push(`next due ${formatDate(record.expiresAt)}`);
+    if (record.intervalDays) parts.push(`every ${record.intervalDays} days`);
     if (record.verification === "documented") parts.push("certificate attached");
     return parts.join(" · ");
   };
 
   return (
     <Screen scroll testID="pet-health">
-      <Text variant="title">{pet?.name ? `${pet.name}'s vaccinations` : "Vaccinations"}</Text>
+      <Text variant="title">{pet?.name ? `${pet.name}'s health` : "Health"}</Text>
       <Text variant="caption" tone="muted" style={tailwind("mt-xs mb-lg")}>
         As you enter it. PetPals doesn&apos;t check certificates - a daycare or
         boarder will still ask to see the originals.
@@ -255,22 +324,42 @@ const PetHealthScreen = ({ route, navigation }) => {
           />
         </View>
       ) : (
-        <SettingsSection title="Recorded" footer="Tap a record to remove it.">
-          {records.map((record, index) => (
-            <SettingsRow
-              key={record._id}
-              testID={`health-record-${index}`}
-              label={KIND_LABELS[record.kind] ?? record.kind}
-              description={describeRecord(record)}
-              icon="shield-checkmark-outline"
-              onPress={() => remove(record)}
-            />
-          ))}
-        </SettingsSection>
+        grouped.map((group, groupIndex) => (
+          <SettingsSection
+            key={group.category}
+            testID={`health-group-${group.category}`}
+            title={CATEGORY_LABELS[group.category]}
+            footer={groupIndex === grouped.length - 1 ? "Tap a record to remove it." : undefined}
+          >
+            {group.records.map((record) => {
+              const index = records.indexOf(record);
+              return (
+                <SettingsRow
+                  key={record._id}
+                  testID={`health-record-${index}`}
+                  label={nameOf(record)}
+                  description={describeRecord(record)}
+                  icon={ICONS[group.category]}
+                  onPress={() => remove(record)}
+                >
+                  {record.intervalDays ? (
+                    <Button
+                      testID={`health-done-${index}`}
+                      title={busyRecord === record._id ? "Logging…" : "Log today's dose"}
+                      variant="soft"
+                      disabled={busyRecord !== null}
+                      onPress={() => logDose(record)}
+                    />
+                  ) : null}
+                </SettingsRow>
+              );
+            })}
+          </SettingsSection>
+        ))
       )}
 
       <SettingsSection title="Add a record">
-        <SettingsRow label="Vaccine">
+        <SettingsRow label="What">
           <View style={tailwind("flex-row flex-wrap")}>
             {kinds.map((entry) => (
               <KindChip
@@ -278,27 +367,66 @@ const PetHealthScreen = ({ route, navigation }) => {
                 testID={`health-kind-${entry}`}
                 label={KIND_LABELS[entry] ?? entry}
                 selected={kind === entry}
-                onPress={() => setKind(entry)}
+                onPress={() => chooseKind(entry)}
               />
             ))}
           </View>
         </SettingsRow>
 
-        <SettingsRow label="Given on" description="The date on the certificate.">
+        {category === "medication" ? (
+          <SettingsRow label="Name" description="Just the name. What it's for and how much stays with your vet.">
+            <TextInput
+              testID="health-label"
+              value={label}
+              onChangeText={setLabel}
+              placeholder="e.g. Apoquel"
+              placeholderTextColor={tokens.textFaint}
+              style={tailwind("border border-border rounded-card p-md text-text")}
+              maxLength={60}
+            />
+          </SettingsRow>
+        ) : null}
+
+        <SettingsRow
+          label={repeating ? "Last given" : category === "visit" ? "Visited on" : "Given on"}
+          description={category === "vaccine" ? "The date on the certificate." : undefined}
+        >
           <View testID="health-given">
             <DateTimePickerComponent mode="date" date={administeredAt} onDateChange={setAdministeredAt} />
           </View>
         </SettingsRow>
 
-        <SettingsRow
-          testID="health-expiry-toggle"
-          label="I know when the next dose is due"
-          description="Your vet's certificate usually says. We'll remind you a month before."
-          value={hasExpiry}
-          onValueChange={setHasExpiry}
-        />
+        {repeating ? (
+          <SettingsRow
+            label="Days between doses"
+            description="As your vet prescribed. We'll remind you a month before, or when it's due if sooner."
+          >
+            <TextInput
+              testID="health-interval"
+              value={intervalDays}
+              onChangeText={(text) => setIntervalDays(text.replace(/[^0-9]/g, ""))}
+              keyboardType="number-pad"
+              placeholder="30"
+              placeholderTextColor={tokens.textFaint}
+              style={tailwind("border border-border rounded-card p-md text-text")}
+              maxLength={3}
+            />
+          </SettingsRow>
+        ) : (
+          <SettingsRow
+            testID="health-expiry-toggle"
+            label={category === "visit" ? "I know when the next visit is" : "I know when the next dose is due"}
+            description={
+              category === "visit"
+                ? "We'll remind you a month before."
+                : "Your vet's certificate usually says. We'll remind you a month before."
+            }
+            value={hasExpiry}
+            onValueChange={setHasExpiry}
+          />
+        )}
 
-        {hasExpiry ? (
+        {!repeating && hasExpiry ? (
           <SettingsRow label="Next due">
             <View testID="health-expiry">
               <DateTimePickerComponent mode="date" date={expiresAt} onDateChange={setExpiresAt} />
@@ -306,34 +434,33 @@ const PetHealthScreen = ({ route, navigation }) => {
           </SettingsRow>
         ) : null}
 
-        <SettingsRow
-          label="Certificate photo"
-          description="Optional. Only you can see it."
-        >
-          {certificatePhoto ? (
-            <View style={tailwind("flex-row items-center")}>
-              <Image
-                testID="health-certificate"
-                source={{ uri: certificatePhoto }}
-                style={tailwind("h-16 w-16 rounded-xl mr-md")}
-              />
+        {category === "vaccine" ? (
+          <SettingsRow label="Certificate photo" description="Optional. Only you can see it.">
+            {certificatePhoto ? (
+              <View style={tailwind("flex-row items-center")}>
+                <Image
+                  testID="health-certificate"
+                  source={{ uri: certificatePhoto }}
+                  style={tailwind("h-16 w-16 rounded-xl mr-md")}
+                />
+                <Button
+                  testID="health-remove-photo"
+                  title="Remove"
+                  variant="ghost"
+                  onPress={() => setCertificatePhoto(null)}
+                />
+              </View>
+            ) : (
               <Button
-                testID="health-remove-photo"
-                title="Remove"
-                variant="ghost"
-                onPress={() => setCertificatePhoto(null)}
+                testID="health-add-photo"
+                title={uploading ? "Uploading…" : "Attach a photo"}
+                variant="secondary"
+                disabled={uploading}
+                onPress={attachCertificate}
               />
-            </View>
-          ) : (
-            <Button
-              testID="health-add-photo"
-              title={uploading ? "Uploading…" : "Attach a photo"}
-              variant="secondary"
-              disabled={uploading}
-              onPress={attachCertificate}
-            />
-          )}
-        </SettingsRow>
+            )}
+          </SettingsRow>
+        ) : null}
 
         <SettingsRow label="Notes" description="Optional. Batch number, clinic, anything you want to keep.">
           <TextInput
@@ -366,11 +493,24 @@ const PetHealthScreen = ({ route, navigation }) => {
       <View style={tailwind("flex-row items-center justify-center mb-xl")}>
         <Ionicons name="information-circle-outline" size={14} color={tokens.textFaint} />
         <Text variant="caption" tone="faint" style={tailwind("ml-xs")}>
-          Which vaccines your dog needs is a question for your vet.
+          What your dog needs, and how often, is a question for your vet.
         </Text>
       </View>
     </Screen>
   );
 };
+
+const ICONS = {
+  vaccine: "shield-checkmark-outline",
+  prevention: "bug-outline",
+  visit: "medkit-outline",
+  medication: "flask-outline",
+};
+
+/** A medication is known by its name; everything else by its kind. */
+const nameOf = (record) =>
+  record.kind === "medication" && record.label
+    ? record.label
+    : KIND_LABELS[record.kind] ?? record.kind;
 
 export default PetHealthScreen;

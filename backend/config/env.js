@@ -42,6 +42,29 @@ if (missing.length > 0) {
 
 const has = (feature) => FEATURE_VARS[feature].every((key) => !!process.env[key]);
 
+/**
+ * The pet-insurance comparison link, if there is a partner.
+ *
+ * Both or neither. The care hub's rule is that a paid link says so on screen
+ * next to the link, and it cannot say "opens X" without knowing X - so a URL
+ * with no partner name is refused at boot rather than shipped undisclosed.
+ * Neither set means the hub simply has no insurance card, which is the state
+ * until there is a partner.
+ */
+const insuranceUrl = process.env.INSURANCE_COMPARE_URL || "";
+const insurancePartner = process.env.INSURANCE_PARTNER_NAME || "";
+if (Boolean(insuranceUrl) !== Boolean(insurancePartner)) {
+  console.error(
+    "\n[config] INSURANCE_COMPARE_URL and INSURANCE_PARTNER_NAME must be set together: " +
+      "an affiliate link with no named partner cannot be disclosed on screen.\n"
+  );
+  process.exit(1);
+}
+if (insuranceUrl && !/^https:\/\//.test(insuranceUrl)) {
+  console.error("\n[config] INSURANCE_COMPARE_URL must be an https:// URL.\n");
+  process.exit(1);
+}
+
 const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   isProduction: process.env.NODE_ENV === "production",
@@ -61,6 +84,13 @@ const env = {
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     // Private keys are stored with literal \n escapes in .env; restore real newlines.
     privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+    // The bucket the app uploads to. New projects get `<project>.firebasestorage.app`;
+    // older ones `<project>.appspot.com` - set it explicitly if the default is wrong.
+    storageBucket:
+      process.env.FIREBASE_STORAGE_BUCKET ||
+      (process.env.FIREBASE_PROJECT_ID
+        ? `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`
+        : undefined),
   },
 
   revenuecat: {
@@ -70,6 +100,12 @@ const env = {
   },
 
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+
+  insurance: {
+    enabled: Boolean(insuranceUrl),
+    url: insuranceUrl,
+    partner: insurancePartner,
+  },
 
   mail: {
     user: process.env.GMAIL_EMAIL,

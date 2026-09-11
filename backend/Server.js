@@ -89,6 +89,7 @@ const routes = {
   supportmessages: "supportMessages",
   userpreferences: "userPreferences",
   users: "users",
+  waitlist: "waitlist",
 };
 
 /**

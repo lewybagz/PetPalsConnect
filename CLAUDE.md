@@ -78,6 +78,28 @@ branch per screen. Screens that merely display pets need nothing special; an
 empty list is fine. Use `hasPet` from `useAuthSession`, never `profile.pets`
 directly.
 
+**The app is open in Arizona, and outside it is a session state, not a
+refusal.** Every dead competitor in the research launched nationally into an
+empty deck. `services/regions.js` is the one place the rule lives:
+`LAUNCH_REGIONS` (mirrored in `src/api/waitlist.js`, checked by
+`regions.test.js`) and the USPS prefix table that turns a ZIP into a `region`.
+The ZIP is asked once on `CreateProfile` because location sharing is optional
+by design and the fence cannot depend on it - and it is the only thing that
+tells the waitlist *where* demand is. `User.region` follows `User.zip` in a
+pre-validate hook the way `usernameLower` follows `username`; a profile with
+no region predates the field and is let in, the same rule as `Pet.species`.
+`AuthSessionContext` reports `waitlisted` and `RootNavigator` mounts
+`WaitlistScreen`, exactly like the onboarding gates: one tap writes a
+`Waitlist` row (the email is on the account, nothing is typed; ZIP and region
+are copied from the profile, never the body), and "Continue to my pets" is
+remembered per user and lets them into the care hub, which is the half of the
+app that works anywhere. Nothing server-side turns a waitlisted account away;
+its deck is simply, honestly, empty. `npm run import:arizona` seeds the places
+directory for the six Arizona cities over 250,000 (Census Vintage 2025), and
+the three "out and about" categories - `patio`, `hotel`, `trail` - are keyword
+searches labelled "reported dog-friendly" because Google has no such type and
+nothing here vouches for them.
+
 **Auth screens never navigate on success.** Signing in, signing up and signing
 out all change Firebase auth state, and `RootNavigator` swaps the whole tree in
 response. A manual `navigation.navigate()` after those calls targets a route
@@ -646,6 +668,34 @@ because for "who can message you: everyone / matches / friends" the alternatives
 *are* the explanation; `Picker` is not an option regardless, having been removed
 from React Native core in 0.62.
 
+**The legal documents are hosted, not embedded.** `docs/privacy.html` and
+`docs/terms.html` at the repo root are what GitHub Pages serves, and
+`src/config/legal.ts` is the one place the app names those URLs -
+`LegalPoliciesScreen` and the agreement line on Register both open them.
+`LegalPoliciesScreen` used to render "Terms of Service content here...", which
+is a rejection on both stores by itself; a copy of the text in the app would be
+a second document that drifts from the one the listings cite. The terms are a
+first draft written to the app as it is; have them reviewed before launch.
+
+**Deleting an account deletes what it owns, and `services/accountDeletion.js`
+is the list.** `DELETE /api/users/me` removed the `User` row and the Firebase
+login and left the pets, photos, messages, playdates and health records behind
+under an owner id that no longer resolved - which both stores forbid (Apple
+5.1.1(v), Play's User Data policy) and the privacy policy said did not happen.
+The service cascades through every model that references a user; `RETAINED`
+names the two that survive (reports, support messages) and why, and the
+privacy policy's retention table is written from it. `accountDeletion.test.js`
+reads the service's source and fails when a model with `ref: "User"` is in
+neither place, so the next model has to choose.
+
+**Another user gets the neighbourhood, never the door.** `/api/petmatches/map`
+rounds other owners' coordinates to 0.01° (~1 km) before they leave the
+server. The stored position is wherever somebody last opened the app, which is
+usually their home; precise geolocation is sensitive data under most US state
+privacy laws, and a map that hands strangers exact positions is what turns a
+harassment case into a negligence claim. `map.test.js` asserts the exact
+coordinate does not come back.
+
 **The Settings screen holds no setting that has a home of its own.** It holds
 the route to each one and the answer it currently gives. Three of its controls
 used to duplicate ones on the screens it linked to, with a different answer.
@@ -731,6 +781,16 @@ tells somebody to feed their dog should be a reviewed diff. Nothing writes it
 at runtime, so there is no create path and no spam surface. Every entry is a
 *category* of thing with a search link, not a named product with an affiliate
 tag - and if that ever changes, the fact belongs on screen next to the link.
+
+**The insurance card is a slot, and a paid link discloses itself on the
+card.** Pet insurance is the largest evidenced revenue lane the research found
+(95%+ of US dogs and cats uninsured), and there is no partner yet. So
+`INSURANCE_COMPARE_URL` and `INSURANCE_PARTNER_NAME` are read together in
+`config/env.js` - both or the server refuses to boot - because the card has to
+say "Opens {partner}. PetPals may be paid" next to the link, and a URL with no
+name to disclose is exactly the undisclosed affiliate the hub refuses to be.
+Neither set and `/api/petcare/picks` carries `insurance: null` and the hub
+shows nothing. No click tracking; attribution belongs in the partner's URL.
 
 **`specialNeeds` never selects a product.** Life stage and size are shopping
 facts; "diabetic" is a conversation with a vet. `recommend.js` takes species,
@@ -844,6 +904,22 @@ anyway. `discovery.requireVaccinationShared` narrows to shared statuses and is
 off by default: early on almost nobody has entered any, and a preference that
 empties the deck is one nobody keeps. Like every discovery preference it can
 only remove from the list the safety rules already built.
+
+**The same record is the app's recurring reason to open.** Every durable pet
+app in the research monetises a recurring, non-social behaviour, and the
+monthly preventatives are the reminders owners actually forget. So
+`HealthRecord.kind` is wider than vaccines - `fleaTick`, `heartworm`,
+`vetVisit`, `medication` - and `KIND_CATEGORIES` in `services/vaccinations.js`
+is the one table saying which is which. `statusOf()` filters to vaccine kinds
+first: a pet with only a flea record has shared nothing about vaccinations, and
+`partial` would say it had. The kinds that repeat carry `intervalDays`, and
+`POST /:petId/health/:recordId/done` writes the *next* record from it (given
+now, due one interval on) and queues its reminder - the old record stays, it is
+history. A vaccine has a certificate date, not a cycle, so "done" on one is a
+400. A medication is a `label` and a date and has no field for how much, on
+purpose; the pre-filled 30 days is a number the owner changes, captioned "as
+your vet prescribed", never a recommendation. Non-vaccine reminders raise
+`healthDue` so the push does not say "vaccination" about a flea treatment.
 
 **The add-a-pet form sends what it collects.** It had a free-text "Health
 Information" box that was never posted and had no schema field - so everything

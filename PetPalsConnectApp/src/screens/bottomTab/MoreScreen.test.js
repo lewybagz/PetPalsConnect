@@ -82,6 +82,7 @@ const respondWith = ({
   saved = [],
   locationKnown = true,
   importable = true,
+  insurance = null,
 } = {}) => {
   api.get.mockImplementation((url) => {
     if (url === "/api/petcare/picks") {
@@ -89,7 +90,9 @@ const respondWith = ({
         data: {
           categories: ["food", "supplies"],
           placeCategories: ["vet", "petStore", "groomer", "boarding"],
+          outCategories: ["patio", "hotel", "trail"],
           emergency: EMERGENCY,
+          insurance,
           pets,
         },
       });
@@ -434,6 +437,50 @@ describe("the care hub", () => {
 
     await waitFor(() => expect(screen.getByTestId("hub-saved")).toBeTruthy());
     expect(screen.getByTestId("place-loc-mine")).toBeTruthy();
+  });
+
+  it("shows no insurance card until there is a partner", async () => {
+    respondWith({ pets: [dogPicks()] });
+    await render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("hub-picks")).toBeTruthy());
+    expect(screen.queryByTestId("hub-insurance")).toBeNull();
+  });
+
+  it("an insurance link names who it opens and that PetPals may be paid, on the card", async () => {
+    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+    respondWith({
+      pets: [dogPicks()],
+      insurance: { url: "https://partner.example/compare?ref=petpals", partner: "Example Insure" },
+    });
+    await render(<MoreScreen navigation={navigation} route={route} />);
+
+    const card = await waitFor(() => screen.getByTestId("hub-insurance"));
+    // The disclosure is the feature: a paid link says so next to the link,
+    // not on a policy page somebody has to go and find.
+    expect(screen.getByText(/Opens Example Insure/)).toBeTruthy();
+    expect(screen.getByText(/PetPals may be paid/)).toBeTruthy();
+
+    await fireEvent.press(card);
+    expect(openURL).toHaveBeenCalledWith("https://partner.example/compare?ref=petpals");
+  });
+
+  it("offers patios, hotels and trails apart from care, labelled as reported", async () => {
+    respondWith({ pets: [dogPicks()] });
+    await render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("hub-out-and-about")).toBeTruthy());
+    // Google cannot vouch for "dog-friendly"; the section says where it came from.
+    expect(screen.getByText(/REPORTED DOG-FRIENDLY/)).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId("hub-category-patio"));
+
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith(
+        "/api/locations/care",
+        expect.objectContaining({ params: expect.objectContaining({ category: "patio" }) })
+      )
+    );
   });
 
   it("keeps the links this screen already had", async () => {

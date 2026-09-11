@@ -126,7 +126,7 @@ export default function AppStack() {
       <Stack.Screen name="AddPet" component={AddPetScreen} options={{ title: "Add Pet" }} />
       <Stack.Screen name="PetDetails" component={PetDetailsScreen} options={{ title: "Pet" }} />
       <Stack.Screen name="PetPhotos" component={PetPhotosScreen} options={{ title: "Photos" }} />
-      <Stack.Screen name="PetHealth" component={PetHealthScreen} options={{ title: "Vaccinations" }} />
+      <Stack.Screen name="PetHealth" component={PetHealthScreen} options={{ title: "Health" }} />
       <Stack.Screen name="PetList" component={PetListScreen} options={{ title: "Pets" }} />
       <Stack.Screen name="UsersPets" component={UsersPetsScreen} options={{ title: "Their Pets" }} />
 

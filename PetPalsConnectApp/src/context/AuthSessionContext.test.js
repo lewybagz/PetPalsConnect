@@ -285,3 +285,49 @@ describe("a suspended account", () => {
     );
   });
 });
+
+/**
+ * The launch fence. Outside Arizona is a session state with a way through,
+ * never a refusal; a profile from before the field is let in.
+ */
+describe("the launch fence", () => {
+  const elsewhere = { _id: "user-la", username: "la_owner", zip: "90210", region: "other", pets: [] };
+
+  it("waitlists a profile whose ZIP is outside the launch region", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: elsewhere });
+
+    renderSession();
+
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("waitlisted"));
+  });
+
+  it("lets an Arizona profile through to onboarding", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: { ...elsewhere, zip: "85004", region: "AZ" } });
+
+    renderSession();
+
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("needsPet"));
+  });
+
+  it("lets a profile with no region through - it predates the field", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: withPet });
+
+    renderSession();
+
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("ready"));
+  });
+
+  it("remembers 'continue anyway' per user", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: elsewhere });
+    await AsyncStorage.setItem(`@petpals/launch-continue:${elsewhere._id}`, JSON.stringify(true));
+
+    renderSession();
+
+    // Past the fence, and on to the next gate rather than straight to ready.
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("needsPet"));
+  });
+});

@@ -18,6 +18,7 @@ router.post("/", PetController.createPet);
 router.get("/:petId/health/status", HealthRecordController.getStatus);
 router.get("/:petId/health", HealthRecordController.listRecords);
 router.post("/:petId/health", HealthRecordController.createRecord);
+router.post("/:petId/health/:recordId/done", HealthRecordController.markDone);
 router.delete("/:petId/health/:recordId", HealthRecordController.deleteRecord);
 
 router.get("/:petId", PetController.getPetById);

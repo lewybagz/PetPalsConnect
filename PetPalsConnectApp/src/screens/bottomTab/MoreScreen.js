@@ -81,6 +81,9 @@ const PLACE_LABELS = {
   petStore: "Pet shops",
   groomer: "Groomers",
   boarding: "Boarding",
+  patio: "Patios",
+  hotel: "Hotels",
+  trail: "Trails",
 };
 
 /** Human names for the pick shelves. */
@@ -353,6 +356,7 @@ const MoreScreen = ({ route, start, navigation }) => {
 
   const emergency = picks?.emergency ?? places?.emergency ?? [];
   const placeCategories = picks?.placeCategories ?? ["vet", "petStore", "groomer", "boarding"];
+  const outCategories = picks?.outCategories ?? [];
 
   return (
     <Screen
@@ -552,6 +556,33 @@ const MoreScreen = ({ route, start, navigation }) => {
             </>
           )}
 
+          {/* ---- Insurance -----------------------------------------------
+              A slot, empty until there is a partner. When there is one the
+              card says who it opens and that PetPals may be paid - on the
+              card, not in a policy page. The hub's rule for a paid link. */}
+          {picks?.insurance ? (
+            <Card
+              testID="hub-insurance"
+              style={tailwind("mb-xl")}
+              onPress={() => openExternal(picks.insurance.url)}
+              accessibilityLabel={`Compare pet insurance. Opens ${picks.insurance.partner}. PetPals may be paid if you take out a policy.`}
+            >
+              <View style={tailwind("flex-row items-center justify-between")}>
+                <Text weight="600" style={tailwind("flex-1 mr-sm")}>
+                  Compare pet insurance
+                </Text>
+                <Ionicons name="open-outline" size={16} color={tokens.textMuted} />
+              </View>
+              <Text variant="caption" tone="muted" style={tailwind("mt-xs")}>
+                Most dogs and cats in the US aren&apos;t insured, and a vet bill is the
+                most common unplanned cost. Opens {picks.insurance.partner}.
+              </Text>
+              <Text variant="caption" tone="faint" style={tailwind("mt-xs")}>
+                PetPals may be paid if you take out a policy.
+              </Text>
+            </Card>
+          ) : null}
+
           {/* ---- Places -------------------------------------------------- */}
           <SectionHeading>Care near you</SectionHeading>
 
@@ -578,6 +609,43 @@ const MoreScreen = ({ route, start, navigation }) => {
               );
             })}
           </View>
+
+          {/*
+            Where a dog goes *with* its owner. The same list and the same
+            fetch - a chip here narrows to one category like the row above -
+            but labelled apart, because these come from keyword searches
+            Google cannot vouch for and the section says so.
+          */}
+          {outCategories.length > 0 ? (
+            <View testID="hub-out-and-about" style={tailwind("mb-md")}>
+              <Text variant="caption" tone="faint" style={tailwind("mb-xs")}>
+                OUT AND ABOUT · REPORTED DOG-FRIENDLY
+              </Text>
+              <View style={tailwind("flex-row flex-wrap")}>
+                {outCategories.map((category) => {
+                  const active = category === placeCategory;
+                  return (
+                    <Pressable
+                      key={category}
+                      testID={`hub-category-${category}`}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      onPress={() => setPlaceCategory(active ? null : category)}
+                      style={tailwind(
+                        `border rounded-lg px-md py-sm mr-sm mb-sm ${
+                          active ? "bg-primary border-primary" : "bg-surface border-border"
+                        }`
+                      )}
+                    >
+                      <Text variant="caption" weight="600" tone={active ? "onPrimary" : "muted"}>
+                        {PLACE_LABELS[category] ?? category}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
 
           {/*
             Saved places sit above the search, unfiltered by the chips and by

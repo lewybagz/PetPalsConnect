@@ -24,7 +24,10 @@ const navigation = { goBack: jest.fn() };
 const PET = { _id: "pet-1", name: "Bo" };
 const CERT = "https://firebasestorage.googleapis.com/v0/b/p/o/cert.jpg";
 
-const KINDS = ["rabies", "dhpp", "bordetella", "influenza", "leptospirosis", "other"];
+const KINDS = [
+  "rabies", "dhpp", "bordetella", "influenza", "leptospirosis", "other",
+  "fleaTick", "heartworm", "vetVisit", "medication",
+];
 const CORE = ["rabies", "dhpp", "bordetella"];
 
 const health = (records, status = "unknown") => ({
@@ -102,7 +105,7 @@ describe("PetHealthScreen", () => {
     await renderScreen({ petId: "pet-1" });
 
     await waitFor(() => expect(api.get).toHaveBeenCalledWith("/api/pets/pet-1"));
-    await waitFor(() => expect(screen.getByText("Bo's vaccinations")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Bo's health")).toBeTruthy());
   });
 
   it("saves the chosen vaccine with no expiry unless one is given", async () => {
@@ -159,6 +162,73 @@ describe("PetHealthScreen", () => {
 
     await waitFor(() =>
       expect(api.delete).toHaveBeenCalledWith("/api/pets/pet-1/health/rec-1")
+    );
+  });
+
+  it("groups records by what they are, vaccinations first", async () => {
+    respond(
+      health(
+        [record("rec-2", "fleaTick", { intervalDays: 30 }), record("rec-1", "rabies")],
+        "partial"
+      )
+    );
+    await renderScreen();
+
+    await waitFor(() => expect(screen.getByTestId("health-group-vaccine")).toBeTruthy());
+    expect(screen.getByTestId("health-group-prevention")).toBeTruthy();
+    expect(within(screen.getByTestId("health-group-prevention")).getByText(/every 30 days/)).toBeTruthy();
+  });
+
+  it("a repeating kind asks for days between doses and posts them as an interval", async () => {
+    await renderScreen();
+
+    await tapById("health-kind-fleaTick");
+    // Pre-filled with the common cycle, labelled as the vet's call to change.
+    const interval = await waitFor(() => screen.getByTestId("health-interval"));
+    expect(interval.props.value).toBe("30");
+    expect(screen.queryByTestId("health-expiry-toggle")).toBeNull();
+    expect(screen.queryByTestId("health-add-photo")).toBeNull();
+
+    await fireEvent.changeText(interval, "28");
+    await tapById("health-save");
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith(
+        "/api/pets/pet-1/health",
+        expect.objectContaining({ kind: "fleaTick", intervalDays: 28, expiresAt: expect.any(String) })
+      )
+    );
+  });
+
+  it("a medication needs a name, and only a name", async () => {
+    await renderScreen();
+
+    await tapById("health-kind-medication");
+    await tapById("health-save");
+    expect(api.post).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(await waitFor(() => screen.getByTestId("health-label")), "Apoquel");
+    await tapById("health-save");
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith(
+        "/api/pets/pet-1/health",
+        expect.objectContaining({ kind: "medication", label: "Apoquel", intervalDays: 30 })
+      )
+    );
+    // No dose field exists to send.
+    expect(Object.keys(api.post.mock.calls[0][1])).not.toContain("dose");
+  });
+
+  it("logs today's dose against a repeating record", async () => {
+    respond(health([record("rec-1", "fleaTick", { intervalDays: 30 })], "unknown"));
+    api.post.mockResolvedValue({ data: { record: {}, status: "unknown" } });
+    await renderScreen();
+
+    await tapById("health-done-0");
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/api/pets/pet-1/health/rec-1/done")
     );
   });
 

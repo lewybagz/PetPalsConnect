@@ -2,8 +2,9 @@ const Pet = require("../models/Pet");
 const User = require("../models/User");
 const recommend = require("../services/petCare/recommend");
 const { CATEGORIES: PICK_CATEGORIES } = require("../services/petCare/picks");
-const { CARE_CATEGORIES } = require("../services/placeCategories");
+const { CARE_CATEGORIES, OUT_CATEGORIES } = require("../services/placeCategories");
 const { EMERGENCY_CONTACTS } = require("../services/petCare/emergency");
+const env = require("../config/env");
 
 /**
  * The pet owner's hub.
@@ -46,7 +47,15 @@ const PetCareController = {
         // What the hub can offer beyond products, so the screen does not have
         // to know the vocabulary of another module.
         placeCategories: CARE_CATEGORIES,
+        // Where a dog goes with its owner: reported dog-friendly, from keyword
+        // searches, so the hub labels them as such.
+        outCategories: OUT_CATEGORIES,
         emergency: EMERGENCY_CONTACTS,
+        // Null until there is a partner. The name travels with the URL so the
+        // card can say who it opens - the disclosure is the feature.
+        insurance: env.insurance.enabled
+          ? { url: env.insurance.url, partner: env.insurance.partner }
+          : null,
         pets: recommend.forPets(pets),
       });
     } catch (err) {

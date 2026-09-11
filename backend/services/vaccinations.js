@@ -18,7 +18,29 @@
  * Canine Vaccination Guidelines list rabies and DHPP as core, and Bordetella
  * as "core for the individual" once a dog is in regular group contact).
  */
-const KINDS = ["rabies", "dhpp", "bordetella", "influenza", "leptospirosis", "other"];
+const VACCINE_KINDS = ["rabies", "dhpp", "bordetella", "influenza", "leptospirosis", "other"];
+
+/**
+ * The other things an owner remembers by date: the monthly preventatives
+ * (the reminders people actually forget), a check-up, and a medication by
+ * name. Same record, same reminder; only the vaccination status ignores them.
+ */
+const KIND_CATEGORIES = {
+  rabies: "vaccine",
+  dhpp: "vaccine",
+  bordetella: "vaccine",
+  influenza: "vaccine",
+  leptospirosis: "vaccine",
+  other: "vaccine",
+  fleaTick: "prevention",
+  heartworm: "prevention",
+  vetVisit: "visit",
+  medication: "medication",
+};
+
+const KINDS = Object.keys(KIND_CATEGORIES);
+
+const categoryOf = (kind) => KIND_CATEGORIES[kind] ?? null;
 
 /** A pet is "current" when its latest record of each of these has not lapsed. */
 const CORE_KINDS = ["rabies", "dhpp", "bordetella"];
@@ -68,7 +90,10 @@ const latestByKind = (records) => {
  * `expiresAt` never lapses - the owner chose not to enter a date, and
  * inventing one would be prescribing.
  */
-const statusOf = (records = [], now = Date.now()) => {
+const statusOf = (allRecords = [], now = Date.now()) => {
+  // Only vaccines count. A pet with a flea record and nothing else has shared
+  // nothing about vaccinations, and "partial" would say it had.
+  const records = allRecords.filter((record) => categoryOf(record.kind) === "vaccine");
   if (records.length === 0) return "unknown";
 
   const latest = latestByKind(records);
@@ -121,8 +146,28 @@ const reminderAt = (expiresAt, now = Date.now()) => {
   return new Date(Math.max(now, expiry - REMINDER_LEAD_MS));
 };
 
+/**
+ * The record that follows one just done: same kind, label and interval, given
+ * now, due one interval on. Null when the record has no interval - there is
+ * nothing to re-arm. Pure, so "done" is testable without a database.
+ */
+const nextFrom = (record, now = Date.now()) => {
+  if (!record?.intervalDays) return null;
+  return {
+    kind: record.kind,
+    label: record.label,
+    intervalDays: record.intervalDays,
+    administeredAt: new Date(now),
+    expiresAt: new Date(now + record.intervalDays * 24 * 60 * 60 * 1000),
+  };
+};
+
 module.exports = {
   KINDS,
+  VACCINE_KINDS,
+  KIND_CATEGORIES,
+  categoryOf,
+  nextFrom,
   CORE_KINDS,
   VERIFICATIONS,
   STATUSES,

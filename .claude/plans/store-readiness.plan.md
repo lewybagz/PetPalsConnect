@@ -1,6 +1,6 @@
 # Store readiness — closing the gaps in existing features
 
-Status: **in progress** - Phases 0, 1 and 2 done (billing decision: RevenueCat). Written 2026-09-09 against `main` @ `34d232b`.
+Status: **in progress** - Phases 0-3 done (billing decision: RevenueCat). Written 2026-09-09 against `main` @ `34d232b`.
 Source: the end-to-end gap audit of the same day (screen → API client → route → controller, plus `app.json` against each platform's requirements).
 
 ## Overview and goal
@@ -111,15 +111,15 @@ Backend files: new `routes/revenuecatWebhooks.js`, [SubscriptionController.js](.
 
 Console: RevenueCat project, `premium` entitlement, one monthly product on each store, webhook URL + secret, public API keys → `EXPO_PUBLIC_REVENUECAT_IOS_KEY` / `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`. Real purchases need a dev build (Expo Go runs the SDK in preview mode).
 
-### Phase 3 — legal pages (½ session)
+### Phase 3 — legal pages (done 2026-09-10; documents researched and rewritten the same day)
 
 Files: [LegalPoliciesScreen.js](../../PetPalsConnectApp/src/screens/settings/LegalPoliciesScreen.js), move `PetPalsConnectApp/docs/index.html` + `privacy-policy.html` → repo-root `docs/` for GitHub Pages, new `docs/terms.html`.
 
 | id | todo | status |
 | --- | --- | --- |
-| 3.1 | Host the privacy policy: repo-root `docs/privacy.html` (GitHub Pages from `/docs`), write `docs/terms.html` from the same template — a URL the store listing can cite | todo |
-| 3.2 | `LegalPoliciesScreen` → two `SettingsRow`s from `components/ui` opening the URLs with `Linking.openURL` (stdlib; no in-app WebView dep). Delete the placeholder switch | todo |
-| 3.3 | Register screen: one line under the button — "By continuing you agree to the Terms and Privacy Policy" with both tappable | todo |
+| 3.1 | Host the privacy policy: repo-root `docs/privacy.html` (GitHub Pages from `/docs`), write `docs/terms.html` from the same template — a URL the store listing can cite | done |
+| 3.2 | `LegalPoliciesScreen` → two `SettingsRow`s from `components/ui` opening the URLs with `Linking.openURL` (stdlib; no in-app WebView dep). Delete the placeholder switch | done |
+| 3.3 | Register screen: one line under the button — "By continuing you agree to the Terms and Privacy Policy" with both tappable | done |
 
 ### Phase 4 — sign-out hygiene and push on both platforms (1 session)
 
@@ -167,6 +167,19 @@ Files: [ChatScreen.js](../../PetPalsConnectApp/src/screens/bottomTab/ChatScreen.
 | 7.1 | Delete app-root `utils/tokenutil.js`, `services/`, `firebase/`; strip the 15 hand-set `Authorization` headers (the axios interceptor overwrites them anyway) | todo |
 | 7.2 | Remove `lottie-react-native`, `expo-constants` (0 imports); keep `react-native-pager-view` (peer of material-top-tabs) and `expo-linking` (Expo internal) | todo |
 | 7.3 | `store.test.js`-style walker: fail on any import from outside `src/` except `App.js`/`index.js` — stops the app-root dirs coming back | todo |
+
+### Phase 3b — legal research and the two code exposures it found (done 2026-09-10)
+
+| id | todo | status |
+| --- | --- | --- |
+| 3b.1 | Rewrite `docs/privacy.html` to what the app does (no card data, no analytics, precise location with consent shown coarse, Firebase/RevenueCat/Google Maps disclosures, retention table, US-state and PIPEDA/Law 25 sections, placeholders for address and privacy officer) | done |
+| 3b.2 | Complete `docs/terms.html`: Apple minimum EULA terms, Google Maps ToS incorporation, ROSCA/state-ARL subscription disclosures, DMCA agent + procedure, UGC moderation per Apple 1.2, assumption of risk / release / indemnity for meetups, AAA arbitration with 30-day opt-out and Canadian carve-out, Texas ASAA minors clause, placeholders for state/address/agent | done |
+| 3b.3 | `docs/delete-account.html` — the web deletion resource Google Play requires | done |
+| 3b.4 | Account deletion cascades through every model (`services/accountDeletion.js`) and empties the account's Storage folders; `accountDeletion.test.js` fails on a new `ref: "User"` model that is neither cascaded nor in `RETAINED` | done |
+| 3b.5 | `/api/petmatches/map` rounds other users' coordinates to ~1 km; `map.test.js` asserts the exact value never leaves the server | done |
+| 3b.6 | Plan picker carries the renewal terms and links to Terms/Privacy (Apple 3.1.2, Play subscriptions policy) | done |
+
+Still on you: fill the placeholders, register the DMCA agent, enable Pages, paste the URLs into both consoles, and have a lawyer read both documents - see the README checklist.
 
 ## Env vars and dashboard prerequisites
 

@@ -14,7 +14,15 @@ const KIND_LABELS = {
   influenza: "canine influenza",
   leptospirosis: "leptospirosis",
   other: "vaccination",
+  fleaTick: "flea and tick treatment",
+  heartworm: "heartworm prevention",
+  vetVisit: "check-up",
+  medication: "medication",
 };
+
+/** What a reminder calls the thing: the medication's own name where it has one. */
+const describeKind = (record) =>
+  record.kind === "medication" && record.label ? record.label : KIND_LABELS[record.kind];
 
 /**
  * The reminder, registered once at module load like the review reminder.
@@ -36,14 +44,32 @@ scheduler.registerHandler(VACCINATION_DUE_JOB, async ({ recordId }) => {
     month: "long",
     day: "numeric",
   });
+  const isVaccine = vaccinations.categoryOf(record.kind) === "vaccine";
   await notify({
-    content: `${pet.name}'s ${KIND_LABELS[record.kind]} is due ${due}. Your vet can confirm the schedule.`,
+    content: `${pet.name}'s ${describeKind(record)} is due ${due}. Your vet can confirm the schedule.`,
     recipientId: record.owner,
-    type: "vaccinationDue",
+    type: isVaccine ? "vaccinationDue" : "healthDue",
     petName: pet.name,
     data: { petId: String(record.pet) },
   });
 });
+
+/** Writes one record and queues its reminder. Shared by create and done. */
+const record = async (fields) => {
+  const created = await HealthRecord.create(fields);
+  const runAt = vaccinations.reminderAt(created.expiresAt);
+  if (runAt) {
+    await scheduler.schedule(VACCINATION_DUE_JOB, { recordId: String(created._id) }, runAt);
+  }
+  return created;
+};
+
+const statusFor = async (petId, userId) =>
+  vaccinations.statusOf(
+    await HealthRecord.find({ pet: petId, owner: userId })
+      .select("kind administeredAt expiresAt")
+      .lean()
+  );
 
 /** The caller's own pet, or the response that says why not. */
 const ownPet = async (req, res) => {
@@ -74,6 +100,7 @@ const HealthRecordController = {
         status: vaccinations.statusOf(records),
         kinds: vaccinations.KINDS,
         coreKinds: vaccinations.CORE_KINDS,
+        categories: vaccinations.KIND_CATEGORIES,
         records,
       });
     } catch (err) {
@@ -94,10 +121,11 @@ const HealthRecordController = {
       const pet = await ownPet(req, res);
       if (!pet) return;
 
-      const { kind, administeredAt, expiresAt, certificatePhoto, notes } = req.body;
+      const { kind, administeredAt, expiresAt, certificatePhoto, notes, intervalDays, label } =
+        req.body;
       const [photo] = sanitisePhotos(certificatePhoto ? [certificatePhoto] : []);
 
-      const record = await HealthRecord.create({
+      const created = await record({
         pet: pet._id,
         owner: req.userId,
         creator: req.userId,
@@ -106,19 +134,12 @@ const HealthRecordController = {
         expiresAt: expiresAt || undefined,
         certificatePhoto: photo,
         verification: photo ? "documented" : "selfReported",
+        intervalDays: intervalDays || undefined,
+        label: label || undefined,
         notes,
       });
 
-      const runAt = vaccinations.reminderAt(record.expiresAt);
-      if (runAt) {
-        await scheduler.schedule(VACCINATION_DUE_JOB, { recordId: String(record._id) }, runAt);
-      }
-
-      const records = await HealthRecord.find({ pet: pet._id, owner: req.userId })
-        .select("kind administeredAt expiresAt")
-        .lean();
-
-      res.status(201).json({ record, status: vaccinations.statusOf(records) });
+      res.status(201).json({ record: created, status: await statusFor(pet._id, req.userId) });
     } catch (err) {
       if (err.name === "ValidationError") {
         return res.status(400).json({ message: err.message });
@@ -139,11 +160,43 @@ const HealthRecordController = {
         return res.status(404).json({ message: "Cannot find that record" });
       }
 
-      const records = await HealthRecord.find({ pet: req.params.petId, owner: req.userId })
-        .select("kind administeredAt expiresAt")
-        .lean();
+      res.json({ recordId: deleted._id, status: await statusFor(req.params.petId, req.userId) });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
 
-      res.json({ recordId: deleted._id, status: vaccinations.statusOf(records) });
+  /**
+   * "Done": today's dose is logged as the next record and the reminder is
+   * re-armed from it. The record being marked stays - it is the history.
+   * Only records with an interval repeat; a vaccine has a certificate date,
+   * not a cycle.
+   */
+  async markDone(req, res) {
+    try {
+      const previous = await HealthRecord.findOne({
+        _id: req.params.recordId,
+        pet: req.params.petId,
+        owner: req.userId,
+      }).lean();
+      if (!previous) {
+        return res.status(404).json({ message: "Cannot find that record" });
+      }
+
+      const next = vaccinations.nextFrom(previous);
+      if (!next) {
+        return res.status(400).json({ message: "That record doesn't repeat" });
+      }
+
+      const created = await record({
+        ...next,
+        pet: previous.pet,
+        owner: req.userId,
+        creator: req.userId,
+        verification: "selfReported",
+      });
+
+      res.status(201).json({ record: created, status: await statusFor(previous.pet, req.userId) });
     } catch (err) {
       res.status(500).json({ message: err.message });
     }

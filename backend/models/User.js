@@ -1,7 +1,20 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+const { regionForZip } = require("../services/regions");
 // Create Schema for User
 const UserSchema = new Schema({
+  /**
+   * Where this person is, as a ZIP code, asked once at profile creation.
+   *
+   * The app launches one region at a time, and location sharing is optional
+   * by design, so the fence cannot depend on it. A ZIP also tells the
+   * waitlist *where* demand is. `region` is derived from it on save by
+   * `services/regions.js` - the one place that rule lives - and the session
+   * reads `region`, never the ZIP. Profiles from before the field have neither
+   * and are let in.
+   */
+  zip: { type: String, match: /^\d{5}$/ },
+  region: { type: String, index: true },
   // Links this profile to the Firebase Auth account. Firebase is the single
   // source of truth for credentials; this server never stores passwords.
   firebaseUid: {
@@ -224,6 +237,14 @@ const UserSchema = new Schema({
 UserSchema.pre("validate", function setUsernameLower() {
   if (this.username) {
     this.usernameLower = this.username.trim().toLowerCase();
+  }
+});
+
+// `region` follows `zip` the way `usernameLower` follows `username`: no call
+// site can set one without the other.
+UserSchema.pre("validate", function setRegionFromZip() {
+  if (this.isModified("zip")) {
+    this.region = regionForZip(this.zip) ?? undefined;
   }
 });
 

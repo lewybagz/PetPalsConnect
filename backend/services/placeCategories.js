@@ -15,8 +15,13 @@
  * pet shops groom - so `categories` is an array rather than a single type.
  */
 
-/** Playdates happen at one of these; the care hub is about the rest. */
-const CATEGORIES = ["park", "vet", "petStore", "groomer", "boarding"];
+/**
+ * Playdates happen at a park; the care hub is about the next four; the last
+ * three are where a dog goes *with* its owner - a patio, a hotel, a trail.
+ * Those are "reported dog-friendly": Google has no dog-friendly type, so they
+ * come from keyword searches and nothing here vouches for them.
+ */
+const CATEGORIES = ["park", "vet", "petStore", "groomer", "boarding", "patio", "hotel", "trail"];
 
 /**
  * What to ask Google for, per category.
@@ -34,6 +39,10 @@ const IMPORTS = [
   { category: "petStore", type: "pet_store" },
   { category: "groomer", type: "pet_store", keyword: "pet grooming" },
   { category: "boarding", type: "lodging", keyword: "pet boarding kennel" },
+  // Out and about. All keyword searches: precision is what the keyword gives.
+  { category: "patio", type: "restaurant", keyword: "dog friendly patio" },
+  { category: "hotel", type: "lodging", keyword: "pet friendly hotel" },
+  { category: "trail", type: "park", keyword: "dog friendly hiking trail" },
 ];
 
 /** Google's own types, where one maps cleanly onto one of ours. */
@@ -74,9 +83,17 @@ const categoriesFor = (googleTypes = [], searchedCategory = null) => {
  */
 const CARE_CATEGORIES = ["vet", "petStore", "groomer", "boarding"];
 
+/**
+ * Places somebody takes a pet *with* them. Kept apart from the care list so
+ * the default vet lookup does not fill with hotels, and so the hub can label
+ * the section "reported dog-friendly" rather than imply it checked.
+ */
+const OUT_CATEGORIES = ["patio", "hotel", "trail"];
+
 module.exports = {
   CATEGORIES,
   CARE_CATEGORIES,
+  OUT_CATEGORIES,
   IMPORTS,
   FROM_GOOGLE_TYPE,
   categoriesFor,

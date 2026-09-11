@@ -31,6 +31,22 @@ const HealthRecordSchema = new Schema({
   verification: { type: String, enum: VERIFICATIONS, default: "selfReported" },
   /** A photo of the certificate, from our own storage bucket. */
   certificatePhoto: { type: String },
+  /**
+   * Days until the next dose, for the things that repeat - flea and tick,
+   * heartworm, a medication. "Done" writes the next record from it. Never a
+   * suggestion: the app pre-fills a number the owner can change, and the copy
+   * says "as your vet prescribed".
+   */
+  intervalDays: { type: Number, min: 1, max: 730 },
+  /** A medication's name. There is deliberately no field for how much. */
+  label: {
+    type: String,
+    maxlength: 60,
+    trim: true,
+    required: function medicationNeedsAName() {
+      return this.kind === "medication";
+    },
+  },
   notes: { type: String, maxlength: 500 },
   creator: { type: Schema.Types.ObjectId, ref: "User", required: true },
   createdDate: { type: Date, default: Date.now },

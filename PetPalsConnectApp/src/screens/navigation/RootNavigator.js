@@ -7,6 +7,7 @@ import AppStack from "./AppStack";
 import CreateProfileScreen from "../auth/CreateProfileScreen";
 import AddFirstPetScreen from "../pets/AddFirstPetScreen";
 import AccountSuspendedScreen from "../auth/AccountSuspendedScreen";
+import WaitlistScreen from "../auth/WaitlistScreen";
 import usePushNotifications from "../../hooks/usePushNotifications";
 import { useSocketSession } from "../../hooks/useSocketEvents";
 import useSessionStore from "../../hooks/useSessionStore";
@@ -110,6 +111,12 @@ export default function RootNavigator() {
           be a screenful of failed requests explaining nothing. */}
       {status === AuthStatus.suspended && (
         <Root.Screen name="AccountSuspended" component={AccountSuspendedScreen} />
+      )}
+
+      {/* Outside the launch region. Not a refusal: one tap to be told when it
+          opens, and a way through to the pets and the care hub. */}
+      {status === AuthStatus.waitlisted && (
+        <Root.Screen name="Waitlist" component={WaitlistScreen} />
       )}
 
       {status === AuthStatus.ready && <Root.Screen name="App" component={AppStack} />}

@@ -5,6 +5,9 @@ const {
   statusOf,
   reminderAt,
   isShared,
+  nextFrom,
+  categoryOf,
+  KINDS,
   REMINDER_LEAD_MS,
 } = require("../services/vaccinations");
 
@@ -76,6 +79,41 @@ test("only current and expiring-soon count as shared", () => {
   assert.equal(isShared("partial"), false);
   assert.equal(isShared("expired"), false);
   assert.equal(isShared("unknown"), false);
+});
+
+test("preventatives, visits and medications never change the vaccination status", () => {
+  // A flea record on its own has shared nothing about vaccinations.
+  assert.equal(statusOf([record("fleaTick", { expiresAt: at(20) })], NOW), "unknown");
+  // And an expired one beside a current core set does not lapse it.
+  const records = [...core(365), record("heartworm", { expiresAt: at(-5) })];
+  assert.equal(statusOf(records, NOW), "current");
+});
+
+test("every kind has a category", () => {
+  for (const kind of KINDS) assert.ok(categoryOf(kind), `${kind} has no category`);
+  assert.equal(categoryOf("rabies"), "vaccine");
+  assert.equal(categoryOf("fleaTick"), "prevention");
+  assert.equal(categoryOf("vetVisit"), "visit");
+  assert.equal(categoryOf("medication"), "medication");
+  assert.equal(categoryOf("homeopathy"), null);
+});
+
+test("done writes the next dose one interval on, and only for records that repeat", () => {
+  const next = nextFrom(
+    { kind: "fleaTick", intervalDays: 30, label: undefined, expiresAt: at(-2) },
+    NOW
+  );
+  assert.equal(next.kind, "fleaTick");
+  assert.equal(next.intervalDays, 30);
+  assert.equal(next.administeredAt.getTime(), NOW);
+  assert.equal(next.expiresAt.getTime(), NOW + 30 * DAY);
+
+  const medication = nextFrom({ kind: "medication", label: "Apoquel", intervalDays: 1 }, NOW);
+  assert.equal(medication.label, "Apoquel");
+
+  // A vaccine has a certificate date, not a cycle.
+  assert.equal(nextFrom({ kind: "rabies", expiresAt: at(365) }, NOW), null);
+  assert.equal(nextFrom(null, NOW), null);
 });
 
 test("a reminder lands one lead time before expiry, never in the past", () => {

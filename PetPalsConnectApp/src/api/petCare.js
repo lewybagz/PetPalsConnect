@@ -21,7 +21,15 @@ export const fetchCarePicks = async () => {
   return {
     categories: data?.categories ?? [],
     placeCategories: data?.placeCategories ?? [],
+    // Patios, hotels, trails: reported dog-friendly, labelled apart from care.
+    outCategories: Array.isArray(data?.outCategories) ? data.outCategories : [],
     emergency: data?.emergency ?? [],
+    // Null until there is a partner. When set it names who the link opens,
+    // because the card has to say so next to the link.
+    insurance:
+      data?.insurance?.url && data?.insurance?.partner
+        ? { url: data.insurance.url, partner: data.insurance.partner }
+        : null,
     pets: Array.isArray(data?.pets) ? data.pets : [],
   };
 };

@@ -237,7 +237,7 @@ const PetDetailsScreen = ({ route, navigation }) => {
           style={styles.secondaryButton}
         >
           <Icon name="medkit" size={16} color={tokens.primary} />
-          <Text style={styles.secondaryButtonText}>Vaccination records</Text>
+          <Text style={styles.secondaryButtonText}>Health records</Text>
         </TouchableOpacity>
       ) : null}
     </ScrollView>

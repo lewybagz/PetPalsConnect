@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -27,6 +28,7 @@ import { describeAuthError } from "../../utils/authErrors";
 import { passwordRules, scorePassword } from "../../utils/passwordStrength";
 import { useTokens } from "../../context/AppThemeContext";
 import AppleSignInButton from "../../components/AppleSignInButton";
+import { PRIVACY_URL, TERMS_URL } from "../../config/legal";
 
 GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
 
@@ -280,6 +282,28 @@ export default function RegisterScreen({ navigation }) {
             Continue with Google
           </Text>
         </Pressable>
+
+        {/* Under all three ways in, since Apple and Google create an account
+            too. Both links open the hosted documents the store listings cite. */}
+        <Text style={tailwind("text-xs text-textMuted text-center mt-6")}>
+          By continuing you agree to the{" "}
+          <Text
+            testID="register-terms"
+            style={tailwind("text-danger")}
+            onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}
+          >
+            Terms of Service
+          </Text>{" "}
+          and{" "}
+          <Text
+            testID="register-privacy"
+            style={tailwind("text-danger")}
+            onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}
+          >
+            Privacy Policy
+          </Text>
+          .
+        </Text>
 
         <Pressable
           onPress={() => navigation.navigate("Login")}

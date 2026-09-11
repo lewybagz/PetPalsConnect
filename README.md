@@ -171,6 +171,30 @@ Both stores use the bundle identifier `com.petpalsconnect.app`.
       Authorization header, and set `REVENUECAT_WEBHOOK_SECRET` to the same value
 - [ ] Enable the Apple sign-in provider in Firebase Authentication and the
       Sign in with Apple capability on the app id
+- [ ] Enable the Google provider in Firebase Authentication and re-download
+      `GoogleService-Info.plist` so it carries `REVERSED_CLIENT_ID` - without it
+      `app.config.js` leaves Google Sign-In off on iOS
+- [ ] Repo settings > Pages > deploy from `main` `/docs`, so
+      https://lewybagz.github.io/PetPalsConnect/privacy.html, `terms.html` and
+      `delete-account.html` resolve; both store listings cite them and
+      `src/config/legal.ts` opens them
+- [ ] Fill the `[STATE]`, `[MAILING ADDRESS]`, `[TITLE]`, `[AGENT NAME]`,
+      `[DATABASE HOST]` and `[SERVER HOST]` placeholders in `docs/terms.html`
+      and `docs/privacy.html`, then have both reviewed by a lawyer
+- [ ] Register a DMCA designated agent with the US Copyright Office
+      (dmca.copyright.gov, $6, renew every three years) and put the name in
+      `docs/terms.html` section 9
+- [ ] App Store Connect: paste https://lewybagz.github.io/PetPalsConnect/terms.html
+      as the custom EULA and privacy.html as the privacy policy URL; privacy
+      nutrition labels: Contact Info (email/phone), User Content (photos,
+      messages), Identifiers (user id), Location (precise, app functionality),
+      Purchases - none used for tracking
+- [ ] Play Console: privacy policy URL, Data safety form matching
+      `docs/privacy.html` section 2, and `delete-account.html` as the account
+      deletion URL
+- [ ] Set `FIREBASE_STORAGE_BUCKET` in backend `.env` if the project is not on
+      `<project-id>.firebasestorage.app`, so account deletion can empty the
+      account's photo folders
 
 ## Security
 

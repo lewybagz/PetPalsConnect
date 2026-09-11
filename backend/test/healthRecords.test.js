@@ -262,6 +262,94 @@ test("a record with no expiry queues nothing", async () => {
   assert.equal(await ScheduledJob.countDocuments({ type: "vaccination:due" }), 0);
 });
 
+test("marking a repeating record done logs the next dose and re-arms the reminder", async () => {
+  const owner = await makeUser("owner");
+  const pet = await makePet(owner);
+
+  const first = await request(app)
+    .post(`/api/pets/${pet._id}/health`)
+    .set(...auth("owner"))
+    .send({ kind: "fleaTick", administeredAt: days(-31), expiresAt: days(-1), intervalDays: 30 })
+    .expect(201);
+  // Already lapsed, so nothing was queued for it.
+  assert.equal(await ScheduledJob.countDocuments({ type: "vaccination:due" }), 0);
+
+  const done = await request(app)
+    .post(`/api/pets/${pet._id}/health/${first.body.record._id}/done`)
+    .set(...auth("owner"))
+    .expect(201);
+
+  assert.equal(done.body.record.kind, "fleaTick");
+  assert.equal(done.body.record.intervalDays, 30);
+  const dueIn = (new Date(done.body.record.expiresAt) - Date.now()) / DAY;
+  assert.ok(dueIn > 29 && dueIn <= 30, `next dose due in ${dueIn} days`);
+
+  // The old record is history, not overwritten.
+  assert.equal(await HealthRecord.countDocuments({ pet: pet._id, kind: "fleaTick" }), 2);
+  // And the next reminder is queued, at the lead before the new expiry.
+  const job = await ScheduledJob.findOne({ type: "vaccination:due" }).lean();
+  assert.ok(job, "no reminder queued for the next dose");
+  assert.equal(job.payload.recordId, String(done.body.record._id));
+});
+
+test("a non-vaccine reminder is a healthDue notification named after the thing", async () => {
+  const owner = await makeUser("owner");
+  const pet = await makePet(owner);
+
+  await request(app)
+    .post(`/api/pets/${pet._id}/health`)
+    .set(...auth("owner"))
+    .send({
+      kind: "medication",
+      label: "Apoquel",
+      administeredAt: days(0),
+      expiresAt: days(5),
+      intervalDays: 30,
+    })
+    .expect(201);
+
+  await scheduler.drain();
+
+  const notification = await Notification.findOne({ recipient: owner._id }).lean();
+  assert.equal(notification.type, "healthDue");
+  assert.match(notification.content, /Bo's Apoquel is due/);
+});
+
+test("done on a record that does not repeat is refused", async () => {
+  const owner = await makeUser("owner");
+  const pet = await makePet(owner);
+  const [rabies] = await coreRecords(owner, pet);
+
+  await request(app)
+    .post(`/api/pets/${pet._id}/health/${rabies._id}/done`)
+    .set(...auth("owner"))
+    .expect(400);
+});
+
+test("a medication needs a name, and a stranger cannot mark anything done", async () => {
+  const owner = await makeUser("owner");
+  await makeUser("stranger");
+  const pet = await makePet(owner);
+
+  await request(app)
+    .post(`/api/pets/${pet._id}/health`)
+    .set(...auth("owner"))
+    .send({ kind: "medication", administeredAt: days(0), intervalDays: 1 })
+    .expect(400);
+
+  const flea = await request(app)
+    .post(`/api/pets/${pet._id}/health`)
+    .set(...auth("owner"))
+    .send({ kind: "fleaTick", administeredAt: days(0), intervalDays: 30 })
+    .expect(201);
+
+  await request(app)
+    .post(`/api/pets/${pet._id}/health/${flea.body.record._id}/done`)
+    .set(...auth("stranger"))
+    .expect(404);
+  assert.equal(await HealthRecord.countDocuments({ pet: pet._id }), 1);
+});
+
 test("every deck card carries the candidate's vaccination status", async () => {
   const me = await makeUser("me");
   const other = await makeUser("other");

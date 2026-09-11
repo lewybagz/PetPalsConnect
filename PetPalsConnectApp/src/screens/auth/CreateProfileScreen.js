@@ -40,13 +40,20 @@ export default function CreateProfileScreen() {
   }, [firebaseUser]);
 
   const [username, setUsername] = useState(suggested);
+  // Where they are, once. The app opens one region at a time and location
+  // sharing is optional, so a ZIP is what the launch fence reads - and what
+  // tells the waitlist where the next launch should be.
+  const [zip, setZip] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
   const availability = useUsernameAvailability(username);
 
+  const zipValid = /^\d{5}$/.test(zip);
+
   const canSubmit =
     !submitting &&
+    zipValid &&
     username.trim().length >= 3 &&
     availability.status !== "unavailable" &&
     availability.status !== "checking";
@@ -55,7 +62,7 @@ export default function CreateProfileScreen() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await createProfile({ username: username.trim() });
+      await createProfile({ username: username.trim(), zip });
       // No navigation call: creating the profile flips the session to "ready"
       // and RootNavigator swaps in the app tree.
     } catch (error) {
@@ -153,7 +160,32 @@ export default function CreateProfileScreen() {
           </View>
         </View>
 
-        <Text style={tailwind(`text-sm mb-6 ${hintColour}`)}>{hint}</Text>
+        <Text style={tailwind(`text-sm mb-4 ${hintColour}`)}>{hint}</Text>
+
+        <View style={tailwind("mb-2")}>
+          <View style={tailwind("flex-row items-center border rounded-lg px-3 border-border")}>
+            <Ionicons name="location-outline" size={18} color={tokens.textFaint} />
+            <TextInput
+              testID="profile-zip"
+              style={tailwind("flex-1 py-3 px-2 text-base text-text")}
+              placeholder="ZIP code"
+              placeholderTextColor={tokens.textFaint}
+              value={zip}
+              onChangeText={(text) => setZip(text.replace(/[^0-9]/g, "").slice(0, 5))}
+              keyboardType="number-pad"
+              autoComplete="postal-code"
+              textContentType="postalCode"
+              maxLength={5}
+              returnKeyType="done"
+              onSubmitEditing={canSubmit ? onSubmit : undefined}
+              editable={!submitting}
+            />
+            {zipValid && <Ionicons name="checkmark-circle" size={22} color={tokens.success} />}
+          </View>
+        </View>
+        <Text style={tailwind("text-sm mb-6 text-textMuted")}>
+          So we can show dogs near you. PetPals is opening one area at a time.
+        </Text>
 
         {submitError && (
           <Text style={tailwind("text-danger text-center mb-4")}>{submitError}</Text>

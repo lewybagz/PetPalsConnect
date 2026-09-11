@@ -11,6 +11,7 @@
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { getMessaging } = require("firebase-admin/messaging");
+const { getStorage } = require("firebase-admin/storage");
 const env = require("./env");
 
 let app = null;
@@ -65,4 +66,24 @@ const deleteUser = async (uid) => {
   return getAuth(app).deleteUser(uid);
 };
 
-module.exports = { isEnabled, verifyIdToken, sendMessage, deleteUser };
+/**
+ * Deletes every file an account uploaded.
+ *
+ * Every Storage path starts with the uploader's Firebase uid (`pets/<uid>/`,
+ * `profiles/<uid>/`, `chat/<uid>/`) - that is what lets `storage.rules` check
+ * ownership, and it is also what makes deletion a prefix walk rather than a
+ * hunt through every document for URLs. Account deletion has to remove the
+ * data associated with the account, and photos are most of it by weight.
+ */
+const STORAGE_PREFIXES = ["pets", "profiles", "chat"];
+
+const deleteUserFiles = async (uid) => {
+  if (!app || !uid) return null;
+  const bucket = getStorage(app).bucket(env.firebase.storageBucket);
+  for (const prefix of STORAGE_PREFIXES) {
+    await bucket.deleteFiles({ prefix: `${prefix}/${uid}/`, force: true });
+  }
+  return STORAGE_PREFIXES.length;
+};
+
+module.exports = { isEnabled, verifyIdToken, sendMessage, deleteUser, deleteUserFiles };

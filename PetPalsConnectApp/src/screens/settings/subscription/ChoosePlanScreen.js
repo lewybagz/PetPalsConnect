@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Platform,
   ScrollView,
   Text,
@@ -18,6 +19,7 @@ import {
 import { useAuthSession } from "../../../context/AuthSessionContext";
 import { useTokens } from "../../../context/AppThemeContext";
 import { useToast } from "../../../components/ui";
+import { PRIVACY_URL, TERMS_URL } from "../../../config/legal";
 
 const STORE = Platform.OS === "ios" ? "the App Store" : "Google Play";
 
@@ -178,9 +180,30 @@ const ChoosePlanScreen = ({ navigation }) => {
         )}
       </TouchableOpacity>
 
+      {/* Apple 3.1.2 and Google Play both want the renewal terms and links to
+          the Terms and Privacy Policy on the screen that sells the subscription,
+          not only in the store listing. */}
       <Text style={tailwind("text-xs text-textMuted text-center mt-2")}>
-        Billed through {STORE}. Renews automatically until you cancel, which you
-        can do any time in your {STORE} account settings.
+        Billed to your {STORE} account at the price shown. Renews automatically
+        each period until you cancel, at least 24 hours before it renews, in your{" "}
+        {STORE} subscription settings. Cancelling keeps your access to the end of
+        the period you paid for. By subscribing you agree to the{" "}
+        <Text
+          testID="plans-terms"
+          style={tailwind("text-primary")}
+          onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}
+        >
+          Terms of Service
+        </Text>{" "}
+        and{" "}
+        <Text
+          testID="plans-privacy"
+          style={tailwind("text-primary")}
+          onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}
+        >
+          Privacy Policy
+        </Text>
+        .
       </Text>
     </ScrollView>
   );

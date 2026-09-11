@@ -1,7 +1,7 @@
 const Location = require("../models/Location");
 const places = require("../services/places");
 const { milesBetween, formatMiles } = require("../services/matching/distance");
-const { CATEGORIES, CARE_CATEGORIES } = require("../services/placeCategories");
+const { CATEGORIES, CARE_CATEGORIES, OUT_CATEGORIES } = require("../services/placeCategories");
 const { EMERGENCY_CONTACTS } = require("../services/petCare/emergency");
 const Favorite = require("../models/Favorite");
 
@@ -171,11 +171,14 @@ const LocationController = {
   async getCarePlaces(req, res) {
     const { lat, lng, range, category } = req.query;
 
+    // Asked for by name, a patio or a hotel is a fine answer. Unasked, the
+    // default is the care list alone, so a vet lookup does not fill with
+    // hotels.
     const requested = category
       ? String(category)
           .split(",")
           .map((name) => name.trim())
-          .filter((name) => CARE_CATEGORIES.includes(name))
+          .filter((name) => CARE_CATEGORIES.includes(name) || OUT_CATEGORIES.includes(name))
       : CARE_CATEGORIES;
 
     try {

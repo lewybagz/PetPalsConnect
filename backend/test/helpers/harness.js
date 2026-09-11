@@ -39,6 +39,15 @@ const firebaseStub = {
     firebaseStub.sent.push(message);
     return "stub-message-id";
   },
+  deletedUsers: [],
+  deleteUser: async (uid) => {
+    firebaseStub.deletedUsers.push(uid);
+  },
+  deletedFiles: [],
+  deleteUserFiles: async (uid) => {
+    firebaseStub.deletedFiles.push(uid);
+    return 3;
+  },
 };
 
 /**

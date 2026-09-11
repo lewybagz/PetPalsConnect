@@ -99,9 +99,15 @@ test("a matched pet is placed at its owner's position", async () => {
     .expect(200);
 
   assert.equal(res.body.pets.length, 1);
-  // Named, so no screen has to know that the stored pair is [lng, lat].
-  assert.equal(res.body.pets[0].latitude, NEARBY[1]);
-  assert.equal(res.body.pets[0].longitude, NEARBY[0]);
+  // Named, so no screen has to know that the stored pair is [lng, lat] - and
+  // coarse: the stored position is where they last opened the app, usually
+  // home, and a stranger gets the neighbourhood rather than the door.
+  const coarse = (v) => Math.round(v / 0.01) * 0.01;
+  assert.equal(res.body.pets[0].latitude, coarse(NEARBY[1]));
+  assert.equal(res.body.pets[0].longitude, coarse(NEARBY[0]));
+  assert.notEqual(res.body.pets[0].latitude, NEARBY[1], "exact latitude must not leave the server");
+  assert.notEqual(res.body.pets[0].longitude, NEARBY[0], "exact longitude must not leave the server");
+  assert.ok(Math.abs(res.body.pets[0].latitude - NEARBY[1]) < 0.01);
   assert.equal(res.body.pets[0].name, "Bo");
 });
 

@@ -230,6 +230,18 @@ test("distance is attached in miles when both ends are known", async () => {
 
 // --- The shape of it --------------------------------------------------------
 
+test("a patio is a category only when asked for, never in the default care list", async () => {
+  const { OUT_CATEGORIES, IMPORTS } = require("../services/placeCategories");
+  // Every out-and-about category is a keyword search: Google has no
+  // dog-friendly type, and the row must carry the category it was searched for.
+  for (const category of OUT_CATEGORIES) {
+    const entry = IMPORTS.find((candidate) => candidate.category === category);
+    assert.ok(entry?.keyword, `${category} needs a keyword search`);
+  }
+  assert.deepEqual(categoriesFor(["restaurant", "establishment"], "patio"), ["patio"]);
+  assert.ok(!CARE_CATEGORIES.some((category) => OUT_CATEGORIES.includes(category)));
+});
+
 test("care categories never include parks", () => {
   // A hub listing the local park under "places to take your pet for care"
   // would be a category error with a real consequence: it pads the vet list.

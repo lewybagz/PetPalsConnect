@@ -13,6 +13,7 @@ import api from "../api/axios";
 import { onSessionInvalidated } from "../api/sessionEvents";
 import { isAppleAccount, revokeAppleAccess } from "../api/appleAuth";
 import { readCache, writeCache, removeCache, CacheKeys } from "../services/localCache";
+import { isLaunched } from "../api/waitlist";
 
 /**
  * The app's notion of "who is signed in".
@@ -34,6 +35,8 @@ import { readCache, writeCache, removeCache, CacheKeys } from "../services/local
  *   needsPet     - profile exists, but no pets yet and the prompt wasn't skipped
  *   suspended    - the account is hidden pending review; the API refuses it
  *                  nearly everything, so the app must not pretend otherwise
+ *   waitlisted   - the profile's ZIP is outside the launch region; a screen
+ *                  with a "notify me" button, and a way through to the care hub
  *   ready        - the app can be entered
  *   error        - profile lookup failed for a reason that isn't "absent"
  *
@@ -54,6 +57,7 @@ const STATUS = {
   needsProfile: "needsProfile",
   needsPet: "needsPet",
   suspended: "suspended",
+  waitlisted: "waitlisted",
   ready: "ready",
   error: "error",
 };
@@ -100,6 +104,16 @@ const profileHasDog = (profile) =>
 const skipKey = (profile) => `pet-setup-skipped:${profile?._id ?? "unknown"}`;
 
 /**
+ * "Continue anyway" past the launch fence, remembered per user.
+ *
+ * The fence is not a refusal: an out-of-area owner can still add a pet and
+ * use the care hub, which is the half of the app the research says is the
+ * durable one. Nothing server-side turns them away; this is a session state
+ * and one screen.
+ */
+const continueKey = (profile) => `launch-continue:${profile?._id ?? "unknown"}`;
+
+/**
  * The onboarding step a profile still needs, if any.
  *
  * Having a pet always wins over a stored skip, so adding one later clears the
@@ -113,8 +127,11 @@ const skipKey = (profile) => `pet-setup-skipped:${profile?._id ?? "unknown"}`;
  * and a toast that said nothing about why. It is the same shape as the other
  * gates: a state the session reports, and one tree the navigator picks from it.
  */
-const statusForProfile = (profile, skipped) => {
+const statusForProfile = (profile, skipped, continued = false) => {
   if (profile?.suspended) return STATUS.suspended;
+  // Outside the launch region, and has not chosen to go on regardless. A
+  // profile with no region predates the field and is let in.
+  if (!isLaunched(profile?.region) && !continued) return STATUS.waitlisted;
   return profileHasPet(profile) || skipped ? STATUS.ready : STATUS.needsPet;
 };
 
@@ -124,6 +141,7 @@ export const AuthSessionProvider = ({ children }) => {
   const [status, setStatus] = useState(STATUS.loading);
   const [error, setError] = useState(null);
   const [skippedPetSetup, setSkippedPetSetup] = useState(false);
+  const [continuedPastFence, setContinuedPastFence] = useState(false);
 
   // Guards against a slow response for a previous user overwriting a newer one.
   const requestId = useRef(0);
@@ -143,11 +161,13 @@ export const AuthSessionProvider = ({ children }) => {
       const skipped = profileHasPet(data)
         ? false
         : Boolean(await readCache(skipKey(data), false));
+      const continued = Boolean(await readCache(continueKey(data), false));
 
       setProfile(data);
       setSkippedPetSetup(skipped);
+      setContinuedPastFence(continued);
       setError(null);
-      setStatus(statusForProfile(data, skipped));
+      setStatus(statusForProfile(data, skipped, continued));
       writeCache(CacheKeys.userData, data);
       return data;
     } catch (err) {
@@ -168,9 +188,11 @@ export const AuthSessionProvider = ({ children }) => {
         const skipped = profileHasPet(cached)
           ? false
           : Boolean(await readCache(skipKey(cached), false));
+        const continued = Boolean(await readCache(continueKey(cached), false));
         setProfile(cached);
         setSkippedPetSetup(skipped);
-        setStatus(statusForProfile(cached, skipped));
+        setContinuedPastFence(continued);
+        setStatus(statusForProfile(cached, skipped, continued));
         return cached;
       }
 
@@ -252,6 +274,16 @@ export const AuthSessionProvider = ({ children }) => {
     setStatus(STATUS.ready);
   }, [profile]);
 
+  /**
+   * Goes on past the launch fence. Remembered per user so the screen is not
+   * shown again on every launch; the deck stays honest and empty.
+   */
+  const continueAnyway = useCallback(async () => {
+    if (profile) await writeCache(continueKey(profile), true);
+    setContinuedPastFence(true);
+    setStatus(statusForProfile(profile, skippedPetSetup, true));
+  }, [profile, skippedPetSetup]);
+
   const refresh = useCallback(
     () => loadProfile(getAuth().currentUser),
     [loadProfile]
@@ -292,9 +324,11 @@ export const AuthSessionProvider = ({ children }) => {
       // want this one.
       hasDog: profileHasDog(profile),
       skippedPetSetup,
+      continuedPastFence,
       createProfile,
       createPet,
       skipPetSetup,
+      continueAnyway,
       refresh,
       signOut,
       deleteAccount,
@@ -305,9 +339,11 @@ export const AuthSessionProvider = ({ children }) => {
       firebaseUser,
       profile,
       skippedPetSetup,
+      continuedPastFence,
       createProfile,
       createPet,
       skipPetSetup,
+      continueAnyway,
       refresh,
       signOut,
       deleteAccount,

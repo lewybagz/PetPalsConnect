@@ -143,6 +143,7 @@ describe("navigation params", () => {
       "VerificationSelection",
       "CreateProfile",
       "AddFirstPet",
+      "Waitlist",
     ]);
 
     const unknown = new Set();

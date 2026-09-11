@@ -43,6 +43,15 @@ const CANDIDATE_LIMIT = 500;
  *
  * Plain async function, not an Express handler - `createPet` calls it directly.
  */
+/**
+ * Rounds a coordinate to ~1 km so another user's pin is a neighbourhood, not a
+ * home. Precise geolocation is "sensitive data" under most US state privacy
+ * laws, and a map that hands strangers exact positions is the kind of feature
+ * that turns a harassment case into a negligence claim against the app.
+ */
+const COARSE_STEP = 0.01;
+const coarse = (value) => Math.round(value / COARSE_STEP) * COARSE_STEP;
+
 const runMatching = async (petId, { isSubscribed = false } = {}) => {
   const currentPet = await Pet.findById(petId);
   if (!currentPet) return [];
@@ -547,9 +556,12 @@ const PetMatchController = {
           breed: pet.breed,
           photos: pet.photos ?? [],
           // Latitude and longitude by name, so the screen never has to know
-          // which way round the stored pair is.
-          latitude: coordinates[1],
-          longitude: coordinates[0],
+          // which way round the stored pair is - and rounded, because the
+          // stored pair is wherever this person last opened the app, which is
+          // usually their home. A stranger gets the neighbourhood, not the
+          // door: 0.01 degrees is about 1.1 km, which still places a pin.
+          latitude: coarse(coordinates[1]),
+          longitude: coarse(coordinates[0]),
           distanceMiles: origin
             ? formatMiles(milesBetween(origin, coordinates))
             : null,
