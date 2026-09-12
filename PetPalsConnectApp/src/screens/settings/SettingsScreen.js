@@ -192,6 +192,13 @@ const SettingsScreen = ({ navigation }) => {
           detail={profile?.subscribed ? "Premium" : "Free"}
           onPress={() => navigation.navigate("SubscriptionManagement")}
         />
+        <SettingsRow
+          testID="settings-orders"
+          icon="cube-outline"
+          label="Orders"
+          description="What you've bought in the shop, and where it is."
+          onPress={() => navigation.navigate("Orders")}
+        />
       </SettingsSection>
 
       <SettingsSection title="About">

@@ -516,8 +516,222 @@ export const HEALTH = {
   ],
 };
 
+/**
+ * The poison lookup shows real entries rather than invented ones: the whole
+ * point of the board is to check that a long, dense, source-cited card is
+ * still readable on a phone in both themes.
+ */
+export const TOXINS = {
+  severities: ["emergency", "call", "avoid"],
+  contacts: CARE_PICKS.emergency,
+  toxins: [
+    {
+      slug: "grapes-raisins",
+      name: "Grapes, raisins and currants",
+      aliases: ["grape", "raisin", "sultana"],
+      species: ["dog"],
+      severity: "emergency",
+      signs: "Vomiting, lethargy, loss of appetite, and later a drop in how much the dog urinates.",
+      guidance:
+        "Grapes and their dried forms can cause sudden kidney failure in dogs. The reaction is unpredictable: severity does not track neatly with how much was eaten. Because the amount does not tell you what will happen, published guidance is to treat any ingestion as urgent.",
+      sources: [
+        {
+          name: "ASPCA Animal Poison Control Center",
+          url: "https://www.aspca.org/pet-care/animal-poison-control",
+          year: 2025,
+        },
+      ],
+    },
+    {
+      slug: "lilies",
+      name: "Lilies",
+      aliases: ["lily", "easter lily", "stargazer"],
+      species: ["cat"],
+      severity: "emergency",
+      signs: "Vomiting, loss of appetite and lethargy first, then increased drinking and urinating.",
+      guidance:
+        "True lilies are the single most dangerous common houseplant for cats, and every part counts: petals, leaves, pollen and even the water in the vase.",
+      sources: [
+        {
+          name: "FDA Center for Veterinary Medicine",
+          url: "https://www.fda.gov/animal-veterinary",
+          year: 2024,
+        },
+      ],
+    },
+    {
+      slug: "chocolate",
+      name: "Chocolate",
+      aliases: ["cocoa", "cacao", "brownie"],
+      species: ["dog", "cat"],
+      severity: "call",
+      signs: "Vomiting, diarrhoea, restlessness, a fast or irregular heartbeat, tremors.",
+      guidance:
+        "Darker and more bitter products are the more concentrated ones. How serious an amount is depends on the type and the size of the animal, which is the judgement the helpline is there to make.",
+      sources: [
+        {
+          name: "ASPCA Animal Poison Control Center",
+          url: "https://www.aspca.org/pet-care/animal-poison-control",
+          year: 2025,
+        },
+      ],
+    },
+    {
+      slug: "silica-gel",
+      name: "Silica gel packets",
+      aliases: ["silica gel", "desiccant"],
+      species: ["dog", "cat"],
+      severity: "avoid",
+      signs: "Usually nothing. Occasionally mild vomiting.",
+      guidance:
+        "Included because it frightens people more than it should. The beads are not absorbed and pass through; the printed warning is about children choking rather than poisoning.",
+      sources: [
+        {
+          name: "Pet Poison Helpline",
+          url: "https://www.petpoisonhelpline.com",
+          year: 2025,
+        },
+      ],
+    },
+  ],
+};
+
+/** The shop as the server lists it: one variant deliberately unpriced. */
+export const STORE_CATALOGUE = {
+  configured: true,
+  categories: [
+    { key: "tracking", label: "Tracking" },
+    { key: "pets", label: "For your dog" },
+    { key: "people", label: "For you" },
+  ],
+  products: [
+    {
+      id: "tracking-collar",
+      category: "tracking",
+      name: "PetPals Tracking Collar",
+      description:
+        "A PetPals collar with a GPS tracker built in. See where the collar last reported on the map, and share that with friends in the app for as long as you choose.",
+      photos: [],
+      requiresDeviceSetup: true,
+      variants: [
+        { sku: "collar-tracker-s", label: "Small (10–14 in)", price: { amount: 12900, currency: "usd" } },
+        { sku: "collar-tracker-m", label: "Medium (14–18 in)", price: { amount: 12900, currency: "usd" } },
+        { sku: "collar-tracker-l", label: "Large (18–24 in)", price: { amount: 12900, currency: "usd" } },
+      ],
+    },
+    {
+      id: "bandana",
+      category: "pets",
+      name: "PetPals Bandana",
+      description: "A cotton bandana with the PetPals paw, in three sizes.",
+      photos: [],
+      variants: [
+        { sku: "bandana-s", label: "Small", price: { amount: 1800, currency: "usd" } },
+        { sku: "bandana-m", label: "Medium", price: { amount: 1800, currency: "usd" } },
+        { sku: "bandana-l", label: "Large", price: null },
+      ],
+    },
+    {
+      id: "tee",
+      category: "people",
+      name: "PetPals Tee",
+      description: "A soft cotton tee with the PetPals paw on the chest.",
+      photos: [],
+      variants: [
+        { sku: "tee-s", label: "S", price: { amount: 2800, currency: "usd" } },
+        { sku: "tee-m", label: "M", price: { amount: 2800, currency: "usd" } },
+        { sku: "tee-l", label: "L", price: { amount: 2800, currency: "usd" } },
+      ],
+    },
+  ],
+};
+
+export const ORDERS = [
+  {
+    _id: "ord-1",
+    user: "me",
+    status: "fulfilled",
+    stripeSessionId: "cs_1",
+    items: [
+      { sku: "collar-tracker-m", productId: "tracking-collar", name: "PetPals Tracking Collar", variantLabel: "Medium (14–18 in)", quantity: 1, unitAmount: 12900, currency: "usd" },
+      { sku: "tee-m", productId: "tee", name: "PetPals Tee", variantLabel: "M", quantity: 2, unitAmount: 2800, currency: "usd" },
+    ],
+    amountSubtotal: 18500,
+    amountTax: 1590,
+    amountShipping: 0,
+    amountTotal: 20090,
+    amountRefunded: 0,
+    currency: "usd",
+    shipping: { name: "Sam Rivera", line1: "2400 E Camelback Rd", city: "Phoenix", state: "AZ", postalCode: "85016", country: "US" },
+    email: "sam@example.test",
+    carrier: "USPS",
+    trackingNumber: "9400 1000 0000 0000 0000 00",
+    createdDate: "2026-09-02T17:20:00.000Z",
+    modifiedDate: "2026-09-04T09:00:00.000Z",
+  },
+  {
+    _id: "ord-2",
+    user: "me",
+    status: "paid",
+    items: [{ sku: "bandana-m", productId: "bandana", name: "PetPals Bandana", variantLabel: "Medium", quantity: 1, unitAmount: 1800, currency: "usd" }],
+    amountSubtotal: 1800,
+    amountTax: 155,
+    amountShipping: 0,
+    amountTotal: 1955,
+    amountRefunded: 0,
+    currency: "usd",
+    createdDate: "2026-09-09T12:00:00.000Z",
+    modifiedDate: "2026-09-09T12:00:00.000Z",
+  },
+];
+
 export const ROUTES = {
+  "/api/store/products": STORE_CATALOGUE,
+  // Longest prefix first: an order by id must not be answered with the list.
+  "/api/store/orders/ord-1": ORDERS[0],
+  "/api/store/orders": ORDERS,
   [`/api/pets/${MY_PET._id}/health`]: HEALTH,
+  "/api/petcare/toxins": TOXINS,
+  [`/api/pets/${MY_PET._id}/weight`]: {
+    measured: true,
+    entries: [
+      { _id: "w-3", pounds: 44, takenAt: new Date().toISOString(), bodyCondition: 7 },
+      { _id: "w-2", pounds: 42, takenAt: new Date(Date.now() - 90 * 864e5).toISOString() },
+      { _id: "w-1", pounds: 39, takenAt: new Date(Date.now() - 200 * 864e5).toISOString() },
+    ],
+  },
+  "/api/petcare/lost-pet": {
+    contacts: CARE_PICKS.emergency,
+    identification: [
+      { petId: MY_PET._id, petName: MY_PET.name, kind: "microchip", label: "985141000123456" },
+    ],
+    steps: [
+      {
+        id: "check-chip",
+        title: "Check the microchip registration first",
+        body:
+          "A chip only works if the registry has a phone number that still reaches you. Look the number up in the registry's own database and confirm the details are current.",
+        source: {
+          name: "AAHA universal chip lookup",
+          url: "https://www.aaha.org/petmicrochiplookup/",
+        },
+      },
+      {
+        id: "search-close",
+        title: "Search close to home, and at night",
+        body:
+          "Most cats and many frightened dogs are found within a few houses of home, hiding rather than travelling. Go back after dark with a torch when it is quiet.",
+        source: { name: "ASPCA, lost pet guidance", url: "https://www.aspca.org" },
+      },
+      {
+        id: "call-shelters",
+        title: "Ring and then visit the local shelters",
+        body:
+          "File a lost report with every shelter and animal control office in your area, and go in person where you can.",
+        source: { name: "ASPCA, lost pet guidance", url: "https://www.aspca.org" },
+      },
+    ],
+  },
   "/api/pets/pet-1/health/status": { status: "current", shared: true },
   "/api/petmatches/discover": {
     pet: MY_PET,

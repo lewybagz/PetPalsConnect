@@ -15,6 +15,7 @@ import { SettingsProvider } from "./src/context/SettingsContext";
 import RootNavigator from "./src/screens/navigation/RootNavigator";
 import PurchasesProvider from "./src/components/PurchasesProvider";
 import { navigationRef } from "./src/navigation/navigationRef";
+import { linking } from "./src/navigation/linking";
 import { useAppFonts } from "./src/styles/fonts";
 
 /**
@@ -73,7 +74,7 @@ export default function App() {
                         positions itself above the home indicator, and outside
                         the navigator so one host serves every screen. */}
                     <ToastProvider>
-                      <NavigationContainer ref={navigationRef}>
+                      <NavigationContainer ref={navigationRef} linking={linking}>
                         <ThemedStatusBar />
                         <RootNavigator />
                       </NavigationContainer>

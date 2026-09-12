@@ -35,6 +35,7 @@ export const TYPES = {
   reviewReminder: { screen: "PostPlaydateReview", param: "playdateId" },
   vaccinationDue: { screen: "PetHealth", param: "petId" },
   healthDue: { screen: "PetHealth", param: "petId" },
+  orderShipped: { screen: "OrderDetail", param: "orderId" },
   general: { screen: "Notifications", param: null },
 };
 

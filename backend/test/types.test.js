@@ -37,6 +37,7 @@ const DOCUMENT_INTERFACES = {
   Location: "Location",
   Article: "Article",
   HealthRecord: "HealthRecord",
+  Order: "Order",
 };
 
 /** Fields that exist on the JSON but not as schema paths. */
@@ -48,6 +49,7 @@ require("../models/Subscription");
 require("../models/Location");
 require("../models/Article");
 require("../models/HealthRecord");
+require("../models/Order");
 
 /** Extracts `interface Name { ... }` bodies, ignoring comments. */
 const readInterfaces = () => {
@@ -134,6 +136,22 @@ test("the subscription status union matches the schema's enum exactly", () => {
 
   // The store owns these values; a status in one list and not the other means the
   // app cannot describe a state a subscription can actually be in.
+  assert.deepEqual(declared, schemaEnum);
+});
+
+test("the order status union matches the schema's enum exactly", () => {
+  const source = fs.readFileSync(TYPES_FILE, "utf8");
+  const union = source.slice(
+    source.indexOf("export type OrderStatus"),
+    source.indexOf(";", source.indexOf("export type OrderStatus"))
+  );
+
+  const declared = [...union.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).sort();
+  const schemaEnum = [...mongoose.model("Order").schema.path("status").enumValues].sort();
+
+  // Stripe's webhook owns these; the app's `ORDER_STATUS_LABELS` is keyed by
+  // the same union, so a status missing here is one the order screen would
+  // render with no words at all.
   assert.deepEqual(declared, schemaEnum);
 });
 

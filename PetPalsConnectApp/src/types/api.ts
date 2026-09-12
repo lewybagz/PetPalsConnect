@@ -305,6 +305,102 @@ export interface Subscription {
 }
 
 /**
+ * An order's state as Stripe reports it, mapped by the webhook. `pending` is a
+ * Checkout Session that completed without the payment settling yet; `failed`
+ * is one whose deferred payment did not go through. Mirrors `STATUSES` on the
+ * `Order` schema, and `backend/test/types.test.js` checks the two agree.
+ */
+export type OrderStatus =
+  | "pending"
+  | "paid"
+  | "fulfilled"
+  | "refunded"
+  | "disputed"
+  | "failed";
+
+/**
+ * One line of an order, snapshotted from Stripe's own line items at the time
+ * of purchase - a catalogue edit afterwards does not rewrite it.
+ */
+export interface OrderItem {
+  /** The Stripe Price lookup key, which is also the catalogue sku. */
+  sku?: string;
+  productId?: string;
+  name: string;
+  variantLabel?: string;
+  quantity: number;
+  /** Minor units (cents), as Stripe reports it. */
+  unitAmount?: number;
+  currency?: string;
+}
+
+/** The address Stripe collected. The app never asks for one. */
+export interface OrderShipping {
+  name?: string;
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}
+
+/**
+ * A shop order. Written only by the Stripe webhook, so a row exists once
+ * Stripe has told the server about it - never merely because the buyer came
+ * back from Checkout.
+ */
+export interface Order {
+  _id: ObjectId;
+  user: ObjectId;
+  status: OrderStatus;
+  stripeSessionId?: string;
+  paymentIntentId?: string;
+  items: OrderItem[];
+  /** All amounts are minor units (cents). */
+  amountSubtotal?: number;
+  amountTax?: number;
+  amountShipping?: number;
+  amountTotal?: number;
+  amountRefunded: number;
+  currency: string;
+  shipping?: OrderShipping;
+  email?: string;
+  carrier?: string;
+  trackingNumber?: string;
+  fulfilledAt?: IsoDate;
+  refundedAt?: IsoDate;
+  livemode?: boolean;
+  createdDate: IsoDate;
+  modifiedDate: IsoDate;
+}
+
+/** A live Stripe price, or null when the sku has no Price in the dashboard. */
+export interface StorePrice {
+  /** Minor units (cents). */
+  amount: number;
+  currency: string;
+}
+
+export interface StoreVariant {
+  sku: string;
+  label: string;
+  price: StorePrice | null;
+}
+
+/** A catalogue entry from `backend/services/store/products.js`. */
+export interface StoreProduct {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  photos: string[];
+  /** The tracking collar: claimed by serial once delivered. */
+  requiresDeviceSetup?: boolean;
+  variants: StoreVariant[];
+}
+
+/**
  * The onboarding gate's states, in the order a new account passes through
  * them. `ready` does NOT imply a pet exists - the add-a-pet step is skippable.
  */

@@ -72,6 +72,11 @@ const SHORTCUTS = [
     step: "groupChatCreation",
     order: 1,
   },
+  // The shop lives in the hub because merch and the collar are for the pets
+  // somebody already has, which is what this half of the app is. Not a tab:
+  // twenty products do not earn a fifth one.
+  { label: "Shop", route: "Shop", icon: "bag-outline", step: null },
+  { label: "Orders", route: "Orders", icon: "cube-outline", step: null },
   { label: "Settings", route: "Settings", icon: "settings-outline", step: null },
 ];
 
@@ -164,6 +169,11 @@ const MoreScreen = ({ route, start, navigation }) => {
   const [picks, setPicks] = useState(null);
   const [places, setPlaces] = useState(null);
   const [placeCategory, setPlaceCategory] = useState(null);
+  /**
+   * A city to look at instead of where the phone is. Null means here, which
+   * is the ordinary case; a destination is somebody planning a trip.
+   */
+  const [destination, setDestination] = useState(null);
   const [selectedPetId, setSelectedPetId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -240,7 +250,11 @@ const MoreScreen = ({ route, start, navigation }) => {
      * so they survive either one failing.
      */
     const load = async () => {
-      const position = await currentPosition();
+      // A chosen destination replaces the device position outright: somebody
+      // asking about Tucson does not want their own street sorted first.
+      const position = destination
+        ? { latitude: destination.latitude, longitude: destination.longitude }
+        : await currentPosition();
 
       const [pickData, placeData] = await Promise.all([
         fetchCarePicks().catch(() => null),
@@ -306,7 +320,7 @@ const MoreScreen = ({ route, start, navigation }) => {
     return () => {
       cancelled = true;
     };
-  }, [reloadToken, placeCategory, currentPosition]);
+  }, [reloadToken, placeCategory, currentPosition, destination]);
 
   // Memoised rather than defaulted inline: a fresh `[]` on every render would
   // re-run the memo below every time.
@@ -357,6 +371,7 @@ const MoreScreen = ({ route, start, navigation }) => {
   const emergency = picks?.emergency ?? places?.emergency ?? [];
   const placeCategories = picks?.placeCategories ?? ["vet", "petStore", "groomer", "boarding"];
   const outCategories = picks?.outCategories ?? [];
+  const destinations = picks?.destinations ?? [];
 
   return (
     <Screen
@@ -411,6 +426,46 @@ const MoreScreen = ({ route, start, navigation }) => {
             </Pressable>
           ))
         )}
+
+        {/* Inside the emergency card on purpose. The lookup is cached and
+            works with no signal, exactly like the numbers above it, so it
+            belongs in the one section of the hub that never depends on a
+            request having succeeded. */}
+        <Pressable
+          testID="hub-toxin-lookup"
+          accessibilityRole="button"
+          accessibilityLabel="Check whether something is dangerous"
+          onPress={() => navigation.navigate("ToxinLookup")}
+          style={tailwind("flex-row items-center pt-sm mt-sm border-t border-border")}
+        >
+          <Ionicons name="search-outline" size={18} color={tokens.primary} />
+          <View style={tailwind("ml-sm flex-1")}>
+            <Text tone="primary" weight="600">
+              They ate something. Is it dangerous?
+            </Text>
+            <Text variant="caption" tone="faint">
+              Chocolate, grapes, plants, medicines and more.
+            </Text>
+          </View>
+        </Pressable>
+
+        <Pressable
+          testID="hub-lost-pet"
+          accessibilityRole="button"
+          accessibilityLabel="What to do if your pet is missing"
+          onPress={() => navigation.navigate("LostPet")}
+          style={tailwind("flex-row items-center pt-sm mt-sm border-t border-border")}
+        >
+          <Ionicons name="footsteps-outline" size={18} color={tokens.primary} />
+          <View style={tailwind("ml-sm flex-1")}>
+            <Text tone="primary" weight="600">
+              Your pet is missing. What now?
+            </Text>
+            <Text variant="caption" tone="faint">
+              The first hours, in order, and your chip number.
+            </Text>
+          </View>
+        </Pressable>
       </Card>
 
       {loading ? (
@@ -551,6 +606,49 @@ const MoreScreen = ({ route, start, navigation }) => {
                       </View>
                     ))
                   )}
+
+                  {/* ---- Reading -------------------------------------------
+                      Three articles for this pet's species and life stage.
+                      Contextual rather than a content tab: the corpus is
+                      sixty researched articles and almost nobody found it,
+                      and a library beside what somebody is already looking
+                      at is the shape that gets read. */}
+                  {selectedPet.articles?.length ? (
+                    <View testID="hub-reading" style={tailwind("mb-md")}>
+                      <Text variant="caption" tone="faint" style={tailwind("mb-xs")}>
+                        {`READING FOR ${selectedPet.name.toUpperCase()}`}
+                      </Text>
+                      {selectedPet.articles.map((article) => (
+                        <Card
+                          key={article._id}
+                          testID={`hub-article-${article._id}`}
+                          style={tailwind("mb-sm")}
+                          onPress={() =>
+                            navigation.navigate("ArticleDetail", { articleId: article._id })
+                          }
+                          accessibilityLabel={article.title}
+                        >
+                          <Text weight="600">{article.title}</Text>
+                          {article.summary ? (
+                            <Text variant="caption" tone="muted" style={tailwind("mt-xs")}>
+                              {article.summary}
+                            </Text>
+                          ) : null}
+                        </Card>
+                      ))}
+                      <Pressable
+                        testID="hub-all-articles"
+                        accessibilityRole="button"
+                        accessibilityLabel="See all articles"
+                        onPress={() => navigation.navigate("Articles")}
+                        style={tailwind("py-sm")}
+                      >
+                        <Text tone="primary" weight="600">
+                          See all articles
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : null}
                 </View>
               ) : null}
             </>
@@ -644,6 +742,68 @@ const MoreScreen = ({ route, start, navigation }) => {
                   );
                 })}
               </View>
+
+              {/* Somewhere you are not. 78% of owners have travelled with a
+                  pet, and the question "where can I take the dog in Tucson"
+                  has a bounded answer here: the cities the importer seeds.
+                  A geocoder would happily name a city with no rows at all. */}
+              {destinations.length > 0 ? (
+                <View testID="hub-destinations" style={tailwind("mt-sm")}>
+                  <Text variant="caption" tone="faint" style={tailwind("mb-xs")}>
+                    TRAVELLING?
+                  </Text>
+                  <View style={tailwind("flex-row flex-wrap")}>
+                    <Pressable
+                      testID="hub-destination-here"
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: destination === null }}
+                      accessibilityLabel="Places near me"
+                      onPress={() => setDestination(null)}
+                      style={tailwind(
+                        `border rounded-lg px-md py-sm mr-sm mb-sm ${
+                          destination === null
+                            ? "bg-primary border-primary"
+                            : "bg-surface border-border"
+                        }`
+                      )}
+                    >
+                      <Text
+                        variant="caption"
+                        weight="600"
+                        tone={destination === null ? "onPrimary" : "muted"}
+                      >
+                        Near me
+                      </Text>
+                    </Pressable>
+                    {destinations.map((city) => {
+                      const active = destination?.id === city.id;
+                      return (
+                        <Pressable
+                          key={city.id}
+                          testID={`hub-destination-${city.id}`}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
+                          accessibilityLabel={`Places in ${city.name}`}
+                          onPress={() => setDestination(active ? null : city)}
+                          style={tailwind(
+                            `border rounded-lg px-md py-sm mr-sm mb-sm ${
+                              active ? "bg-primary border-primary" : "bg-surface border-border"
+                            }`
+                          )}
+                        >
+                          <Text
+                            variant="caption"
+                            weight="600"
+                            tone={active ? "onPrimary" : "muted"}
+                          >
+                            {city.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : null}
             </View>
           ) : null}
 

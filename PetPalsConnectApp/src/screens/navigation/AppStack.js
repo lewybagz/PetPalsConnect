@@ -18,6 +18,9 @@ import PetSelectionScreen from "../chat/PetSelectionScreen";
 import AddPetScreen from "../pets/AddPetScreen";
 import PetDetailsScreen from "../pets/PetDetailsScreen";
 import PetHealthScreen from "../pets/PetHealthScreen";
+import PetWeightScreen from "../pets/PetWeightScreen";
+import ToxinLookupScreen from "../petCare/ToxinLookupScreen";
+import LostPetScreen from "../petCare/LostPetScreen";
 import PetPhotosScreen from "../pets/PetPhotosScreen";
 import PetListScreen from "../pets/PetListScreen";
 
@@ -58,6 +61,12 @@ import ChoosePlanScreen from "../settings/subscription/ChoosePlanScreen";
 import SubscriptionConfirmationScreen from "../settings/subscription/SubscriptionConfirmationScreen";
 import SubscriptionHistoryScreen from "../settings/subscription/SubscriptionHistoryScreen";
 import SubscriptionManagementScreen from "../settings/subscription/SubscriptionManagementScreen";
+
+// Shop
+import ShopScreen from "../store/ShopScreen";
+import ProductDetailScreen from "../store/ProductDetailScreen";
+import OrdersScreen from "../store/OrdersScreen";
+import OrderDetailScreen from "../store/OrderDetailScreen";
 
 // Misc
 import ArticleDetailScreen from "../misc/ArticleDetailScreen";
@@ -127,6 +136,22 @@ export default function AppStack() {
       <Stack.Screen name="PetDetails" component={PetDetailsScreen} options={{ title: "Pet" }} />
       <Stack.Screen name="PetPhotos" component={PetPhotosScreen} options={{ title: "Photos" }} />
       <Stack.Screen name="PetHealth" component={PetHealthScreen} options={{ title: "Health" }} />
+      <Stack.Screen name="PetWeight" component={PetWeightScreen} options={{ title: "Weight" }} />
+      {/* Deliberately not behind `withRequiredPet`: somebody whose friend's dog
+          has just eaten something needs this, and a gate here would be a wall
+          in front of an emergency. */}
+      <Stack.Screen
+        name="ToxinLookup"
+        component={ToxinLookupScreen}
+        options={{ title: "Is this dangerous?" }}
+      />
+      {/* Same reasoning: somebody reading this is in the street, and gating it
+          behind owning a pet would be a wall in front of an emergency. */}
+      <Stack.Screen
+        name="LostPet"
+        component={LostPetScreen}
+        options={{ title: "Missing pet" }}
+      />
       <Stack.Screen name="PetList" component={PetListScreen} options={{ title: "Pets" }} />
       <Stack.Screen name="UsersPets" component={UsersPetsScreen} options={{ title: "Their Pets" }} />
 
@@ -166,6 +191,13 @@ export default function AppStack() {
       <Stack.Screen name="SubscriptionConfirmation" component={SubscriptionConfirmationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SubscriptionHistory" component={SubscriptionHistoryScreen} options={{ title: "Subscription History" }} />
       <Stack.Screen name="SubscriptionManagement" component={SubscriptionManagementScreen} options={{ title: "Subscription" }} />
+
+      {/* Shop. Buying happens on Stripe's page; OrderDetail is also where the
+          checkout deep link lands (src/navigation/linking.js). */}
+      <Stack.Screen name="Shop" component={ShopScreen} options={{ title: "Shop" }} />
+      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: "" }} />
+      <Stack.Screen name="Orders" component={OrdersScreen} options={{ title: "Orders" }} />
+      <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: "Order" }} />
 
       {/* Misc */}
       <Stack.Screen name="Articles" component={ArticlesScreen} options={{ title: "Articles" }} />

@@ -8,6 +8,9 @@ import ReportUserScreen from "../../src/screens/profile/ReportUserScreen";
 import BlockedAccountsScreen from "../../src/screens/settings/BlockedAccountsScreen";
 import PetPhotosScreen from "../../src/screens/pets/PetPhotosScreen";
 import PetHealthScreen from "../../src/screens/pets/PetHealthScreen";
+import ToxinLookupScreen from "../../src/screens/petCare/ToxinLookupScreen";
+import LostPetScreen from "../../src/screens/petCare/LostPetScreen";
+import PetWeightScreen from "../../src/screens/pets/PetWeightScreen";
 import SettingsScreen from "../../src/screens/settings/SettingsScreen";
 import NotificationsScreen from "../../src/screens/bottomTab/NotificationsScreen";
 import NotificationPreferencesScreen from "../../src/screens/settings/NotificationPreferencesScreen";
@@ -28,6 +31,10 @@ import PotentialPlaydateLocationScreen from "../../src/screens/playdate/Potentia
 import PlaydateDetailsScreen from "../../src/screens/playdate/PlaydateDetailsScreen";
 import ArticlesScreen from "../../src/screens/misc/ArticlesScreen";
 import ArticleDetailScreen from "../../src/screens/misc/ArticleDetailScreen";
+import ShopScreen from "../../src/screens/store/ShopScreen";
+import ProductDetailScreen from "../../src/screens/store/ProductDetailScreen";
+import OrdersScreen from "../../src/screens/store/OrdersScreen";
+import OrderDetailScreen from "../../src/screens/store/OrderDetailScreen";
 import {
   ARTICLE,
   ARTICLES,
@@ -473,6 +480,35 @@ export const BOARDS = [
     ),
   },
   {
+    id: "toxin-lookup",
+    label: "Poison lookup",
+    routes: ROUTES,
+    render: () => <ToxinLookupScreen />,
+  },
+  {
+    id: "toxin-lookup-unreachable",
+    // The worst case: nothing cached and the table did not arrive. What must
+    // still be on screen is a number to ring, which is the point of rendering
+    // the contacts above the search box rather than below the results.
+    label: "Poison lookup - nothing loaded",
+    routes: { ...ROUTES, "/api/petcare/toxins": { toxins: [], contacts: [] } },
+    render: () => <ToxinLookupScreen />,
+  },
+  {
+    id: "lost-pet",
+    label: "Missing pet checklist",
+    routes: ROUTES,
+    render: () => <LostPetScreen navigation={navigation} />,
+  },
+  {
+    id: "pet-weight",
+    label: "Weight history",
+    routes: ROUTES,
+    render: () => (
+      <PetWeightScreen navigation={navigation} route={{ params: { pet: MY_PET, petId: MY_PET._id } }} />
+    ),
+  },
+  {
     id: "map",
     label: "Map",
     routes: ROUTES,
@@ -526,6 +562,51 @@ export const BOARDS = [
           },
         }}
       />
+    ),
+  },
+  {
+    id: "shop",
+    label: "Shop",
+    routes: ROUTES,
+    render: () => <ShopScreen navigation={navigation} />,
+  },
+  {
+    id: "shop-closed",
+    label: "Shop - no Stripe key configured",
+    // A deployment state, not an error: the shelves are not ready.
+    routes: { ...ROUTES, "/api/store/products": { configured: false, categories: [], products: [] } },
+    render: () => <ShopScreen navigation={navigation} />,
+  },
+  {
+    id: "product-detail",
+    label: "Product - the tracking collar",
+    routes: ROUTES,
+    render: () => (
+      <ProductDetailScreen navigation={navigation} route={{ params: { productId: "tracking-collar" } }} />
+    ),
+  },
+  {
+    id: "orders",
+    label: "Orders",
+    routes: ROUTES,
+    render: () => <OrdersScreen navigation={navigation} />,
+  },
+  {
+    id: "order-detail",
+    label: "Order - shipped, with tracking",
+    routes: ROUTES,
+    render: () => (
+      <OrderDetailScreen navigation={navigation} route={{ params: { orderId: "ord-1" } }} />
+    ),
+  },
+  {
+    id: "order-confirming",
+    label: "Order - back from Stripe, webhook not landed",
+    // The screen a buyer sees for the first few seconds after paying. It
+    // must say "confirming", never "paid": a redirect is not proof of payment.
+    routes: { ...ROUTES, "/api/store/orders/by-session/cs_pending": pending },
+    render: () => (
+      <OrderDetailScreen navigation={navigation} route={{ params: { sessionId: "cs_pending" } }} />
     ),
   },
   {
