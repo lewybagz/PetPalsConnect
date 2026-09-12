@@ -605,7 +605,10 @@ export const BOARDS = [
     label: "Order - back from Stripe, webhook not landed",
     // The screen a buyer sees for the first few seconds after paying. It
     // must say "confirming", never "paid": a redirect is not proof of payment.
-    routes: { ...ROUTES, "/api/store/orders/by-session/cs_pending": pending },
+    // A null body is what the client reads as the server's "not yet" (a 404);
+    // `pending` would photograph the skeleton instead, since the request
+    // would never settle.
+    routes: { ...ROUTES, "/api/store/orders/by-session/cs_pending": null },
     render: () => (
       <OrderDetailScreen navigation={navigation} route={{ params: { sessionId: "cs_pending" } }} />
     ),

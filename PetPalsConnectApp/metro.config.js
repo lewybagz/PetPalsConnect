@@ -23,6 +23,7 @@ const WEB_STUBS = {
   "@react-native-firebase/storage": "tools/web-stubs/firebase-storage.js",
   "@react-native-firebase/messaging": "tools/web-stubs/firebase-messaging.js",
   "@react-native-google-signin/google-signin": "tools/web-stubs/google-signin.js",
+  "@invertase/react-native-apple-authentication": "tools/web-stubs/apple-authentication.js",
   "react-native-maps": "tools/web-stubs/maps.js",
   "react-native-purchases": "tools/web-stubs/purchases.js",
   "@gorhom/bottom-sheet": "tools/web-stubs/bottom-sheet.js",

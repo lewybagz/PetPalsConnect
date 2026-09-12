@@ -1,6 +1,10 @@
 # The shop and the tracking collar
 
-Status: **planned**. Written 2026-09-11 against `main` @ `b37f9b4`.
+Status: **built** on `feat/store-and-tracking` (five commits, 2026-09-11):
+Phase 1 `5bb01b0`, Phase 2 `5484e81`, Phase 3 `103a54a`, Phase 4 `5658f41`,
+Phase 5 `b5c0d7d`. Written 2026-09-11 against `main` @ `b37f9b4`. What is
+still on you is under "Env vars and dashboard prerequisites" and in the
+README's ship list.
 Scope decided with Lewy: Stripe Checkout + 3PL, catalog as a source table (admin
 portal planned, not built), the collar's software half built now behind a vendor
 adapter, everything in one pass on one branch as sequenced commits.
