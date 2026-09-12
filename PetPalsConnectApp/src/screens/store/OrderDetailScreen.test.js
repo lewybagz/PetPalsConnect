@@ -59,6 +59,22 @@ describe("OrderDetailScreen", () => {
     expect(screen.getByText(/60\.00/)).toBeTruthy();
     expect(screen.getByTestId("order-shipping")).toBeTruthy();
     expect(screen.getByText(/Phoenix, AZ, 85001/)).toBeTruthy();
+    // A tee has no set-up step.
+    expect(screen.queryByTestId("order-collar-setup")).toBeNull();
+  });
+
+  it("offers the collar set-up step once a collar order is paid", async () => {
+    fetchOrder.mockResolvedValue({
+      ...ORDER,
+      items: [{ sku: "collar-tracker-m", name: "PetPals Tracking Collar", quantity: 1, unitAmount: 12900, requiresDeviceSetup: true }],
+    });
+    await render(
+      wrap(<OrderDetailScreen route={{ params: { orderId: "ord-1" } }} navigation={navigation} />)
+    );
+    await waitFor(() => expect(screen.getByTestId("order-collar-setup")).toBeTruthy());
+    await act(async () => {
+      screen.getByTestId("order-collar-setup-button").props.onPress?.();
+    });
   });
 
   it("says 'confirming' after a checkout redirect and keeps asking until the webhook lands", async () => {

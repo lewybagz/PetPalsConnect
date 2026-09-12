@@ -11,6 +11,7 @@ import { darkMapStyle } from "../../styles/mapStyle";
 import { hit, radius, space } from "../../styles/tokens";
 import { Button, Card, EmptyState, Screen, Text, useToast } from "../../components/ui";
 import { fetchMapPets, fetchPlaces, importPlaces } from "../../api/maps";
+import { describeLastSeen, fetchTrackedCollars, isStale } from "../../api/tracking";
 import { describeDistance } from "../../api/discovery";
 import { useUnits } from "../../context/SettingsContext";
 
@@ -60,8 +61,13 @@ const MapScreen = ({ navigation }) => {
   const [origin, setOrigin] = useState(null);
   const [pets, setPets] = useState([]);
   const [places, setPlaces] = useState([]);
+  // Collars: mine, and friends' shared with me. Exact positions, because the
+  // server has already decided I may see each one; the matches layer above
+  // stays at the neighbourhood, as it always has.
+  const [collars, setCollars] = useState([]);
   const [showPets, setShowPets] = useState(true);
   const [showPlaces, setShowPlaces] = useState(true);
+  const [showCollars, setShowCollars] = useState(true);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -94,17 +100,21 @@ const MapScreen = ({ navigation }) => {
     }
 
     try {
-      const [map, nearby] = await Promise.all([
+      const [map, nearby, tracked] = await Promise.all([
         fetchMapPets(),
         fetchPlaces(
           coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}
         ),
+        // A server with tracking off answers with an empty list, not an
+        // error, so this layer costs nothing where there are no collars.
+        fetchTrackedCollars().catch(() => []),
       ]);
 
       const here = coords ?? map.origin;
       setOrigin(here);
       setPets(map.pets);
       setPlaces(nearby);
+      setCollars(tracked.filter((collar) => collar.latest));
 
       // An empty collection and a broken query look identical on a map, so say
       // which it is rather than showing bare ground.
@@ -150,6 +160,7 @@ const MapScreen = ({ navigation }) => {
     setSelected(null);
 
     if (kind === "pet") navigation.navigate("PetDetails", { petId: id });
+    else if (kind === "collar") navigation.navigate("PetTracking", { petId: id });
     else navigation.navigate("PotentialPlaydateLocation", { locationId: id });
   };
 
@@ -161,7 +172,7 @@ const MapScreen = ({ navigation }) => {
     );
   }
 
-  const nothingToShow = pets.length === 0 && places.length === 0;
+  const nothingToShow = pets.length === 0 && places.length === 0 && collars.length === 0;
 
   return (
     <View testID="map" style={tailwind("flex-1 bg-bg")}>
@@ -233,6 +244,40 @@ const MapScreen = ({ navigation }) => {
                 </View>
               </Marker>
             ))}
+
+        {showCollars &&
+          collars.map((collar) => (
+            <Marker
+              key={`collar-${collar.pet._id}`}
+              testID={`map-pin-collar-${collar.pet._id}`}
+              identifier={`collar-${collar.pet._id}`}
+              coordinate={{ latitude: collar.latest.latitude, longitude: collar.latest.longitude }}
+              title={collar.pet.name}
+              description={describeLastSeen(collar.latest.recordedAt)}
+              onPress={() =>
+                setSelected({
+                  kind: "collar",
+                  id: collar.pet._id,
+                  title: collar.pet.name,
+                  subtitle: collar.mine
+                    ? `Your collar · last seen ${describeLastSeen(collar.latest.recordedAt).toLowerCase()}`
+                    : `@${collar.owner.username ?? "a friend"}'s collar · last seen ${describeLastSeen(collar.latest.recordedAt).toLowerCase()}`,
+                  distanceMiles: null,
+                })
+              }
+            >
+              {/* A collar that has gone quiet is drawn faint, so a stale
+                  position never reads as a live one on the map either. */}
+              <View
+                style={[
+                  styles.pin,
+                  { backgroundColor: isStale(collar.latest.recordedAt) ? tokens.textFaint : tokens.warning },
+                ]}
+              >
+                <Icon name="access-point" size={18} color={tokens.onPrimary} />
+              </View>
+            </Marker>
+          ))}
       </MapView>
 
       {/* Layer switches. Icon-only would announce as nothing, so they carry
@@ -254,6 +299,18 @@ const MapScreen = ({ navigation }) => {
             label="Places"
             onPress={() => setShowPlaces((value) => !value)}
           />
+          {collars.length > 0 ? (
+            <>
+              <View style={{ width: space.sm }} />
+              <Toggle
+                testID="map-toggle-collars"
+                tailwind={tailwind}
+                active={showCollars}
+                label="Collars"
+                onPress={() => setShowCollars((value) => !value)}
+              />
+            </>
+          ) : null}
         </View>
       </Screen>
 
@@ -291,7 +348,13 @@ const MapScreen = ({ navigation }) => {
 
             <Button
               testID="map-open"
-              title={selected.kind === "pet" ? "See this pet" : "See this place"}
+              title={
+                selected.kind === "pet"
+                  ? "See this pet"
+                  : selected.kind === "collar"
+                    ? "See the collar"
+                    : "See this place"
+              }
               onPress={openSelected}
               style={tailwind("mt-lg")}
             />

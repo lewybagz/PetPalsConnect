@@ -38,6 +38,8 @@ const DOCUMENT_INTERFACES = {
   Article: "Article",
   HealthRecord: "HealthRecord",
   Order: "Order",
+  Device: "Device",
+  TrackingShare: "TrackingShare",
 };
 
 /** Fields that exist on the JSON but not as schema paths. */
@@ -50,6 +52,8 @@ require("../models/Location");
 require("../models/Article");
 require("../models/HealthRecord");
 require("../models/Order");
+require("../models/Device");
+require("../models/TrackingShare");
 
 /** Extracts `interface Name { ... }` bodies, ignoring comments. */
 const readInterfaces = () => {

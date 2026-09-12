@@ -67,6 +67,7 @@ import ShopScreen from "../store/ShopScreen";
 import ProductDetailScreen from "../store/ProductDetailScreen";
 import OrdersScreen from "../store/OrdersScreen";
 import OrderDetailScreen from "../store/OrderDetailScreen";
+import PetTrackingScreen from "../tracking/PetTrackingScreen";
 
 // Misc
 import ArticleDetailScreen from "../misc/ArticleDetailScreen";
@@ -198,6 +199,9 @@ export default function AppStack() {
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: "" }} />
       <Stack.Screen name="Orders" component={OrdersScreen} options={{ title: "Orders" }} />
       <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: "Order" }} />
+      {/* Not behind withRequiredPet: a friend with no pet of their own can
+          still be shown a collar somebody shared with them. */}
+      <Stack.Screen name="PetTracking" component={PetTrackingScreen} options={{ title: "Tracking" }} />
 
       {/* Misc */}
       <Stack.Screen name="Articles" component={ArticlesScreen} options={{ title: "Articles" }} />

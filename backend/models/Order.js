@@ -31,6 +31,8 @@ const OrderItemSchema = new Schema(
     // In the currency's minor unit (cents), as Stripe reports it.
     unitAmount: Number,
     currency: String,
+    // The tracking collar: the order screen offers the set-up step for it.
+    requiresDeviceSetup: { type: Boolean, default: false },
   },
   { _id: false }
 );

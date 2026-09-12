@@ -685,7 +685,82 @@ export const ORDERS = [
   },
 ];
 
+/** A collar reporting a few minutes ago, and its last hour of movement. */
+const minutesAgo = (minutes) => new Date(Date.now() - minutes * 60_000).toISOString();
+
+export const TRACKING_POSITIONS = {
+  pet: { _id: MY_PET._id, name: MY_PET.name, photos: MY_PET.photos },
+  owner: { _id: "me", username: "sam" },
+  device: {
+    _id: "dev-1",
+    serial: "PPC-000451",
+    vendor: "generic",
+    status: "active",
+    batteryPercent: 68,
+    lastSeenAt: minutesAgo(3),
+    latest: null,
+  },
+  latest: { latitude: 33.4512, longitude: -112.0733, accuracyMeters: 7, batteryPercent: 68, recordedAt: minutesAgo(3) },
+  trail: [
+    { latitude: 33.4498, longitude: -112.0761, accuracyMeters: 9, batteryPercent: 69, recordedAt: minutesAgo(48) },
+    { latitude: 33.4503, longitude: -112.0752, accuracyMeters: 8, batteryPercent: 69, recordedAt: minutesAgo(31) },
+    { latitude: 33.4509, longitude: -112.0741, accuracyMeters: 8, batteryPercent: 68, recordedAt: minutesAgo(17) },
+    { latitude: 33.4512, longitude: -112.0733, accuracyMeters: 7, batteryPercent: 68, recordedAt: minutesAgo(3) },
+  ],
+  serverTime: new Date().toISOString(),
+};
+
+export const TRACKING_SHARES = {
+  given: [
+    {
+      _id: "share-1",
+      pet: { _id: MY_PET._id, name: MY_PET.name },
+      owner: "me",
+      viewer: { _id: "u-alex", username: "alex" },
+      expiresAt: new Date(Date.now() + 5 * 3_600_000).toISOString(),
+      createdDate: minutesAgo(40),
+    },
+  ],
+  received: [],
+};
+
+export const TRACKED_COLLARS = {
+  collars: [
+    {
+      pet: { _id: MY_PET._id, name: MY_PET.name, photos: MY_PET.photos },
+      owner: { _id: "me", username: "sam" },
+      mine: true,
+      batteryPercent: 68,
+      lastSeenAt: minutesAgo(3),
+      latest: { latitude: 37.7902, longitude: -122.4331, accuracyMeters: 7, batteryPercent: 68, recordedAt: minutesAgo(3) },
+    },
+    {
+      pet: { _id: "pet-9", name: "Sky", photos: [PHOTOS.sky] },
+      owner: { _id: "u-alex", username: "alex" },
+      mine: false,
+      batteryPercent: 41,
+      lastSeenAt: minutesAgo(26),
+      // Quiet for a while: drawn faint on the map.
+      latest: { latitude: 37.7861, longitude: -122.4268, accuracyMeters: 12, batteryPercent: 41, recordedAt: minutesAgo(26) },
+    },
+  ],
+  serverTime: new Date().toISOString(),
+};
+
+/** A pal's collar, shared with the viewer: the same shape, somebody else's dog. */
+export const SHARED_POSITIONS = {
+  ...TRACKING_POSITIONS,
+  pet: { _id: "pet-9", name: "Sky", photos: [PHOTOS.sky] },
+  owner: { _id: "u-alex", username: "alex" },
+  device: { ...TRACKING_POSITIONS.device, _id: "dev-9", serial: "PPC-000982", batteryPercent: 41 },
+};
+
 export const ROUTES = {
+  "/api/tracking/status": { enabled: true, vendor: "generic", acceptsIngest: true },
+  [`/api/tracking/pets/${MY_PET._id}/positions`]: TRACKING_POSITIONS,
+  "/api/tracking/pets/pet-9/positions": SHARED_POSITIONS,
+  "/api/tracking/shares": TRACKING_SHARES,
+  "/api/tracking/map": TRACKED_COLLARS,
   "/api/store/products": STORE_CATALOGUE,
   // Longest prefix first: an order by id must not be answered with the list.
   "/api/store/orders/ord-1": ORDERS[0],

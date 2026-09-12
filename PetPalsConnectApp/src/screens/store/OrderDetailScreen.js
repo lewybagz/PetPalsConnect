@@ -166,6 +166,10 @@ const OrderDetailScreen = ({ route, navigation }) => {
 
   const currency = order.currency ?? "usd";
   const shipping = order.shipping;
+  // The collar has a second life after purchase; nothing else here does.
+  const hasCollar =
+    ["paid", "fulfilled"].includes(order.status) &&
+    order.items.some((item) => item.requiresDeviceSetup);
 
   return (
     <Screen testID="order-detail" scroll>
@@ -194,6 +198,24 @@ const OrderDetailScreen = ({ route, navigation }) => {
           </View>
         ) : null}
       </Card>
+
+      {hasCollar ? (
+        <Card testID="order-collar-setup" style={tailwind("mb-lg border-primary")}>
+          <Text weight="600" style={tailwind("mb-xs")}>
+            {order.status === "fulfilled" ? "Collar on its way?" : "When your collar arrives"}
+          </Text>
+          <Text tone="muted" style={tailwind("mb-md")}>
+            Register it to one of your pets with the serial printed inside, and it
+            shows up on the map.
+          </Text>
+          <Button
+            testID="order-collar-setup-button"
+            title="Set up your collar"
+            variant="secondary"
+            onPress={() => navigation.navigate("PetTracking")}
+          />
+        </Card>
+      ) : null}
 
       <Text variant="label" tone="muted" style={tailwind("mb-sm uppercase")}>
         Items

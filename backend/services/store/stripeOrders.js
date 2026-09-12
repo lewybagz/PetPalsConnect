@@ -75,6 +75,7 @@ const itemsFor = async (stripe, sessionId) => {
       quantity: line.quantity ?? 1,
       unitAmount: line.price?.unit_amount ?? undefined,
       currency: line.price?.currency ?? line.currency ?? undefined,
+      requiresDeviceSetup: Boolean(known?.product.requiresDeviceSetup),
     };
   });
 };

@@ -36,6 +36,7 @@ export const TYPES = {
   vaccinationDue: { screen: "PetHealth", param: "petId" },
   healthDue: { screen: "PetHealth", param: "petId" },
   orderShipped: { screen: "OrderDetail", param: "orderId" },
+  trackingShared: { screen: "PetTracking", param: "petId" },
   general: { screen: "Notifications", param: null },
 };
 

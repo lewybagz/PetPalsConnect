@@ -332,6 +332,8 @@ export interface OrderItem {
   /** Minor units (cents), as Stripe reports it. */
   unitAmount?: number;
   currency?: string;
+  /** The tracking collar: the order screen offers the set-up step for it. */
+  requiresDeviceSetup: boolean;
 }
 
 /** The address Stripe collected. The app never asks for one. */
@@ -398,6 +400,75 @@ export interface StoreProduct {
   /** The tracking collar: claimed by serial once delivered. */
   requiresDeviceSetup?: boolean;
   variants: StoreVariant[];
+}
+
+/** A collar's state. `inactive` keeps the row and drops its reports. */
+export type DeviceStatus = "active" | "inactive";
+
+/**
+ * A tracking collar as the owner sees it. The ingest secret's hash is on the
+ * schema and never in a response, so it is not here.
+ */
+export interface Device {
+  _id: ObjectId;
+  owner: ObjectId;
+  pet: ObjectId;
+  serial: string;
+  /** Which adapter in `backend/services/tracking/vendor/` it reports through. */
+  vendor: string;
+  status: DeviceStatus;
+  batteryPercent?: number;
+  lastSeenAt?: IsoDate;
+  createdDate: IsoDate;
+  modifiedDate: IsoDate;
+}
+
+/**
+ * Where a collar was, with named fields rather than GeoJSON order - the
+ * server converts, so no screen has to remember that the stored pair is
+ * [longitude, latitude]. Not a document, so not checked against a schema.
+ */
+export interface TrackedPosition {
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number | null;
+  batteryPercent: number | null;
+  recordedAt: IsoDate;
+}
+
+/** `GET /api/tracking/devices` and the `device` on a positions response. */
+export interface TrackedDevice extends Device {
+  latest: TrackedPosition | null;
+}
+
+/** Somebody named on a share, populated. */
+export interface ShareParty {
+  _id: ObjectId;
+  username?: string;
+  userPhoto?: string;
+}
+
+/**
+ * "This friend may see this pet's collar until `expiresAt`." Per pet, per
+ * friend, always expiring; a block ends its effect before the date does.
+ */
+export interface TrackingShare {
+  _id: ObjectId;
+  pet: ObjectId | Pick<Pet, "_id" | "name" | "photos">;
+  owner: ObjectId | ShareParty;
+  viewer: ObjectId | ShareParty;
+  expiresAt: IsoDate;
+  createdDate: IsoDate;
+}
+
+/** One collar on the map: mine, or a friend's shared with me. */
+export interface TrackedCollar {
+  pet: Pick<Pet, "_id" | "name" | "photos">;
+  owner: ShareParty;
+  mine: boolean;
+  batteryPercent: number | null;
+  lastSeenAt: IsoDate | null;
+  latest: TrackedPosition | null;
 }
 
 /**

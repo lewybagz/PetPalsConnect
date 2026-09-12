@@ -92,6 +92,11 @@ const TYPES = {
     screen: "OrderDetail",
     param: "orderId",
   },
+  trackingShared: {
+    title: "A collar was shared with you",
+    screen: "PetTracking",
+    param: "petId",
+  },
   general: {
     title: "PetPals Connect",
     screen: "Notifications",
@@ -143,6 +148,7 @@ const CATEGORY_OF = {
   vaccinationDue: "playdateReminders",
   healthDue: "playdateReminders",
   orderShipped: "appUpdates",
+  trackingShared: "friendRequests",
   general: "appUpdates",
 };
 

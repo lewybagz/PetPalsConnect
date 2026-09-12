@@ -5,6 +5,7 @@ const User = require("../models/User");
 const vendors = require("../services/tracking/vendor");
 const positions = require("../services/tracking/positions");
 const visibility = require("../services/tracking/visibility");
+const { notify } = require("../services/NotificationService");
 
 /**
  * The tracking collar.
@@ -185,6 +186,68 @@ const TrackingController = {
     }
   },
 
+  /**
+   * Every collar the caller may see right now, for the map: their own, and
+   * the ones friends have shared with them. Each row goes back through
+   * `canView`, so a share that has lapsed or crossed a block since it was
+   * listed is dropped here too.
+   */
+  async mapCollars(req, res) {
+    if (!vendors.enabled()) return disabled(res);
+    try {
+      const [mine, { received }] = await Promise.all([
+        Device.find({ owner: req.userId, status: "active" }).lean(),
+        visibility.sharesFor(req.userId),
+      ]);
+
+      const sharedPetIds = [...new Set(received.map((row) => String(row.pet?._id)).filter(Boolean))];
+      const visible = [];
+      for (const petId of sharedPetIds) {
+        if (await visibility.canView(req.userId, petId)) visible.push(petId);
+      }
+      const shared = visible.length
+        ? await Device.find({ pet: { $in: visible }, status: "active" }).lean()
+        : [];
+
+      const devices = [...mine, ...shared];
+      await positions.tick(devices);
+      const latest = await positions.latestFor(devices);
+
+      const petIds = [...new Set(devices.map((device) => String(device.pet)))];
+      const [pets, owners] = await Promise.all([
+        Pet.find({ _id: { $in: petIds } }).select("name photos owner").lean(),
+        User.find({ _id: { $in: devices.map((device) => device.owner) } })
+          .select("username")
+          .lean(),
+      ]);
+      const petById = new Map(pets.map((pet) => [String(pet._id), pet]));
+      const ownerById = new Map(owners.map((owner) => [String(owner._id), owner]));
+
+      const seen = new Set();
+      const collars = [];
+      for (const device of devices) {
+        const pet = petById.get(String(device.pet));
+        if (!pet || seen.has(String(pet._id))) continue;
+        seen.add(String(pet._id));
+        collars.push({
+          pet: { _id: pet._id, name: pet.name, photos: pet.photos ?? [] },
+          owner: {
+            _id: device.owner,
+            username: ownerById.get(String(device.owner))?.username ?? null,
+          },
+          mine: String(device.owner) === String(req.userId),
+          batteryPercent: device.batteryPercent ?? null,
+          lastSeenAt: device.lastSeenAt ?? null,
+          latest: latest.get(String(device._id)) ?? null,
+        });
+      }
+
+      res.json({ collars, serverTime: new Date() });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
   /** The shares the caller has given and received. */
   async listShares(req, res) {
     if (!vendors.enabled()) return disabled(res);
@@ -206,6 +269,23 @@ const TrackingController = {
         viewerId: viewer,
         hours,
       });
+
+      // Tell the friend, through the one path every notification takes, so
+      // quiet hours and their preferences apply. Best-effort: a failed push
+      // must never undo the share.
+      const [pet, owner] = await Promise.all([
+        Pet.findById(row.pet).select("name").lean(),
+        User.findById(req.userId).select("username").lean(),
+      ]);
+      await notify({
+        recipientId: row.viewer,
+        creatorId: req.userId,
+        type: "trackingShared",
+        petName: pet?.name,
+        content: `@${owner?.username ?? "A friend"} shared ${pet?.name ?? "their pet"}'s collar location with you.`,
+        data: { petId: String(row.pet) },
+      }).catch((error) => console.warn("[tracking] share notification failed:", error.message));
+
       res.status(201).json(row);
     } catch (error) {
       if (error instanceof visibility.ShareError) {

@@ -13,6 +13,8 @@ router.patch("/devices/:deviceId", TrackingController.updateDevice);
 router.delete("/devices/:deviceId", TrackingController.removeDevice);
 
 router.get("/shares", TrackingController.listShares);
+// Everything the caller may see right now, for the map layer.
+router.get("/map", TrackingController.mapCollars);
 
 // Every position read goes through visibility.canView inside the handler.
 router.get("/pets/:petId/positions", TrackingController.getPetPositions);

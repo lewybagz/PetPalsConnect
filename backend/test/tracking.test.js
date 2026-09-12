@@ -381,6 +381,47 @@ test("a share can only go to a friend, only from the owner, and is capped at a w
   assert.equal(await TrackingShare.countDocuments(), 0);
 });
 
+test("the map layer lists my collars and the ones shared with me, and nothing else", async () => {
+  const owner = await signUp("owner");
+  const friend = await signUp("friend");
+  const stranger = await signUp("stranger");
+  await befriend(owner, friend);
+  const { secret } = await claim(owner);
+  await report("PPC-000001", secret, HERE);
+  const { secret: strangerSecret } = await claim(stranger, "PPC-000005");
+  await report("PPC-000005", strangerSecret, HERE);
+
+  // Before the share: the friend sees nothing.
+  let map = await request(app).get("/api/tracking/map").set(...friend.header);
+  assert.equal(map.status, 200);
+  assert.deepEqual(map.body.collars, []);
+
+  await request(app)
+    .post(`/api/tracking/pets/${owner.pet._id}/shares`)
+    .set(...owner.header)
+    .send({ viewer: String(friend.user._id) })
+    .expect(201);
+
+  map = await request(app).get("/api/tracking/map").set(...friend.header);
+  assert.equal(map.body.collars.length, 1);
+  assert.equal(map.body.collars[0].pet._id, String(owner.pet._id));
+  assert.equal(map.body.collars[0].mine, false);
+  assert.equal(map.body.collars[0].owner.username, "owner");
+  assert.equal(map.body.collars[0].latest.latitude, HERE.latitude);
+
+  // The owner sees their own, marked as theirs, and never the stranger's.
+  const own = await request(app).get("/api/tracking/map").set(...owner.header);
+  assert.equal(own.body.collars.length, 1);
+  assert.equal(own.body.collars[0].mine, true);
+
+  // And the friend is told.
+  const Notification = require("../models/Notification");
+  // (The friend request itself raised one too; this is about the share.)
+  const notes = await Notification.find({ recipient: friend.user._id, type: "trackingShared" }).lean();
+  assert.equal(notes.length, 1);
+  assert.match(notes[0].content, /@owner shared owner-dog's collar location/);
+});
+
 test("a suspended owner's collar is not visible to a friend, even with a share", async () => {
   const owner = await signUp("owner");
   const friend = await signUp("friend");

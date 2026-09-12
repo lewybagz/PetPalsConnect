@@ -11,6 +11,11 @@ jest.mock("../../api/maps", () => ({
   fetchPlaces: jest.fn(),
   importPlaces: jest.fn(),
 }));
+jest.mock("../../api/tracking", () => ({
+  ...jest.requireActual("../../api/tracking"),
+  fetchTrackedCollars: jest.fn(),
+}));
+const { fetchTrackedCollars } = require("../../api/tracking");
 
 /**
  * A marker's `title` is a prop the native view draws in a callout, not a text
@@ -93,9 +98,47 @@ beforeEach(() => {
   fetchMapPets.mockResolvedValue({ pets: [], origin: HERE, range: 25 });
   fetchPlaces.mockResolvedValue([]);
   importPlaces.mockResolvedValue({ configured: false, imported: 0 });
+  fetchTrackedCollars.mockResolvedValue([]);
 });
 
 describe("MapScreen", () => {
+  it("plots a collar at its exact position and opens the tracking screen", async () => {
+    const recent = new Date(Date.now() - 2 * 60_000).toISOString();
+    fetchTrackedCollars.mockResolvedValue([
+      {
+        pet: { _id: "pet-9", name: "Bo", photos: [] },
+        owner: { _id: "u1", username: "alex" },
+        mine: false,
+        batteryPercent: 70,
+        lastSeenAt: recent,
+        latest: { latitude: 37.78901, longitude: -112.07001, accuracyMeters: 6, batteryPercent: 70, recordedAt: recent },
+      },
+      // No position yet: no pin, never one at 0,0.
+      { pet: { _id: "pet-10", name: "Sky", photos: [] }, owner: { _id: "u1" }, mine: true, latest: null },
+    ]);
+    await renderScreen();
+
+    const pin = await waitFor(() => screen.getByTestId("map-pin-collar-pet-9"));
+    expect(pin.props.coordinate).toEqual({ latitude: 37.78901, longitude: -112.07001 });
+    expect(screen.queryByTestId("map-pin-collar-pet-10")).toBeNull();
+
+    await fireEvent.press(pin);
+    await waitFor(() => expect(screen.getByTestId("map-selection")).toBeTruthy());
+    expect(screen.getByText(/@alex's collar · last seen 2 minutes ago/)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId("map-open"));
+    expect(navigation.navigate).toHaveBeenCalledWith("PetTracking", { petId: "pet-9" });
+
+    // The collars switch only appears when there is a collar to switch.
+    await fireEvent.press(screen.getByTestId("map-toggle-collars"));
+    await waitFor(() => expect(screen.queryByTestId("map-pin-collar-pet-9")).toBeNull());
+  });
+
+  it("shows no collars switch when there are none", async () => {
+    await renderScreen();
+    await waitFor(() => expect(screen.getByTestId("map-view")).toBeTruthy());
+    expect(screen.queryByTestId("map-toggle-collars")).toBeNull();
+  });
+
   it("renders the map once both layers have loaded", async () => {
     fetchMapPets.mockResolvedValue({ pets: [pet("p1", "Bo")], origin: HERE, range: 25 });
     await renderScreen();

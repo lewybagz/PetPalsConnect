@@ -35,6 +35,7 @@ import ShopScreen from "../../src/screens/store/ShopScreen";
 import ProductDetailScreen from "../../src/screens/store/ProductDetailScreen";
 import OrdersScreen from "../../src/screens/store/OrdersScreen";
 import OrderDetailScreen from "../../src/screens/store/OrderDetailScreen";
+import PetTrackingScreen from "../../src/screens/tracking/PetTrackingScreen";
 import {
   ARTICLE,
   ARTICLES,
@@ -607,6 +608,45 @@ export const BOARDS = [
     routes: { ...ROUTES, "/api/store/orders/by-session/cs_pending": pending },
     render: () => (
       <OrderDetailScreen navigation={navigation} route={{ params: { sessionId: "cs_pending" } }} />
+    ),
+  },
+  {
+    id: "pet-tracking",
+    label: "Tracking - the owner's collar",
+    routes: ROUTES,
+    // The map tiles do not render on web (see the "map" board); the pin, the
+    // trail, the "last seen" line and the sharing controls do, and those are
+    // what this board is for.
+    render: () => (
+      <PetTrackingScreen navigation={navigation} route={{ params: { petId: MY_PET._id } }} />
+    ),
+  },
+  {
+    id: "pet-tracking-shared",
+    label: "Tracking - a pal's collar, shared with me",
+    // pet-9 is not one of the session's pets, so the screen renders the
+    // viewer's half: position and who shared it, none of the owner's controls.
+    routes: ROUTES,
+    render: () => (
+      <PetTrackingScreen navigation={navigation} route={{ params: { petId: "pet-9" } }} />
+    ),
+  },
+  {
+    id: "pet-tracking-claim",
+    label: "Tracking - registering a collar",
+    // A null body is what the client reads as "no collar here", the same as a
+    // 404 from the server; the owner then gets the serial form.
+    routes: { ...ROUTES, [`/api/tracking/pets/${MY_PET._id}/positions`]: null },
+    render: () => (
+      <PetTrackingScreen navigation={navigation} route={{ params: { petId: MY_PET._id } }} />
+    ),
+  },
+  {
+    id: "pet-tracking-off",
+    label: "Tracking - server has no vendor",
+    routes: { ...ROUTES, "/api/tracking/status": { enabled: false, vendor: null, acceptsIngest: false } },
+    render: () => (
+      <PetTrackingScreen navigation={navigation} route={{ params: { petId: MY_PET._id } }} />
     ),
   },
   {
