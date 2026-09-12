@@ -33,7 +33,7 @@ test("a profile created with an Arizona ZIP is in the launch region", async () =
   const res = await request(app)
     .post("/api/users")
     .set(...auth("phx"))
-    .send({ username: "phx_owner", zip: "85004" })
+    .send({ acceptedTerms: true, username: "phx_owner", zip: "85004" })
     .expect(201);
 
   assert.equal(res.body.zip, "85004");
@@ -44,7 +44,7 @@ test("a profile from elsewhere is 'other', and one without a ZIP has no region",
   const la = await request(app)
     .post("/api/users")
     .set(...auth("la"))
-    .send({ username: "la_owner", zip: "90210" })
+    .send({ acceptedTerms: true, username: "la_owner", zip: "90210" })
     .expect(201);
   assert.equal(la.body.region, "other");
 
@@ -52,7 +52,7 @@ test("a profile from elsewhere is 'other', and one without a ZIP has no region",
   const old = await request(app)
     .post("/api/users")
     .set(...auth("old"))
-    .send({ username: "old_build" })
+    .send({ acceptedTerms: true, username: "old_build" })
     .expect(201);
   assert.equal(old.body.region, undefined);
 });
@@ -61,7 +61,7 @@ test("a ZIP that is not one is refused, naming the field", async () => {
   const res = await request(app)
     .post("/api/users")
     .set(...auth("typo"))
-    .send({ username: "typo", zip: "8500" })
+    .send({ acceptedTerms: true, username: "typo", zip: "8500" })
     .expect(400);
 
   assert.equal(res.body.field, "zip");

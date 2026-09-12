@@ -221,6 +221,11 @@ const UserSchema = new Schema({
   },
   // NOTE: no password field by design. Firebase Auth owns credentials, so this
   // database never sees or stores one. Do not reintroduce it.
+  // When the person confirmed they were 18+ and agreed to the Terms. Set by
+  // `createUser`, which refuses a profile without the confirmation.
+  termsAcceptedAt: {
+    type: Date,
+  },
   modifiedDate: {
     type: Date,
     default: Date.now,

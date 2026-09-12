@@ -696,6 +696,36 @@ privacy laws, and a map that hands strangers exact positions is what turns a
 harassment case into a negligence claim. `map.test.js` asserts the exact
 coordinate does not come back.
 
+**The app explains before the OS asks.** `src/services/location.js` is the one
+way the app requests the location permission: a sheet saying that other users
+will see the dog's approximate position, with an affirmative "Continue" and a
+"Not now" that means no without the OS being asked, and never shown to somebody
+who already answered. Play's prominent-disclosure rule wants exactly that in
+front of a runtime permission whose use - being shown to strangers - the OS
+string cannot convey. Map and SchedulePlaydate go through it; a screen that
+calls `requestForegroundPermissionsAsync` directly has skipped the disclosure.
+
+**Language other users will read is filtered at the write.** Apple 1.2 wants
+filtering as well as report and block. `services/contentFilter.js` is a stem
+list with leetspeak and masked-vowel normalisation, applied in
+`chatController.sendMessage`, `GroupChatController.sendMessage` and
+`createReview`; it refuses with 422 `CONTENT_BLOCKED` rather than masking,
+because a masked slur still says what it meant and a refusal tells the sender
+what happened. It catches the obvious and leaves the determined to
+report-and-block, which is the honest version of the rule.
+
+**Every new profile confirms 18+ and the Terms, and the server keeps the
+date.** `createUser` refuses a body without `acceptedTerms: true` and stamps
+`termsAcceptedAt`; `CreateProfileScreen` is where the checkbox lives because
+email, phone, Apple and Google all pass through it. The Terms are a contract
+with an adult, and the timestamp is what the 30-day arbitration opt-out window
+is measured from.
+
+**"Up to three years" is a job, not a sentence.** `services/retention.js`
+deletes reports and support messages older than `RETENTION_DAYS` nightly from
+Server.js - the two things account deletion keeps. A retention period the code
+does not enforce is the kind of promise a regulator reads back.
+
 **The Settings screen holds no setting that has a home of its own.** It holds
 the route to each one and the answer it currently gives. Three of its controls
 used to duplicate ones on the screens it linked to, with a different answer.
@@ -803,6 +833,102 @@ than guessing, and a pick that depends on a stage is then left out: a
 recommendation for the wrong stage is worse than one not shown. Only dogs and
 cats have a `sizeBand`, because they are the only species the schema stores a
 weight for.
+
+**The poison lookup answers "is this dangerous?" and never "how much is."**
+451,000 calls reached the ASPCA's poison centre in 2024, food and chocolate
+among the top three categories, and the app already carried the two helpline
+numbers with nothing to look anything up in. `content/toxins/toxins.json` is
+that table, held to `content/research/standards.md` like the articles - every
+entry names its sources and their year - and `services/petCare/toxins.js`
+serves it whole. It is a table rather than a collection for the same reason
+`picks.js` and `emergency.js` are, with one addition: changing what the app
+says about chocolate has to be a reviewed diff.
+
+The line it does not cross is the one `topics.md` already draws. No dose, no
+threshold, no "should I worry" branch - the amount is exactly the judgement
+the helpline exists to make, and `toxins.test.js` fails on `mg/kg`, on an
+`LD50`, on a bare quantity and on any sentence that reads as an instruction to
+treat at home. `severity` is `emergency`/`call`/`avoid`, which is an
+instruction and deliberately not a score.
+
+**A miss is an answer, and it still ends at a phone number.** "Not in this
+list" is followed by the numbers and by the sentence saying the list is not
+everything; silence or an approximate match are the two ways this screen could
+do harm. That is also why the match is one-directional: `tea` is an alias of
+caffeine, and letting a stored alias claim the longer query `tea tree` answered
+a question about a cat's liver with one about a dog's heart. A near-miss here
+is worse than no match, because the reader acts on it. Both halves of the rule
+are tested, on both sides of the wire.
+
+**The table is cached and the search runs on the device.** This is the screen
+somebody opens in a garage at midnight on one bar of signal, so the network is
+how the table is kept current, not how a question is answered. An empty
+response never replaces a good cached copy - an empty poison table renders as
+"nothing is dangerous". The contacts render above the search box so that
+somebody who opens the screen in a panic and types nothing still has what they
+came for, and the entry point is inside the hub's emergency card, the one
+section that never waits on a request.
+
+**A microchip is a `HealthRecord`, not a field on `Pet`.** A chip number and a
+medication are the same shape - a label and a date - so `microchip` and
+`licence` are kinds in a new `identification` category rather than three new
+columns, one new screen and one more thing for account deletion to forget.
+`label` is `required` for all three kinds, because a medication nobody named
+and a chip with no number are rows that cannot answer the question they were
+created to answer. A chip never expires, so it raises no reminder and "done"
+on one is a 400; a licence does, and behaves like every other dated record.
+`statusOf()` already filters to vaccine kinds, so none of this can make a pet
+read as vaccinated to a stranger - `identification.test.js` asserts exactly
+that. The reason it exists: about 45% of US pets are microchipped and only
+around 60% of those registrations are current, and a chipped dog is returned
+about 52% of the time against roughly 2% without.
+
+**The lost-pet checklist is advice plus your own number, and nothing else.**
+`services/petCare/lostPet.js` is a table like `emergency.js`, each step citing
+its source, and the screen puts the owner's recorded chip numbers *above* the
+steps because the first step is "check the registration". Deliberately absent:
+a broadcast to other users, a map of lost pets, an alert radius. None of the
+eleven competitor apps surveyed ships one, and a feature implying a search
+party exists when it does not is worse than the honest checklist.
+
+**`services/petCare/reading.js` is the one place the two species vocabularies
+meet.** Articles are tagged editorially (`dogs`, `small-pets`); pets carry a
+schema enum (`dog`, `smallMammal`). Both are correct and they are deliberately
+different, but nothing mapped between them, so "articles for your cat" could
+not be expressed at all. The hub now carries three article stubs per pet,
+preferring the pet's life-stage tag and never guessing a stage the way
+`recommend.js` never guesses one. `reading.test.js` reads the committed corpus
+and fails if any species maps to a tag no article carries - a shelf that is
+empty forever with nothing saying why is the same failure as a topic chip with
+nothing behind it.
+
+**The way into the articles does not depend on there being an article.** Both
+entry points lived inside `{latestArticle ? ... : null}` on Home, so an empty
+or failed `/api/articles/recent` took the only route to sixty researched
+articles down with it. The card needs an article; the button does not. This is
+the reachability failure this repo keeps finding, one level below a screen
+nothing navigates to.
+
+**Weight is a `WeightEntry`, and the newest one *is* `Pet.weight`.** A weight
+is a number and every field on `HealthRecord` is a date, so this is its own
+model; storage is pounds because matching compares two pets' numbers and a
+stored unit would make two pets incomparable. Saving moves `Pet.weight` only
+when the new row really is the most recent, and deleting the newest moves it
+back - two answers to "how heavy is this dog" is the bug shape this codebase
+has already fixed twice. `bodyCondition` is the published 1-9 AAHA/WSAVA
+scale, entered by the owner and never computed from the weight, because a
+score is a hands-on finding. The screen shows the number, the trend and the
+chart; it never names a target weight, a calorie figure or a diet, and
+`PetWeightScreen.test.js` greps the rendered output to keep it that way.
+
+**A destination is a city the importer actually seeds.** `services/destinations.js`
+holds that list and `scripts/importArizona.js` now reads it, because the
+importer decides where rows come from and the hub decides where an owner may
+look, and those have to be the same places. A geocoder would cheerfully name a
+city with nothing in it, which is the empty list with no explanation the hub
+works hardest to avoid. Requiring the importer used to *run* it and close the
+shared mongoose connection, which is why the list was duplicated in the first
+place; it is behind `require.main === module` now.
 
 **Empty is not the same as broken.** The hub tells three nothings apart, and
 each was a wrong answer at some point in writing it: no pets (`picks` came back

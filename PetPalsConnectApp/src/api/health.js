@@ -26,6 +26,8 @@ export const KIND_LABELS = {
   heartworm: "Heartworm",
   vetVisit: "Vet visit",
   medication: "Medication",
+  microchip: "Microchip",
+  licence: "Licence or tag",
 };
 
 export const KIND_CATEGORIES = {
@@ -39,6 +41,8 @@ export const KIND_CATEGORIES = {
   heartworm: "prevention",
   vetVisit: "visit",
   medication: "medication",
+  microchip: "identification",
+  licence: "identification",
 };
 
 export const CATEGORY_LABELS = {
@@ -46,10 +50,11 @@ export const CATEGORY_LABELS = {
   prevention: "Flea, tick and heartworm",
   visit: "Vet visits",
   medication: "Medications",
+  identification: "Identification",
 };
 
 /** The order the screen shows them in: what strangers see first. */
-export const CATEGORY_ORDER = ["vaccine", "prevention", "visit", "medication"];
+export const CATEGORY_ORDER = ["vaccine", "prevention", "visit", "medication", "identification"];
 
 /**
  * A starting number for the kinds that repeat - the common monthly cycle,
@@ -67,6 +72,39 @@ export const categoryOf = (kind) => KIND_CATEGORIES[kind] ?? "vaccine";
 /** Whether a kind is entered with an interval and can be marked "done". */
 export const repeats = (kind) =>
   categoryOf(kind) === "prevention" || categoryOf(kind) === "medication";
+
+/**
+ * Whether the record is meaningless without a name or number typed into it.
+ *
+ * Mirrors the `required` function on `HealthRecord.label`: a medication
+ * nobody named, and a microchip with no number, are both rows that cannot
+ * answer the question they were created to answer. One list rather than a
+ * `kind === "medication"` check in five places, which is what this was.
+ */
+export const needsLabel = (kind) => ["medication", "microchip", "licence"].includes(kind);
+
+/**
+ * What the "Name" field is asking for, per kind. The medication wording is
+ * load-bearing: the app stores a name and a date and deliberately has no
+ * field for a dose, and the caption is where that is said out loud.
+ */
+export const LABEL_FIELDS = {
+  medication: {
+    label: "Name",
+    description: "Just the name. What it's for and how much stays with your vet.",
+    placeholder: "e.g. Apoquel",
+  },
+  microchip: {
+    label: "Chip number",
+    description: "The number on the chip. Add the registry below, in notes.",
+    placeholder: "e.g. 985141000123456",
+  },
+  licence: {
+    label: "Tag or licence number",
+    description: "The number on the tag, and who issued it, in notes.",
+    placeholder: "e.g. MC-20461",
+  },
+};
 
 /** The owner's records for one of their pets, with the status. */
 export const fetchHealth = async (petId) => {

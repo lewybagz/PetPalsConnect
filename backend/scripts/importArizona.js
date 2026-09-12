@@ -14,17 +14,11 @@
  */
 const path = require("node:path");
 
-const CITIES = [
-  { name: "Phoenix", population: 1665481, latitude: 33.4484, longitude: -112.074 },
-  { name: "Tucson", population: 548371, latitude: 32.2226, longitude: -110.9747 },
-  { name: "Mesa", population: 513656, latitude: 33.4152, longitude: -111.8315 },
-  { name: "Gilbert", population: 287285, latitude: 33.3528, longitude: -111.789 },
-  { name: "Chandler", population: 278748, latitude: 33.3062, longitude: -111.8413 },
-  { name: "Glendale", population: 260572, latitude: 33.5387, longitude: -112.186 },
-];
+// One list, in services/destinations.js: the importer decides where to pull
+// rows into and the hub decides where an owner can look, and those have to be
+// the same places.
+const { DESTINATIONS: CITIES, RADIUS_MILES } = require(path.join(__dirname, "../services/destinations"));
 
-/** Miles. Phoenix is wide; the East Valley cities overlap, which the upsert absorbs. */
-const RADIUS_MILES = 12;
 
 const main = async () => {
   const dryRun = process.argv.includes("--dry-run");
@@ -68,9 +62,15 @@ const main = async () => {
   }
 };
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+// Only when run as a script. Requiring this module used to *execute* the
+// import and then close the shared mongoose connection out from under the
+// caller, which made the city list impossible to reuse from anywhere - the
+// reason the list was duplicated rather than imported in the first place.
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
 
 module.exports = { CITIES, RADIUS_MILES };

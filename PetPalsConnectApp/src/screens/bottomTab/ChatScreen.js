@@ -181,7 +181,15 @@ const ChatScreen = ({ route, navigation }) => {
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
-      dispatch(setError("Message not sent. Tap send to try again."));
+      // A 422 is the language filter explaining itself; anything else is a
+      // failure to retry.
+      dispatch(
+        setError(
+          error.response?.status === 422 && error.response.data?.message
+            ? error.response.data.message
+            : "Message not sent. Tap send to try again."
+        )
+      );
     } finally {
       dispatch(endLoading());
     }

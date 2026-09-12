@@ -18,6 +18,15 @@ jest.mock("expo-location", () => ({
   requestForegroundPermissionsAsync: jest.fn(),
   getCurrentPositionAsync: jest.fn(),
 }));
+// The disclosure sheet is tested in services/location.test.js; here the
+// permission answer is whatever the OS mock says.
+jest.mock("../../services/location", () => ({
+  requestLocationPermission: () =>
+    require("expo-location")
+      .requestForegroundPermissionsAsync()
+      .then((result) => result.status),
+}));
+
 jest.mock("../../components/DateTimePickerComponent", () => "DateTimePicker");
 // The real icon set loads its font asynchronously and setStates when it lands,
 // which keeps firing after a test has finished and destabilises the next one.

@@ -123,6 +123,26 @@ const outreach = make({
   message: "You're doing that too quickly. Give it a moment.",
 });
 
+/**
+ * A tracking collar reporting in. Keyed by the device's serial, since there
+ * is no account: a real device reports every few seconds at most, and a
+ * ceiling well above that stops one misbehaving unit from filling the
+ * position collection while leaving every other collar unaffected.
+ */
+const ingest = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 600,
+  skip: () => !enabled,
+  keyGenerator: (req) => {
+    const serial = String(req.headers["x-device-serial"] ?? "").trim().toUpperCase();
+    return serial ? `d:${serial}` : `ip:${ipKeyGenerator(req.ip)}`;
+  },
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: (req, res) =>
+    res.status(429).json({ message: "Reporting too often.", code: "RATE_LIMITED" }),
+});
+
 module.exports = {
   setEnabled,
   general,
@@ -130,5 +150,6 @@ module.exports = {
   signup,
   reporting,
   outreach,
+  ingest,
   byUserOrIp,
 };

@@ -1,5 +1,6 @@
 const Chat = require("../models/Chat");
 const Message = require("../models/Message");
+const { refuseBlocked } = require("../services/contentFilter");
 const Media = require("../models/Media");
 const { createHash } = require("node:crypto");
 
@@ -229,6 +230,9 @@ const ChatController = {
     if (!body && !contentImage) {
       return res.status(400).json({ message: "A message needs text or an image" });
     }
+    // Apple 1.2: filter objectionable material at the write, not only after a
+    // report. A refusal says what happened; a masked word would still say it.
+    if (refuseBlocked(res, body)) return;
 
     try {
       const chat = await Chat.findOne({

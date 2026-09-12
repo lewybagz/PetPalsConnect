@@ -23,6 +23,9 @@ export const fetchCarePicks = async () => {
     placeCategories: data?.placeCategories ?? [],
     // Patios, hotels, trails: reported dog-friendly, labelled apart from care.
     outCategories: Array.isArray(data?.outCategories) ? data.outCategories : [],
+    // Where an owner can look besides where they are standing. Bounded to the
+    // cities the importer actually seeds, so a choice always has rows behind it.
+    destinations: Array.isArray(data?.destinations) ? data.destinations : [],
     emergency: data?.emergency ?? [],
     // Null until there is a partner. When set it names who the link opens,
     // because the card has to say so next to the link.
@@ -30,7 +33,13 @@ export const fetchCarePicks = async () => {
       data?.insurance?.url && data?.insurance?.partner
         ? { url: data.insurance.url, partner: data.insurance.partner }
         : null,
-    pets: Array.isArray(data?.pets) ? data.pets : [],
+    // Each pet carries three article stubs. The corpus is otherwise one
+    // failed request away from unreachable, and the research is clear that a
+    // library earns its place beside what the reader is already looking at.
+    pets: (Array.isArray(data?.pets) ? data.pets : []).map((pet) => ({
+      ...pet,
+      articles: Array.isArray(pet?.articles) ? pet.articles : [],
+    })),
   };
 };
 

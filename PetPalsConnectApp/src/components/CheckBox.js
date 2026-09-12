@@ -18,6 +18,7 @@ export default function CheckBox({
   // Resolved in the body rather than as a default, which cannot read a hook.
   checkedColor,
   uncheckedColor,
+  testID,
 }) {
   const tokens = useTokens();
   const onColour = checkedColor ?? tokens.primary;
@@ -25,6 +26,7 @@ export default function CheckBox({
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="checkbox"

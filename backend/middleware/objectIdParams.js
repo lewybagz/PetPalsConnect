@@ -30,6 +30,7 @@ const mongoose = require("mongoose");
 const OBJECT_ID_PARAMS = [
   "id",
   "chatId",
+  "deviceId",
   "groupId",
   "locationId",
   "messageId",

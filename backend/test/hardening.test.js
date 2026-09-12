@@ -260,7 +260,7 @@ test("an operator in a body is dropped before it reaches Mongoose", async () => 
   const response = await request(app)
     .post("/api/users")
     .set(...auth("writer"))
-    .send({ username: "writer2", $set: { suspended: false } });
+    .send({ acceptedTerms: true, username: "writer2", $set: { suspended: false } });
 
   assert.notEqual(response.status, 500);
   const stored = await User.findOne({ firebaseUid: "writer" }).lean();

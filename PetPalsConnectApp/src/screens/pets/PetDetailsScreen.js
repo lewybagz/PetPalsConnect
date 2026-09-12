@@ -240,6 +240,18 @@ const PetDetailsScreen = ({ route, navigation }) => {
           <Text style={styles.secondaryButtonText}>Health records</Text>
         </TouchableOpacity>
       ) : null}
+      {/* Only the species the schema stores a weight for. A history of a
+          number nobody collects is not a feature. */}
+      {isMine && ["dog", "cat"].includes(pet.species ?? "dog") ? (
+        <TouchableOpacity
+          testID="pet-weight"
+          onPress={() => navigation.navigate("PetWeight", { pet, petId: pet._id })}
+          style={styles.secondaryButton}
+        >
+          <Icon name="stats-chart" size={16} color={tokens.primary} />
+          <Text style={styles.secondaryButtonText}>Weight history</Text>
+        </TouchableOpacity>
+      ) : null}
     </ScrollView>
   );
 };

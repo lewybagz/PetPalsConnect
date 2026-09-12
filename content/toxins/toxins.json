@@ -1,0 +1,492 @@
+[
+  {
+    "slug": "chocolate",
+    "name": "Chocolate",
+    "aliases": ["cocoa", "cacao", "brownie", "fudge", "baking chocolate", "dark chocolate", "milk chocolate", "hot chocolate"],
+    "species": ["dog", "cat"],
+    "group": "food",
+    "severity": "call",
+    "signs": "Vomiting, diarrhoea, restlessness, a fast or irregular heartbeat, tremors, and in severe cases seizures.",
+    "guidance": "Chocolate contains theobromine and caffeine, which dogs clear far more slowly than people do. Darker and more bitter products are the more concentrated ones: baking chocolate and cocoa powder carry much more than milk chocolate. How serious an amount is depends on the type of chocolate and the size of the animal, which is the judgement the helpline is there to make.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/people-foods-avoid-feeding-your-pets", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Chocolate Toxicosis", "url": "https://www.merckvetmanual.com/toxicology/food-hazards/chocolate-toxicosis-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "xylitol",
+    "name": "Xylitol and birch sugar",
+    "aliases": ["birch sugar", "sugar free gum", "sugarfree", "sweetener", "sugar-free peanut butter", "wood sugar"],
+    "species": ["dog"],
+    "group": "food",
+    "severity": "emergency",
+    "signs": "Vomiting, then weakness, wobbliness and collapse as blood sugar falls. Liver injury can follow later.",
+    "guidance": "In dogs xylitol triggers a rapid release of insulin and a steep drop in blood sugar, and it can also damage the liver. It appears in sugar-free gum and sweets, some peanut butters, toothpaste, mouthwash and baked goods, so check the label of anything sugar-free a dog has reached. This is treated as an emergency rather than a wait-and-see: ring the helpline or a vet straight away.",
+    "sources": [
+      { "name": "FDA Center for Veterinary Medicine", "url": "https://www.fda.gov/consumers/consumer-updates/xylitol-and-your-dog-danger-under-many-names", "year": 2024 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/xylitol/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "grapes-raisins",
+    "name": "Grapes, raisins and currants",
+    "aliases": ["grape", "raisin", "sultana", "currant", "trail mix", "fruit cake", "grape juice"],
+    "species": ["dog"],
+    "group": "food",
+    "severity": "emergency",
+    "signs": "Vomiting, lethargy, loss of appetite, and later a drop in how much the dog urinates.",
+    "guidance": "Grapes and their dried forms can cause sudden kidney failure in dogs. The reaction is unpredictable: severity does not track neatly with how much was eaten, and some dogs are affected by small amounts while others are not. Because the amount does not tell you what will happen, published guidance is to treat any ingestion as urgent rather than to estimate. Cats and ferrets are not known to react the same way.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/people-foods-avoid-feeding-your-pets", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Grape and Raisin Toxicosis", "url": "https://www.merckvetmanual.com/toxicology/food-hazards/grape-and-raisin-toxicosis-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "onion-garlic",
+    "name": "Onion, garlic, chives and leeks",
+    "aliases": ["onion", "garlic", "chive", "leek", "shallot", "scallion", "onion powder", "garlic powder", "allium"],
+    "species": ["dog", "cat"],
+    "group": "food",
+    "severity": "call",
+    "signs": "Stomach upset first, then over the following days pale gums, tiredness, fast breathing and discoloured urine as red blood cells are damaged.",
+    "guidance": "Every plant in the onion family can damage red blood cells, and the signs often appear days after the meal rather than the same evening. Dried and powdered forms are more concentrated than fresh, so a seasoned dish or a stock cube counts. Cats are more sensitive than dogs. Because the effect builds, repeated small amounts matter as well as one large one.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/people-foods-avoid-feeding-your-pets", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Allium Species Toxicosis", "url": "https://www.merckvetmanual.com/toxicology/food-hazards/onion-garlic-chive-and-leek-toxicosis-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "macadamia-nuts",
+    "name": "Macadamia nuts",
+    "aliases": ["macadamia", "macadamia nut", "nuts"],
+    "species": ["dog"],
+    "group": "food",
+    "severity": "call",
+    "signs": "Weakness, especially in the back legs, wobbliness, tremors, vomiting and a raised temperature.",
+    "guidance": "Macadamia nuts affect dogs in a way that is still not fully explained. Signs usually appear within about twelve hours and most dogs recover within a day or two with supportive care. The reason to ring anyway is that the same wobbliness has other, more serious causes, and nuts often arrive inside chocolate or baked goods that carry their own problems.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/people-foods-avoid-feeding-your-pets", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Macadamia Nut Toxicosis", "url": "https://www.merckvetmanual.com/toxicology/food-hazards/macadamia-nut-toxicosis-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "alcohol",
+    "name": "Alcohol",
+    "aliases": ["beer", "wine", "spirits", "liquor", "ethanol", "hand sanitiser", "hand sanitizer", "rubbing alcohol", "isopropanol"],
+    "species": ["dog", "cat", "bird", "smallMammal"],
+    "group": "household",
+    "severity": "emergency",
+    "signs": "Wobbliness, drooling, vomiting, disorientation, slow breathing, low body temperature and collapse.",
+    "guidance": "Animals are far more sensitive to alcohol than people, and it reaches the bloodstream quickly. It is not only drinks: hand sanitiser, mouthwash, some cleaning products and raw bread dough all supply it. Rapid sedation and a falling body temperature are what make this urgent rather than something to sleep off.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/alcohol/", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Alcohol Toxicosis", "url": "https://www.merckvetmanual.com/toxicology/alcohol-toxicoses/alcohol-toxicosis-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "caffeine",
+    "name": "Caffeine",
+    "aliases": ["coffee", "coffee grounds", "espresso", "tea", "tea bag", "energy drink", "caffeine pill", "pre workout"],
+    "species": ["dog", "cat"],
+    "group": "food",
+    "severity": "call",
+    "signs": "Restlessness, pacing, vomiting, a fast heart rate, tremors and in severe cases seizures.",
+    "guidance": "Caffeine works on animals the way the theobromine in chocolate does, and pets are more sensitive to it than people. Used coffee grounds, tea bags, energy drinks and caffeine tablets are the usual sources, and tablets or pre-workout powders are far more concentrated than a drink. Ring for advice with the product and its strength to hand.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/people-foods-avoid-feeding-your-pets", "year": 2025 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/caffeine/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "yeast-dough",
+    "name": "Raw yeast dough",
+    "aliases": ["bread dough", "pizza dough", "raw dough", "rising dough", "yeast"],
+    "species": ["dog", "cat"],
+    "group": "food",
+    "severity": "emergency",
+    "signs": "A swollen, painful belly, unproductive retching, restlessness, and the wobbliness of alcohol poisoning.",
+    "guidance": "Raw dough does two things at once in a warm stomach. It keeps rising, which stretches the stomach painfully and can be dangerous on its own, and the yeast produces alcohol that is absorbed into the blood. A distended abdomen with unproductive retching is an emergency in its own right, so this is a straight call rather than a wait.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/people-foods-avoid-feeding-your-pets", "year": 2025 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/bread-dough/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "avocado",
+    "name": "Avocado",
+    "aliases": ["avocado", "guacamole", "avocado pit", "avocado stone"],
+    "species": ["bird", "smallMammal"],
+    "group": "food",
+    "severity": "call",
+    "signs": "In birds, breathing difficulty, weakness and sudden collapse. In dogs and cats, usually mild stomach upset if anything.",
+    "guidance": "This one is mostly a bird problem, and the difference between species is the important part. Avocado contains persin, which birds and rabbits tolerate badly; published guidance treats it as genuinely dangerous for them. Dogs and cats are much less affected and usually show nothing worse than stomach upset, though the stone is a choking and blockage hazard for any animal that swallows one.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/people-foods-avoid-feeding-your-pets", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Avocado Poisoning", "url": "https://www.merckvetmanual.com/toxicology/food-hazards/avocado-poisoning-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "cooked-bones",
+    "name": "Cooked bones",
+    "aliases": ["chicken bone", "bone", "rib bone", "turkey bone", "cooked bone", "steak bone"],
+    "species": ["dog", "cat"],
+    "group": "food",
+    "severity": "call",
+    "signs": "Gagging, retching, drooling, refusing food, straining to pass stool, or blood in the stool.",
+    "guidance": "This is a physical hazard rather than a poison. Cooking makes bones brittle, so they splinter into sharp pieces that can lodge in the throat or gut or pierce it. A blockage or a perforation may not show for a day or more after the meal, which is why the advice is to ring rather than watch the first quiet hour and assume it passed.",
+    "sources": [
+      { "name": "FDA Center for Veterinary Medicine", "url": "https://www.fda.gov/animal-veterinary/animal-health-literacy/no-bones-about-it-reasons-not-give-your-dog-bones", "year": 2024 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/bones/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "lilies",
+    "name": "Lilies",
+    "aliases": ["lily", "easter lily", "tiger lily", "stargazer", "day lily", "daylily", "asiatic lily", "lilium"],
+    "species": ["cat"],
+    "group": "plant",
+    "severity": "emergency",
+    "signs": "Vomiting, loss of appetite and lethargy first, then increased drinking and urinating as the kidneys are affected.",
+    "guidance": "True lilies are the single most dangerous common houseplant for cats, and every part of the plant counts: petals, leaves, stems, pollen and even the water in the vase. Published guidance is unambiguous that a cat known to have chewed any part of one, or to have groomed pollen off its coat, is an immediate emergency, because treatment started early works far better than treatment started once the kidneys are struggling. Dogs get stomach upset rather than the kidney injury. Peace lilies and calla lilies are different plants with a milder, mouth-irritant problem.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants/lilies", "year": 2025 },
+      { "name": "FDA Center for Veterinary Medicine", "url": "https://www.fda.gov/animal-veterinary/animal-health-literacy/lovely-lilies-and-curious-cats-dangerous-combination", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "sago-palm",
+    "name": "Sago palm",
+    "aliases": ["sago", "cycad", "cycas revoluta", "coontie", "zamia"],
+    "species": ["dog", "cat"],
+    "group": "plant",
+    "severity": "emergency",
+    "signs": "Vomiting, diarrhoea, belly pain and lethargy, followed by signs of liver injury such as yellow gums or bruising.",
+    "guidance": "Every part of a sago palm is toxic and the seeds are the worst of it. The damage is to the liver and it can progress over days, so an animal that seems better after the first upset is not necessarily out of it. This is a common ornamental and patio plant in warm states, which is where most cases come from.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/sago-palm/", "year": 2025 },
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants/sago-palm", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "azalea-rhododendron",
+    "name": "Azalea and rhododendron",
+    "aliases": ["azalea", "rhododendron", "rosebay"],
+    "species": ["dog", "cat", "smallMammal"],
+    "group": "plant",
+    "severity": "call",
+    "signs": "Drooling, vomiting, diarrhoea, weakness, and in larger ingestions an abnormal heart rhythm or collapse.",
+    "guidance": "These contain grayanotoxins, which upset the gut and can affect the heart rhythm. A nibbled leaf usually means stomach upset; a larger amount is the case where the heart matters. Both are extremely common garden shrubs, so a dog that has been chewing in the borders is a realistic scenario.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants/azalea", "year": 2025 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/azaleas/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "oleander",
+    "name": "Oleander",
+    "aliases": ["oleander", "nerium"],
+    "species": ["dog", "cat", "bird"],
+    "group": "plant",
+    "severity": "emergency",
+    "signs": "Drooling, vomiting, belly pain, then a slow or irregular heartbeat, weakness and collapse.",
+    "guidance": "Oleander contains cardiac glycosides, which act on the heart in the way digoxin does. All parts are toxic, including dried clippings, and the heart effects are what make it an emergency rather than the stomach upset. It is planted widely as a hedge and roadside shrub across the southern states.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants/oleander", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Cardiotoxic Plants", "url": "https://www.merckvetmanual.com/toxicology/poisonous-plants/cardiotoxic-plants", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "autumn-crocus",
+    "name": "Autumn crocus",
+    "aliases": ["autumn crocus", "colchicum", "meadow saffron", "naked ladies"],
+    "species": ["dog", "cat"],
+    "group": "plant",
+    "severity": "emergency",
+    "signs": "Vomiting, sometimes bloody, diarrhoea and belly pain, then an apparent recovery, then serious illness days later.",
+    "guidance": "Autumn crocus contains colchicine and is dangerous in a way that misleads people: the first illness eases, the animal looks better for a day or two, and organ damage appears afterwards. That false recovery is the reason published guidance says to ring on the first signs rather than wait to see whether it settles. Do not confuse it with the spring crocus, which is a much milder stomach irritant.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/autumn-crocus/", "year": 2025 },
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants/autumn-crocus", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "tulip-daffodil-bulbs",
+    "name": "Tulip and daffodil bulbs",
+    "aliases": ["tulip", "daffodil", "narcissus", "bulb", "bulbs", "hyacinth"],
+    "species": ["dog", "cat"],
+    "group": "plant",
+    "severity": "call",
+    "signs": "Drooling, vomiting, diarrhoea and belly pain; with larger amounts, wobbliness or an irregular heartbeat.",
+    "guidance": "The bulb is the concentrated part, which is why planting season and a digging dog are the usual story rather than a vase of cut flowers. Daffodils can also affect the heart rhythm when a lot is eaten. Stomach upset is the common outcome, and the helpline can tell you which case you have.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants/tulip", "year": 2025 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/daffodil/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "dieffenbachia-philodendron",
+    "name": "Dieffenbachia, philodendron and pothos",
+    "aliases": ["dieffenbachia", "dumb cane", "philodendron", "pothos", "devil's ivy", "monstera", "peace lily", "calla lily"],
+    "species": ["dog", "cat", "smallMammal"],
+    "group": "plant",
+    "severity": "avoid",
+    "signs": "Immediate mouth pain, pawing at the face, drooling, a swollen tongue or lips, and reluctance to eat.",
+    "guidance": "These houseplants share insoluble calcium oxalate crystals, which sting the mouth and throat on contact. The pain is immediate and usually stops the animal eating more, so serious illness is uncommon. It is worth a call when the swelling affects breathing or when the animal will not drink, and worth knowing that peace lilies and calla lilies belong in this milder group rather than with true lilies.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants/dieffenbachia", "year": 2025 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/dieffenbachia/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "cannabis",
+    "name": "Cannabis",
+    "aliases": ["marijuana", "weed", "thc", "edible", "gummy", "pot", "hash", "cannabis butter"],
+    "species": ["dog", "cat"],
+    "group": "household",
+    "severity": "call",
+    "signs": "Wobbliness, dilated pupils, dribbling urine, sensitivity to sound, low body temperature, and sometimes tremors.",
+    "guidance": "Calls about cannabis have risen sharply as it has become legal in more states. Most dogs recover with supportive care, but two things raise the stakes: edibles often also contain chocolate or xylitol, and concentrates are far stronger than plant material. Vets in this context are treating the animal, not reporting anybody, and the honest answer about what was eaten is what makes the treatment right.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/news/top-10-toxins-2025", "year": 2025 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/marijuana/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "ibuprofen-nsaids",
+    "name": "Ibuprofen and similar painkillers",
+    "aliases": ["ibuprofen", "advil", "motrin", "naproxen", "aleve", "nsaid", "painkiller", "anti-inflammatory"],
+    "species": ["dog", "cat"],
+    "group": "medicine",
+    "severity": "emergency",
+    "signs": "Vomiting, sometimes with blood, black tarry stools, belly pain, loss of appetite, and increased drinking if the kidneys are affected.",
+    "guidance": "Human anti-inflammatory painkillers strip the stomach of its protective lining and reduce blood flow to the kidneys, and pets have much less margin with them than people do. Never give one to a pet for pain. Over-the-counter medicines are the single most common category of poisoning call, and a dropped tablet or a chewed bottle is the usual route.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/news/top-10-toxins-2025", "year": 2025 },
+      { "name": "Merck Veterinary Manual, NSAID Toxicosis", "url": "https://www.merckvetmanual.com/toxicology/toxicities-from-human-drugs/nonsteroidal-anti-inflammatory-drugs-toxicosis-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "acetaminophen",
+    "name": "Paracetamol and acetaminophen",
+    "aliases": ["acetaminophen", "paracetamol", "tylenol", "panadol", "cold medicine", "flu medicine"],
+    "species": ["dog", "cat"],
+    "group": "medicine",
+    "severity": "emergency",
+    "signs": "In cats, a swollen face or paws, brown or grey gums and laboured breathing. In dogs, vomiting, lethargy and yellow gums.",
+    "guidance": "Cats lack a liver pathway that people and dogs rely on to clear this drug, which is why it is exceptionally dangerous to them and why no cat should ever be given it. In dogs the concern is the liver and the blood's ability to carry oxygen. It hides inside many combination cold and flu remedies, so check the full ingredient list of anything that was reached.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/acetaminophen/", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Acetaminophen Toxicosis", "url": "https://www.merckvetmanual.com/toxicology/toxicities-from-human-drugs/acetaminophen-toxicosis-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "antidepressants",
+    "name": "Antidepressants",
+    "aliases": ["ssri", "antidepressant", "prozac", "fluoxetine", "sertraline", "zoloft", "citalopram", "venlafaxine", "effexor"],
+    "species": ["dog", "cat"],
+    "group": "medicine",
+    "severity": "emergency",
+    "signs": "Agitation or unusual sedation, tremors, a raised temperature, a fast heart rate, dilated pupils and in severe cases seizures.",
+    "guidance": "These are among the most commonly ingested prescription drugs in pets, partly because they are taken daily and often kept on a bedside table. Too much serotonin causes a recognisable and dangerous syndrome of tremor, agitation and overheating. Some of these medicines are also prescribed to animals at their own doses, which is not the same thing as a human tablet being safe.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/news/top-10-toxins-2025", "year": 2025 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/antidepressants/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "adhd-stimulants",
+    "name": "ADHD stimulant medication",
+    "aliases": ["adderall", "ritalin", "amphetamine", "methylphenidate", "vyvanse", "concerta", "adhd"],
+    "species": ["dog", "cat"],
+    "group": "medicine",
+    "severity": "emergency",
+    "signs": "Hyperactivity, pacing, a racing heart, high temperature, tremors and seizures.",
+    "guidance": "Stimulants act quickly and pets have very little margin with them. Extended-release forms complicate things further, because the drug keeps being released over hours and an animal that looks settled can deteriorate afterwards. Have the packaging to hand when ringing, since the formulation changes what happens next.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/news/top-10-toxins-2025", "year": 2025 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/adderall/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "vitamin-d",
+    "name": "Vitamin D supplements",
+    "aliases": ["vitamin d", "cholecalciferol", "vitamin d3", "multivitamin", "supplement", "calcipotriene", "psoriasis cream"],
+    "species": ["dog", "cat"],
+    "group": "medicine",
+    "severity": "emergency",
+    "signs": "Increased drinking and urinating, vomiting, loss of appetite, weakness and constipation.",
+    "guidance": "Too much vitamin D raises blood calcium, and sustained high calcium damages the kidneys in a way that can be permanent. It comes from human supplements, some psoriasis creams, and occasionally from recalled pet foods. The early signs are vague and easy to attribute to something else, which is why the history of what was reached matters more than how the animal looks in the first hours.",
+    "sources": [
+      { "name": "FDA Center for Veterinary Medicine", "url": "https://www.fda.gov/animal-veterinary/animal-health-literacy/vitamin-d-toxicity-dogs", "year": 2024 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/vitamin-d/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "antifreeze",
+    "name": "Antifreeze and ethylene glycol",
+    "aliases": ["antifreeze", "ethylene glycol", "coolant", "radiator fluid", "de-icer", "brake fluid"],
+    "species": ["dog", "cat"],
+    "group": "household",
+    "severity": "emergency",
+    "signs": "Wobbliness as though drunk, vomiting, and heavy drinking and urinating, then apparent improvement, then kidney failure.",
+    "guidance": "Antifreeze tastes sweet, which is why animals drink it from a garage floor or a puddle. It is one of the most time-critical poisonings there is: treatment works when it is started early and works poorly once the kidneys have been damaged, and the middle stage looks deceptively like recovery. A suspicion is enough to ring on, before any signs at all.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/ethylene-glycol/", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Ethylene Glycol Toxicosis", "url": "https://www.merckvetmanual.com/toxicology/ethylene-glycol-toxicity/ethylene-glycol-toxicosis-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "rodenticide",
+    "name": "Rat and mouse poison",
+    "aliases": ["rat poison", "mouse poison", "rodenticide", "bait", "warfarin", "brodifacoum", "bromethalin", "d-con"],
+    "species": ["dog", "cat"],
+    "group": "household",
+    "severity": "emergency",
+    "signs": "Depends on the type. Weakness, pale gums, coughing or bruising with the blood-thinning kind; tremors and seizures with others.",
+    "guidance": "These products are not one thing. Blood-thinning baits cause internal bleeding that may not show for several days, while others act on the brain or on blood calcium, and the treatments are completely different. The single most useful thing you can do is find the packaging and read out the active ingredient, because that is what decides the response. Bleeding that is happening internally is not visible from outside, so waiting for a sign is not a plan.",
+    "sources": [
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/news/top-10-toxins-2025", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Rodenticide Toxicosis", "url": "https://www.merckvetmanual.com/toxicology/rodenticide-poisoning/anticoagulant-rodenticide-poisoning-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "permethrin-cats",
+    "name": "Dog flea treatment used on a cat",
+    "aliases": ["permethrin", "pyrethrin", "flea spot on", "flea treatment", "dog flea", "spot-on", "flea collar"],
+    "species": ["cat"],
+    "group": "household",
+    "severity": "emergency",
+    "signs": "Muscle twitching and tremors, drooling, wobbliness, a raised temperature and seizures.",
+    "guidance": "Permethrin is safe in dog flea products and dangerous to cats, which cannot break it down the way dogs do. Most cases are an honest mistake: a dog product applied to the cat, or a cat grooming a freshly treated dog it lives with. Do not wait for it to wear off, and keep the treated dog apart from the cat until the product has dried.",
+    "sources": [
+      { "name": "FDA Center for Veterinary Medicine", "url": "https://www.fda.gov/animal-veterinary/animal-health-literacy/fda-alerts-pet-owners-about-flea-and-tick-products", "year": 2024 },
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/permethrin/", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "essential-oils",
+    "name": "Essential oils",
+    "aliases": ["essential oil", "tea tree", "tea tree oil", "eucalyptus", "diffuser", "peppermint oil", "citrus oil", "potpourri"],
+    "species": ["cat", "dog", "bird"],
+    "group": "household",
+    "severity": "call",
+    "signs": "Drooling, vomiting, wobbliness, tremors, low body temperature, and skin or mouth irritation where the oil touched.",
+    "guidance": "Cats clear the compounds in many essential oils poorly, so oils that are unremarkable for a person can make a cat ill, whether licked, spilled on the coat or breathed in from an active diffuser. Tea tree oil is the one that causes the most trouble. Birds are sensitive to airborne fumes generally. Undiluted oil on the skin is a reason to ring rather than to wash and hope.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/essential-oils/", "year": 2025 },
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "slug-bait",
+    "name": "Slug and snail bait",
+    "aliases": ["slug bait", "snail bait", "metaldehyde", "slug pellets", "snail pellets"],
+    "species": ["dog", "cat"],
+    "group": "household",
+    "severity": "emergency",
+    "signs": "Drooling, vomiting, anxiety, muscle tremors that run into continuous shaking, a high temperature and seizures.",
+    "guidance": "Metaldehyde baits cause severe tremors that come on quickly, often within an hour or two, and the overheating that follows the shaking is itself dangerous. The pellets are made to be attractive and are often dyed blue or green. Owners frequently do not think of a garden product as a poison, which is part of why these cases arrive late.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/metaldehyde/", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Metaldehyde Poisoning", "url": "https://www.merckvetmanual.com/toxicology/metaldehyde-poisoning/metaldehyde-poisoning-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "button-batteries",
+    "name": "Button and lithium batteries",
+    "aliases": ["battery", "batteries", "button battery", "coin cell", "watch battery", "hearing aid battery", "airtag"],
+    "species": ["dog", "cat"],
+    "group": "household",
+    "severity": "emergency",
+    "signs": "Drooling, retching, refusing food, pawing at the mouth, or no outward sign at all in the early hours.",
+    "guidance": "A swallowed button battery can burn the tissue it rests against through an electrical current, and the damage begins quickly even though the animal may look fine. A chewed and punctured battery adds a caustic leak. Published guidance treats a swallowed or chewed battery as urgent, and specifically advises against making the animal vomit, since a battery coming back up can burn the throat on the way.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/batteries/", "year": 2025 },
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/news/top-10-toxins-2025", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "household-cleaners",
+    "name": "Household cleaners",
+    "aliases": ["bleach", "ammonia", "cleaner", "detergent", "drain cleaner", "disinfectant", "toilet cleaner", "laundry pod", "pine oil"],
+    "species": ["dog", "cat", "bird"],
+    "group": "household",
+    "severity": "call",
+    "signs": "Drooling, mouth pain or ulcers, vomiting, coughing, and breathing difficulty if fumes were inhaled.",
+    "guidance": "Dilute cleaners on a floor usually cause mild stomach upset, while concentrated drain and oven products are corrosive and can burn the mouth and throat. Laundry pods are a particular problem because they burst under a bite. With corrosives, published guidance is not to make the animal vomit, since the material burns twice on the way back. Birds are also vulnerable to fumes in an unventilated room.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/bleach/", "year": 2025 },
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/household-hazards", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "compost-mouldy-food",
+    "name": "Compost and mouldy food",
+    "aliases": ["compost", "mouldy food", "moldy food", "mould", "mold", "rubbish", "garbage", "bin", "tremorgenic"],
+    "species": ["dog"],
+    "group": "food",
+    "severity": "emergency",
+    "signs": "Restlessness, muscle twitching that builds into whole-body tremors, wobbliness, vomiting and a high temperature.",
+    "guidance": "Mouldy food and garden compost can carry tremorgenic mycotoxins, which cause severe shaking that starts within an hour or two and can last for days without treatment. The overheating that comes with prolonged tremors is the dangerous part. A dog that has been in the compost heap or the bin and is trembling is an emergency, not a dog that ate something disagreeable.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/mycotoxins/", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Tremorgenic Mycotoxins", "url": "https://www.merckvetmanual.com/toxicology/mycotoxicoses/tremorgenic-mycotoxins-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "wild-mushrooms",
+    "name": "Wild mushrooms",
+    "aliases": ["mushroom", "mushrooms", "toadstool", "fungus", "death cap", "amanita"],
+    "species": ["dog", "cat"],
+    "group": "plant",
+    "severity": "emergency",
+    "signs": "Vomiting and diarrhoea, sometimes followed by a day or two of apparent recovery before serious liver illness.",
+    "guidance": "Identifying a mushroom from a photograph is unreliable, and the most dangerous species cause exactly this pattern of early upset, false recovery, then liver failure. Because a safe identification cannot be made quickly, published guidance is to treat any wild mushroom a dog has eaten as urgent. If you can, bag a sample of the same mushroom for the vet.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/mushrooms/", "year": 2025 },
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/news/top-10-toxins-2025", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "salt-and-dough-ornaments",
+    "name": "Salt, rock salt and salt dough",
+    "aliases": ["salt", "rock salt", "road salt", "ice melt", "de-icer", "salt dough", "play dough", "playdough"],
+    "species": ["dog", "cat", "bird"],
+    "group": "household",
+    "severity": "call",
+    "signs": "Heavy drinking, vomiting, diarrhoea, wobbliness and, with large amounts, tremors or seizures.",
+    "guidance": "A large amount of salt at once raises blood sodium and pulls water out of the brain's cells. The usual sources are homemade salt dough ornaments, ice-melt granules licked off paws in winter, and sea water drunk at the beach. Correcting it too quickly is also harmful, which is why this is a call rather than something to fix with a bowl of water.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/salt/", "year": 2025 },
+      { "name": "Merck Veterinary Manual, Salt Toxicosis", "url": "https://www.merckvetmanual.com/toxicology/salt-toxicity/salt-toxicosis-in-animals", "year": 2024 }
+    ]
+  },
+  {
+    "slug": "silica-gel",
+    "name": "Silica gel packets",
+    "aliases": ["silica gel", "silica", "desiccant", "do not eat packet", "moisture packet"],
+    "species": ["dog", "cat"],
+    "group": "household",
+    "severity": "avoid",
+    "signs": "Usually nothing. Occasionally mild vomiting, or signs of a blockage if a large packet was swallowed whole.",
+    "guidance": "This one is included because it frightens people more than it should. The gel beads are not absorbed and pass through, and the printed warning is aimed at children choking rather than at poisoning. The realistic risks are the packet itself causing a blockage in a small animal, and the older colour-indicator type that used cobalt. Worth a call if the animal is small or the packet was large, not worth panic.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/silica-gel/", "year": 2025 },
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/household-hazards", "year": 2025 }
+    ]
+  },
+  {
+    "slug": "nicotine",
+    "name": "Nicotine and vapes",
+    "aliases": ["nicotine", "cigarette", "vape", "e-cigarette", "vape juice", "e-liquid", "nicotine pouch", "patch", "gum", "tobacco"],
+    "species": ["dog", "cat"],
+    "group": "household",
+    "severity": "emergency",
+    "signs": "Drooling, vomiting, agitation, a fast heart rate, tremors, weakness and in severe cases collapse.",
+    "guidance": "Nicotine acts fast, and vaping liquid and pouches are far more concentrated than a cigarette end. Nicotine replacement gum is a double problem because it often also contains xylitol. Signs typically begin within the hour, so this is not one to watch overnight.",
+    "sources": [
+      { "name": "Pet Poison Helpline", "url": "https://www.petpoisonhelpline.com/poison/nicotine/", "year": 2025 },
+      { "name": "ASPCA Animal Poison Control Center", "url": "https://www.aspca.org/pet-care/animal-poison-control/household-hazards", "year": 2025 }
+    ]
+  }
+]

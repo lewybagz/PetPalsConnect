@@ -20,6 +20,9 @@ const BlockList = require("../models/BlockList");
 const ActivityLog = require("../models/ActivityLog");
 const Event = require("../models/Event");
 const Waitlist = require("../models/Waitlist");
+const Device = require("../models/Device");
+const DevicePosition = require("../models/DevicePosition");
+const TrackingShare = require("../models/TrackingShare");
 const firebase = require("../config/firebase");
 
 /**
@@ -86,6 +89,15 @@ const deleteAccountData = async (user, firebaseUid) => {
   await BlockList.deleteMany({ owner: userId });
   await ActivityLog.deleteMany({ user: userId });
   await Waitlist.deleteMany({ user: userId });
+
+  // A location history has no reason to outlive the account, and neither do
+  // the shares - in either direction: a share *to* this account is a row that
+  // would otherwise name a viewer who no longer exists.
+  await DevicePosition.deleteMany({ $or: [{ owner: userId }, { pet: petFilter }] });
+  await Device.deleteMany({ $or: [{ owner: userId }, { pet: petFilter }] });
+  await TrackingShare.deleteMany({
+    $or: [{ owner: userId }, { viewer: userId }, { pet: petFilter }],
+  });
 
   // --- Things shared with other people ---------------------------------------
   // A one-to-one conversation is between two pets, one of which is about to

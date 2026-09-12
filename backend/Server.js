@@ -55,6 +55,12 @@ app.use("/api/revenuecat-webhooks", require("./routes/revenuecatWebhooks"));
 
 app.use("/api", limits.general);
 
+// A tracking collar reporting in. Outside `authenticate` because a device has
+// no Firebase account; it proves itself with a per-device secret and is rate
+// limited per serial. Registered before the authenticated /api/tracking mount
+// below, or that mount would claim the path first.
+app.use("/api/tracking/ingest", require("./routes/trackingIngest"));
+
 // ---------------------------------------------------------------------------
 // Health check - unauthenticated, used by hosting platforms and smoke tests.
 // ---------------------------------------------------------------------------
@@ -95,6 +101,7 @@ const routes = {
   "subscription-history": "subscriptionHistory",
   subscriptions: "subscriptions",
   supportmessages: "supportMessages",
+  tracking: "tracking",
   userpreferences: "userPreferences",
   users: "users",
   waitlist: "waitlist",

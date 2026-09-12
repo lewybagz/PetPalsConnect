@@ -298,23 +298,28 @@ const HomeScreen = ({ navigation, route, start }) => {
         </TouchableOpacity>
       </CopilotStep>
 
-      {latestArticle ? (
-        <View>
+      {/* The card needs an article; the way into the library does not.
+          Both used to live inside this conditional, so a failed or empty
+          `/api/articles/recent` took the only route to sixty articles down
+          with it - the reachability failure this repo keeps finding, one
+          level down from a screen nothing navigates to. */}
+      <View>
+        {latestArticle ? (
           <ArticleCard
             article={latestArticle}
             onPress={() =>
               navigation.navigate("ArticleDetail", { articleId: latestArticle._id })
             }
           />
-          <Button
-            testID="home-all-articles"
-            title="View all articles"
-            variant="soft"
-            onPress={() => navigation.navigate("Articles")}
-            style={tailwind("mt-sm")}
-          />
-        </View>
-      ) : null}
+        ) : null}
+        <Button
+          testID="home-all-articles"
+          title="View all articles"
+          variant="soft"
+          onPress={() => navigation.navigate("Articles")}
+          style={tailwind("mt-sm")}
+        />
+      </View>
 
       {showMatchingAlgorithmPopup && (
         <MatchingAlgorithmPopup

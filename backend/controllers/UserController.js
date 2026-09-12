@@ -276,6 +276,17 @@ const UserController = {
       // Optional on the wire so builds from before the field keep working; a
       // profile without one is let in, which is the rule for rows that predate
       // a field. A ZIP that is sent has to be one, or the fence learns nothing.
+      // The Terms are a contract with an adult. Every new profile - email,
+      // phone, Apple, Google - passes through CreateProfile, which asks; a
+      // client that does not send the answer does not get an account, and the
+      // answer is dated so there is a record of when it was given.
+      if (req.body.acceptedTerms !== true) {
+        return res.status(400).json({
+          message: "Confirm that you are 18 or older and agree to the Terms of Service.",
+          field: "acceptedTerms",
+        });
+      }
+
       const zip = req.body.zip == null || req.body.zip === "" ? undefined : String(req.body.zip).trim();
       if (zip !== undefined && !regions.isValidZip(zip)) {
         return res.status(400).json({ message: "Enter a five-digit ZIP code.", field: "zip" });
@@ -294,6 +305,7 @@ const UserController = {
         friendsList: [],
         subscribed: false,
         verified: req.firebaseUser.email_verified ?? false,
+        termsAcceptedAt: new Date(),
         slug: req.body.slug,
       });
 

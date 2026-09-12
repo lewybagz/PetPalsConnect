@@ -2,6 +2,7 @@ const GroupChat = require("../models/GroupChat");
 const Pet = require("../models/Pet");
 const Media = require("../models/Media");
 const Message = require("../models/Message");
+const { refuseBlocked } = require("../services/contentFilter");
 const {
   notify,
   fetchGroupParticipants,
@@ -108,6 +109,9 @@ const GroupChatController = {
     if (!body && !contentImage) {
       return res.status(400).json({ message: "A message needs text or an image" });
     }
+    // Apple 1.2: filter objectionable material at the write, not only after a
+    // report. A refusal says what happened; a masked word would still say it.
+    if (refuseBlocked(res, body)) return;
 
     try {
       const groupChat = await GroupChat.findOne({

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Image, TextInput, View } from "react-native";
 import * as Location from "expo-location";
+import { requestLocationPermission } from "../../services/location";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
@@ -159,7 +160,7 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
         const preferences = await fetchUserPreferences(profile?._id);
         const range = preferences?.playdateRange ?? DEFAULT_RANGE_MILES;
 
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        const status = await requestLocationPermission();
 
         // Without permission we can still list places, just not nearest-first.
         let coords = {};

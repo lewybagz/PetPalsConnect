@@ -1,4 +1,5 @@
 const Review = require("../models/Review");
+const { refuseBlocked } = require("../services/contentFilter");
 const Pet = require("../models/Pet");
 
 const ReviewController = {
@@ -92,6 +93,10 @@ const ReviewController = {
   },
 
   async createReview(req, res) {
+    // A review is read by the person reviewed and by strangers; same filter
+    // as a message (Apple 1.2).
+    if (refuseBlocked(res, req.body.comment)) return;
+
     const review = new Review({
       comment: req.body.comment,
       date: req.body.date,

@@ -40,6 +40,26 @@ describe("HomeScreen", () => {
     await waitFor(() => expect(screen.getByTestId("shortcut-Profile")).toBeTruthy());
   });
 
+  it("keeps a way into the articles when there is no article to feature", async () => {
+    /**
+     * The regression this guards: the "View all articles" button used to live
+     * inside `{latestArticle ? ... : null}`, so an empty or failed
+     * `/api/articles/recent` hid the only route to a sixty-article corpus.
+     * The card needs an article; the way into the library does not.
+     */
+    api.get.mockImplementation((url) => {
+      if (url === "/api/pets/latest") return Promise.resolve({ data: [] });
+      if (url === "/api/favorites") return Promise.resolve({ data: [] });
+      // Exactly what the server answers when nothing is published yet.
+      if (url === "/api/articles/recent") return Promise.resolve({ data: null });
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+
+    render(<HomeScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("home-all-articles")).toBeTruthy());
+  });
+
   it("asks for favourites by token, not by an id in the URL", async () => {
     respondWith();
     render(<HomeScreen navigation={navigation} route={route} />);

@@ -15,6 +15,8 @@ import {
   markDone,
   removeHealthRecord,
   repeats,
+  needsLabel,
+  LABEL_FIELDS,
 } from "../../api/health";
 import { addPetPhoto } from "../../services/photos";
 import { useTailwind } from "../../styles/tailwind";
@@ -160,13 +162,14 @@ const PetHealthScreen = ({ route, navigation }) => {
 
   const category = categoryOf(kind);
   const repeating = repeats(kind);
+  const labelled = needsLabel(kind);
 
   const chooseKind = (next) => {
     setKind(next);
     // A repeating kind starts with the common cycle filled in; the owner
     // changes it rather than invents it.
     setIntervalDays(repeats(next) ? String(DEFAULT_INTERVALS[next] ?? "") : "");
-    if (categoryOf(next) !== "medication") setLabel("");
+    if (!needsLabel(next)) setLabel("");
   };
 
   const attachCertificate = async () => {
@@ -192,8 +195,8 @@ const PetHealthScreen = ({ route, navigation }) => {
       toast.show("Enter how many days between doses, 1 to 730.");
       return;
     }
-    if (category === "medication" && !label.trim()) {
-      toast.show("Give the medication a name.");
+    if (labelled && !label.trim()) {
+      toast.show(`Add the ${(LABEL_FIELDS[kind]?.label ?? "name").toLowerCase()}.`);
       return;
     }
     if (hasExpiry && expiresAt <= administeredAt) {
@@ -216,11 +219,11 @@ const PetHealthScreen = ({ route, navigation }) => {
         administeredAt: administeredAt.toISOString(),
         expiresAt: due ? due.toISOString() : undefined,
         intervalDays: repeating ? interval : undefined,
-        label: category === "medication" ? label.trim() : undefined,
+        label: labelled ? label.trim() : undefined,
         certificatePhoto: certificatePhoto ?? undefined,
         notes: notes.trim() || undefined,
       });
-      toast.success(`${category === "medication" ? label.trim() : KIND_LABELS[kind]} recorded`);
+      toast.success(`${labelled ? label.trim() : KIND_LABELS[kind]} recorded`);
       setCertificatePhoto(null);
       setNotes("");
       setLabel("");
@@ -373,22 +376,34 @@ const PetHealthScreen = ({ route, navigation }) => {
           </View>
         </SettingsRow>
 
-        {category === "medication" ? (
-          <SettingsRow label="Name" description="Just the name. What it's for and how much stays with your vet.">
+        {labelled ? (
+          <SettingsRow
+            label={LABEL_FIELDS[kind]?.label ?? "Name"}
+            description={LABEL_FIELDS[kind]?.description}
+          >
             <TextInput
               testID="health-label"
               value={label}
               onChangeText={setLabel}
-              placeholder="e.g. Apoquel"
+              placeholder={LABEL_FIELDS[kind]?.placeholder}
               placeholderTextColor={tokens.textFaint}
               style={tailwind("border border-border rounded-card p-md text-text")}
               maxLength={60}
+              autoCapitalize={category === "identification" ? "characters" : "sentences"}
             />
           </SettingsRow>
         ) : null}
 
         <SettingsRow
-          label={repeating ? "Last given" : category === "visit" ? "Visited on" : "Given on"}
+          label={
+            repeating
+              ? "Last given"
+              : category === "visit"
+                ? "Visited on"
+                : category === "identification"
+                  ? "Registered on"
+                  : "Given on"
+          }
           description={category === "vaccine" ? "The date on the certificate." : undefined}
         >
           <View testID="health-given">

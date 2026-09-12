@@ -36,6 +36,21 @@ const KIND_CATEGORIES = {
   heartworm: "prevention",
   vetVisit: "visit",
   medication: "medication",
+  /**
+   * What gets a pet home again. Only 45% of US pets are microchipped and only
+   * about 60% of those chips are registered to a current address (2025
+   * registration survey), and a chip nobody can look up is a chip that does
+   * nothing - a microchipped dog is returned about 52% of the time against
+   * roughly 2% without one (AAHA).
+   *
+   * These are the same shape as a medication - a number and a date - so they
+   * are records here rather than fields on `Pet`: one screen, one ownership
+   * rule, one delete cascade. A chip does not expire, so `identification`
+   * carries no interval and raises no reminder; a licence does, and keeps
+   * `expiresAt` like any other dated record.
+   */
+  microchip: "identification",
+  licence: "identification",
 };
 
 const KINDS = Object.keys(KIND_CATEGORIES);

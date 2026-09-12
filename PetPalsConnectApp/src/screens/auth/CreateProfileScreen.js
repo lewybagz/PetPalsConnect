@@ -9,11 +9,14 @@ import {
   Text,
   TextInput,
   View,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
 import { OnboardingProgress } from "../../components/ui";
+import CheckBox from "../../components/CheckBox";
+import { PRIVACY_URL, TERMS_URL } from "../../config/legal";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import useUsernameAvailability from "../../hooks/useUsernameAvailability";
 import { describeApiError } from "../../utils/authErrors";
@@ -46,6 +49,10 @@ export default function CreateProfileScreen() {
   const [zip, setZip] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  // The one thing the Terms depend on. Every new profile passes through here
+  // whichever way they signed in, so this is where it is asked; the server
+  // refuses a profile that does not answer it.
+  const [agreed, setAgreed] = useState(false);
 
   const availability = useUsernameAvailability(username);
 
@@ -53,6 +60,7 @@ export default function CreateProfileScreen() {
 
   const canSubmit =
     !submitting &&
+    agreed &&
     zipValid &&
     username.trim().length >= 3 &&
     availability.status !== "unavailable" &&
@@ -62,7 +70,7 @@ export default function CreateProfileScreen() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await createProfile({ username: username.trim(), zip });
+      await createProfile({ username: username.trim(), zip, acceptedTerms: true });
       // No navigation call: creating the profile flips the session to "ready"
       // and RootNavigator swaps in the app tree.
     } catch (error) {
@@ -186,6 +194,27 @@ export default function CreateProfileScreen() {
         <Text style={tailwind("text-sm mb-6 text-textMuted")}>
           So we can show dogs near you. PetPals is opening one area at a time.
         </Text>
+
+        <View style={tailwind("flex-row items-start mb-6")}>
+          <CheckBox testID="accept-terms" checked={agreed} onPress={() => setAgreed((v) => !v)} />
+          <Text style={tailwind("flex-1 ml-2 text-sm text-text")}>
+            I am 18 or older and I agree to the{" "}
+            <Text
+              style={tailwind("text-danger")}
+              onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}
+            >
+              Terms of Service
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={tailwind("text-danger")}
+              onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}
+            >
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+        </View>
 
         {submitError && (
           <Text style={tailwind("text-danger text-center mb-4")}>{submitError}</Text>

@@ -196,6 +196,32 @@ Both stores use the bundle identifier `com.petpalsconnect.app`.
       `<project-id>.firebasestorage.app`, so account deletion can empty the
       account's photo folders
 
+## Operating the legal commitments
+
+Two documents make promises that a mailbox has to keep. Set these up before
+the listing goes live; neither is code.
+
+- **Privacy requests** (access, correction, deletion, portability) arrive at
+  contact@petpalsconnectapp.com. The policy promises an answer within **45
+  days** (extendable once by 45 with notice) and an appeal reviewed by a
+  different person within 45 days. Filter: subject or body contains "delete",
+  "my data", "access request" or "privacy" → label `privacy-request`, star,
+  and a calendar reminder at day 30. Identity check: reply to the account's
+  email or ask them to confirm from inside the app; never act on a request
+  from a different address.
+- **Arbitration opt-outs** arrive with subject "Arbitration opt-out" within
+  **30 days** of the account's creation (`User.termsAcceptedAt`). Filter:
+  subject contains "Arbitration opt-out" → label `arbitration-opt-out`; keep
+  the email and note the account email or phone in a spreadsheet. These are
+  the accounts that can sue in court; the list is what proves who did and did
+  not opt out.
+- **DMCA notices** → label `dmca`; remove or disable the material promptly,
+  notify the user who posted it, accept counter-notices, and record repeat
+  infringers against the account.
+- **Deletion by email** (from `docs/delete-account.html`) → verify the sender
+  is the account holder, then delete the account through the admin path or by
+  running the same cascade as `DELETE /api/users/me`; reply within 30 days.
+
 ## Security
 
 Credentials were committed to this repository while it was public. Removing the

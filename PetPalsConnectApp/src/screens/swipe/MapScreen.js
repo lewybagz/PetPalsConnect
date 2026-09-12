@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
+import { requestLocationPermission } from "../../services/location";
 import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
@@ -75,7 +76,9 @@ const MapScreen = ({ navigation }) => {
     let coords = null;
 
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      // Explains that other users will see the dog's approximate position
+      // before the OS asks - Play's prominent-disclosure rule.
+      const status = await requestLocationPermission();
       setPermission(status);
 
       if (status === "granted") {

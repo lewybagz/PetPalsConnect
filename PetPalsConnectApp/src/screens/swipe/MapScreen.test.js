@@ -36,6 +36,15 @@ jest.mock("expo-location", () => ({
   requestForegroundPermissionsAsync: jest.fn(),
   getCurrentPositionAsync: jest.fn(),
 }));
+// The disclosure sheet is tested in services/location.test.js; here the
+// permission answer is whatever the OS mock says.
+jest.mock("../../services/location", () => ({
+  requestLocationPermission: () =>
+    require("expo-location")
+      .requestForegroundPermissionsAsync()
+      .then((result) => result.status),
+}));
+
 
 /**
  * The map, which had never rendered a marker.

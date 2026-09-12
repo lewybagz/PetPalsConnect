@@ -38,13 +38,20 @@ const HealthRecordSchema = new Schema({
    * says "as your vet prescribed".
    */
   intervalDays: { type: Number, min: 1, max: 730 },
-  /** A medication's name. There is deliberately no field for how much. */
+  /**
+   * A medication's name, or a chip or tag number. There is deliberately no
+   * field for how much of a medication.
+   *
+   * Required for the kinds where the record is meaningless without it: a
+   * medication nobody named, or a microchip record with no number, is a row
+   * that cannot answer the question it was created to answer.
+   */
   label: {
     type: String,
     maxlength: 60,
     trim: true,
-    required: function medicationNeedsAName() {
-      return this.kind === "medication";
+    required: function labelIsTheRecord() {
+      return ["medication", "microchip", "licence"].includes(this.kind);
     },
   },
   notes: { type: String, maxlength: 500 },

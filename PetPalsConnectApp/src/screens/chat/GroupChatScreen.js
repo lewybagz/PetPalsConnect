@@ -184,7 +184,11 @@ const GroupChatScreen = ({ route, navigation }) => {
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error("Couldn't send that message.");
+      toast.error(
+        error.response?.status === 422 && error.response.data?.message
+          ? error.response.data.message
+          : "Couldn't send that message."
+      );
     } finally {
       setIsLoading(false);
     }

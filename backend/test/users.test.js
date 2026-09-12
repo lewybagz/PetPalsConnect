@@ -26,7 +26,7 @@ test("signup creates a Mongo profile linked to the Firebase uid", async () => {
   const res = await request(app)
     .post("/api/users")
     .set(...auth("new-signup"))
-    .send({ username: "petlover" });
+    .send({ acceptedTerms: true, username: "petlover" });
 
   assert.equal(res.status, 201);
   assert.equal(res.body.firebaseUid, "new-signup");
@@ -38,7 +38,7 @@ test("signup never stores a password, even if one is sent", async () => {
   const res = await request(app)
     .post("/api/users")
     .set(...auth("pw-attempt"))
-    .send({ username: "nopw", password: "hunter2" });
+    .send({ acceptedTerms: true, username: "nopw", password: "hunter2" });
 
   assert.equal(res.status, 201);
   assert.equal(res.body.password, undefined);
@@ -52,7 +52,7 @@ test("signup takes identity from the token, not the request body", async () => {
   const res = await request(app)
     .post("/api/users")
     .set(...auth("real-user"))
-    .send({
+    .send({ acceptedTerms: true,
       username: "impostor",
       firebaseUid: "someone-elses-uid",
       email: "victim@example.test",
@@ -69,13 +69,13 @@ test("signup is idempotent - retrying returns the existing profile", async () =>
   const first = await request(app)
     .post("/api/users")
     .set(...header)
-    .send({ username: "retry" });
+    .send({ acceptedTerms: true, username: "retry" });
   assert.equal(first.status, 201);
 
   const second = await request(app)
     .post("/api/users")
     .set(...header)
-    .send({ username: "retry" });
+    .send({ acceptedTerms: true, username: "retry" });
 
   assert.equal(second.status, 200);
   assert.equal(second.body._id, first.body._id);
@@ -92,7 +92,7 @@ test("a duplicate username is reported as a conflict, not a 500", async () => {
   const res = await request(app)
     .post("/api/users")
     .set(...auth("second-owner"))
-    .send({ username: "taken" });
+    .send({ acceptedTerms: true, username: "taken" });
 
   assert.equal(res.status, 409);
 });
@@ -164,13 +164,13 @@ test("usernames are unique case-insensitively", async () => {
   await request(app)
     .post("/api/users")
     .set(...auth("first-casing"))
-    .send({ username: "PetLover" })
+    .send({ acceptedTerms: true, username: "PetLover" })
     .expect(201);
 
   const res = await request(app)
     .post("/api/users")
     .set(...auth("second-casing"))
-    .send({ username: "petlover" });
+    .send({ acceptedTerms: true, username: "petlover" });
 
   assert.equal(res.status, 409);
   assert.equal(res.body.field, "username");
@@ -180,7 +180,7 @@ test("the display casing a user chose is preserved", async () => {
   const res = await request(app)
     .post("/api/users")
     .set(...auth("casing-kept"))
-    .send({ username: "PetLover" });
+    .send({ acceptedTerms: true, username: "PetLover" });
 
   assert.equal(res.body.username, "PetLover");
   assert.equal(res.body.usernameLower, "petlover");
@@ -191,7 +191,7 @@ test("reserved usernames are refused", async () => {
     const res = await request(app)
       .post("/api/users")
       .set(...auth(`reserved-${reserved}`))
-      .send({ username: reserved });
+      .send({ acceptedTerms: true, username: reserved });
 
     assert.equal(res.status, 400, `expected ${reserved} to be refused`);
     assert.equal(res.body.field, "username");
@@ -211,11 +211,33 @@ test("malformed usernames are refused with a readable reason", async () => {
     const res = await request(app)
       .post("/api/users")
       .set(...auth(`bad-${candidate.length}-${candidate[0]}`))
-      .send({ username: candidate });
+      .send({ acceptedTerms: true, username: candidate });
 
     assert.equal(res.status, 400);
     assert.match(res.body.message, pattern);
   }
+});
+
+test("signup without confirming age and terms is refused", async () => {
+  const res = await request(app)
+    .post("/api/users")
+    .set(...auth("no-terms"))
+    .send({ username: "noterms" });
+
+  assert.equal(res.status, 400);
+  assert.equal(res.body.field, "acceptedTerms");
+  assert.equal(await User.countDocuments({ firebaseUid: "no-terms" }), 0);
+});
+
+test("signup records when the terms were accepted", async () => {
+  await request(app)
+    .post("/api/users")
+    .set(...auth("with-terms"))
+    .send({ username: "withterms", acceptedTerms: true })
+    .expect(201);
+
+  const stored = await User.findOne({ firebaseUid: "with-terms" }).lean();
+  assert.ok(stored.termsAcceptedAt instanceof Date);
 });
 
 test("signup with no username is refused rather than saving a broken profile", async () => {
@@ -275,7 +297,7 @@ test("availability agrees with what signup will accept", async () => {
     const created = await request(app)
       .post("/api/users")
       .set(...auth(`create-${candidate}`))
-      .send({ username: candidate });
+      .send({ acceptedTerms: true, username: candidate });
 
     const signupAccepted = created.status === 201;
     assert.equal(
@@ -315,7 +337,7 @@ test("deletion frees the username for someone else", async () => {
   await request(app)
     .post("/api/users")
     .set(...auth("original-owner"))
-    .send({ username: "recycled" })
+    .send({ acceptedTerms: true, username: "recycled" })
     .expect(201);
 
   await request(app)
@@ -326,7 +348,7 @@ test("deletion frees the username for someone else", async () => {
   const res = await request(app)
     .post("/api/users")
     .set(...auth("new-owner"))
-    .send({ username: "recycled" });
+    .send({ acceptedTerms: true, username: "recycled" });
 
   assert.equal(res.status, 201);
 });

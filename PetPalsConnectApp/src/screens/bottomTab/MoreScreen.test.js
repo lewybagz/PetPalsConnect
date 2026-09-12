@@ -91,6 +91,10 @@ const respondWith = ({
           categories: ["food", "supplies"],
           placeCategories: ["vet", "petStore", "groomer", "boarding"],
           outCategories: ["patio", "hotel", "trail"],
+          destinations: [
+            { id: "phoenix", name: "Phoenix", region: "AZ", latitude: 33.4484, longitude: -112.074 },
+            { id: "tucson", name: "Tucson", region: "AZ", latitude: 32.2226, longitude: -110.9747 },
+          ],
           emergency: EMERGENCY,
           insurance,
           pets,
@@ -133,6 +137,109 @@ describe("the care hub", () => {
 
     await waitFor(() => expect(screen.getByTestId("hub-emergency")).toBeTruthy());
     expect(screen.getByTestId("hub-loading")).toBeTruthy();
+  });
+
+  it("puts reading for this pet beside its picks", async () => {
+    respondWith({
+      pets: [
+        dogPicks({
+          articles: [
+            { _id: "art-1", title: "How to read dog play", summary: "Bouncy and lopsided." },
+            { _id: "art-2", title: "Dog park etiquette", summary: "When to leave." },
+          ],
+        }),
+      ],
+    });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("hub-reading")).toBeTruthy());
+    expect(screen.getByText("READING FOR REX")).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId("hub-article-art-1"));
+    expect(navigation.navigate).toHaveBeenCalledWith("ArticleDetail", { articleId: "art-1" });
+  });
+
+  it("offers the whole library as well as the three picked for the pet", async () => {
+    respondWith({
+      pets: [dogPicks({ articles: [{ _id: "art-1", title: "A dog article", summary: "Yes." }] })],
+    });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    const all = await waitFor(() => screen.getByTestId("hub-all-articles"));
+    fireEvent.press(all);
+
+    expect(navigation.navigate).toHaveBeenCalledWith("Articles");
+  });
+
+  it("says nothing about reading when there is nothing to read", async () => {
+    // An empty shelf is not an error, and an empty heading is worse than none.
+    respondWith({ pets: [dogPicks({ articles: [] })] });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("hub-picks")).toBeTruthy());
+    expect(screen.queryByTestId("hub-reading")).toBeNull();
+  });
+
+  it("offers what to do about a missing pet before anything has loaded", async () => {
+    api.get.mockReturnValue(new Promise(() => {}));
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    const link = await waitFor(() => screen.getByTestId("hub-lost-pet"));
+    fireEvent.press(link);
+
+    expect(navigation.navigate).toHaveBeenCalledWith("LostPet");
+  });
+
+  it("offers the poison lookup before anything has loaded", async () => {
+    // Same reasoning as the numbers it sits with: the lookup is cached and
+    // answers offline, so it must not be behind the picks request.
+    api.get.mockReturnValue(new Promise(() => {}));
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    const link = await waitFor(() => screen.getByTestId("hub-toxin-lookup"));
+    fireEvent.press(link);
+
+    expect(navigation.navigate).toHaveBeenCalledWith("ToxinLookup");
+  });
+
+  it("looks somewhere you are not when a destination is chosen", async () => {
+    respondWith({ pets: [dogPicks()] });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("hub-destinations")).toBeTruthy());
+    api.get.mockClear();
+
+    fireEvent.press(screen.getByTestId("hub-destination-tucson"));
+
+    await waitFor(() => {
+      const call = api.get.mock.calls.find(([url]) => url === "/api/locations/care");
+      expect(call?.[1]?.params?.lat).toBeCloseTo(32.2226);
+    });
+
+    // And the device position is not what was asked about.
+    const call = api.get.mock.calls.find(([url]) => url === "/api/locations/care");
+    expect(call[1].params.lat).not.toBeCloseTo(37.76);
+  });
+
+  it("goes back to where you are standing", async () => {
+    respondWith({ pets: [dogPicks()] });
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => expect(screen.getByTestId("hub-destinations")).toBeTruthy());
+    fireEvent.press(screen.getByTestId("hub-destination-tucson"));
+    await waitFor(() =>
+      expect(
+        api.get.mock.calls.some(([url, config]) => url === "/api/locations/care" && config?.params?.lat === 32.2226)
+      ).toBe(true)
+    );
+
+    api.get.mockClear();
+    fireEvent.press(screen.getByTestId("hub-destination-here"));
+
+    await waitFor(() => {
+      const call = api.get.mock.calls.find(([url]) => url === "/api/locations/care");
+      expect(call?.[1]?.params?.lat).toBeCloseTo(37.76);
+    });
   });
 
   it("dials a number rather than only printing it", async () => {

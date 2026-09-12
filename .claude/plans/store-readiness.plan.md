@@ -179,7 +179,13 @@ Files: [ChatScreen.js](../../PetPalsConnectApp/src/screens/bottomTab/ChatScreen.
 | 3b.5 | `/api/petmatches/map` rounds other users' coordinates to ~1 km; `map.test.js` asserts the exact value never leaves the server | done |
 | 3b.6 | Plan picker carries the renewal terms and links to Terms/Privacy (Apple 3.1.2, Play subscriptions policy) | done |
 
-Still on you: fill the placeholders, register the DMCA agent, enable Pages, paste the URLs into both consoles, and have a lawyer read both documents - see the README checklist.
+| 3b.7 | Pre-permission location disclosure (`src/services/location.js`), used by Map and SchedulePlaydate | done |
+| 3b.8 | Language filter on messages, group messages and reviews (`services/contentFilter.js`, 422 `CONTENT_BLOCKED`) | done |
+| 3b.9 | 18+ / Terms checkbox on CreateProfile; `createUser` requires `acceptedTerms` and stamps `termsAcceptedAt` | done |
+| 3b.10 | Nightly retention job for reports and support messages (`services/retention.js`, 3 years) | done |
+| 3b.11 | Mailbox rules and clocks documented in README (privacy requests 45 d, arbitration opt-out 30 d, DMCA, email deletion) - manual | done |
+
+Still on you: set up the mailbox filters described in the README, fill the placeholders, register the DMCA agent, enable Pages, paste the URLs into both consoles, and have a lawyer read both documents - see the README checklist.
 
 ## Env vars and dashboard prerequisites
 
