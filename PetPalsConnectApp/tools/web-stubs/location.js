@@ -9,9 +9,16 @@
  * Refusing is the honest answer: the browser genuinely has no position here,
  * and it exercises the path that matters most anyway - the pins come from the
  * server's record of where the caller last was, so only the blue dot is lost.
+ *
+ * Refused *permanently* (`canAskAgain: false`), because `services/location.js`
+ * shows its pre-permission disclosure - an Alert awaiting a tap - to anybody
+ * who has not answered yet, and nobody taps in a headless browser. A "denied"
+ * with no `canAskAgain` read as "not answered yet", and the map board sat on
+ * "Finding what's near you…" forever.
  */
-export const requestForegroundPermissionsAsync = async () => ({ status: "denied" });
-export const getForegroundPermissionsAsync = async () => ({ status: "denied" });
+const refused = { status: "denied", granted: false, canAskAgain: false };
+export const requestForegroundPermissionsAsync = async () => refused;
+export const getForegroundPermissionsAsync = async () => refused;
 export const getCurrentPositionAsync = async () => {
   throw new Error("Location is not available in the gallery");
 };
