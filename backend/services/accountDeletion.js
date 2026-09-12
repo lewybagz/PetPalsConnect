@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Pet = require("../models/Pet");
 const HealthRecord = require("../models/HealthRecord");
+const WeightEntry = require("../models/WeightEntry");
 const Favorite = require("../models/Favorite");
 const Friend = require("../models/Friend");
 const FriendRequest = require("../models/FriendRequest");
@@ -46,11 +47,16 @@ const firebase = require("../config/firebase");
  *   a pattern across accounts; a report *by* it is evidence the reporter was
  *   real. Both are kept, with the account id as an opaque reference.
  * - SupportMessage: a record of what was said to us, for disputes.
+ * - Order: a paid order is a financial and tax record - the IRS's window on
+ *   sales records is six years, and state sales-tax audits reach back as far.
+ *   Kept with the account id as an opaque reference and the shipping address
+ *   Stripe collected, because a refund or a chargeback after deletion still
+ *   has to be answerable.
  *
- * ponytail: kept indefinitely. Add a scheduler job that anonymises them after
- * the retention window the policy names (three years) when there is one.
+ * `services/retention.js` removes reports and support messages after the
+ * three years the policy names and orders after seven, nightly from Server.js.
  */
-const RETAINED = ["Report", "SupportMessage"];
+const RETAINED = ["Report", "SupportMessage", "Order"];
 
 const deleteAccountData = async (user, firebaseUid) => {
   const userId = user._id;
@@ -59,6 +65,7 @@ const deleteAccountData = async (user, firebaseUid) => {
 
   // --- Things the account created, in its own name --------------------------
   await HealthRecord.deleteMany({ $or: [{ owner: userId }, { pet: petFilter }] });
+  await WeightEntry.deleteMany({ $or: [{ owner: userId }, { pet: petFilter }] });
   await Favorite.deleteMany({
     $or: [{ user: userId }, { pet: petFilter }, { content: petFilter }],
   });

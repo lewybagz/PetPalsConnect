@@ -55,6 +55,9 @@ const PUBLIC_READS = {
 const GUARDED_READS = {
   "ReportController.getReportQueue": "requireModerator",
   "ReportController.updateReportStatus": "requireModerator",
+  // The one order write that is not Stripe's: marking a parcel shipped, which
+  // also pushes to the buyer. An operator's tool until a 3PL webhook exists.
+  "StoreController.fulfilOrder": "requireModerator",
 };
 
 /**

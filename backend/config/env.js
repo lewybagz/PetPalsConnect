@@ -65,6 +65,25 @@ if (insuranceUrl && !/^https:\/\//.test(insuranceUrl)) {
   process.exit(1);
 }
 
+/**
+ * The shop's Stripe keys, both or neither.
+ *
+ * A secret key with no webhook secret would take payments the server never
+ * hears about - orders paid for and never recorded - so a half-configured shop
+ * is refused at boot the way a half-configured insurance link is. Neither set
+ * and the shop is simply closed: the catalogue lists with nothing purchasable,
+ * checkout and the webhook answer 503, and the rest of the API is unaffected.
+ */
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
+if (Boolean(stripeSecretKey) !== Boolean(stripeWebhookSecret)) {
+  console.error(
+    "\n[config] STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET must be set together: " +
+      "a shop that takes payments the server is never told about records no orders.\n"
+  );
+  process.exit(1);
+}
+
 const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   isProduction: process.env.NODE_ENV === "production",
@@ -100,6 +119,21 @@ const env = {
   },
 
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+
+  stripe: {
+    enabled: Boolean(stripeSecretKey),
+    secretKey: stripeSecretKey,
+    webhookSecret: stripeWebhookSecret,
+    // Stripe `shipping_rate` ids, comma-separated. Rates live in the dashboard
+    // so a postage change is not a deploy; empty means Checkout charges none.
+    shippingRateIds: (process.env.STRIPE_SHIPPING_RATE_IDS || "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean),
+    // Where Checkout sends the buyer back: a deep link into the app. The
+    // scheme is `app.json`'s.
+    returnUrl: (process.env.STORE_RETURN_URL || "petpalsconnect://store").replace(/\/$/, ""),
+  },
 
   insurance: {
     enabled: Boolean(insuranceUrl),

@@ -87,6 +87,11 @@ const TYPES = {
     screen: "PetHealth",
     param: "petId",
   },
+  orderShipped: {
+    title: "Your order is on its way",
+    screen: "OrderDetail",
+    param: "orderId",
+  },
   general: {
     title: "PetPals Connect",
     screen: "Notifications",
@@ -137,6 +142,7 @@ const CATEGORY_OF = {
   reviewReminder: "playdateReminders",
   vaccinationDue: "playdateReminders",
   healthDue: "playdateReminders",
+  orderShipped: "appUpdates",
   general: "appUpdates",
 };
 

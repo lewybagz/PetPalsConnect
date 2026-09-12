@@ -10,6 +10,7 @@ const env = require("./config/env");
 const db = require("./config/db");
 require("./config/firebase"); // Initialise Firebase Admin before any route needs it.
 const scheduler = require("./services/scheduler");
+const retention = require("./services/retention");
 const authenticate = require("./middleware/authenticate");
 const sanitize = require("./middleware/sanitize");
 const limits = require("./middleware/rateLimits");
@@ -33,6 +34,12 @@ app.use(
   })
 );
 app.use(morgan(env.isProduction ? "combined" : "dev"));
+
+// Stripe verifies a signature over the raw request bytes, so this has to sit
+// above `express.json()` and `sanitize`, not merely outside `authenticate` -
+// a parsed-and-reserialised body never verifies. The route reads its own raw
+// body; nothing below it ever sees the request.
+app.use("/api/stripe-webhooks", require("./routes/stripeWebhooks"));
 
 app.use(express.json({ limit: "1mb" }));
 // `extended: false` because nothing here sends nested form data, and the
@@ -84,6 +91,7 @@ const routes = {
   playdates: "playdates",
   reports: "reports",
   reviews: "reviews",
+  store: "store",
   "subscription-history": "subscriptionHistory",
   subscriptions: "subscriptions",
   supportmessages: "supportMessages",
@@ -241,6 +249,19 @@ const start = async () => {
   scheduler.start();
   auditSchemas();
   auditAuthorisation();
+
+  // The privacy policy keeps reports and support messages for three years;
+  // this is what makes "up to three years" true. Nightly, off-peak.
+  cron.schedule("30 4 * * *", async () => {
+    try {
+      const result = await retention.purgeExpired();
+      if (result.reports || result.support || result.orders) {
+        console.log("[cron] retention:", result);
+      }
+    } catch (error) {
+      console.error("[cron] retention failed:", error.message);
+    }
+  });
 
   // Refresh cached place data at 00:00 on the 1st of each month.
   cron.schedule("0 0 1 * *", async () => {
