@@ -169,6 +169,24 @@ Both stores use the bundle identifier `com.petpalsconnect.app`.
       set `EXPO_PUBLIC_REVENUECAT_IOS_KEY` / `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`
 - [ ] Add the RevenueCat webhook (`/api/revenuecat-webhooks`) with an
       Authorization header, and set `REVENUECAT_WEBHOOK_SECRET` to the same value
+- [ ] Stripe, for the shop (physical goods must not use IAP): set
+      `STRIPE_SECRET_KEY`; create one Product + Price per sku in
+      `backend/services/store/products.js` with the sku as the Price's
+      **lookup key** (the price lives in the dashboard, never in the source);
+      optional `shipping_rate` ids in `STRIPE_SHIPPING_RATE_IDS`; enable
+      Stripe Tax and register a sales-tax nexus (Arizona at minimum - Stripe
+      calculates, it does not register or file); add the webhook
+      `/api/stripe-webhooks` for `checkout.session.completed`,
+      `checkout.session.async_payment_succeeded`,
+      `checkout.session.async_payment_failed`, `charge.refunded` and
+      `charge.dispute.created`, and set `STRIPE_WEBHOOK_SECRET`
+- [ ] Choose a fulfilment partner (Printful/Printify or a 3PL), map its
+      products to the Stripe prices, and wire its shipped event to
+      `POST /api/store/orders/:id/fulfilled` (moderator-only until then); fill
+      `[FULFILMENT PARTNER]` in `docs/privacy.html`
+- [ ] Choose a collar vendor. Until then `TRACKING_VENDOR=simulator` for
+      development or unset for off; a real vendor is one module in
+      `backend/services/tracking/vendor/` and one line in its `index.js`
 - [ ] Enable the Apple sign-in provider in Firebase Authentication and the
       Sign in with Apple capability on the app id
 - [ ] Enable the Google provider in Firebase Authentication and re-download
@@ -187,8 +205,10 @@ Both stores use the bundle identifier `com.petpalsconnect.app`.
 - [ ] App Store Connect: paste https://lewybagz.github.io/PetPalsConnect/terms.html
       as the custom EULA and privacy.html as the privacy policy URL; privacy
       nutrition labels: Contact Info (email/phone), User Content (photos,
-      messages), Identifiers (user id), Location (precise, app functionality),
-      Purchases - none used for tracking
+      messages), Identifiers (user id), Location (precise, app functionality;
+      collar positions are precise and shared only with pals the user picks),
+      Purchases (subscription via IAP; goods via Stripe, card never seen) -
+      none used for tracking
 - [ ] Play Console: privacy policy URL, Data safety form matching
       `docs/privacy.html` section 2, and `delete-account.html` as the account
       deletion URL

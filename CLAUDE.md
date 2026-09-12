@@ -1396,6 +1396,115 @@ picker shows an empty state; no `REVENUECAT_WEBHOOK_SECRET` and the webhook
 answers 503. A missing key must never stop the app from opening. Real purchases
 need a development build - in Expo Go the SDK runs in preview mode.
 
+### The shop
+
+**RevenueCat sells entitlements; Stripe sells objects that ship; neither ever
+sells the other's kind of thing.** Apple 3.1.1 and Play's payments policy
+require IAP for anything that unlocks in-app content, which is why `subscribed`
+moved to RevenueCat - and Apple 3.1.3(e) and Play's physical-goods rule require
+the *opposite* for merchandise and the tracking collar: a normal processor, with
+opening a browser expressly permitted. So Stripe is back in the repo, backend
+only: no `@stripe/stripe-react-native`, no card form, no PCI scope. The app
+opens a hosted Checkout URL and the deep link returns to `OrderDetail`. A
+product must never grant an entitlement, or it is digital content sold outside
+IAP; `products.js` has no such field and `store.test.js` asserts none appears.
+
+**The catalogue is a source table, and Stripe holds the price.**
+`services/store/products.js` is a table for the reasons `picks.js` and
+`emergency.js` are - ten to twenty skus, no admin console, a price change is a
+reviewed diff. Each sku is the *lookup key* of a Price in the dashboard;
+`checkout.js` resolves sku -> Price id and hands Stripe an id and a quantity,
+never an amount. A client naming a price is the oldest e-commerce hole there
+is, and it is the first thing `store.test.js` checks. `listProducts()` and
+`findVariant()` are the seam a later admin portal moves to Mongo behind.
+
+**`syncFromEvent` in `services/store/stripeOrders.js` is the only writer of
+`Order`.** Same rule as RevenueCat: Stripe is taking the money, so Stripe is the
+truth and Mongo mirrors it. The redirect back from Checkout proves the buyer
+came back, not that they paid, so `OrderDetail` says "confirming" and polls
+`/orders/by-session/:sessionId` until the webhook has written the row - and
+gives up honestly after ninety seconds with "you don't need to buy again".
+Items are snapshotted from Stripe's own line items, not from the table, so a
+later catalogue edit cannot rewrite what somebody paid for.
+
+**The Stripe webhook mounts above `express.json()`, not merely outside
+`authenticate`.** `constructEvent` verifies a signature over the raw bytes; a
+body that has been parsed and re-serialised, or had its `$` keys stripped by
+`sanitize`, never verifies, and every delivery is a 400 with nothing saying
+why. `routes/stripeWebhooks.js` carries `express.raw` and is registered before
+the JSON parser in Server.js. Copying the RevenueCat mount position - which
+authenticates by a header and reads a parsed body - would have shipped a webhook
+that could not be delivered to.
+
+**Orders are retained on account deletion, seven years.** A paid order is a
+sales and tax record, so `Order` is in `accountDeletion.RETAINED` beside
+`Report` and `SupportMessage`, `retention.js` removes it after
+`ORDER_RETENTION_DAYS`, and `docs/privacy.html`'s retention table says so -
+that table is written from `RETAINED`, and a model added to the list without
+a row in the table makes the policy false. Fulfilment is the one status Stripe
+does not know: `POST /orders/:id/fulfilled` is moderator-guarded (in
+`GUARDED_READS`) until a 3PL webhook replaces it, and it is what raises the
+`orderShipped` push.
+
+### The tracking collar
+
+**Live tracking inverts the map's privacy rule, and `services/tracking/
+visibility.js` is the one place that decides who gets which.** Every other
+user gets the neighbourhood: `/api/petmatches/map` rounds to ~0.01deg and
+`map.test.js` asserts the exact value never leaves the server. An owner looking
+for a lost dog needs metres. Both are right because the question is *who is
+asking*: `canView(viewerId, petId)` answers true for the owner and for a friend
+with a live share, false for everyone else, and every position read goes
+through it. A refusal is a 404, never a 403. `tracking.test.js` asserts the
+discovery map's controller never imports the position service, so the two can
+never share a code path by accident.
+
+**A share is per pet, per friend, and expiring.** `TrackingShare.expiresAt` is
+required, defaults to 24 hours, is capped at a week, and carries a TTL index -
+and `canView` checks the date too, because a TTL sweep runs about once a minute
+and a minute is long enough to matter here. Only a `Friend` may be shared with,
+and a block in either direction ends a share's effect before its date does;
+`sharesFor` also drops it from both people's lists. Sharing again extends the
+one row rather than adding another.
+
+**Positions are the most sensitive data this app holds, so they expire.**
+`DevicePosition.recordedAt` carries a 30-day TTL, `owner` is denormalised
+beside `pet` and `device` so every read is scoped without a join, and account
+deletion cascades devices, positions and shares - shares in *both* directions,
+because a share *to* a deleted account would otherwise name a viewer who no
+longer exists. Nothing on the phone ever reports the pet's position: the collar
+does, so the app stays out of the background-location permission entirely.
+
+**No vendor is chosen, so the hardware boundary is one adapter per vendor.**
+`services/tracking/vendor/` holds `simulator` (a deterministic loop, so the
+feature can be built, tested and screenshotted with no hardware) and `generic`
+(HTTP ingest at `POST /api/tracking/ingest`, authenticated by a per-device
+secret handed out once at claim time and stored only as a SHA-256 hash,
+compared in constant time). `TRACKING_VENDOR` is read at call time like
+`MODERATOR_EMAILS`; unset means every tracking route answers 503 and the app
+shows nothing. What is deliberately absent is a protocol guess - no MQTT, no
+LoRa, no BLE pairing - because each is a bet on hardware that does not exist.
+The ingest route is rate-limited per serial (`limits.ingest`), not per
+address: one flooding collar behind a carrier NAT must not silence the others.
+"Wrong secret" and "no such serial" are the same 401.
+
+**Every position says how old it is, on every view.** `describeLastSeen` is on
+the tracking screen, the map callout and the selection sheet; a position older
+than `STALE_AFTER_MS` reads in the danger tone and draws faint on the map. A
+collar that stopped reporting yesterday looks exactly like one reporting now
+unless the screen says so, and that is the one mistake here that could get a
+dog lost twice. No position is an `EmptyState`, never a marker at 0,0. And the
+collar is never described as a safety device - the product page, the tracking
+screen and the Terms all say "shows where it last reported", and
+`ShopScreen.test.js` asserts the safety phrasing does not appear.
+
+**`PetTracking` is one screen for two people and is not behind
+`withRequiredPet`.** The owner sees position, trail, battery, sharing and the
+collar; a friend with a live share sees position and who shared it; a stranger
+and a pet with no collar get the same quiet "not available". A friend with no
+pet of their own can still be shown a collar somebody shared with them, which
+is why the pet gate would be wrong here.
+
 ## Verifying a change
 
 ```bash

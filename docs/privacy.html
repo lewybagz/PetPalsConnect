@@ -45,7 +45,7 @@
           <li>We collect what the app needs to work: your sign-in details, your pets' profiles and photos, your location (only with your permission), your messages and playdates, and a push-notification token for your device.</li>
           <li>We do <strong>not</strong> sell your personal information, do not show ads, and do not use advertising or analytics trackers. We do not collect your contacts, your card details or any biometric data.</li>
           <li>Other users see your pets, your username and profile photo, and - if you allow it - your pet's <em>approximate</em> location (rounded to about a kilometre). They never see your exact position.</li>
-          <li>You can delete your account, and everything it owns, in Settings or by emailing us. Safety reports and support messages are kept for up to three years; everything else goes.</li>
+          <li>You can delete your account, and everything it owns, in Settings or by emailing us. Safety reports and support messages are kept for up to three years and shop orders for seven, as tax records; everything else goes.</li>
         </ul>
       </div>
 
@@ -91,6 +91,16 @@
           <td>What you write to us in the app's Help &amp; Support form or by email, with your account's name and email.</td>
           <td>To answer you.</td>
         </tr>
+        <tr>
+          <td>Shop orders</td>
+          <td>If you buy something in the shop: what you ordered, the amounts including tax and shipping, the shipping name and address you enter on Stripe's checkout page, and the email your receipt goes to. <strong>Stripe collects your card details; we never see them.</strong></td>
+          <td>To fulfil and support your order, and because sales-tax law requires us to keep records of sales.</td>
+        </tr>
+        <tr>
+          <td>Tracking collar</td>
+          <td>If you register a PetPals tracking collar: its serial number, which of your pets wears it, and the friends you choose to share it with and for how long.</td>
+          <td>To show you where the collar last reported, and to show it to the friends you choose for the time you choose.</td>
+        </tr>
       </table>
 
       <h3>2.2 Information collected automatically</h3>
@@ -100,6 +110,11 @@
           <td><strong>Precise location</strong> (sensitive)</td>
           <td>Your device's GPS position, <em>only</em> after you grant the location permission your phone asks for. We store your most recent position and the time it was taken; each new position replaces the last. We do not collect location in the background or when the app is closed.</td>
           <td>To show dogs, parks, vets and shops near you, to filter matches by the distance you set, and to show your pet on the map to other owners - as an approximate position rounded to roughly one kilometre. You can decline or later revoke the permission in your phone's settings; the app then works without distance features.</td>
+        </tr>
+        <tr>
+          <td><strong>Collar positions</strong> (sensitive)</td>
+          <td>If you register a tracking collar, the collar - not your phone - reports its GPS position, accuracy and battery level to our servers whenever it is switched on and has signal, whether or not the app is open. We keep each position for 30 days. See section 5 for who can see them.</td>
+          <td>To show you, and the friends you share with, where the collar is and where it has recently been.</td>
         </tr>
         <tr>
           <td>Push notification token</td>
@@ -157,6 +172,14 @@
         You can block anyone; a blocked person no longer sees you and cannot
         contact you, and we never tell them they were blocked.
       </p>
+      <p>
+        <strong>Tracking collar.</strong> If you share a collar with a pal, that
+        person sees the collar's <em>exact</em> current position and its recent
+        trail on their map, until the time you chose runs out (at most a week)
+        or you stop it, whichever is first. Blocking them, or being blocked by
+        them, ends it at once. Nobody else - not matches, not other pals, not
+        the approximate map - ever sees a collar's position.
+      </p>
 
       <h3>4.2 Service providers</h3>
       <p>
@@ -180,6 +203,16 @@
           <td>RevenueCat, Inc.</td>
           <td>Validates App Store and Google Play purchases and tracks subscription status.</td>
           <td>Your internal user id, the store receipt or purchase token, device type and OS, purchase history. Not your payment details. <a href="https://www.revenuecat.com/privacy-policy">revenuecat.com/privacy-policy</a>.</td>
+        </tr>
+        <tr>
+          <td>Stripe, Inc.</td>
+          <td>Takes payment for goods bought in the shop (merchandise and the tracking collar) on a checkout page in your browser, and calculates sales tax.</td>
+          <td>Your card details (held by Stripe, never by us), your email, the shipping address you enter on Stripe's page, and what you bought. Stripe's practices: <a href="https://stripe.com/privacy">stripe.com/privacy</a>.</td>
+        </tr>
+        <tr>
+          <td><span class="todo">[FULFILMENT PARTNER, e.g. Printful]</span></td>
+          <td>Packs and ships shop orders.</td>
+          <td>Your name, shipping address and what you ordered.</td>
         </tr>
         <tr>
           <td>Apple Inc. / Google LLC (App Store, Google Play)</td>
@@ -233,6 +266,19 @@
         account or emailing us. Emergency numbers in the care hub are shown
         without any location.
       </p>
+      <p>
+        <strong>A tracking collar is different.</strong> It reports its own exact
+        position - which is usually the position of the pet wearing it, and so
+        often of whoever is with them - whenever it is switched on and has
+        signal, whether or not the app is open. Only you can see those
+        positions, plus any pal you have explicitly shared that pet with, for
+        the period you chose (up to a week); a block in either direction ends a
+        share immediately. Collar positions are never rounded and never shown to
+        anyone else, and they never appear on the approximate map. We keep each
+        reported position for 30 days and then delete it. Switch the collar off
+        or remove it in the app to stop it reporting; removing it deletes every
+        position it reported, and so does deleting your account.
+      </p>
 
       <h2>6. How long we keep information</h2>
       <table>
@@ -245,6 +291,9 @@
         <tr><td>Server logs</td><td>Up to 30 days.</td></tr>
         <tr><td>Reports you made or that were made about you</td><td>Up to three years after account deletion, referencing your former account by an internal id, so moderators can still see patterns across accounts.</td></tr>
         <tr><td>Support messages</td><td>Up to three years after account deletion.</td></tr>
+        <tr><td>Collar positions</td><td>30 days from when the collar reported them, then deleted automatically; all deleted at once when you remove the collar or delete your account.</td></tr>
+        <tr><td>Collar shares</td><td>Until the time you chose runs out or you stop the share; deleted when either account is deleted.</td></tr>
+        <tr><td>Shop orders</td><td>Seven years from the order, including after account deletion, as a sales and tax record, referencing your former account by an internal id. Stripe keeps its own transaction records under its policy.</td></tr>
         <tr><td>Subscription records</td><td>Our copy is deleted with the account. Apple, Google and RevenueCat keep transaction records under their own policies.</td></tr>
         <tr><td>Provider backups</td><td>Google Firebase removes deleted data from live and backup systems within 180 days.</td></tr>
       </table>
@@ -257,7 +306,8 @@
         account", your Firebase sign-in, and your Sign in with Apple grant if you
         used one. It cannot be undone. If you have an active subscription, cancel
         it in your App Store or Google Play settings as well; we cannot cancel it
-        for you.
+        for you. Shop orders are kept for the period in section 6 as sales
+        records; safety reports and support messages for three years.
       </p>
 
       <h2>8. Your rights</h2>
