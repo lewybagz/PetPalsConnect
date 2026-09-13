@@ -1,8 +1,19 @@
 # Spot: the assistant
 
-Status: **Phase 1 built** on `feat/store-and-tracking` (2026-09-12): todo 1
-`734e417`, todo 2 `6f6cd6f`, todo 3 `e01046f`, todo 4 `bd7d4a0`. Backend
-suite 720 green, lint and both audits clean. Phases 2 and 3 are not started.
+Status: **Phase 1 built, Phase 2 core built** on `feat/store-and-tracking`
+(2026-09-12): todo 1 `734e417`, todo 2 `6f6cd6f`, todo 3 `e01046f`, todo 4
+`bd7d4a0`, todos 5 and 6 `1e6263e`. Backend suite 720 green; app suite 751
+green plus the known pre-existing Home screen flake; lint, typecheck, the
+colour ban and both Expo bundles clean. **Todo 7 (entry points, the floating
+button, gallery boards) and Phase 3 are not started - the Spot screen is
+registered on `AppStack` but nothing navigates to it yet.**
+
+Phase 2 departures worth knowing: software-answered turns (chips, intents,
+exact toxin hits) live only on the device and are not written to the
+conversation on the server - reopening a conversation shows its model turns;
+the flag control shipped with the message component rather than waiting for
+Phase 3; and a conversation is created on the first model turn, not when the
+screen opens, so nobody accumulates empty conversations.
 Written 2026-09-12 against `a974f46`. Brief from Lewy: "the ultimate AI
 assistant for our app, his name is Spot, he should basically be god within
 the app."
@@ -593,8 +604,8 @@ job), scheduling playdates or messaging other owners on the user's behalf
 | 2 | Install SDK; client, env, health; `SpotConversation` + `SpotUsage` + `spotConsentAt` + cascade | done `6f6cd6f` |
 | 3 | Read and write tools + `blocks.js`, `readChats` setting, two-account tests per tool, contacts rule | done `e01046f` |
 | 4 | Runner, controller, routes, quota, conversation cap, photos forwarded not stored, rate limit, `spot.test.js` | done `bd7d4a0` |
-| 5 | `intents.js`, `src/api/spot.js`, types, `SpotScreen`, consent sheet, AppStack, photo attach, quota notice | pending |
-| 6 | Rich blocks + done/undo table + socket deltas | pending |
+| 5 | `intents.js`, `src/api/spot.js`, types, `SpotScreen`, consent sheet, AppStack, photo attach, quota notice | done `1e6263e` |
+| 6 | Rich blocks + done/undo table + socket deltas | done `1e6263e` |
 | 7 | Entry points + `AskSpotButton`, 503 hiding, chats-setting row, gallery boards, screenshots | pending |
 | 8 | Flagging + moderator read, policy texts pasted, run `spotEval.js` | pending |
 
