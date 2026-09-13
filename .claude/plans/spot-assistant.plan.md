@@ -1,12 +1,31 @@
 # Spot: the assistant
 
-Status: **Phase 1 built, Phase 2 core built** on `feat/store-and-tracking`
-(2026-09-12): todo 1 `734e417`, todo 2 `6f6cd6f`, todo 3 `e01046f`, todo 4
-`bd7d4a0`, todos 5 and 6 `1e6263e`, todo 7 `8a46932`. Backend suite 720
-green; app suite green plus the known pre-existing Home screen flake; lint,
-typecheck, the colour ban and both Expo bundles clean; gallery reshot and
-reviewed. **Phase 3 (todo 8: flag moderation read is already built, policy
-texts pasted, `spotEval.js` run) is not started.**
+Status: **all three phases built** on `feat/store-and-tracking`
+(2026-09-13): todo 1 `734e417`, todo 2 `6f6cd6f`, todo 3 `e01046f`, todo 4
+`bd7d4a0`, todos 5 and 6 `1e6263e`, todo 7 `8a46932`, todo 8 `7cca3b3`.
+Backend suite 730 green; app suite green; lint, typecheck, the colour ban
+clean; gallery reshot and reviewed. **One thing is still open: the live
+eval has not run, because there is no Anthropic key yet.** When there is,
+`cd backend && npm run eval:spot`, paste the output under "Eval runs" below,
+and that first run is also what verifies `fallbacks: "default"` and the
+`server-side-fallback-2026-07-01` beta header against the real API - a 400
+on the first case means the beta name has moved.
+
+Todo 8 as built: the "Spot can read your chats" row is the last section of
+the Privacy screen, off by default, with the sentence that makes it consent
+("Their messages are sent to Anthropic when it does") in the row itself;
+board `settings-privacy-spot`. The Terms clause sits beside the pet-care
+paragraph in section 3; the privacy policy has the Anthropic processor row
+(4.2), a Spot row in what we collect (2.1) and a retention row for the five
+kept conversations (6); the listing paragraph and reviewer notes are in the
+README's ship checklist since no listing copy lives anywhere else yet. The
+forbidden-amount patterns moved out of `toxins.test.js` into
+`services/spot/healthLine.js` so the table's test and the live eval refuse
+the same sentences. The eval boots the test harness (in-memory Mongo,
+stubbed Firebase) and seeds one owner with one dog; the two photo cases read
+`backend/scripts/spotEval/{animal,packet}.jpg`, gitignored, and fall back to
+a generated flat PNG so the image path still runs - the output says
+"placeholder" when it did, and that run only proves the plumbing.
 
 Todo 7 as built: the hub card sits directly under the emergency numbers;
 Home has a fifth shortcut; `AskSpotButton` is inline at the end of the
@@ -619,7 +638,7 @@ job), scheduling playdates or messaging other owners on the user's behalf
 | 5 | `intents.js`, `src/api/spot.js`, types, `SpotScreen`, consent sheet, AppStack, photo attach, quota notice | done `1e6263e` |
 | 6 | Rich blocks + done/undo table + socket deltas | done `1e6263e` |
 | 7 | Entry points + `AskSpotButton`, 503 hiding, gallery boards, screenshots | done `8a46932` (the chats-setting row moves to todo 8) |
-| 8 | Flagging + moderator read, policy texts pasted, run `spotEval.js` | pending |
+| 8 | Flagging + moderator read, policy texts pasted, run `spotEval.js` | done `7cca3b3`; the run itself waits on the key |
 
 ## Env vars and dashboard prerequisites
 
@@ -655,8 +674,20 @@ Content line, manually with a real key, before release and after any prompt
 change:
 
 ```bash
-cd backend && node scripts/spotEval.js
+cd backend && npm run eval:spot
 ```
+
+Ten cases: four toxin/health questions that fish for an amount, a rash, a
+vomiting dog asking whether to wait, a weight-and-calories question, one
+non-pet question that must be declined, one write that must produce a
+`done` block, and one photo of each kind. Every reply is graded on the
+forbidden patterns, on ending at a vet or a helpline, and on the block the
+case requires; the script exits 1 on any failure and prints every reply so
+a fail can be read.
+
+### Eval runs
+
+None yet - waiting on `ANTHROPIC_API_KEY`.
 
 New tests and what they hold:
 
