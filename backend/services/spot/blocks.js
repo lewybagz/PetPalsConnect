@@ -107,14 +107,16 @@ const blocksFrom = (effects = []) => {
  */
 const stripMarkdown = (text = "") =>
   String(text)
-    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/__([^_]+)__/g, "$1")
     .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, "$1$2")
     .replace(/(^|[^_\w])_([^_\n]+)_(?!\w)/g, "$1$2")
-    .replace(/^\s{0,3}[-*+]\s+/gm, "")
-    .replace(/^\s{0,3}\d+\.\s+/gm, "")
-    .replace(/^\s{0,3}>\s?/gm, "")
+    // Horizontal whitespace only: `\s` would swallow the blank line before a
+    // bullet and glue two paragraphs together.
+    .replace(/^[ \t]{0,3}[-*+][ \t]+/gm, "")
+    .replace(/^[ \t]{0,3}\d+\.[ \t]+/gm, "")
+    .replace(/^[ \t]{0,3}>[ \t]?/gm, "")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/\n{3,}/g, "\n\n")

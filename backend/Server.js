@@ -98,6 +98,7 @@ const routes = {
   playdates: "playdates",
   reports: "reports",
   reviews: "reviews",
+  spot: "spot",
   store: "store",
   "subscription-history": "subscriptionHistory",
   subscriptions: "subscriptions",
@@ -123,6 +124,9 @@ const TIGHTER = {
   chats: limits.outreach,
   groupchats: limits.outreach,
   playdates: limits.outreach,
+  // Each message is a paid model call; the quota is the product limit and
+  // this is the ceiling under it.
+  spot: limits.spot,
 };
 
 for (const [mountPath, moduleName] of Object.entries(routes)) {

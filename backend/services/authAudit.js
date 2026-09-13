@@ -58,6 +58,8 @@ const GUARDED_READS = {
   // The one order write that is not Stripe's: marking a parcel shipped, which
   // also pushes to the buyer. An operator's tool until a 3PL webhook exists.
   "StoreController.fulfilOrder": "requireModerator",
+  // Answers people flagged as wrong or harmful, across accounts, for review.
+  "SpotController.getFlagged": "requireModerator",
 };
 
 /**

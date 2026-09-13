@@ -143,6 +143,18 @@ const ingest = rateLimit({
     res.status(429).json({ message: "Reporting too often.", code: "RATE_LIMITED" }),
 });
 
+/**
+ * Talking to Spot. The daily quota (`services/spot/quota.js`) is the product
+ * limit; this is the abuse ceiling underneath it, so a script cannot spend a
+ * whole day's premium allowance in a second. Reads are the screen opening.
+ */
+const spot = make({
+  windowMs: 10 * 60 * 1000,
+  limit: 30,
+  skip: (req) => req.method === "GET",
+  message: "You're doing that too quickly. Give it a moment.",
+});
+
 module.exports = {
   setEnabled,
   general,
@@ -151,5 +163,6 @@ module.exports = {
   reporting,
   outreach,
   ingest,
+  spot,
   byUserOrIp,
 };
