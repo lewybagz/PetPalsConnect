@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
 import { useTokens } from "../../context/AppThemeContext";
+import { useSpotEnabled } from "../../hooks/useSpotEnabled";
 import { space } from "../../styles/tokens";
 import { Button, Screen, Skeleton, Text } from "../../components/ui";
 import {
@@ -68,6 +69,9 @@ const SHORTCUTS = [
   { label: "Settings", route: "Settings", icon: "settings-outline" },
 ];
 
+/** Only when the server has a key for it; hidden otherwise, like the plan picker. */
+const SPOT_SHORTCUT = { label: "Ask Spot", route: "Spot", icon: "sparkles-outline" };
+
 /** First photo, or null - `photos` is an array and is often empty. */
 const petPhoto = (pet) => (Array.isArray(pet?.photos) ? pet.photos[0] : null) ?? null;
 
@@ -90,6 +94,7 @@ const PetShelfSkeleton = () => {
 const HomeScreen = ({ navigation, route, start }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
+  const spotEnabled = useSpotEnabled();
 
   const [latestPets, setLatestPets] = useState([]);
   const [favorites, setFavorites] = useState([]);
@@ -167,7 +172,7 @@ const HomeScreen = ({ navigation, route, start }) => {
       </CopilotStep>
 
       <View style={tailwind("flex-row justify-between mb-xl")}>
-        {SHORTCUTS.map((shortcut) => (
+        {(spotEnabled ? [...SHORTCUTS, SPOT_SHORTCUT] : SHORTCUTS).map((shortcut) => (
           <WalkthroughableTouchableOpacity
             key={shortcut.route}
             testID={`shortcut-${shortcut.route}`}

@@ -468,14 +468,16 @@ const SpotScreen = ({ navigation, route }) => {
   );
 };
 
-/** "the health screen for Bella", for a question asked from a screen. */
+/** "Bella's health screen", for a question asked from a screen. */
 const describeContext = (context, pets) => {
   if (context?.petId) {
     const pet = pets.find((p) => String(p._id) === String(context.petId));
     return pet ? `${pet.name}'s ${context.screen ?? "pet"} screen` : "a pet's screen";
   }
-  if (context?.articleId) return "an article";
-  return "the app";
+  if (context?.articleId) {
+    return context.title ? `the article "${context.title}"` : "an article";
+  }
+  return `the ${context?.screen ?? "app"}`;
 };
 
 export default SpotScreen;

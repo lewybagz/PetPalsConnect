@@ -4,6 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Screen, Card, Text, ListSkeleton } from "../../components/ui";
 import { useTailwind } from "../../styles/tailwind";
+import AskSpotButton from "../../components/spot/AskSpotButton";
+
 import { useTokens } from "../../context/AppThemeContext";
 import {
   fetchToxins,
@@ -35,7 +37,7 @@ const SEVERITY_TONE = {
   avoid: "border",
 };
 
-const ToxinLookupScreen = () => {
+const ToxinLookupScreen = ({ navigation }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
 
@@ -210,6 +212,12 @@ const ToxinLookupScreen = () => {
             ))}
           </View>
         )}
+        {/* Below the results and the numbers, never over them: a fuzzy
+            name or "is X and Y together bad" is a question for Spot, and
+            it has the same table and the same numbers. */}
+        {navigation ? (
+          <AskSpotButton navigation={navigation} prefill="My pet ate " inline />
+        ) : null}
       </ScrollView>
     </Screen>
   );

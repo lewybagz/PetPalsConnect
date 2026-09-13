@@ -755,7 +755,119 @@ export const SHARED_POSITIONS = {
   device: { ...TRACKING_POSITIONS.device, _id: "dev-9", serial: "PPC-000982", batteryPercent: 41 },
 };
 
+/**
+ * Spot, on and agreed to, with a conversation that shows all three blocks:
+ * a chip row, a "Spot did this" card with its undo, and the helpline numbers
+ * after a toxin question. The text is the shape a real answer takes - plain
+ * paragraphs, the vet at the end - because the gallery is the one place the
+ * reading column can be judged.
+ */
+export const SPOT_STATUS = {
+  enabled: true,
+  consented: true,
+  readChats: false,
+  quota: { used: 2, limit: 3, premium: false },
+};
+
+export const SPOT_CONVERSATION = {
+  _id: "conv-1",
+  title: "Bella has been scratching her ears",
+  createdAt: new Date(Date.now() - 3600e3).toISOString(),
+  updatedAt: new Date().toISOString(),
+  messages: [
+    {
+      _id: "sm-1",
+      role: "user",
+      text: `${MY_PET.name} has been scratching her ears a lot this week`,
+      blocks: [],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 3500e3).toISOString(),
+    },
+    {
+      _id: "sm-2",
+      role: "assistant",
+      text:
+        `Ear scratching that goes on for a week is worth a look rather than a wait. Published guidance lists infection, mites, allergies and something lodged in the canal as the usual reasons, and none of them can be told apart from the outside.
+
+What you can notice before the visit: whether one ear or both, any smell or discharge, head shaking, and whether it started after swimming. Those are the things your vet will ask.
+
+Her records show rabies and DHPP in date and no Bordetella entered, if that comes up while you are there.`,
+      blocks: [
+        {
+          type: "links",
+          items: [
+            { screen: "PetHealth", params: { petId: MY_PET._id }, label: "Health records" },
+            { screen: "Map", params: {}, label: "Vets near you" },
+          ],
+        },
+      ],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 3400e3).toISOString(),
+    },
+    {
+      _id: "sm-3",
+      role: "user",
+      text: "she also weighed 44 today, log that",
+      blocks: [],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 1800e3).toISOString(),
+    },
+    {
+      _id: "sm-4",
+      role: "assistant",
+      text: `Logged ${MY_PET.name} at 44 lb. That is two pounds up on March; the chart on her weight screen shows the trend, and your vet can say what it means for her.`,
+      blocks: [
+        {
+          type: "done",
+          kind: "logWeight",
+          summary: `Logged ${MY_PET.name} at 44 lb`,
+          undo: { kind: "removeWeight", petId: MY_PET._id, entryId: "w-4" },
+        },
+        { type: "links", items: [{ screen: "PetWeight", params: { petId: MY_PET._id }, label: "Weight history" }] },
+      ],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 1700e3).toISOString(),
+    },
+    {
+      _id: "sm-5",
+      role: "user",
+      text: "and she got into some raisin bread yesterday, is that bad?",
+      blocks: [],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 600e3).toISOString(),
+    },
+    {
+      _id: "sm-6",
+      role: "assistant",
+      text:
+        `Raisins are in the poison table as an emergency for dogs: published guidance says not to wait for signs, because the kidney damage they can cause is not visible from the outside and the amount that matters varies from dog to dog.
+
+Ring one of the numbers below now rather than watching her. They will want her weight, which is on record as 44 lb, and roughly when it happened.`,
+      blocks: [{ type: "contacts", items: CARE_PICKS.emergency }],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 500e3).toISOString(),
+    },
+  ],
+};
+
 export const ROUTES = {
+  "/api/spot/status": SPOT_STATUS,
+  "/api/spot/conversations/conv-1": SPOT_CONVERSATION,
+  // The first exchange alone, so the opening of the reading column fits a viewport.
+  "/api/spot/conversations/conv-2": { ...SPOT_CONVERSATION, _id: "conv-2", messages: SPOT_CONVERSATION.messages.slice(0, 2) },
+  "/api/spot/conversations": [SPOT_CONVERSATION],
   "/api/tracking/status": { enabled: true, vendor: "generic", acceptsIngest: true },
   [`/api/tracking/pets/${MY_PET._id}/positions`]: TRACKING_POSITIONS,
   "/api/tracking/pets/pet-9/positions": SHARED_POSITIONS,

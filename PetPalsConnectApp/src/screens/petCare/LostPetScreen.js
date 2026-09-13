@@ -4,6 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Screen, Card, Text, ListSkeleton } from "../../components/ui";
 import { useTailwind } from "../../styles/tailwind";
+import AskSpotButton from "../../components/spot/AskSpotButton";
+
 import { useTokens } from "../../context/AppThemeContext";
 import { fetchLostPet } from "../../api/lostPet";
 import { KIND_LABELS } from "../../api/health";
@@ -56,7 +58,7 @@ const LostPetScreen = ({ navigation }) => {
 
   return (
     <Screen testID="lost-pet">
-      <ScrollView>
+      <ScrollView contentContainerStyle={{ paddingBottom: 72 }}>
         <Text variant="display">If your pet is missing</Text>
         <Text tone="muted" style={tailwind("mt-xs mb-md")}>
           The first hours matter most. Work down this list.
@@ -164,6 +166,7 @@ const LostPetScreen = ({ navigation }) => {
           </>
         )}
       </ScrollView>
+      <AskSpotButton navigation={navigation} context={{ screen: "missing pet checklist" }} />
     </Screen>
   );
 };

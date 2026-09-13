@@ -8,6 +8,7 @@ import api from "../../api/axios";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { importPlaces } from "../../api/maps";
 import { savePlace } from "../../api/petCare";
+import { useSpotEnabled } from "../../hooks/useSpotEnabled";
 
 jest.mock("../../api/axios", () => ({ get: jest.fn(), post: jest.fn() }));
 jest.mock("../../api/petCare", () => ({
@@ -19,6 +20,7 @@ jest.mock("../../context/AuthSessionContext", () => ({
   useAuthSession: jest.fn(),
 }));
 jest.mock("../../api/maps", () => ({ importPlaces: jest.fn() }));
+jest.mock("../../hooks/useSpotEnabled", () => ({ useSpotEnabled: jest.fn(() => true) }));
 jest.mock("@react-navigation/native", () => ({
   // Runs the effect once, like a first focus, and never re-focuses.
   useFocusEffect: (effect) => require("react").useEffect(effect, [effect]),
@@ -622,5 +624,27 @@ describe("the care hub", () => {
     await waitFor(() => expect(screen.getByTestId("care-hub")).toBeTruthy());
     // The emergency numbers ride on both responses, so they survive either one.
     expect(screen.getByTestId("hub-emergency")).toBeTruthy();
+  });
+});
+
+describe("Spot", () => {
+  it("offers Spot under the numbers when it is on", async () => {
+    api.get.mockReturnValue(new Promise(() => {}));
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    const card = await waitFor(() => screen.getByTestId("hub-spot"));
+    fireEvent.press(card);
+
+    expect(navigation.navigate).toHaveBeenCalledWith("Spot");
+  });
+
+  it("has no Spot card when the server has no key for it", async () => {
+    useSpotEnabled.mockReturnValue(false);
+    api.get.mockReturnValue(new Promise(() => {}));
+    render(<MoreScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => screen.getByTestId("hub-toxin-lookup"));
+    expect(screen.queryByTestId("hub-spot")).toBeNull();
+    useSpotEnabled.mockReturnValue(true);
   });
 });

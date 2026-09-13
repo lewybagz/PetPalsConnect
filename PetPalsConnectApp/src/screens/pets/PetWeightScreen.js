@@ -13,6 +13,8 @@ import {
 } from "../../components/ui";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
 import { useTailwind } from "../../styles/tailwind";
+import AskSpotButton from "../../components/spot/AskSpotButton";
+
 import { useTokens } from "../../context/AppThemeContext";
 import { useUnits } from "../../context/SettingsContext";
 import { formatWeight, weightToPounds } from "../../utils/units";
@@ -144,7 +146,7 @@ const PetWeightScreen = ({ navigation, route }) => {
 
   return (
     <Screen testID="pet-weight">
-      <ScrollView keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 72 }}>
         <Text variant="display">{pet?.name ? `${pet.name}'s weight` : "Weight"}</Text>
         <Text tone="muted" style={tailwind("mt-xs mb-md")}>
           What the scales said, over time. Your vet is who decides what it means.
@@ -287,6 +289,7 @@ const PetWeightScreen = ({ navigation, route }) => {
           </>
         )}
       </ScrollView>
+      <AskSpotButton navigation={navigation} context={{ petId: String(petId), screen: "weight" }} />
     </Screen>
   );
 };

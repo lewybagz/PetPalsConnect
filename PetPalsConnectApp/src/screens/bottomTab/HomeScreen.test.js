@@ -3,8 +3,10 @@ import { render, screen, waitFor } from "@testing-library/react-native";
 
 import HomeScreen from "./HomeScreen";
 import api from "../../api/axios";
+import { useSpotEnabled } from "../../hooks/useSpotEnabled";
 
 jest.mock("../../api/axios", () => ({ get: jest.fn(), post: jest.fn() }));
+jest.mock("../../hooks/useSpotEnabled", () => ({ useSpotEnabled: jest.fn(() => true) }));
 /**
  * The landing screen after sign-in. It threw a ReferenceError on import for
  * four sessions - `StyleSheet.create` at module scope with no import - and lint
@@ -104,5 +106,27 @@ describe("HomeScreen", () => {
     render(<HomeScreen navigation={navigation} route={route} />);
 
     await waitFor(() => expect(screen.getByTestId("favorite-fav1")).toBeTruthy());
+  });
+});
+
+describe("Spot shortcut", () => {
+  it("is in the shortcuts row when Spot is on, and navigates there", async () => {
+    respondWith();
+    render(<HomeScreen navigation={navigation} route={route} />);
+
+    const shortcut = await waitFor(() => screen.getByTestId("shortcut-Spot"));
+    const { fireEvent } = require("@testing-library/react-native");
+    await fireEvent.press(shortcut);
+    expect(navigation.navigate).toHaveBeenCalledWith("Spot");
+  });
+
+  it("is absent when the server has no key for it", async () => {
+    useSpotEnabled.mockReturnValue(false);
+    respondWith();
+    render(<HomeScreen navigation={navigation} route={route} />);
+
+    await waitFor(() => screen.getByTestId("shortcut-Settings"));
+    expect(screen.queryByTestId("shortcut-Spot")).toBeNull();
+    useSpotEnabled.mockReturnValue(true);
   });
 });

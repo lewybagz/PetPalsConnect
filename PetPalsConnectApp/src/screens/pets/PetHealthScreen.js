@@ -20,6 +20,8 @@ import {
 } from "../../api/health";
 import { addPetPhoto } from "../../services/photos";
 import { useTailwind } from "../../styles/tailwind";
+import AskSpotButton from "../../components/spot/AskSpotButton";
+
 import { useTokens } from "../../context/AppThemeContext";
 import { hit } from "../../styles/tokens";
 import {
@@ -497,6 +499,11 @@ const PetHealthScreen = ({ route, navigation }) => {
         disabled={saving || uploading}
       />
 
+      <AskSpotButton
+        navigation={navigation}
+        context={{ petId: String(petId), screen: "health" }}
+        inline
+      />
       <Pressable
         testID="health-done"
         accessibilityRole="button"

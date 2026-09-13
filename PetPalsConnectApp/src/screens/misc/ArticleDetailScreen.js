@@ -3,6 +3,8 @@ import { View, Linking, TouchableOpacity } from "react-native";
 
 import { Screen, Text, EmptyState, Skeleton } from "../../components/ui";
 import { useTailwind } from "../../styles/tailwind";
+import AskSpotButton from "../../components/spot/AskSpotButton";
+
 import { hit, space } from "../../styles/tokens";
 import { fetchArticle, fetchRelatedArticles, topicLabel } from "../../api/articles";
 
@@ -183,6 +185,12 @@ const ArticleDetailScreen = ({ route, navigation }) => {
           ))}
         </View>
       ) : null}
+
+      <AskSpotButton
+        navigation={navigation}
+        context={{ articleId: String(article._id), title: article.title, screen: "article" }}
+        inline
+      />
 
       {reviewed && !Number.isNaN(reviewed.valueOf()) ? (
         <Text variant="caption" tone="faint" style={tailwind("mt-xl")}>

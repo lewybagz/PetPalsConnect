@@ -13,6 +13,7 @@ import {
 import { FontAwesome as Icon } from "@expo/vector-icons";
 import { useDispatch } from "react-redux";
 
+import AskSpotButton from "../../components/spot/AskSpotButton";
 import { useAuthSession } from "../../context/AuthSessionContext";
 
 import api from "../../api/axios";
@@ -130,7 +131,8 @@ const PetDetailsScreen = ({ route, navigation }) => {
   const isMine = String(pet.owner?._id ?? pet.owner) === String(userId);
 
   return (
-    <ScrollView testID="pet-details" style={styles.container}>
+    <View style={{ flex: 1 }}>
+    <ScrollView testID="pet-details" style={styles.container} contentContainerStyle={{ paddingBottom: 72 }}>
       {photos.length > 0 ? (
         <View>
           <HorizontalScrollView
@@ -263,6 +265,10 @@ const PetDetailsScreen = ({ route, navigation }) => {
         </TouchableOpacity>
       ) : null}
     </ScrollView>
+    {isMine ? (
+      <AskSpotButton navigation={navigation} context={{ petId: String(pet._id), screen: "pet" }} />
+    ) : null}
+    </View>
   );
 };
 

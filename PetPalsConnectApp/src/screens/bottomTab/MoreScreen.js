@@ -21,6 +21,7 @@ import {
   unsavePlace,
 } from "../../api/petCare";
 import { importPlaces } from "../../api/maps";
+import { useSpotEnabled } from "../../hooks/useSpotEnabled";
 
 /**
  * The pet owner's hub.
@@ -165,6 +166,7 @@ const MoreScreen = ({ route, start, navigation }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
   const toast = useToast();
+  const spotEnabled = useSpotEnabled();
 
   const [picks, setPicks] = useState(null);
   const [places, setPlaces] = useState(null);
@@ -467,6 +469,31 @@ const MoreScreen = ({ route, start, navigation }) => {
           </View>
         </Pressable>
       </Card>
+
+      {/* Spot, directly under the numbers: the hub is the half of the app for
+          the pets somebody already has, and that is what Spot is for. Hidden
+          when the server has no key, the way the plan picker hides. */}
+      {spotEnabled ? (
+        <Card
+          testID="hub-spot"
+          onPress={() => navigation.navigate("Spot")}
+          accessibilityLabel="Ask Spot"
+          style={tailwind("mt-md")}
+        >
+          <View style={tailwind("flex-row items-center")}>
+            <View style={tailwind("bg-primarySoft rounded-card p-sm")}>
+              <Ionicons name="sparkles-outline" size={22} color={tokens.primary} />
+            </View>
+            <View style={tailwind("ml-md flex-1")}>
+              <Text variant="title">Ask Spot</Text>
+              <Text variant="caption" tone="muted">
+                What is due, what is dangerous, where the nearest vet is.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={tokens.textFaint} />
+          </View>
+        </Card>
+      ) : null}
 
       {loading ? (
         <View style={tailwind("mt-xl")}>

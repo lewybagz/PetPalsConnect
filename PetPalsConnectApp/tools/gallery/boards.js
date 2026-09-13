@@ -36,6 +36,7 @@ import ProductDetailScreen from "../../src/screens/store/ProductDetailScreen";
 import OrdersScreen from "../../src/screens/store/OrdersScreen";
 import OrderDetailScreen from "../../src/screens/store/OrderDetailScreen";
 import PetTrackingScreen from "../../src/screens/tracking/PetTrackingScreen";
+import SpotScreen from "../../src/screens/spot/SpotScreen";
 import {
   ARTICLE,
   ARTICLES,
@@ -47,6 +48,7 @@ import {
   MY_PET,
   ROUTES,
   SETTINGS,
+  SPOT_STATUS,
   pending,
 } from "./fixtures";
 
@@ -724,6 +726,49 @@ export const BOARDS = [
         }}
       />
     ),
+  },
+  {
+    id: "spot-empty",
+    label: "Spot - before the first question",
+    // The chips are the teaching: each is a real question, and the first two
+    // are answered by software without a model turn.
+    routes: ROUTES,
+    render: () => <SpotScreen navigation={navigation} route={{ params: {} }} />,
+  },
+  {
+    id: "spot",
+    label: "Spot - a conversation with all three blocks",
+    // Chips, a done card with its undo, and the helpline numbers after a
+    // toxin question. This is the board for the reading column: an answer
+    // about ears should read like the article it is quoting.
+    routes: ROUTES,
+    render: () => (
+      <SpotScreen navigation={navigation} route={{ params: { conversationId: "conv-1" } }} />
+    ),
+  },
+  {
+    id: "spot-reading",
+    label: "Spot - one answer, read as a column",
+    // Opening a conversation scrolls to its newest message, which is right
+    // for a person and wrong for a photograph of how an answer opens. Two
+    // messages fit a viewport.
+    routes: ROUTES,
+    render: () => (
+      <SpotScreen navigation={navigation} route={{ params: { conversationId: "conv-2" } }} />
+    ),
+  },
+  {
+    id: "spot-consent",
+    label: "Spot - the disclosure before the first message",
+    routes: { ...ROUTES, "/api/spot/status": { ...SPOT_STATUS, consented: false } },
+    render: () => <SpotScreen navigation={navigation} route={{ params: {} }} />,
+  },
+  {
+    id: "spot-off",
+    label: "Spot - no key on the server",
+    // An ordinary state, not an error: the poison lookup is one tap away.
+    routes: { ...ROUTES, "/api/spot/status": { enabled: false, consented: false, quota: null } },
+    render: () => <SpotScreen navigation={navigation} route={{ params: {} }} />,
   },
 ];
 
