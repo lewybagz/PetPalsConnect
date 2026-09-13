@@ -357,3 +357,28 @@ test("showOnMap: false keeps you off the map", async () => {
   const names = (response.body.pets ?? response.body).map?.((row) => row.name) ?? [];
   assert.ok(!names.includes("Shy"), "a map says where somebody is");
 });
+
+// ---------------------------------------------------------------------------
+// Spot
+// ---------------------------------------------------------------------------
+
+test("spot.readChats decides whether Spot can read your chats at all", async () => {
+  const me = await makeUser("me");
+  const { toolsFor } = require("../services/spot/tools");
+  const toolNames = (readChats) => toolsFor({ userId: me._id, readChats }).tools.map((t) => t.name);
+
+  // Off by default: the other person in a chat has not agreed to anything.
+  const before = await request(app).get("/api/users/me/settings").set(...auth("me")).expect(200);
+  assert.equal(before.body.spot.readChats, false);
+  assert.ok(!toolNames(before.body.spot.readChats).includes("my_chats"));
+
+  await request(app)
+    .patch("/api/users/me/settings")
+    .set(...auth("me"))
+    .send({ spot: { readChats: true } })
+    .expect(200);
+
+  const after = await request(app).get("/api/users/me/settings").set(...auth("me")).expect(200);
+  assert.equal(after.body.spot.readChats, true);
+  assert.ok(toolNames(after.body.spot.readChats).includes("my_chats"));
+});
