@@ -535,3 +535,44 @@ export interface Article {
   publishedDate: string;
   lastReviewedDate: string;
 }
+
+/**
+ * A rich piece beside a Spot answer. `links` are chips that navigate; `done`
+ * is a write Spot made, with its undo where one exists; `contacts` are the
+ * helpline numbers. The server attaches them mechanically
+ * (`backend/services/spot/blocks.js`), never the model.
+ */
+export type SpotBlock =
+  | { type: "links"; items: { screen: string; params: Record<string, string>; label: string }[] }
+  | { type: "done"; kind: string; summary: string; undo: { kind: string; [key: string]: unknown } | null }
+  | { type: "contacts"; items: EmergencyContact[] };
+
+/**
+ * One turn with Spot. `source` says whether the model answered or software
+ * did, in Spot's voice; a software turn lives only on the device.
+ */
+export interface SpotMessage {
+  _id: string;
+  role: "user" | "assistant";
+  text: string;
+  blocks: SpotBlock[];
+  attachments: { kind: "photo"; width?: number; height?: number }[];
+  flagged: boolean;
+  source: "model" | "software";
+  createdAt: IsoDate;
+}
+
+export interface SpotConversation {
+  _id: ObjectId;
+  title: string;
+  messages: SpotMessage[];
+  createdAt: IsoDate;
+  updatedAt: IsoDate;
+}
+
+/** Where today's quota stands. `null` when Spot is off. */
+export interface SpotQuota {
+  used: number;
+  limit: number;
+  premium: boolean;
+}

@@ -79,3 +79,12 @@ export const useSocketNotification = (onNotification) => {
 export const useSocketFriendRequest = (onFriendRequest) => {
   useSocketListener("friendRequest", onFriendRequest);
 };
+
+/**
+ * Spot's answer, as it is being written. `{ conversationId, text }` per
+ * chunk; the HTTP response carries the whole answer afterwards, so a missed
+ * chunk costs the live typing and nothing else.
+ */
+export const useSpotDelta = (onDelta) => {
+  useSocketListener("spotDelta", onDelta);
+};

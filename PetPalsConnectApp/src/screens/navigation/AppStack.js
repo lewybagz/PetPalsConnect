@@ -69,6 +69,9 @@ import OrdersScreen from "../store/OrdersScreen";
 import OrderDetailScreen from "../store/OrderDetailScreen";
 import PetTrackingScreen from "../tracking/PetTrackingScreen";
 
+// Spot
+import SpotScreen from "../spot/SpotScreen";
+
 // Misc
 import ArticleDetailScreen from "../misc/ArticleDetailScreen";
 import ArticlesScreen from "../misc/ArticlesScreen";
@@ -202,6 +205,10 @@ export default function AppStack() {
       {/* Not behind withRequiredPet: a friend with no pet of their own can
           still be shown a collar somebody shared with them. */}
       <Stack.Screen name="PetTracking" component={PetTrackingScreen} options={{ title: "Tracking" }} />
+
+      {/* Spot. Not behind withRequiredPet: the poison lookup and the helpline
+          numbers are the reason somebody with no pet of their own opens it. */}
+      <Stack.Screen name="Spot" component={SpotScreen} options={{ title: "Spot" }} />
 
       {/* Misc */}
       <Stack.Screen name="Articles" component={ArticlesScreen} options={{ title: "Articles" }} />

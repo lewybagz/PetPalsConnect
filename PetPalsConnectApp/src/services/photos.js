@@ -104,6 +104,28 @@ export const compressPhoto = async (uri) => {
   }
 };
 
+/**
+ * A photo for Spot: smaller, and as bytes rather than a file.
+ *
+ * It travels inline with the message and is stored nowhere, so the only size
+ * that matters is the request. 1024 on the long edge at q0.6 is a few hundred
+ * kilobytes base64, well inside the server's 1MB body limit; the model reads
+ * a packet label or a plant at that size perfectly well.
+ */
+export const compressForSpot = async (uri) => {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: 1024 } }],
+    { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+  );
+  return {
+    data: result.base64,
+    mediaType: "image/jpeg",
+    width: result.width,
+    height: result.height,
+  };
+};
+
 /** iOS hands back a file:// URI that the native uploader will not take. */
 const localPath = (uri) =>
   Platform.OS === "ios" ? uri.replace("file://", "") : uri;

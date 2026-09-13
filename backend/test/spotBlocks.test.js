@@ -94,3 +94,25 @@ test("stripping leaves ordinary prose alone", () => {
   const prose = "Bella's rabies is current until March 2027.\n\nDHPP has no date on record - your vet can confirm the schedule.";
   assert.equal(stripMarkdown(prose), prose);
 });
+
+test("every undo kind the server can emit has a handler in the app", () => {
+  /**
+   * The app's `UNDO` table in `src/api/spot.js` is the other copy of this.
+   * A `done` block whose undo the app cannot run is a button that does
+   * nothing, which is the reachability failure this repo keeps finding.
+   */
+  const tools = fs.readFileSync(path.resolve(__dirname, "../services/spot/tools.js"), "utf8");
+  const emitted = new Set([...tools.matchAll(/undo:\s*\{\s*kind:\s*"(\w+)"/g)].map((m) => m[1]));
+  assert.ok(emitted.size > 0);
+
+  const app = fs.readFileSync(
+    path.resolve(__dirname, "../../PetPalsConnectApp/src/api/spot.js"),
+    "utf8"
+  );
+  const table = app.match(/export const UNDO = \{([\s\S]*?)\n\};/);
+  assert.ok(table, "no UNDO table in the app's spot.js");
+  const handled = new Set([...table[1].matchAll(/^\s*(\w+):/gm)].map((m) => m[1]));
+
+  const missing = [...emitted].filter((kind) => !handled.has(kind));
+  assert.deepEqual(missing, [], `the app cannot undo: ${missing.join(", ")}`);
+});
