@@ -226,6 +226,23 @@ const UserSchema = new Schema({
   termsAcceptedAt: {
     type: Date,
   },
+  // When the person agreed that Spot sends their questions and their pets'
+  // details to Anthropic. Set by `POST /api/spot/consent`; every other Spot
+  // route refuses until it is. Apple 5.1.1(i) wants explicit permission before
+  // personal data reaches a third-party AI, and the server keeps the date
+  // the way it keeps `termsAcceptedAt`.
+  spotConsentAt: {
+    type: Date,
+  },
+  /**
+   * Spot's own settings, written through `services/settings.js` like every
+   * other setting. `readChats` lets Spot read this person's chats with other
+   * owners; off by default because the other person in a chat has not agreed
+   * to anything.
+   */
+  spot: {
+    readChats: { type: Boolean, default: false },
+  },
   modifiedDate: {
     type: Date,
     default: Date.now,

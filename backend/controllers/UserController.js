@@ -597,7 +597,7 @@ const UserController = {
   async updateUserSettings(req, res) {
     try {
       const current = await User.findById(req.userId)
-        .select("discovery privacy units")
+        .select("discovery privacy units spot")
         .lean();
 
       if (!current) return res.status(404).json({ message: "User not found" });
@@ -621,7 +621,7 @@ const UserController = {
         { $set: update },
         { returnDocument: "after", runValidators: true }
       )
-        .select("playdateRange locationSharingEnabled notificationsEnabled units discovery privacy")
+        .select("playdateRange locationSharingEnabled notificationsEnabled units discovery privacy spot")
         .lean();
 
       // The same body as `GET`, so the app can replace what it holds with the
@@ -650,7 +650,7 @@ const UserController = {
   async getUserSettings(req, res) {
     try {
       const user = await User.findById(req.userId)
-        .select("playdateRange locationSharingEnabled notificationsEnabled units discovery privacy")
+        .select("playdateRange locationSharingEnabled notificationsEnabled units discovery privacy spot")
         .lean();
 
       if (!user) return res.status(404).json({ message: "User not found" });

@@ -122,6 +122,17 @@ const SCHEMA = {
     discoverableInSearch: bool,
     showOnMap: bool,
   },
+
+  /**
+   * Spot. `readChats` lets the assistant read this person's chats with other
+   * owners to answer questions about them. Off by default: the other person
+   * in the chat has not agreed to their words reaching a processor, and the
+   * setting's own copy says so. Enforced in `services/spot/tools.js`, which
+   * leaves `my_chats` out of the model's tool list entirely while it is off.
+   */
+  spot: {
+    readChats: bool,
+  },
 };
 
 /** The defaults, which are also what the schema documents as sensible. */
@@ -143,6 +154,7 @@ const DEFAULTS = {
     discoverableInSearch: true,
     showOnMap: true,
   },
+  spot: { readChats: false },
 };
 
 /**
@@ -215,6 +227,7 @@ const withDefaults = (user = {}) => ({
   units: { ...DEFAULTS.units, ...(user.units ?? {}) },
   discovery: { ...DEFAULTS.discovery, ...(user.discovery ?? {}) },
   privacy: { ...DEFAULTS.privacy, ...(user.privacy ?? {}) },
+  spot: { ...DEFAULTS.spot, ...(user.spot ?? {}) },
 });
 
 module.exports = {

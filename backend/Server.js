@@ -71,6 +71,7 @@ app.get("/health", (req, res) => {
     uptime: process.uptime(),
     database: states[db.mongoose.connection.readyState] ?? "unknown",
     firebase: require("./config/firebase").isEnabled() ? "configured" : "not configured",
+    spot: require("./services/spot/client").isEnabled() ? "configured" : "not configured",
   });
 });
 

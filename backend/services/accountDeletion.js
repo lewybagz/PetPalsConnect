@@ -23,6 +23,8 @@ const Waitlist = require("../models/Waitlist");
 const Device = require("../models/Device");
 const DevicePosition = require("../models/DevicePosition");
 const TrackingShare = require("../models/TrackingShare");
+const SpotConversation = require("../models/SpotConversation");
+const SpotUsage = require("../models/SpotUsage");
 const firebase = require("../config/firebase");
 
 /**
@@ -89,6 +91,9 @@ const deleteAccountData = async (user, firebaseUid) => {
   await BlockList.deleteMany({ owner: userId });
   await ActivityLog.deleteMany({ user: userId });
   await Waitlist.deleteMany({ user: userId });
+  // What was said to Spot, and how much of it. Photos were never stored.
+  await SpotConversation.deleteMany({ owner: userId });
+  await SpotUsage.deleteMany({ owner: userId });
 
   // A location history has no reason to outlive the account, and neither do
   // the shares - in either direction: a share *to* this account is a row that
