@@ -185,6 +185,25 @@ const PrivacySettingsScreen = () => {
         />
       </SettingsSection>
 
+      <SettingsSection
+        title="Spot"
+        footer="The other person in a chat has not agreed to this, which is why it starts off."
+      >
+        <SettingsRow
+          testID="privacy-spotReadChats"
+          label="Spot can read your chats"
+          description="Spot can read your chats with other owners to answer questions about them. Their messages are sent to Anthropic when it does."
+          value={settings.spot?.readChats === true}
+          disabled={saving === "spot.readChats"}
+          onValueChange={async (value) => {
+            setSaving("spot.readChats");
+            const result = await update({ spot: { readChats: value } });
+            setSaving(null);
+            if (!result.ok) toast.error(result.message);
+          }}
+        />
+      </SettingsSection>
+
       <View style={tailwind("mb-xl")} />
     </Screen>
   );

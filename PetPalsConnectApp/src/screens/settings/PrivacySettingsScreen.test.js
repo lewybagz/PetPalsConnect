@@ -42,6 +42,7 @@ const SETTINGS = {
     discoverableInSearch: true,
     showOnMap: true,
   },
+  spot: { readChats: false },
   choices: {
     units: { distance: ["mi", "km"], weight: ["lb", "kg"] },
     audiences: ["everyone", "matches", "friends"],
@@ -140,6 +141,25 @@ describe("PrivacySettingsScreen", () => {
       expect(
         screen.getByTestId("privacy-showOnMap").props.accessibilityState.checked
       ).toBe(true)
+    );
+  });
+
+  it("letting Spot read your chats is off until you say so, and saves as its own key", async () => {
+    respondWith();
+    api.patch.mockResolvedValue({ data: { ...SETTINGS, spot: { readChats: true } } });
+    await renderScreen();
+
+    const row = await waitFor(() => screen.getByTestId("privacy-spotReadChats"));
+    expect(row.props.accessibilityState.checked).toBe(false);
+    // The row says where the words go; a switch with a softer sentence would
+    // be consent to something the person was not told.
+    expect(screen.getByText(/sent to Anthropic/)).toBeTruthy();
+
+    await fireEvent(row, "valueChange", true);
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith("/api/users/me/settings", {
+        spot: { readChats: true },
+      })
     );
   });
 

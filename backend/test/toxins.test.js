@@ -56,16 +56,7 @@ test("nothing in the table states a dose, a threshold or an amount", () => {
    * the helpline exists to make, and a number here would invite arithmetic
    * instead of a phone call.
    */
-  const FORBIDDEN = [
-    /\bmg\s*\/\s*kg\b/i,
-    /\bLD50\b/i,
-    /\b\d+\s*(mg|ml|gram|grams|g|oz|ounce|ounces|tsp|teaspoon|tablespoon|tbsp)\b/i,
-    /\bas little as\b/i,
-    /\btoxic dose\b/i,
-    /\blethal dose\b/i,
-    /\bper pound\b/i,
-    /\bper kilo/i,
-  ];
+  const { FORBIDDEN } = require("../services/spot/healthLine");
 
   for (const toxin of toxins.TOXINS) {
     const prose = `${toxin.name} ${toxin.signs} ${toxin.guidance}`;

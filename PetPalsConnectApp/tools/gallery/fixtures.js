@@ -481,6 +481,7 @@ export const SETTINGS = {
     discoverableInSearch: true,
     showOnMap: true,
   },
+  spot: { readChats: false },
   choices: {
     units: { distance: ["mi", "km"], weight: ["lb", "kg"] },
     audiences: ["everyone", "matches", "friends"],

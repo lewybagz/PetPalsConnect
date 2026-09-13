@@ -48,6 +48,7 @@ const FALLBACK = {
     discoverableInSearch: true,
     showOnMap: true,
   },
+  spot: { readChats: false },
 };
 
 const SettingsContext = createContext(null);

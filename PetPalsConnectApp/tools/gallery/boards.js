@@ -667,6 +667,15 @@ export const BOARDS = [
     render: () => <PrivacySettingsScreen />,
   },
   {
+    id: "settings-privacy-spot",
+    label: "Privacy - the Spot row",
+    // The switch that lets Spot read chats sits below the fold, and its
+    // description is the consent: it has to say where the words go.
+    routes: ROUTES,
+    scrollY: 900,
+    render: () => <PrivacySettingsScreen />,
+  },
+  {
     id: "settings-discovery",
     label: "Discovery preferences",
     routes: ROUTES,

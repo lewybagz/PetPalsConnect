@@ -212,6 +212,19 @@ Both stores use the bundle identifier `com.petpalsconnect.app`.
 - [ ] Play Console: privacy policy URL, Data safety form matching
       `docs/privacy.html` section 2, and `delete-account.html` as the account
       deletion URL
+- [ ] Spot: create an Anthropic Console workspace for the app with a monthly
+      spend limit, make an API key in it, set `ANTHROPIC_API_KEY` in backend
+      `.env`, then run `npm run eval:spot` from `backend/` and keep the output
+      with the release notes. Unset, Spot is off and the app hides it
+- [ ] Both store listings, AI disclosure - paste this paragraph into the
+      description: "Spot is PetPals' assistant. Ask about your pets, what is
+      dangerous for them, what is due, or where the nearest vet is. Spot's
+      answers are generated with AI from published veterinary guidance and
+      your own pet records; it is not a veterinarian and does not diagnose or
+      treat. You can flag any answer from inside the app." Reviewer notes:
+      where the consent sheet is (first open of Spot), where the flag control
+      is (long-press any answer), and a test account with Spot enabled - Play
+      asks that reviewers are not blocked from AI features by a paywall
 - [ ] Set `FIREBASE_STORAGE_BUCKET` in backend `.env` if the project is not on
       `<project-id>.firebasestorage.app`, so account deletion can empty the
       account's photo folders
