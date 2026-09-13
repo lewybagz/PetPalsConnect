@@ -2,11 +2,23 @@
 
 Status: **Phase 1 built, Phase 2 core built** on `feat/store-and-tracking`
 (2026-09-12): todo 1 `734e417`, todo 2 `6f6cd6f`, todo 3 `e01046f`, todo 4
-`bd7d4a0`, todos 5 and 6 `1e6263e`. Backend suite 720 green; app suite 751
-green plus the known pre-existing Home screen flake; lint, typecheck, the
-colour ban and both Expo bundles clean. **Todo 7 (entry points, the floating
-button, gallery boards) and Phase 3 are not started - the Spot screen is
-registered on `AppStack` but nothing navigates to it yet.**
+`bd7d4a0`, todos 5 and 6 `1e6263e`, todo 7 `8a46932`. Backend suite 720
+green; app suite green plus the known pre-existing Home screen flake; lint,
+typecheck, the colour ban and both Expo bundles clean; gallery reshot and
+reviewed. **Phase 3 (todo 8: flag moderation read is already built, policy
+texts pasted, `spotEval.js` run) is not started.**
+
+Todo 7 as built: the hub card sits directly under the emergency numbers;
+Home has a fifth shortcut; `AskSpotButton` is inline at the end of the
+content on health records, an article and the toxin lookup (nothing floats
+over the numbers) and floating bottom-right on a pet's page, weight and the
+missing-pet checklist - six screens, the hub having the card instead of a
+seventh button. `useSpotEnabled` asks `/api/spot/status` once per session
+and everything renders nothing until it answers. Five gallery boards:
+`spot-empty`, `spot`, `spot-reading`, `spot-consent`, `spot-off`. Note for
+Windows: `npm run gallery` sets its env the POSIX way and fails under cmd;
+from Git Bash run `EXPO_PUBLIC_GALLERY=1 npx expo export --platform web
+--output-dir dist-gallery` then `node tools/gallery/shoot.mjs`.
 
 Phase 2 departures worth knowing: software-answered turns (chips, intents,
 exact toxin hits) live only on the device and are not written to the
@@ -606,7 +618,7 @@ job), scheduling playdates or messaging other owners on the user's behalf
 | 4 | Runner, controller, routes, quota, conversation cap, photos forwarded not stored, rate limit, `spot.test.js` | done `bd7d4a0` |
 | 5 | `intents.js`, `src/api/spot.js`, types, `SpotScreen`, consent sheet, AppStack, photo attach, quota notice | done `1e6263e` |
 | 6 | Rich blocks + done/undo table + socket deltas | done `1e6263e` |
-| 7 | Entry points + `AskSpotButton`, 503 hiding, chats-setting row, gallery boards, screenshots | pending |
+| 7 | Entry points + `AskSpotButton`, 503 hiding, gallery boards, screenshots | done `8a46932` (the chats-setting row moves to todo 8) |
 | 8 | Flagging + moderator read, policy texts pasted, run `spotEval.js` | pending |
 
 ## Env vars and dashboard prerequisites

@@ -60,6 +60,8 @@ npx expo export --platform android && npx expo export --platform ios
 - Another session may edit this tree concurrently: stage by path, never `git add <dir>`; re-read shared files before editing.
 - `__`-prefixed files under `src/` are scratch and skipped by every source walker.
 - Windows: `path.relative` gives backslashes; anything keyed by a reported path normalises to POSIX.
+- Windows: `npm run gallery` sets `EXPO_PUBLIC_GALLERY=1` the POSIX way and fails under cmd. From Git Bash run `EXPO_PUBLIC_GALLERY=1 npx expo export --platform web --output-dir dist-gallery` then `node tools/gallery/shoot.mjs`.
+- Several app files are CRLF in the working tree (autocrlf). A scripted multi-line replace must read with universal newlines; a pattern written with LF line breaks will silently miss.
 
 ## Prior plans
 
