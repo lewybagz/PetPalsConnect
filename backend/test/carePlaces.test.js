@@ -242,6 +242,66 @@ test("a patio is a category only when asked for, never in the default care list"
   assert.ok(!CARE_CATEGORIES.some((category) => OUT_CATEGORIES.includes(category)));
 });
 
+test("every category the app offers is actually searched for", () => {
+  /**
+   * The gap this closes cost a whole category.
+   *
+   * `boarding` went out as the keyword "pet boarding kennel" constrained to
+   * Google's `lodging` type, on the reasoning that boarding is lodging. A
+   * kennel is not a hotel, so the type filter rejected every result and the
+   * first real import wrote **zero** boarding rows across all six Arizona
+   * cities - with nothing failing, because an empty result set is a legitimate
+   * answer. Grooming had the same shape of bug against `pet_store`, which
+   * excluded every mobile and salon groomer: 16 rows statewide.
+   *
+   * A count of zero in production is the only thing that would have shown it,
+   * so what is checked here is the table: every category the hub can filter by
+   * has an import entry, and each entry asks a question that can return
+   * something.
+   */
+  const { IMPORTS, CATEGORIES } = require("../services/placeCategories");
+
+  for (const category of CATEGORIES) {
+    const entries = IMPORTS.filter((entry) => entry.category === category);
+    assert.ok(entries.length > 0, `${category} is offered but never imported`);
+    for (const entry of entries) {
+      assert.ok(
+        entry.type || entry.keyword,
+        `${category} asks Google nothing: it needs a type, a keyword, or both`
+      );
+    }
+  }
+});
+
+test("the pet-service types are Google's current ones, not the legacy stand-ins", () => {
+  // These two had no type of their own when this table was written, so they
+  // borrowed the nearest one that existed and both were wrong. Google has real
+  // types now; naming them is what makes the searches return anything.
+  const { IMPORTS } = require("../services/placeCategories");
+  const typeFor = (category) => IMPORTS.find((entry) => entry.category === category)?.type;
+
+  assert.equal(typeFor("boarding"), "pet_boarding_service");
+  assert.notEqual(typeFor("boarding"), "lodging", "a kennel is not a hotel");
+  assert.equal(typeFor("groomer"), "pet_care");
+});
+
+test("a place typed as boarding is recognised without having answered that search", () => {
+  // A vet that also boards comes back from the vet search typed
+  // `veterinary_care, pet_boarding_service`, and should carry both.
+  assert.deepEqual(categoriesFor(["veterinary_care", "pet_boarding_service"], "vet"), [
+    "vet",
+    "boarding",
+  ]);
+});
+
+test("`pet_care` is too broad to be a category on its own", () => {
+  // It covers shelters, daycare and trainers as well as groomers, so mapping
+  // it would file an animal shelter under grooming. Only the searched-for
+  // category should land.
+  assert.deepEqual(categoriesFor(["pet_care", "point_of_interest"], null), []);
+  assert.deepEqual(categoriesFor(["pet_care", "point_of_interest"], "groomer"), ["groomer"]);
+});
+
 test("care categories never include parks", () => {
   // A hub listing the local park under "places to take your pet for care"
   // would be a category error with a real consequence: it pads the vet list.

@@ -99,10 +99,18 @@ const PlaydateDetailsScreen = ({ route, navigation }) => {
       <Text>Date: {new Date(playdateDetails.date).toLocaleDateString()}</Text>
       {/* `getPlaydateById` nulls the location when the organiser has location
           sharing off, so reading `.name` here crashed for exactly the person
-          the server was protecting. */}
+          the server was protecting.
+
+          The two reasons it can be missing are not the same thing, and the
+          server distinguishes them with `locationHidden`: a privacy setting is
+          somebody's choice, and an absent row is a gap. One string for both
+          blamed the organiser for missing data. */}
       <Text>
         Location:{" "}
-        {playdateDetails.location?.name ?? "Hidden until the organiser shares it"}
+        {playdateDetails.location?.name ??
+          (playdateDetails.locationHidden
+            ? "Hidden until the organiser shares it"
+            : "No place set yet")}
       </Text>
       {playdateDetails.notes ? <Text>Notes: {playdateDetails.notes}</Text> : null}
 

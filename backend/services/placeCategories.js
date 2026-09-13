@@ -35,22 +35,54 @@ const CATEGORIES = ["park", "vet", "petStore", "groomer", "boarding", "patio", "
  */
 const IMPORTS = [
   { category: "park", type: "park" },
+  // Google added a real `dog_park` type, and it is a better answer than the
+  // generic one for an app about walking dogs. Both run: a dog park is a park,
+  // and the merge on `placeId` keeps the row that answers both searches.
+  { category: "park", type: "dog_park" },
   { category: "vet", type: "veterinary_care" },
   { category: "petStore", type: "pet_store" },
-  { category: "groomer", type: "pet_store", keyword: "pet grooming" },
-  { category: "boarding", type: "lodging", keyword: "pet boarding kennel" },
+  /**
+   * Grooming and boarding now have types of their own.
+   *
+   * They did not when this table was written, so both went out as keywords
+   * against the nearest type that existed - `pet_store` and `lodging`. That
+   * was wrong in a way the import made obvious: a kennel is not a hotel, so
+   * `lodging` rejected every boarding result and the category came back with
+   * **zero rows** in all six cities. Grooming fared little better: the
+   * `pet_store` filter dropped every mobile and salon groomer, which is most
+   * of them, leaving 16 statewide.
+   *
+   * `pet_boarding_service` and `pet_care` are the real types, verified against
+   * the live API. The keyword stays because `pet_care` is broad - it also
+   * covers shelters and daycare - and the keyword is what keeps a grooming
+   * search about grooming.
+   */
+  { category: "groomer", type: "pet_care", keyword: "pet grooming" },
+  { category: "boarding", type: "pet_boarding_service", keyword: "pet boarding kennel" },
   // Out and about. All keyword searches: precision is what the keyword gives.
   { category: "patio", type: "restaurant", keyword: "dog friendly patio" },
   { category: "hotel", type: "lodging", keyword: "pet friendly hotel" },
-  { category: "trail", type: "park", keyword: "dog friendly hiking trail" },
+  // No type: a trailhead is typed `hiking_area` or `nature_preserve`, and
+  // constraining to `park` returned the preserves while missing the trailheads
+  // somebody actually parks at.
+  { category: "trail", keyword: "dog friendly hiking trail" },
 ];
 
-/** Google's own types, where one maps cleanly onto one of ours. */
+/**
+ * Google's own types, where one maps cleanly onto one of ours.
+ *
+ * `pet_boarding_service` is here so a vet that also boards is recognised as
+ * both from its own types, without having to have answered the boarding
+ * search. `pet_care` is deliberately *not*: it covers grooming, daycare,
+ * shelters and trainers all at once, so treating it as "groomer" would file
+ * an animal shelter under grooming.
+ */
 const FROM_GOOGLE_TYPE = {
   park: "park",
   dog_park: "park",
   veterinary_care: "vet",
   pet_store: "petStore",
+  pet_boarding_service: "boarding",
 };
 
 /**

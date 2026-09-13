@@ -100,13 +100,29 @@ const tapById = async (testID) => {
 };
 
 describe("arriving from a pet", () => {
-  it("lists places near the user", async () => {
+  it("lists places near the user, filtered to somewhere dogs can meet", async () => {
     renderScreen();
 
     await waitFor(() => expect(screen.getByTestId("location-loc-1")).toBeTruthy());
     expect(api.get).toHaveBeenCalledWith("/api/locations/playdate-locations", {
-      params: { userLat: 51.5, userLng: -0.1, range: 5 },
+      // The category filter is the point: without it this picker offered the
+      // whole directory - vets, pet shops, boarding kennels, hotels - as
+      // venues for two dogs to meet.
+      params: { userLat: 51.5, userLng: -0.1, range: 5, category: "park,trail" },
     });
+  });
+
+  it("never offers a vet or a kennel as a place to meet", async () => {
+    renderScreen();
+    await waitFor(() => expect(screen.getByTestId("location-loc-1")).toBeTruthy());
+
+    const [, config] = api.get.mock.calls.find(([path]) =>
+      path.startsWith("/api/locations/playdate-locations")
+    );
+    const asked = String(config.params.category).split(",");
+    for (const wrong of ["vet", "petStore", "groomer", "boarding", "hotel"]) {
+      expect(asked).not.toContain(wrong);
+    }
   });
 
   it("still lists places when location permission is refused", async () => {

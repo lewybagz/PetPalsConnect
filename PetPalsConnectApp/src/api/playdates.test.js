@@ -86,9 +86,28 @@ describe("locations", () => {
   it("still asks when the user declined location permission", async () => {
     await fetchNearbyLocations({ range: 10 });
 
+    // No position means no `userLat`/`userLng` - the list comes back unsorted
+    // rather than not at all. The range goes nowhere without a centre to
+    // measure from, so it is dropped too.
+    const [path, config] = api.get.mock.calls[0];
+    expect(path).toBe("/api/locations/playdate-locations");
+    expect(config.params.userLat).toBeUndefined();
+    expect(config.params.userLng).toBeUndefined();
+  });
+
+  it("narrows to somewhere two dogs can actually meet when asked", async () => {
+    await fetchNearbyLocations({ latitude: 1, longitude: 2, range: 10, categories: ["park", "trail"] });
+
     expect(api.get).toHaveBeenCalledWith("/api/locations/playdate-locations", {
-      params: undefined,
+      params: { userLat: 1, userLng: 2, range: 10, category: "park,trail" },
     });
+  });
+
+  it("sends no category when none is asked for, so older callers are unaffected", async () => {
+    await fetchNearbyLocations({ latitude: 1, longitude: 2, range: 10 });
+
+    const [, config] = api.get.mock.calls[0];
+    expect(config.params.category).toBeUndefined();
   });
 
   it("returns an array whatever the server sends", async () => {

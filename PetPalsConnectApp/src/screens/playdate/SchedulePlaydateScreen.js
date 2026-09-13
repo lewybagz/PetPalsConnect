@@ -1,19 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Image, TextInput, View } from "react-native";
-import * as Location from "expo-location";
-import { requestLocationPermission } from "../../services/location";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTailwind } from "../../styles/tailwind";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import DateTimePickerComponent from "../../components/DateTimePickerComponent";
-import { fetchUserPreferences } from "../../../services/UserService";
-import {
-  createPlaydate,
-  fetchLocation,
-  fetchMatchedPets,
-  fetchNearbyLocations,
-} from "../../api/playdates";
+import { createPlaydate, fetchMatchedPets } from "../../api/playdates";
+import { usePlaydatePlaces } from "../../hooks/usePlaydatePlaces";
 import { useTokens } from "../../context/AppThemeContext";
 import { Button, Card, ListSkeleton, Screen, Text, useToast } from "../../components/ui";
 import { radius } from "../../styles/tokens";
@@ -48,8 +41,6 @@ import { radius } from "../../styles/tokens";
  *   `petId`      - the same, by id
  *   `locationId` - a place chosen in advance (from a location card)
  */
-const DEFAULT_RANGE_MILES = 10;
-
 /** A stable empty list, so "no pets yet" is not a new array on every render. */
 const NO_PETS = [];
 
@@ -140,85 +131,32 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
   const [notes, setNotes] = useState("");
-  const [locations, setLocations] = useState([]);
-  const [selectedLocation, setSelectedLocation] = useState(null);
-  const [loadingLocations, setLoadingLocations] = useState(true);
-  const [locationError, setLocationError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  /**
+   * Where, in one hook shared with `PlaydateModificationScreen`.
+   *
+   * It owns the category filter (parks and trails, never the vet list), the
+   * one-shot import that fills a cold area in, and the empty state. Both
+   * screens ask the identical question and used to answer it differently.
+   */
+  const {
+    places,
+    loading: loadingLocations,
+    importing: importingLocations,
+    error: locationError,
+    selected: selectedLocation,
+    choose: setSelectedLocation,
+  } = usePlaydatePlaces({
+    profileId: profile?._id,
+    presetLocationId: params.locationId ?? null,
+  });
 
   // Whichever pet is yours by default. Kept in state rather than derived so a
   // second pet can be chosen, and re-derived if the profile arrives late.
   useEffect(() => {
     setMyPetId((current) => current ?? myPets[0]?._id ?? myPets[0] ?? null);
   }, [myPets]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const preferences = await fetchUserPreferences(profile?._id);
-        const range = preferences?.playdateRange ?? DEFAULT_RANGE_MILES;
-
-        const status = await requestLocationPermission();
-
-        // Without permission we can still list places, just not nearest-first.
-        let coords = {};
-        if (status === "granted") {
-          const position = await Location.getCurrentPositionAsync({});
-          coords = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-        }
-
-        const nearby = await fetchNearbyLocations({ ...coords, range });
-        if (cancelled) return;
-
-        setLocations(nearby);
-        if (nearby.length === 0) {
-          setLocationError("No places found nearby yet.");
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.warn("[playdate] locations:", error.message);
-          setLocationError("Could not load places near you.");
-        }
-      } finally {
-        if (!cancelled) setLoadingLocations(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [profile?._id]);
-
-  /**
-   * A place chosen before arriving here is fetched by id rather than looked up
-   * in the nearby list: a favourite can be well outside the owner's range, and
-   * an empty "Where" section under a button that said "Schedule a playdate
-   * here" would be a strange thing to show.
-   */
-  useEffect(() => {
-    if (!params.locationId) return undefined;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const place = await fetchLocation(params.locationId);
-        if (cancelled || !place?._id) return;
-
-        setSelectedLocation(place);
-      } catch (error) {
-        console.warn("[playdate] location:", error.message);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [params.locationId]);
 
   /** Only worth asking when the caller did not already say whose pet. */
   useEffect(() => {
@@ -242,18 +180,6 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
   }, [invitedPetId]);
 
   const theirPetId = theirPet?._id ?? invitedPetId ?? null;
-
-  /**
-   * The nearby list, with a place chosen in advance on the front of it.
-   *
-   * Merged here rather than pushed into `locations`: the two loads race, and
-   * prepending to state meant whichever finished second won - usually the
-   * nearby fetch, which replaces the array and dropped the chosen place.
-   */
-  const places =
-    selectedLocation && !locations.some((item) => item._id === selectedLocation._id)
-      ? [selectedLocation, ...locations]
-      : locations;
 
   const submit = useCallback(async () => {
     if (!theirPetId) {
@@ -366,6 +292,11 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
       {loadingLocations ? (
         <View testID="locations-loading">
           <ListSkeleton count={3} />
+          {importingLocations ? (
+            <Text testID="locations-importing" tone="muted" style={tailwind("mt-sm")}>
+              Looking for parks and trails near you…
+            </Text>
+          ) : null}
         </View>
       ) : null}
       {locationError && places.length === 0 ? (

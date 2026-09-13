@@ -30,11 +30,9 @@ import PlaydateCancellationConfirmationScreen from "../playdate/PlaydateCancella
 import PlaydateCreatedScreen from "../playdate/PlaydateCreatedScreen";
 import PlaydateDetailsScreen from "../playdate/PlaydateDetailsScreen";
 import PlaydateHistoryScreen from "../playdate/PlaydateHistoryScreen";
-import PlaydateModificationConfirmationScreen from "../playdate/PlaydateModificationConfirmationScreen";
 import PlaydateModificationScreen from "../playdate/PlaydateModificationScreen";
 import PostPlaydateReviewScreen from "../playdate/PostPlaydateReviewScreen";
 import PotentialPlaydateLocationScreen from "../playdate/PotentialPlaydateLocationScreen";
-import PotentialPlaydateLocationsScreen from "../playdate/PotentialPlaydateLocationsScreen";
 import SchedulePlaydateScreen from "../playdate/SchedulePlaydateScreen";
 
 // Profile
@@ -165,11 +163,9 @@ export default function AppStack() {
       <Stack.Screen name="PlaydateHistory" component={PlaydateHistoryScreen} options={{ title: "History" }} />
       <Stack.Screen name="PlaydateCreated" component={PlaydateCreatedScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlaydateModification" component={PlaydateModificationScreen} options={{ title: "Modify" }} />
-      <Stack.Screen name="PlaydateModificationConfirmation" component={PlaydateModificationConfirmationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlaydateCancellationConfirmation" component={PlaydateCancellationConfirmationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PostPlaydateReview" component={PostPlaydateReviewScreen} options={{ title: "Leave a Review" }} />
       <Stack.Screen name="PotentialPlaydateLocation" component={PotentialPlaydateLocationScreen} options={{ title: "Location" }} />
-      <Stack.Screen name="PotentialPlaydateLocations" component={PotentialPlaydateLocationsScreen} options={{ title: "Locations" }} />
       <Stack.Screen name="SchedulePlaydate" component={SchedulePlaydateWithPet} options={{ title: "Schedule" }} />
 
       {/* Profile */}

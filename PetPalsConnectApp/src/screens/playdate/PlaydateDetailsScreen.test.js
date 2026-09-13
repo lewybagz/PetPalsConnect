@@ -114,11 +114,29 @@ test("an answered playdate offers nothing further", async () => {
   expect(screen.queryByText("Accept")).toBeNull();
 });
 
-test("a hidden location does not crash the screen", async () => {
+test("a location hidden by the organiser says so", async () => {
   // `getPlaydateById` nulls this when the organiser has location sharing off,
   // so `location.name` threw for exactly the person the server was protecting.
-  api.get.mockResolvedValue({ data: playdate({ location: null }) });
+  api.get.mockResolvedValue({
+    data: playdate({ location: null, locationHidden: true }),
+  });
   renderScreen();
 
   expect(await seeText(/Hidden until the organiser shares it/)).toBeTruthy();
+});
+
+test("a location that was never set does not blame the organiser", async () => {
+  /**
+   * Two unrelated reasons the place can be missing, and one string used to
+   * cover both: somebody's privacy choice, and an absent row. Telling a person
+   * their friend is withholding the venue when the venue simply is not set is
+   * the kind of wrong that starts an argument.
+   */
+  api.get.mockResolvedValue({
+    data: playdate({ location: null, locationHidden: false }),
+  });
+  renderScreen();
+
+  expect(await seeText(/No place set yet/)).toBeTruthy();
+  expect(screen.queryByText(/Hidden until the organiser/)).toBeNull();
 });

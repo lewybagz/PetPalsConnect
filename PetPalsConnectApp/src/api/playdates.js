@@ -13,12 +13,24 @@ import api from "./axios";
  * Places near a point, within `range` miles.
  * Mounted on /api/locations, not /api/playdates.
  */
-export const fetchNearbyLocations = async ({ latitude, longitude, range }) => {
+export const fetchNearbyLocations = async ({ latitude, longitude, range, categories } = {}) => {
+  /**
+   * `categories` narrows the directory to somewhere two dogs can actually
+   * meet. Without it this returned everything imported - vets, pet shops,
+   * boarding kennels, hotels - and offered a kennel as a playdate venue.
+   *
+   * Sent comma-separated, which is what `getAllLocations` parses. Omitted
+   * entirely when absent, so the older callers are unaffected.
+   */
   const { data } = await api.get("/api/locations/playdate-locations", {
-    params:
-      latitude != null && longitude != null
+    params: {
+      ...(latitude != null && longitude != null
         ? { userLat: latitude, userLng: longitude, range }
-        : undefined,
+        : {}),
+      ...(Array.isArray(categories) && categories.length
+        ? { category: categories.join(",") }
+        : {}),
+    },
   });
   return Array.isArray(data) ? data : [];
 };
@@ -83,6 +95,39 @@ export const createPlaydate = async ({ date, time, locationId, petIds, notes }) 
     location: locationId,
     petsInvolved: petIds,
     notes,
+  });
+  return data;
+};
+
+/**
+ * One playdate, with its pets, participants and place populated.
+ *
+ * `locationHidden` says *why* `location` is null when it is: the organiser
+ * turned location sharing off, as opposed to the place simply not being set.
+ * The screen cannot tell those apart on its own and used to blame the
+ * organiser for both.
+ */
+export const fetchPlaydate = async (playdateId) => {
+  const { data } = await api.get(`/api/playdates/${playdateId}`);
+  return data ?? null;
+};
+
+/**
+ * Changes the date, the time or the place of a playdate the caller organised.
+ *
+ * Only what is passed is sent: the handler assigns the fields it receives, so
+ * sending `undefined` for the others is what keeps an edit to the time from
+ * wiping the date. `startTime`, not `time` - there is no `time` path on the
+ * schema, and the old name was silently dropped.
+ */
+export const updatePlaydate = async (playdateId, { date, time, locationId } = {}) => {
+  const startTime = date && time ? combineDateAndTime(date, time) : null;
+
+  const { data } = await api.patch(`/api/playdates/${playdateId}/update`, {
+    ...(startTime ? { date: startTime.toISOString(), startTime: startTime.toISOString() } : {}),
+    // An id, never the whole place object - the server looks it up to check
+    // it exists, and a document where an id belongs finds nothing.
+    ...(locationId ? { location: locationId } : {}),
   });
   return data;
 };

@@ -360,3 +360,138 @@ test("a cancelled playdate is history even with a future date", async () => {
     .expect(200);
   assert.equal(res.body.length, 1, "a cancelled playdate should still appear in history");
 });
+
+// --- Changing one that already exists ---------------------------------------
+
+test("the organiser can move a playdate to a different place", async () => {
+  const alice = await makeOwnerWithPet("pd-move-alice");
+  const bob = await makeOwnerWithPet("pd-move-bob");
+  const first = await makePark();
+  const second = await makePark();
+
+  const created = await schedule("pd-move-alice", {
+    pets: [alice.pet, bob.pet],
+    location: first,
+  });
+
+  await request(app)
+    .patch(`/api/playdates/${created.body._id}/update`)
+    .set(...auth("pd-move-alice"))
+    .send({ location: String(second._id) })
+    .expect(200);
+
+  const after = await request(app)
+    .get(`/api/playdates/${created.body._id}`)
+    .set(...auth("pd-move-alice"))
+    .expect(200);
+
+  assert.equal(String(after.body.location._id), String(second._id));
+});
+
+test("an edit to the time leaves the date alone", async () => {
+  /**
+   * This handler assigned `date`, `time` and `location` unconditionally, so an
+   * edit naming only one of them wrote `undefined` over the other two - and
+   * `date` is required, so the save then failed talking about a field the
+   * caller never touched.
+   */
+  const alice = await makeOwnerWithPet("pd-partial-alice");
+  const bob = await makeOwnerWithPet("pd-partial-bob");
+  const park = await makePark();
+
+  const created = await schedule("pd-partial-alice", {
+    pets: [alice.pet, bob.pet],
+    location: park,
+  });
+
+  const moved = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  await request(app)
+    .patch(`/api/playdates/${created.body._id}/update`)
+    .set(...auth("pd-partial-alice"))
+    .send({ date: moved, startTime: moved })
+    .expect(200);
+
+  const after = await request(app)
+    .get(`/api/playdates/${created.body._id}`)
+    .set(...auth("pd-partial-alice"))
+    .expect(200);
+
+  // The place survived an edit that never mentioned it.
+  assert.equal(String(after.body.location._id), String(park._id));
+  assert.equal(new Date(after.body.startTime).toISOString(), moved);
+});
+
+test("a place that does not exist is refused rather than written", async () => {
+  // `createPlaydate` checks this; update did not, so any id at all wrote a
+  // dangling reference that every populate then resolved to null.
+  const alice = await makeOwnerWithPet("pd-bad-alice");
+  const bob = await makeOwnerWithPet("pd-bad-bob");
+  const park = await makePark();
+
+  const created = await schedule("pd-bad-alice", {
+    pets: [alice.pet, bob.pet],
+    location: park,
+  });
+
+  await request(app)
+    .patch(`/api/playdates/${created.body._id}/update`)
+    .set(...auth("pd-bad-alice"))
+    .send({ location: "60a000000000000000000000" })
+    .expect(404);
+
+  const after = await request(app)
+    .get(`/api/playdates/${created.body._id}`)
+    .set(...auth("pd-bad-alice"))
+    .expect(200);
+  assert.equal(String(after.body.location._id), String(park._id));
+});
+
+test("only the organiser can change it", async () => {
+  const alice = await makeOwnerWithPet("pd-guard-alice");
+  const bob = await makeOwnerWithPet("pd-guard-bob");
+  const park = await makePark();
+  const elsewhere = await makePark();
+
+  const created = await schedule("pd-guard-alice", {
+    pets: [alice.pet, bob.pet],
+    location: park,
+  });
+
+  await request(app)
+    .patch(`/api/playdates/${created.body._id}/update`)
+    .set(...auth("pd-guard-bob"))
+    .send({ location: String(elsewhere._id) })
+    .expect(403);
+});
+
+test("the response says why a location is missing", async () => {
+  /**
+   * Nulling the location for privacy and never having set one look identical
+   * to the app, which showed "Hidden until the organiser shares it" for both -
+   * blaming somebody's privacy setting for absent data.
+   */
+  const alice = await makeOwnerWithPet("pd-hidden-alice");
+  const bob = await makeOwnerWithPet("pd-hidden-bob");
+  const park = await makePark();
+
+  const created = await schedule("pd-hidden-alice", {
+    pets: [alice.pet, bob.pet],
+    location: park,
+  });
+
+  const shown = await request(app)
+    .get(`/api/playdates/${created.body._id}`)
+    .set(...auth("pd-hidden-alice"))
+    .expect(200);
+  assert.equal(shown.body.locationHidden, false);
+  assert.ok(shown.body.location);
+
+  await User.updateOne({ _id: alice.user._id }, { locationSharingEnabled: false });
+
+  const hidden = await request(app)
+    .get(`/api/playdates/${created.body._id}`)
+    .set(...auth("pd-hidden-bob"))
+    .expect(200);
+  assert.equal(hidden.body.locationHidden, true);
+  assert.equal(hidden.body.location, null);
+});

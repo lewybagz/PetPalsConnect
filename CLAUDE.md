@@ -1295,6 +1295,44 @@ parks and pet shops so a fresh deployment is not an empty map; without
 The importer upserts on `placeId`, which is also uniquely indexed, so two users
 in one city cannot double the markers.
 
+**It calls Places API (New), because the legacy API cannot be switched on.**
+Google stopped enabling the legacy Places API for new Cloud projects, so
+`maps/api/place/nearbysearch/json` answers "You're calling a legacy API, which
+is not enabled for your project" however the key is configured - there is no
+console toggle that fixes it. The console entry to enable is **Places API
+(New)**, a separate library item from the old "Places API". The key is a
+`X-Goog-Api-Key` header now, not a `key=` parameter, and an
+`X-Goog-FieldMask` header is mandatory - omit it and every call errors.
+
+**Nearby Search has no keyword, so half the categories go through Text
+Search.** The new Nearby Search takes types only. Grooming, boarding, patios,
+hotels and trails exist *only* as keywords - Google has no type for any of
+them - so `search()` picks the endpoint from whether a keyword was passed, and
+callers stay unaware. The catch is that Text Search takes a location *bias*
+rather than a restriction (only a rectangle can restrict, and a circle is the
+shape we have), so it will answer with a Tucson hotel once the Phoenix ones run
+out. `withinRadius` trims the results with the matcher's own haversine, which
+is reused rather than rewritten - a second copy of that arithmetic is a second
+place to put latitude and longitude the wrong way round.
+
+**Three renames in that migration fail quietly rather than loudly**, which is
+why `toLocation` and `withinRadius` are exported and tested directly.
+`results` is now `places`, and it is *absent* on zero results rather than an
+empty array, so `data.places.length` throws. `place_id` is `id` - while `name`
+is now the resource path `places/<id>` and the human name moved to
+`displayName.text`, so reading `name` as before writes "places/ChIJ..." into a
+required field, which validates and renders garbage. And
+`geometry.location.lat/lng` is `location.latitude/longitude`. Errors moved to
+real HTTP codes too: the old `if (data.status !== "OK")` checks were dead code
+that would have passed everything through.
+
+**Details is Enterprise-tier, which is what makes the lazy fetch load-bearing.**
+Billing follows the highest tier named in the field mask, and all four fields
+this asks for - `nationalPhoneNumber`, `websiteUri`, `regularOpeningHours`,
+`rating` - are Enterprise. Fetching them per result at import time would be a
+serious bill; `withDetails` runs on `GET /api/locations/:id` and caches for 30
+days, and that was already the design for other reasons.
+
 **The map keys are prebuild-time, not runtime.** `GOOGLE_MAPS_ANDROID_KEY` and
 `GOOGLE_MAPS_IOS_KEY` are read by the `react-native-maps` config plugin in
 `app.json`, so changing one means rebuilding rather than restarting Metro.
@@ -1340,6 +1378,48 @@ back in the list.
 **Whose pet is coming is a question, once there is more than one.** The screen
 sent `profile.pets[0]` regardless. The owner picks now; with a single pet there
 is no question and none is asked.
+
+**`usePlaydatePlaces` is the one answer to "where can they meet".** Scheduling
+a playdate and changing one ask the identical question, and the app answered it
+two different ways: the scheduling screen had a working picker, and the
+modification screen navigated to a separate list that never sent the choice
+back, so a venue could not be changed at all. That list is deleted rather than
+repaired - the same call as the three-screen flow above - and both screens use
+the hook. It owns the category filter, the one-shot import and the empty state.
+
+**The picker asks for parks and trails, never the whole directory.** It sent no
+category at all, so once the places import ran it offered vets, pet shops,
+boarding kennels and hotels as venues for two dogs to meet. `placeCategories`
+had said "the playdate location pickers want `park`" since it was written and
+nothing acted on it. Trails are in because a trailhead is somewhere two owners
+genuinely meet to walk dogs; everything else is a place you take a pet *to*,
+not a place two pets meet.
+
+**Scheduling imports its own places, like the hub and the map.** It was the one
+place-consuming screen that could not heal a cold area: a user who happened to
+open the care hub first got a working picker, and one who came straight here
+got "No places found nearby yet" and a dead end, because creating a playdate
+requires a location at three layers and the screen offers no other way to add
+one. Same guard rails as the other two - a known position, a genuinely empty
+list, once per mount.
+
+**Changing a playdate was impossible, at four layers.** `updatePlaydateDetails`
+compared `playdate.creator.toString()` against `req.userId`, which is an
+ObjectId rather than a string, so the check never passed and the handler
+answered 403 to everybody - including the organiser it exists for. Behind that
+it assigned `date`, `time` and `location` unconditionally, so an edit naming
+one wrote `undefined` over the others and the save then failed on a required
+field the caller never touched; `time` is not a path on the schema at all
+(`startTime` is), so that change was silently dropped; and `location` was
+written with no existence check, unlike `createPlaydate`, so any id at all left
+a dangling reference. A rule enforced on create and not on update is not a rule.
+
+**A missing venue has two causes and the server says which.**
+`getPlaydateById` nulls the location when the organiser has location sharing
+off, and the screen showed "Hidden until the organiser shares it" for that
+*and* for a playdate whose place was simply never set - blaming somebody's
+privacy choice for absent data. `locationHidden` travels with the response
+because the server is the only side that can tell them apart.
 
 **The confirmation takes the pet off the playdate, not off the caller.**
 `PlaydateCreated` read `pet.photos[0]` from a param only one of the two flows

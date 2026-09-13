@@ -54,11 +54,23 @@ const PlaydateController = {
         return res.status(404).json({ message: "Playdate not found" });
       }
 
-      if (playdate.creator.locationSharingEnabled === false) {
+      /**
+       * Why the location is missing, said out loud.
+       *
+       * Nulling it here and leaving the screen to guess meant one string had
+       * to cover two unrelated cases: an organiser who has turned location
+       * sharing off, and a playdate whose place was deleted. The app showed
+       * "Hidden until the organiser shares it" for both, which blames a
+       * privacy setting for what is often just an absent row.
+       *
+       * The server is the only side that knows which, so it says.
+       */
+      const hidden = playdate.creator.locationSharingEnabled === false;
+      if (hidden) {
         playdate.location = null;
       }
 
-      res.json(playdate);
+      res.json({ ...playdate.toObject(), locationHidden: hidden });
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
@@ -418,7 +430,9 @@ const PlaydateController = {
 
   async updatePlaydateDetails(req, res) {
     const { playdateId } = req.params;
-    const { date, time, location } = req.body;
+    // `startTime` rather than `time`: the schema has no `time` path, so the
+    // old name wrote a stray key and the change was silently dropped.
+    const { date, startTime, location } = req.body;
     const userId = req.userId;
 
     try {
@@ -433,16 +447,40 @@ const PlaydateController = {
         return res.status(404).json({ message: "Playdate not found" });
       }
 
-      if (playdate.creator.toString() !== userId) {
+      // `req.userId` is an ObjectId, not a string, so `x.toString() !== userId`
+      // was always unequal and this handler answered 403 to everybody -
+      // including the organiser it exists for. Compare both as strings.
+      if (String(playdate.creator) !== String(userId)) {
         return res
           .status(403)
           .json({ message: "Unauthorized to update this playdate" });
       }
 
-      // Update playdate details
-      playdate.date = date;
-      playdate.time = time;
-      playdate.location = location;
+      /**
+       * Only what was actually sent, and a location has to exist.
+       *
+       * This assigned all three unconditionally, which meant an edit that
+       * changed only the time also wrote `undefined` over the date - and
+       * `date` is required, so the save then failed talking about a field the
+       * caller never touched. `time` is not a path on the schema at all
+       * (`startTime` is), so that line only ever added a stray key.
+       *
+       * `location` took whatever the body held with no check, so an arbitrary
+       * id wrote a dangling reference that every populate would then resolve
+       * to null. `createPlaydate` verifies the place exists; so does this now,
+       * because a rule enforced on create and not on update is not a rule.
+       */
+      if (date !== undefined) playdate.date = date;
+      if (startTime !== undefined) playdate.startTime = startTime;
+
+      if (location !== undefined) {
+        const place = await Location.findById(location).select("_id");
+        if (!place) {
+          return res.status(404).json({ message: "Cannot find that location" });
+        }
+        playdate.location = place._id;
+      }
+
       await playdate.save();
 
       // Generate messages and notifications

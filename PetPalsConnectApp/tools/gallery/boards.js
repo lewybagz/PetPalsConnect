@@ -22,6 +22,7 @@ import HelpSupportScreen from "../../src/screens/settings/HelpSupportScreen";
 import PostPlaydateReviewScreen from "../../src/screens/playdate/PostPlaydateReviewScreen";
 import MapScreen from "../../src/screens/swipe/MapScreen";
 import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateScreen";
+import PlaydateModificationScreen from "../../src/screens/playdate/PlaydateModificationScreen";
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
 import WaitlistScreen from "../../src/screens/auth/WaitlistScreen";
 import FriendsListScreen from "../../src/screens/profile/FriendsListScreen";
@@ -313,6 +314,33 @@ export const BOARDS = [
     },
     render: () => (
       <PlaydateDetailsScreen
+        navigation={navigation}
+        route={{ params: { playdateId: "pd-1" } }}
+      />
+    ),
+  },
+  {
+    id: "playdate-modify",
+    label: "Playdate - changing one",
+    // Rebuilt: it was raw View/Text/Button, opened on today's date rather
+    // than the scheduled one, and its location button went to a list screen
+    // that never returned a choice. Same picker as scheduling now.
+    routes: {
+      ...ROUTES,
+      "/api/playdates/pd-1": {
+        _id: "pd-1",
+        status: "accepted",
+        creator: { _id: "user-me", username: "sam" },
+        date: "2026-10-01T10:00:00.000Z",
+        startTime: "2026-10-01T10:00:00.000Z",
+        location: { _id: "loc-1", name: "Dolores Park", address: "19th & Dolores" },
+        participants: [],
+        petsInvolved: [],
+        reviews: [],
+      },
+    },
+    render: () => (
+      <PlaydateModificationScreen
         navigation={navigation}
         route={{ params: { playdateId: "pd-1" } }}
       />
