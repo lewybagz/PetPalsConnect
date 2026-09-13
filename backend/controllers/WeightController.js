@@ -1,5 +1,5 @@
 const WeightEntry = require("../models/WeightEntry");
-const Pet = require("../models/Pet");
+const weights = require("../services/weights");
 
 /**
  * Weight history for one pet.
@@ -12,24 +12,17 @@ const Pet = require("../models/Pet");
  * vet (APOP 2025), so the useful thing here is the number over time and the
  * chart to read it against, not an opinion.
  *
- * Only the species the schema stores a weight for. `Pet.weight` is required
- * for dogs and cats and meaningless for a fish, and a history of a number that
- * was never collected is not a feature.
+ * The writes live in `services/weights.js` because Spot writes weights too;
+ * this controller only reads and answers.
  */
-const MEASURED_SPECIES = ["dog", "cat"];
 
-/** The caller's own pet, or the response that says why not. */
-const ownPet = async (req, res) => {
-  const pet = await Pet.findById(req.params.petId).select("owner name species").lean();
-  if (!pet) {
-    res.status(404).json({ message: "Cannot find pet" });
-    return null;
+/** A service error carries its status; anything else is a 500. */
+const answer = (res, err) => {
+  if (err.status) {
+    return res.status(err.status).json({ message: err.message, ...(err.field && { field: err.field }) });
   }
-  if (String(pet.owner) !== String(req.userId)) {
-    res.status(403).json({ message: "That isn't your pet" });
-    return null;
-  }
-  return pet;
+  if (err.name === "ValidationError") return res.status(400).json({ message: err.message });
+  res.status(500).json({ message: err.message });
 };
 
 const WeightController = {
@@ -42,107 +35,52 @@ const WeightController = {
    */
   async listEntries(req, res) {
     try {
-      const pet = await ownPet(req, res);
-      if (!pet) return;
+      const pet = await weights.ownPet(req.userId, req.params.petId);
 
       const entries = await WeightEntry.find({ pet: pet._id, owner: req.userId })
         .sort({ takenAt: -1 })
         .lean();
 
       res.json({
-        measured: MEASURED_SPECIES.includes(pet.species ?? "dog"),
+        measured: weights.MEASURED_SPECIES.includes(pet.species ?? "dog"),
         entries,
       });
     } catch (err) {
-      res.status(500).json({ message: err.message });
+      answer(res, err);
     }
   },
 
-  /**
-   * Records a weigh-in, and moves `Pet.weight` to match.
-   *
-   * The second half matters: `Pet.weight` is what size compatibility scores
-   * on, and leaving it behind would make the app hold two answers to "how
-   * heavy is this dog" - the exact shape of bug this codebase has already
-   * fixed twice. The newest entry is the current weight, by definition.
-   */
+  /** Records a weigh-in; `services/weights` moves `Pet.weight` to match. */
   async createEntry(req, res) {
     try {
-      const pet = await ownPet(req, res);
-      if (!pet) return;
-
-      if (!MEASURED_SPECIES.includes(pet.species ?? "dog")) {
-        return res.status(400).json({
-          message: "Weight is only tracked for dogs and cats",
-          field: "species",
-        });
-      }
-
       const { pounds, takenAt, bodyCondition, notes } = req.body;
-
-      const created = await WeightEntry.create({
-        pet: pet._id,
-        owner: req.userId,
-        creator: req.userId,
+      const entry = await weights.logWeight({
+        ownerId: req.userId,
+        petId: req.params.petId,
         pounds,
-        takenAt: takenAt || new Date(),
-        bodyCondition: bodyCondition || undefined,
+        takenAt,
+        bodyCondition,
         notes,
       });
-
-      // Only when this really is the most recent weigh-in: back-filling last
-      // year's number must not overwrite what the pet weighs now.
-      const newest = await WeightEntry.findOne({ pet: pet._id, owner: req.userId })
-        .sort({ takenAt: -1 })
-        .select("pounds")
-        .lean();
-
-      if (newest && String(newest._id) === String(created._id)) {
-        await Pet.findByIdAndUpdate(pet._id, { weight: created.pounds });
-      }
-
-      res.status(201).json({ entry: created });
+      res.status(201).json({ entry });
     } catch (err) {
-      if (err.name === "ValidationError") {
-        return res.status(400).json({ message: err.message });
-      }
-      res.status(500).json({ message: err.message });
+      answer(res, err);
     }
   },
 
-  /** Removes one. Scoped on the caller, so somebody else's id finds nothing. */
   async deleteEntry(req, res) {
     try {
-      const deleted = await WeightEntry.findOneAndDelete({
-        _id: req.params.entryId,
-        pet: req.params.petId,
-        owner: req.userId,
+      await weights.removeWeight({
+        ownerId: req.userId,
+        petId: req.params.petId,
+        entryId: req.params.entryId,
       });
-      if (!deleted) {
-        return res.status(404).json({ message: "Cannot find that entry" });
-      }
-
-      // The current weight follows the newest remaining entry. Deleting the
-      // most recent weigh-in must not leave `Pet.weight` quoting a number the
-      // owner has just said was wrong.
-      const newest = await WeightEntry.findOne({
-        pet: req.params.petId,
-        owner: req.userId,
-      })
-        .sort({ takenAt: -1 })
-        .select("pounds")
-        .lean();
-
-      if (newest) {
-        await Pet.findByIdAndUpdate(req.params.petId, { weight: newest.pounds });
-      }
-
       res.json({ removed: true });
     } catch (err) {
-      res.status(500).json({ message: err.message });
+      answer(res, err);
     }
   },
 };
 
 module.exports = WeightController;
-module.exports.MEASURED_SPECIES = MEASURED_SPECIES;
+module.exports.MEASURED_SPECIES = weights.MEASURED_SPECIES;
