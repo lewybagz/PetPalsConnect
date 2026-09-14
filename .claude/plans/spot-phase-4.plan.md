@@ -1,8 +1,9 @@
 # Spot, phase 4: reach, hands, and cost
 
 Status: **all eight todos built** (2026-09-13): 1 to 5 in `0cf17c9`, 6 to 8 in
-`90a1377`; the first live eval ran 2026-09-14 (14 of 16) and its two fixes are
-`15b7ca3` - see "Eval runs" in the first plan. Written 2026-09-13 against
+`90a1377`; two live evals ran 2026-09-14 (14 of 16, then 16 of 16); the fixes are
+`15b7ca3` and `29a07d4`, and a third run is owed because the eval had not been
+sending the roster - see "Eval runs" in the first plan. Written 2026-09-13 against
 `9ec369e`, on `feat/store-and-tracking`. Follows [spot-assistant.plan.md](spot-assistant.plan.md),
 whose three phases are built (todo 8 `7cca3b3`). Brief from Lewy: "give Spot
 more features, more tools, better efficiency; ensure it is A1 from day 1."
@@ -275,9 +276,11 @@ dropped since there is no such screen on `AppStack`. Boards `spot-actions`,
 `spot-recent`, `spot-notes` reviewed in both themes. App suite green
 except the known Home flake, which passes alone; backend suite green in
 every Spot file. The eval has seven more cases and grades a roster
-question on its iteration count. It ran on 2026-09-14: 14 of 16, and both
-failures were the runner's and the roster's, fixed in `15b7ca3` and recorded in
-the first plan under "Eval runs".
+question on its iteration count. It ran twice on 2026-09-14: 14 of 16, then 16 of 16. The
+first run's failure was the runner's (`15b7ca3`); the second run passed a
+roster answer that was invented, because the script had never sent the roster
+(`29a07d4`). Both are recorded in the first plan under "Eval runs", with the
+third run still owed.
 
 ## Env vars and dashboard prerequisites
 
