@@ -269,6 +269,39 @@ test("the app's copy of the matching weights matches the algorithm", () => {
   assert.deepEqual(appWeights, WEIGHTS);
 });
 
+/**
+ * The add-a-pet form asks for a life stage rather than a number, so it needs
+ * the same boundaries the care hub already picks from - and the app and the
+ * backend never import each other. A copy drifts; this is the same guard as
+ * the matching weights above.
+ *
+ * The failure this prevents is quiet: a boundary changed on one side files
+ * puppies as adults, and nothing anywhere says so.
+ */
+test("the app's life-stage boundaries match the care hub's", () => {
+  const { STAGE_BOUNDARIES } = require("../services/petCare/picks");
+
+  const source = fs.readFileSync(
+    path.resolve(__dirname, "../../PetPalsConnectApp/src/data/species.js"),
+    "utf8"
+  );
+  const start = source.indexOf("export const STAGE_BOUNDARIES");
+  assert.notEqual(start, -1, "the app must declare STAGE_BOUNDARIES");
+  const block = source.slice(start, source.indexOf("};", start));
+
+  const appBoundaries = {};
+  for (const match of block.matchAll(
+    /(\w+):\s*\{\s*adultFrom:\s*(\d+),\s*seniorFrom:\s*(\d+)\s*\}/g
+  )) {
+    appBoundaries[match[1]] = {
+      adultFrom: Number(match[2]),
+      seniorFrom: Number(match[3]),
+    };
+  }
+
+  assert.deepEqual(appBoundaries, STAGE_BOUNDARIES);
+});
+
 test("the app's notification types match the server's, entry for entry", () => {
   const backend = require("../services/notificationTypes");
   const appSource = fs.readFileSync(

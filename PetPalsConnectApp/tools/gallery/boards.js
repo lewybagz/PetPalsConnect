@@ -26,6 +26,8 @@ import PlaydateModificationScreen from "../../src/screens/playdate/PlaydateModif
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
 import WaitlistScreen from "../../src/screens/auth/WaitlistScreen";
 import FirstRunScreen from "../../src/screens/auth/FirstRunScreen";
+import CreateProfileScreen from "../../src/screens/auth/CreateProfileScreen";
+import AddFirstPetScreen from "../../src/screens/pets/AddFirstPetScreen";
 import FriendsListScreen from "../../src/screens/profile/FriendsListScreen";
 import FriendRequestsCard from "../../src/components/FriendRequestsCard";
 import MoreScreen from "../../src/screens/bottomTab/MoreScreen";
@@ -357,6 +359,28 @@ export const BOARDS = [
         route={{ params: { locationId: "loc-1" } }}
       />
     ),
+  },
+  {
+    id: "create-profile",
+    label: "Onboarding - the profile step",
+    routes: { ...ROUTES, "/api/users/username-available": { available: true } },
+    // Step two of three. The suggested username is accepted when it is free,
+    // so the common case is a confirmed row rather than an empty field - and
+    // this is the board that shows whether that reads as "done" or as
+    // something broken.
+    render: () => <CreateProfileScreen />,
+  },
+  {
+    id: "add-first-pet",
+    label: "Onboarding - the pet step",
+    routes: ROUTES,
+    // Scrolled past the photo and species rows: the age control is the part
+    // that changed and it sits below the fold.
+    scrollY: 700,
+    // Step three. The age control is three stage buttons rather than a
+    // number field; the bands are named on them and are species-specific,
+    // which is the part worth seeing rather than reading.
+    render: () => <AddFirstPetScreen />,
   },
   {
     id: "first-run",

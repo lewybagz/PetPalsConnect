@@ -118,3 +118,61 @@ export const speciesInfo = (value) =>
 
 /** Whether this species can take part in matching and playdates. */
 export const isMatchable = (value) => speciesInfo(value).matchable;
+
+/**
+ * Where each species' life stages begin, in years.
+ *
+ * A mirror of `STAGE_BOUNDARIES` in `backend/services/petCare/picks.js`, which
+ * is where the care hub's picks are already chosen from - the app needs them
+ * too now that the add-a-pet form asks for a stage rather than a number, and
+ * the app and the backend never import each other. `types.test.js` compares
+ * the two, so a boundary changed on one side fails the suite rather than
+ * quietly filing puppies as adults.
+ *
+ * These are approximate by design. The app knows an age in whole years and
+ * nothing more, and pretending to more precision than that would be inventing
+ * it.
+ */
+export const STAGE_BOUNDARIES = {
+  dog: { adultFrom: 2, seniorFrom: 8 },
+  cat: { adultFrom: 1, seniorFrom: 11 },
+  smallMammal: { adultFrom: 1, seniorFrom: 4 },
+  bird: { adultFrom: 1, seniorFrom: 8 },
+  reptile: { adultFrom: 2, seniorFrom: 10 },
+  fish: { adultFrom: 1, seniorFrom: 5 },
+};
+
+/**
+ * The three stages, as a form can offer them.
+ *
+ * `age` is the number stored when somebody picks a stage rather than typing a
+ * year: the midpoint of the band for young and adult, and the boundary itself
+ * for senior, which is open-ended. Matching scores the *difference* between
+ * two ages, so a midpoint is a better input than a number an owner invented to
+ * get past a required field - and plenty of adopted dogs genuinely have no
+ * known birthday.
+ */
+export const lifeStages = (species) => {
+  const { adultFrom, seniorFrom } = STAGE_BOUNDARIES[species] ?? STAGE_BOUNDARIES.dog;
+
+  return [
+    {
+      value: "young",
+      label: species === "dog" ? "Puppy" : "Young",
+      hint: `Under ${adultFrom}`,
+      age: Math.round((adultFrom / 2) * 10) / 10,
+    },
+    {
+      value: "adult",
+      label: "Adult",
+      hint: `${adultFrom}-${seniorFrom - 1}`,
+      age: Math.round(((adultFrom + seniorFrom) / 2) * 10) / 10,
+    },
+    {
+      value: "senior",
+      label: "Senior",
+      hint: `${seniorFrom}+`,
+      age: seniorFrom,
+    },
+  ];
+};

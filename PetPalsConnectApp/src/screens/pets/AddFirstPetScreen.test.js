@@ -51,7 +51,7 @@ describe("AddFirstPetScreen", () => {
     await fireEvent.changeText(screen.getByPlaceholderText("Rex"), "  Bella  ");
     await fireEvent.press(screen.getByTestId("breed-picker"));
     await fireEvent.press(await screen.findByText("Beagle"));
-    await fireEvent.changeText(screen.getByPlaceholderText("3"), "4");
+    await fireEvent.press(screen.getByTestId("stage-adult"));
     await fireEvent.changeText(screen.getByPlaceholderText("25"), "30");
 
     await fireEvent.press(screen.getByText("Finish setting up"));
@@ -63,7 +63,9 @@ describe("AddFirstPetScreen", () => {
       name: "Bella",
       species: "dog",
       breed: "Beagle",
-      age: 4,
+      // The midpoint of the dog adult band (2-7), not a number the owner
+      // invented to get past a required field.
+      age: 5,
       weight: 30,
       photos: [],
     });
@@ -76,7 +78,7 @@ describe("AddFirstPetScreen", () => {
     await fireEvent.changeText(screen.getByPlaceholderText("Rex"), "Otto");
     await fireEvent.press(screen.getByTestId("breed-picker"));
     await fireEvent.press(await screen.findByText("Beagle"));
-    await fireEvent.changeText(screen.getByPlaceholderText("3"), "2");
+    await fireEvent.press(screen.getByTestId("stage-adult"));
     await fireEvent.press(screen.getByText("kg"));
     await fireEvent.changeText(screen.getByPlaceholderText("12"), "10");
 
@@ -94,7 +96,7 @@ describe("AddFirstPetScreen", () => {
 
     await fireEvent.press(screen.getByTestId("species-fish"));
     await fireEvent.changeText(screen.getByPlaceholderText("Rex"), "Bubbles");
-    await fireEvent.changeText(screen.getByPlaceholderText("3"), "1");
+    await fireEvent.press(screen.getByTestId("stage-young"));
 
     await fireEvent.press(screen.getByText("Finish setting up"));
 
@@ -138,7 +140,7 @@ describe("AddFirstPetScreen", () => {
     await renderScreen({ createPet });
 
     await fireEvent.changeText(screen.getByPlaceholderText("Rex"), "Nameless");
-    await fireEvent.changeText(screen.getByPlaceholderText("3"), "3");
+    await fireEvent.press(screen.getByTestId("stage-adult"));
     await fireEvent.changeText(screen.getByPlaceholderText("25"), "20");
 
     await fireEvent.press(screen.getByText("Finish setting up"));
@@ -146,11 +148,80 @@ describe("AddFirstPetScreen", () => {
     expect(createPet).not.toHaveBeenCalled();
   });
 
-  it("rejects an age outside the range it accepts, and says so", async () => {
+  it("offers a stage rather than a number, with the bands named", async () => {
     await renderScreen();
 
-    await fireEvent.changeText(screen.getByPlaceholderText("3"), "99");
+    // Plenty of adopted dogs have no known birthday, and a required number
+    // field asks their owner to invent one that then reaches the matcher.
+    expect(screen.getByTestId("stage-young")).toBeTruthy();
+    expect(screen.getByText("Puppy")).toBeTruthy();
+    expect(screen.getByText("Under 2")).toBeTruthy();
+    expect(screen.getByText("8+")).toBeTruthy();
+    expect(screen.queryByTestId("pet-age")).toBeNull();
+  });
+
+  it("names the bands for the species that is selected", async () => {
+    await renderScreen();
+
+    await fireEvent.press(screen.getByTestId("species-cat"));
+
+    // A cat is an adult at one and a senior at eleven, not two and eight.
+    expect(screen.getByText("Under 1")).toBeTruthy();
+    expect(screen.getByText("11+")).toBeTruthy();
+    expect(screen.getByText("Young")).toBeTruthy();
+  });
+
+  it("sends the exact age when somebody knows it", async () => {
+    const createPet = jest.fn().mockResolvedValue({ _id: "pet-1" });
+    await renderScreen({ createPet });
+
+    await fireEvent.changeText(screen.getByPlaceholderText("Rex"), "Bella");
+    await fireEvent.press(screen.getByTestId("breed-picker"));
+    await fireEvent.press(await screen.findByText("Beagle"));
+    await fireEvent.press(screen.getByTestId("age-use-exact"));
+    await fireEvent.changeText(screen.getByTestId("pet-age"), "7");
+    await fireEvent.changeText(screen.getByPlaceholderText("25"), "30");
+
+    await fireEvent.press(screen.getByText("Finish setting up"));
+
+    await waitFor(() => expect(createPet).toHaveBeenCalledTimes(1));
+    expect(createPet.mock.calls[0][0].age).toBe(7);
+  });
+
+  it("still rejects an exact age outside the range it accepts", async () => {
+    await renderScreen();
+
+    await fireEvent.press(screen.getByTestId("age-use-exact"));
+    await fireEvent.changeText(screen.getByTestId("pet-age"), "99");
 
     expect(screen.getByText(/between 0 and 40/)).toBeTruthy();
+  });
+
+  it("will not submit with no age answered at all", async () => {
+    const createPet = jest.fn();
+    await renderScreen({ createPet });
+
+    await fireEvent.changeText(screen.getByPlaceholderText("Rex"), "Ghost");
+    await fireEvent.press(screen.getByTestId("breed-picker"));
+    await fireEvent.press(await screen.findByText("Beagle"));
+    await fireEvent.changeText(screen.getByPlaceholderText("25"), "20");
+
+    await fireEvent.press(screen.getByText("Finish setting up"));
+
+    // Unknown is a real state the care hub handles, but it has to be chosen -
+    // `lifeStage` returns null rather than guessing, and a pick that depends
+    // on a stage is then left out.
+    expect(createPet).not.toHaveBeenCalled();
+  });
+
+  it("clears a chosen stage when the species changes", async () => {
+    await renderScreen();
+
+    await fireEvent.press(screen.getByTestId("stage-adult"));
+    await fireEvent.press(screen.getByTestId("species-cat"));
+
+    // The bands differ per species, so "adult" does not mean the same thing.
+    const adult = screen.getByTestId("stage-adult");
+    expect(adult.props.accessibilityState.selected).toBe(false);
   });
 });

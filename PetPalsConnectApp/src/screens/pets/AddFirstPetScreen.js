@@ -21,7 +21,7 @@ import { OnboardingProgress, useToast } from "../../components/ui";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { describeApiError } from "../../utils/authErrors";
 import { track } from "../../services/analytics";
-import { SPECIES, DEFAULT_SPECIES, speciesInfo } from "../../data/species";
+import { SPECIES, DEFAULT_SPECIES, speciesInfo, lifeStages } from "../../data/species";
 import { useTokens } from "../../context/AppThemeContext";
 
 /**
@@ -56,6 +56,11 @@ export default function AddFirstPetScreen() {
   const [species, setSpecies] = useState(DEFAULT_SPECIES);
   const [breed, setBreed] = useState("");
   const [age, setAge] = useState("");
+  // A stage by default, an exact year for somebody who knows it. Most owners
+  // of an adopted pet do not, and a required number field asks them to invent
+  // one - which then goes into the matcher as though it were known.
+  const [stage, setStage] = useState(null);
+  const [exactAge, setExactAge] = useState(false);
   const [weight, setWeight] = useState("");
   const [weightUnit, setWeightUnit] = useState("lbs");
   const [photo, setPhoto] = useState(null);
@@ -79,8 +84,17 @@ export default function AddFirstPetScreen() {
     return breeds.filter((option) => option.toLowerCase().includes(query));
   }, [breedQuery, speciesRules]);
 
+  const stages = lifeStages(species);
   const parsedAge = Number(age);
-  const ageIsValid = age !== "" && Number.isFinite(parsedAge) && parsedAge >= 0 && parsedAge < 40;
+  const typedAgeIsValid =
+    age !== "" && Number.isFinite(parsedAge) && parsedAge >= 0 && parsedAge < 40;
+
+  // What actually gets sent: the typed year when there is one, otherwise the
+  // midpoint of the chosen stage.
+  const ageToSend = exactAge
+    ? parsedAge
+    : (stages.find((entry) => entry.value === stage)?.age ?? null);
+  const ageIsValid = exactAge ? typedAgeIsValid : ageToSend != null;
 
   const parsedWeight = Number(weight);
   const weightIsValid =
@@ -135,7 +149,7 @@ export default function AddFirstPetScreen() {
         // Omitted rather than sent empty where the species has no such field -
         // the schema requires them only for dogs and cats.
         breed: speciesRules.breeds ? breed : undefined,
-        age: parsedAge,
+        age: ageToSend,
         weight: speciesRules.weighed
           ? Math.round(weightInPounds * 10) / 10
           : undefined,
@@ -237,6 +251,10 @@ export default function AddFirstPetScreen() {
                 setSpecies(entry.value);
                 setBreed("");
                 setWeight("");
+                // The stage bands differ per species - "adult" starts at two
+                // for a dog and one for a cat - so a chosen stage cannot
+                // survive the change.
+                setStage(null);
               }}
               style={tailwind(
                 `border rounded-lg px-3 py-2 mr-2 mb-2 ${
@@ -290,25 +308,96 @@ export default function AddFirstPetScreen() {
           </>
         ) : null}
 
-        <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>Age (years)</Text>
-        <TextInput
-          style={tailwind(
-            `border rounded-lg px-3 py-3 mb-2 text-base ${
-              age !== "" && !ageIsValid ? "border-danger" : "border-border"
-            }`
-          )}
-          placeholder="3"
-          placeholderTextColor={tokens.textFaint}
-          value={age}
-          onChangeText={(value) => setAge(value.replace(/[^0-9.]/g, ""))}
-          keyboardType="decimal-pad"
-          maxLength={4}
-          editable={!submitting}
-        />
-        {age !== "" && !ageIsValid && (
-          <Text style={tailwind("text-xs text-danger mb-4")}>
-            Enter an age between 0 and 40.
-          </Text>
+        <Text style={tailwind("text-sm font-medium text-textMuted mb-1")}>Age</Text>
+        {exactAge ? (
+          <>
+            <TextInput
+              testID="pet-age"
+              style={tailwind(
+                `border rounded-lg px-3 py-3 mb-2 text-base ${
+                  age !== "" && !typedAgeIsValid ? "border-danger" : "border-border"
+                }`
+              )}
+              placeholder="3"
+              placeholderTextColor={tokens.textFaint}
+              value={age}
+              onChangeText={(value) => setAge(value.replace(/[^0-9.]/g, ""))}
+              keyboardType="decimal-pad"
+              maxLength={4}
+              autoFocus
+              editable={!submitting}
+            />
+            {age !== "" && !typedAgeIsValid ? (
+              <Text style={tailwind("text-xs text-danger mb-2")}>
+                Enter an age between 0 and 40.
+              </Text>
+            ) : null}
+            <Pressable
+              testID="age-use-stage"
+              onPress={() => {
+                setExactAge(false);
+                setAge("");
+              }}
+              style={tailwind("mb-4 py-1")}
+            >
+              <Text style={tailwind("text-sm text-primary")}>
+                I&apos;m not sure of the exact age
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <View style={tailwind("flex-row mb-2")}>
+              {stages.map((entry, index) => (
+                <Pressable
+                  key={entry.value}
+                  testID={`stage-${entry.value}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: stage === entry.value }}
+                  accessibilityLabel={`${entry.label}, ${entry.hint} years`}
+                  disabled={submitting}
+                  onPress={() => setStage(entry.value)}
+                  style={tailwind(
+                    `flex-1 border rounded-lg py-3 items-center ${
+                      index === 0 ? "" : "ml-2"
+                    } ${
+                      stage === entry.value
+                        ? "bg-danger border-danger"
+                        : "bg-surface border-border"
+                    }`
+                  )}
+                >
+                  <Text
+                    style={tailwind(
+                      `text-sm font-medium ${
+                        stage === entry.value ? "text-onPrimary" : "text-textMuted"
+                      }`
+                    )}
+                  >
+                    {entry.label}
+                  </Text>
+                  <Text
+                    style={tailwind(
+                      `text-xs mt-1 ${
+                        stage === entry.value ? "text-onPrimary" : "text-textFaint"
+                      }`
+                    )}
+                  >
+                    {entry.hint}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable
+              testID="age-use-exact"
+              onPress={() => setExactAge(true)}
+              style={tailwind("mb-4 py-1")}
+            >
+              <Text style={tailwind("text-sm text-primary")}>
+                Enter an exact age instead
+              </Text>
+            </Pressable>
+          </>
         )}
 
         {speciesRules.weighed ? (

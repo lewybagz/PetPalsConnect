@@ -199,6 +199,10 @@ const SESSION = {
   status: AuthStatus.ready,
   error: null,
   userId: "user-me",
+  // What Google or an email signup hands `CreateProfileScreen` to suggest a
+  // username from. Without it that board only ever shows the empty-field
+  // state, which is the uncommon one.
+  firebaseUser: { displayName: "Sam Rivera", email: "sam@example.test" },
   hasPet: true,
   // Both pets are dogs, so the matching screens and the intro's dog-owner
   // copy render the way most users will see them.

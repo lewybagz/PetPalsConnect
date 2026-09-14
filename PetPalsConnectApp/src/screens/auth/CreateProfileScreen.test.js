@@ -70,3 +70,57 @@ describe("CreateProfileScreen", () => {
     expect(screen.getByText("Privacy Policy")).toBeTruthy();
   });
 });
+
+/**
+ * The suggested username.
+ *
+ * Google and email both give the screen something to suggest, and where it is
+ * free there is no question left to ask - so the field arrives answered. The
+ * risk is the two ways that can go wrong: accepting a name that is actually
+ * taken (which moves the failure to submit), and taking the choice away from
+ * somebody who wanted to make it.
+ */
+describe("the suggested username", () => {
+  it("is accepted for the user when it is free", async () => {
+    await renderScreen();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("profile-username-suggested")).toBeTruthy()
+    );
+    expect(screen.getByText("@Sam")).toBeTruthy();
+    // One field fewer on the screen that decides whether they ever finish.
+    expect(screen.queryByTestId("profile-username")).toBeNull();
+  });
+
+  it("can still be changed", async () => {
+    await renderScreen();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("profile-username-suggested")).toBeTruthy()
+    );
+    await fireEvent.press(screen.getByTestId("profile-username-edit"));
+
+    expect(screen.getByTestId("profile-username")).toBeTruthy();
+    expect(screen.queryByTestId("profile-username-suggested")).toBeNull();
+  });
+
+  it("is not accepted when the name is taken", async () => {
+    api.get.mockResolvedValue({ data: { available: false, reason: "Already taken." } });
+
+    await renderScreen();
+
+    // Accepting a taken name silently would move the failure to submit,
+    // which is worse than asking.
+    await waitFor(() => expect(screen.getByTestId("profile-username")).toBeTruthy());
+    expect(screen.queryByTestId("profile-username-suggested")).toBeNull();
+  });
+
+  it("is not accepted when there is nothing to suggest", async () => {
+    useAuthSession.mockReturnValue({ ...session, firebaseUser: { email: "a@b.test" } });
+
+    await renderScreen();
+
+    // "a" is under the three-character minimum, so there is a real question.
+    await waitFor(() => expect(screen.getByTestId("profile-username")).toBeTruthy());
+  });
+});

@@ -57,6 +57,27 @@ export default function CreateProfileScreen() {
 
   const availability = useUsernameAvailability(username);
 
+  /**
+   * Whether the suggested name was good enough to accept on the user's behalf.
+   *
+   * Google and email both give us something to suggest, and where it is long
+   * enough and free there is no question left to ask - so the field arrives
+   * answered with an "edit" affordance rather than as an empty required input.
+   * Somebody who wants a different name taps once; somebody who does not is
+   * one field lighter on the screen that decides whether they ever finish.
+   *
+   * The suggestion still has to clear the availability check: accepting a
+   * taken name silently would move the failure to submit, which is worse than
+   * asking.
+   */
+  const suggestionAccepted =
+    suggested.length >= 3 &&
+    username === suggested &&
+    availability.status === "available";
+
+  const [editingUsername, setEditingUsername] = useState(false);
+  const showUsernameField = editingUsername || !suggestionAccepted;
+
   // Reaching this screen is the step, not submitting it - the gap between
   // arriving here and `profile_created` is the zombie-account window.
   React.useEffect(() => {
@@ -130,52 +151,84 @@ export default function CreateProfileScreen() {
 
         <View style={tailwind("items-center mb-8")}>
           <Ionicons name="paw" size={48} color={tokens.primary} />
+          {/* The heading has to follow the field. "Pick your username" over an
+              already-picked username reads as an instruction nobody can act
+              on - and where it is picked, the question left is the ZIP. */}
           <Text style={tailwind("text-2xl font-bold text-text mt-4")}>
-            Pick your username
+            {showUsernameField ? "Pick your username" : "Where are you?"}
           </Text>
           <Text style={tailwind("text-center text-textMuted mt-2")}>
-            This is how other pet owners will find you.
+            {showUsernameField
+              ? "This is how other pet owners will find you."
+              : "Your username is how other pet owners will find you."}
           </Text>
         </View>
 
-        <View style={tailwind("mb-2")}>
+        {showUsernameField ? (
+          <>
+            <View style={tailwind("mb-2")}>
+              <View
+                style={tailwind(
+                  `flex-row items-center border rounded-lg px-3 ${
+                    availability.status === "unavailable"
+                      ? "border-danger"
+                      : availability.status === "available"
+                        ? "border-success"
+                        : "border-border"
+                  }`
+                )}
+              >
+                <Text style={tailwind("text-textFaint text-base")}>@</Text>
+                <TextInput
+                  testID="profile-username"
+                  style={tailwind("flex-1 py-3 px-1 text-base text-text")}
+                  placeholder="username"
+                  placeholderTextColor={tokens.textFaint}
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="username"
+                  maxLength={20}
+                  returnKeyType="done"
+                  onSubmitEditing={canSubmit ? onSubmit : undefined}
+                  editable={!submitting}
+                />
+                {availability.status === "checking" && <ActivityIndicator size="small" />}
+                {availability.status === "available" && (
+                  <Ionicons name="checkmark-circle" size={22} color={tokens.success} />
+                )}
+                {availability.status === "unavailable" && (
+                  <Ionicons name="close-circle" size={22} color={tokens.danger} />
+                )}
+              </View>
+            </View>
+
+            <Text style={tailwind(`text-sm mb-4 ${hintColour}`)}>{hint}</Text>
+          </>
+        ) : (
+          /* The suggestion was free, so it is already the answer. One tap to
+             change it; nothing to type for everybody else. */
           <View
+            testID="profile-username-suggested"
             style={tailwind(
-              `flex-row items-center border rounded-lg px-3 ${
-                availability.status === "unavailable"
-                  ? "border-danger"
-                  : availability.status === "available"
-                    ? "border-success"
-                    : "border-border"
-              }`
+              "flex-row items-center justify-between border border-success rounded-lg px-3 py-3 mb-4"
             )}
           >
-            <Text style={tailwind("text-textFaint text-base")}>@</Text>
-            <TextInput
-              style={tailwind("flex-1 py-3 px-1 text-base text-text")}
-              placeholder="username"
-              placeholderTextColor={tokens.textFaint}
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="username"
-              maxLength={20}
-              returnKeyType="done"
-              onSubmitEditing={canSubmit ? onSubmit : undefined}
-              editable={!submitting}
-            />
-            {availability.status === "checking" && <ActivityIndicator size="small" />}
-            {availability.status === "available" && (
+            <View style={tailwind("flex-row items-center flex-1")}>
               <Ionicons name="checkmark-circle" size={22} color={tokens.success} />
-            )}
-            {availability.status === "unavailable" && (
-              <Ionicons name="close-circle" size={22} color={tokens.danger} />
-            )}
+              <Text style={tailwind("text-base text-text ml-2")}>@{username}</Text>
+            </View>
+            <Pressable
+              testID="profile-username-edit"
+              onPress={() => setEditingUsername(true)}
+              disabled={submitting}
+              hitSlop={8}
+            >
+              <Text style={tailwind("text-sm text-primary font-medium")}>Change</Text>
+            </Pressable>
           </View>
-        </View>
-
-        <Text style={tailwind(`text-sm mb-4 ${hintColour}`)}>{hint}</Text>
+        )}
 
         <View style={tailwind("mb-2")}>
           <View style={tailwind("flex-row items-center border rounded-lg px-3 border-border")}>

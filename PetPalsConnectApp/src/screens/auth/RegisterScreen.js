@@ -55,16 +55,13 @@ export default function RegisterScreen({ navigation }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const strength = scorePassword(password);
-  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
-  const canSubmit =
-    !submitting && isEmail(email.trim()) && strength.isAcceptable && passwordsMatch;
+  const canSubmit = !submitting && isEmail(email.trim()) && strength.isAcceptable;
 
   const onRegisterPress = async () => {
     setErrorMessage(null);
@@ -75,10 +72,6 @@ export default function RegisterScreen({ navigation }) {
     }
     if (!strength.isAcceptable) {
       setErrorMessage("Please choose a stronger password.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMessage("Those passwords don't match.");
       return;
     }
 
@@ -234,24 +227,13 @@ export default function RegisterScreen({ navigation }) {
           </View>
         )}
 
-        <TextInput
-          style={tailwind(
-            `border rounded-lg px-3 py-3 mb-6 text-base ${
-              confirmPassword.length > 0 && !passwordsMatch
-                ? "border-danger"
-                : "border-border"
-            }`
-          )}
-          placeholder="Confirm password"
-          placeholderTextColor={tokens.textFaint}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry={!showPassword}
-          autoCapitalize="none"
-          autoCorrect={false}
-          textContentType="newPassword"
-          editable={!submitting}
-        />
+        {/* No "confirm password" field. It exists to catch a typo in a value
+            the person cannot see - but this screen has a working show/hide
+            toggle, and a typo is fully recoverable through the password reset
+            LoginScreen already offers. One field fewer on the screen where
+            abandonment is highest. */}
+
+        <View style={tailwind("mb-6")} />
 
         <Pressable
           onPress={onRegisterPress}
