@@ -97,6 +97,11 @@ const TYPES = {
     screen: "PetTracking",
     param: "petId",
   },
+  petProfileIncomplete: {
+    title: "Two questions about your pet",
+    screen: "PetDetails",
+    param: "petId",
+  },
   general: {
     title: "PetPals Connect",
     screen: "Notifications",
@@ -148,6 +153,9 @@ const CATEGORY_OF = {
   vaccinationDue: "playdateReminders",
   healthDue: "playdateReminders",
   orderShipped: "appUpdates",
+  // A nudge about match quality, so it belongs with matches rather than in
+  // "everything else" - somebody who has muted matches has said enough.
+  petProfileIncomplete: "matches",
   trackingShared: "friendRequests",
   general: "appUpdates",
 };

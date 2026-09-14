@@ -259,6 +259,15 @@ const start = async () => {
     console.error("[db] Initial connection failed:", error.message);
   });
 
+  // Handlers register themselves on module load, so the modules holding them
+  // have to be loaded before the first drain. Both existing ones were reached
+  // only incidentally, through whichever controller happened to require them
+  // first - which works today and is one import away from a job that sits
+  // "pending" forever with nothing saying why. Named here instead.
+  require("./services/healthRecords");
+  require("./services/petProfileNudge");
+  require("./controllers/NotificationController");
+
   scheduler.start();
   auditSchemas();
   auditAuthorisation();

@@ -69,6 +69,16 @@ const create = async ({ ownerId, fields = {} }) => {
     console.warn("[pets] Matching failed for new pet:", error.message);
   }
 
+  // Two days from now, ask for the fields the short onboarding form defers -
+  // temperament, activity level, socialisation - if they are still empty.
+  // Best-effort like the matching above: a scheduler write must never fail
+  // the pet creation that caused it.
+  try {
+    await require("./petProfileNudge").scheduleNudge(pet);
+  } catch (error) {
+    console.warn("[pets] Could not queue the profile nudge:", error.message);
+  }
+
   return { pet, matches };
 };
 

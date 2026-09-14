@@ -491,3 +491,48 @@ test("the deck reports the range it applied", async () => {
   assert.equal(res.body.range, 20);
   assert.equal(res.body.locationKnown, true);
 });
+
+/**
+ * `reachableCandidates` is a service, and there is still only one of it.
+ *
+ * It lived inside `PetMatchController` and was shared by the two ways of
+ * arriving at the deck. It moved out because a third caller wants the same
+ * question asked from the other end - "which waiting owners is this new dog in
+ * range of" - and re-deriving "in range, not blocked, not suspended,
+ * matchable" at that call site would be a second copy of every safety rule
+ * here. CLAUDE.md's rule for this area is that a second code path is a second
+ * place to forget one.
+ *
+ * The tests above are the real guard: they exercise blocking, suspension,
+ * range and the discovery preferences through the API and all still pass
+ * against the extracted version. This one only pins the arrangement, so a
+ * later edit cannot quietly grow a second implementation beside it.
+ */
+test("the deck's filtering lives in one service, not in the controller", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+
+  const controller = fs.readFileSync(
+    path.resolve(__dirname, "../controllers/PetMatchController.js"),
+    "utf8"
+  );
+
+  assert.ok(
+    /require\("\.\.\/services\/matching\/reachable"\)/.test(controller),
+    "the controller must use the shared service"
+  );
+  assert.ok(
+    !/const reachableCandidates = async/.test(controller),
+    "the controller must not carry its own copy of the candidate filter"
+  );
+
+  const service = fs.readFileSync(
+    path.resolve(__dirname, "../services/matching/reachable.js"),
+    "utf8"
+  );
+  // The four rules that must not be re-derived anywhere else.
+  assert.ok(/blockedIdsFor/.test(service), "blocking");
+  assert.ok(/suspended: true/.test(service), "suspension");
+  assert.ok(/matchableQuery/.test(service), "dogs only");
+  assert.ok(/withinRange/.test(service), "distance");
+});

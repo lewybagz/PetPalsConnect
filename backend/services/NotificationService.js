@@ -34,6 +34,7 @@ const createNotification = async ({
   type,
   creatorId,
   petName,
+  data,
 }) => {
   // The schema requires both, and a notification nobody can read is worse than
   // an error - that is exactly how this failed silently before.
@@ -41,12 +42,17 @@ const createNotification = async ({
     throw new Error("createNotification needs both content and recipientId");
   }
 
+  // `data` is stored, not only pushed. `notificationTypes.js` names a `param`
+  // per type so a tap lands somewhere; without it on the row, the same
+  // notification routed correctly from a lock screen and nowhere at all from
+  // the app's own list.
   const notification = await Notification.create({
     content,
     recipient: recipientId,
     type: normalise(type),
     creator: creatorId,
     petName,
+    data: data ?? {},
   });
 
   // Deliver it now if they are connected; the list endpoint covers the rest.
@@ -155,6 +161,7 @@ const notify = async ({
     type: canonical,
     creatorId,
     petName,
+    data,
   });
 
   if (!push || !(await wantsPush(recipientId, canonical))) return notification;

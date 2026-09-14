@@ -370,7 +370,7 @@ And one the gallery caught that reading could not: the apostrophes were mixed
 straight and curly, because JSX entity escaping produces one and a JS string
 literal the other.
 
-## Phase 3 — Fewer fields
+## Phase 3 — Fewer fields — **SHIPPED** (`76e08bd`)
 
 Baymard: field count, not step count. The step sequence stays (it is resumable and
 correct); the questions get fewer.
@@ -441,6 +441,116 @@ applies.
 
 ---
 
+### What Phase 3 actually landed
+
+Three fields removed as planned. Two things differed:
+
+- **The life-stage bands had to be mirrored, not invented.**
+  `STAGE_BOUNDARIES` already exists in `services/petCare/picks.js` and is
+  species-specific (a dog is adult at 2, a cat at 1). The app cannot import it,
+  so `src/data/species.js` mirrors it and `types.test.js` compares the two -
+  same guard as the matching weights. Verified it fails on drift before
+  trusting it.
+- **The heading had to follow the field.** "Pick your username" sitting above
+  an already-picked username is an instruction nobody can act on. Caught by the
+  gallery, not by reading - neither onboarding form had a board until now, and
+  the gallery session had no `firebaseUser`, so the suggestion path had never
+  rendered anywhere.
+
+## Phase 4 readiness audit
+
+The question was whether Phase 4 waits only on funnel numbers. **It does not.**
+Four things in the plan's Phase 4 assumed infrastructure that turns out not to
+exist in the shape described. None is hard; all are work, and none of it is
+blocked on data.
+
+**1. `reachableCandidates` is not a service.** The plan says "reuses
+`reachableCandidates` for the range test so blocking, suspension and distance
+are not re-implemented". It is a **local function inside
+`controllers/PetMatchController.js`**, not exported, taking
+`{ userId, origin, maxMiles, excludePetIds, limit }`. Phase 4 needs the inverse
+question - "which *waiting users* is this new pet within range of" - which is
+not the same query and cannot simply call it.
+
+  The right move is to extract it to `services/matching/reachable.js` first,
+  unchanged, and have both the controller and the new code use it. That is a
+  refactor with its own test, not a line in the Phase 4 todo. **Doing it any
+  other way re-implements the block and suspension filters, which CLAUDE.md
+  names as the exact failure this area keeps having.**
+
+**2. There is no "waiting" record to notify.** "Notify me when someone new is
+nearby" needs somewhere to store who asked. Nothing in the schema holds it:
+`Waitlist` is the launch-region list and means something else. A new small
+model (owner, pet, radius, createdAt, TTL) is required, plus a cascade entry in
+`accountDeletion.js` and a row in the privacy policy's retention table - the
+`accountDeletion.test.js` guard fails on a model with `ref: "User"` in neither
+list, so this cannot be skipped.
+
+**3. The notification type is cheap; the category already exists.**
+`newPetNearby` needs an entry in `services/notificationTypes.js`, the mirror in
+`src/api/notifications.js`, and a `CATEGORY_OF` mapping - and `matches` is
+already a category with a switch that governs it, so **no settings or
+`UserPreferences` change is needed**. This part is genuinely as small as the
+plan says. Its destination must be a screen `AppStack` registers, which
+`types.test.js` checks.
+
+**4. The spam cap is still an open product decision.** The plan flagged this
+and it remains open: one push per new dog in a dense week is a lot. It needs a
+rule (one per user per day, only while the deck is empty) before it ships. This
+is the *one* item where funnel data genuinely helps - `deck_emptied` is already
+being recorded and will say how often this even arises.
+
+### What the audit then cleared
+
+Rather than leave the audit as a list of objections, the two items that were
+blocked on *work* rather than on data were done:
+
+- **7a, the extraction.** `reachableCandidates` moved verbatim to
+  `services/matching/reachable.js`. The 41 existing discovery, map and
+  petmatch tests pass against it unchanged, which is the real proof a verbatim
+  move stayed verbatim; a new test in `discover.test.js` pins the arrangement
+  so a second copy cannot grow beside it. Four imports in the controller were
+  left unused by the move and are gone.
+- **Todo 8, the profile nudge.** `services/petProfileNudge.js` queues a job on
+  pet creation and raises `petProfileIncomplete` two days later, naming the
+  pet and linking to it - but only if `temperament`, `activityLevel` or
+  `socialisation` are still empty. It re-reads the pet, so one completed or
+  deleted in the meantime raises nothing.
+
+Two pre-existing bugs surfaced while doing it, both fixed:
+
+- **`notify()`'s `data` never reached the stored row.** `Notification` had no
+  `data` field at all, so `vaccinationDue`, `healthDue` and `trackingShared`
+  all routed correctly from a lock screen and to a screen with no parameter
+  from the app's own notification list. Four types were affected.
+- **Scheduler handlers were only registered incidentally**, by whichever
+  controller happened to require them first. Server.js names all three now - a
+  job whose handler never loaded sits `pending` forever with nothing saying so.
+
+And one blind spot worth knowing about: **`schemaAudit` silently skips a
+create site whose object literal contains a comment.** A comment added inside
+`Notification.create({...})` made the site invisible to the audit rather than
+failing it - `schemaAudit.test.js` caught it only because that exact site is
+the one its own self-test looks for. Not fixed here; noted.
+
+### So what is Phase 4 actually waiting on
+
+| Item | Blocked on data? | Blocked on work? |
+| --- | --- | --- |
+| Extract `reachableCandidates` to a service | no | **done** |
+| The 48h "finish your pet's profile" nudge | no | **done** |
+| A "notify me" model + cascade + policy row | no | yes |
+| `newPetNearby` type, both sides | no | yes (small) |
+| The per-user push cap | **yes** | decide once `deck_emptied` has volume |
+
+With 7a and 8 done, **what remains of Phase 4 is 7b, 7c and 7d**. 7b and 7c
+are ordinary work that could be done at any time; 7d is the only thing that
+genuinely wants data, and `deck_emptied` is already being recorded against it.
+
+The honest answer to "is Phase 4 only waiting on numbers" is: **not yet, but
+the blocking work is now one model and one notification type**, both of which
+have a worked example in the tree.
+
 ## Todos
 
 | # | Todo | Status |
@@ -450,9 +560,12 @@ applies.
 | 3 | Add `src/services/analytics.ts` (buffered, never-throwing) and instrument the 14 funnel events | **done** |
 | 4 | Extract `services/pushPermission.js` on the `services/location.js` pattern and remove the cold `requestPermission` from `usePushNotifications` | **done** |
 | 5 | Add `AuthStatus.needsIntro` + per-user intro flag to `AuthSessionContext`; register `FirstRunScreen` on `RootNavigator`; land the user on Discover | **done** |
-| 6 | Reduce fields: drop confirm-password, auto-accept a free suggested username, replace exact age with a life-stage control | pending |
-| 7 | Add `newPetNearby` notification type both sides + the notify-me button on Discover's empty state, raised through `notify()` via `reachableCandidates` | pending |
-| 8 | Add the 48h "finish your pet's profile" scheduler job and handler | pending |
+| 6 | Reduce fields: drop confirm-password, auto-accept a free suggested username, replace exact age with a life-stage control | **done** |
+| 7a | Extract `reachableCandidates` from `PetMatchController` to `services/matching/reachable.js`, unchanged, with a test | **done** |
+| 7b | Add the "notify me when someone new is nearby" model, its `accountDeletion` cascade and its privacy-policy row | pending |
+| 7c | Add `newPetNearby` to both notification tables (category `matches`, which already exists) + the button on Discover's empty state, raised through `notify()` | pending |
+| 7d | Decide and apply the per-user push cap — **the only item waiting on funnel data** (`deck_emptied` volume) | pending |
+| 8 | Add the 48h "finish your pet's profile" scheduler job and handler | **done** |
 
 Todos 1-3 are Phase 1 and merge alone. 4-5 are Phase 2 and are the retention
 fixes. 6 is independent and can land any time. 7-8 are Phase 4 and should wait

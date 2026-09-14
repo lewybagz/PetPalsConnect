@@ -37,6 +37,7 @@ export const TYPES = {
   healthDue: { screen: "PetHealth", param: "petId" },
   orderShipped: { screen: "OrderDetail", param: "orderId" },
   trackingShared: { screen: "PetTracking", param: "petId" },
+  petProfileIncomplete: { screen: "PetDetails", param: "petId" },
   general: { screen: "Notifications", param: null },
 };
 
