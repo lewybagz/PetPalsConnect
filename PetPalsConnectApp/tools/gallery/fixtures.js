@@ -843,7 +843,94 @@ export const SPOT_STATUS = {
   enabled: true,
   consented: true,
   readChats: false,
+  voice: false,
   quota: { used: 2, limit: 3, premium: false },
+};
+
+/** What Spot noticed, for the Home card. */
+export const SPOT_NOTICED = [
+  {
+    id: `vaccine-${MY_PET._id}`,
+    kind: "vaccine",
+    text: `One of ${MY_PET.name}'s vaccinations is due within 30 days.`,
+    question: `Is ${MY_PET.name} due for anything?`,
+    screen: "PetHealth",
+    params: { petId: MY_PET._id },
+  },
+  {
+    id: `weight-${MY_PET._id}`,
+    kind: "weight",
+    text: `${MY_PET.name} hasn't been weighed in 4 months.`,
+    question: `Log a weigh-in for ${MY_PET.name}`,
+    screen: "PetWeight",
+    params: { petId: MY_PET._id },
+  },
+];
+
+/** A conversation whose answers carry cards: articles, then pals. */
+export const SPOT_CARDS = {
+  _id: "conv-4",
+  title: "what should I know about kennel cough",
+  createdAt: new Date(Date.now() - 900e3).toISOString(),
+  updatedAt: new Date(Date.now() - 800e3).toISOString(),
+  messages: [
+    {
+      _id: "sc-1",
+      role: "user",
+      text: "what should I know about kennel cough?",
+      blocks: [],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 900e3).toISOString(),
+    },
+    {
+      _id: "sc-2",
+      role: "assistant",
+      text: "Two of PetPals' articles cover it: one on what Bordetella is and is not, one on the vaccine daycares ask for. The short version is that it is usually mild and passes in a couple of weeks, and your vet is the call if the cough lasts or your dog goes off food.",
+      blocks: [
+        {
+          type: "cards",
+          items: [
+            { title: "Kennel cough, plainly", subtitle: "What Bordetella is and is not, and why daycares ask.", image: null, chip: { screen: "ArticleDetail", params: { articleId: "art-1" }, label: "Read" } },
+            { title: "The Bordetella vaccine", subtitle: "Core for the individual once a dog is in regular group contact.", image: null, chip: { screen: "ArticleDetail", params: { articleId: "art-2" }, label: "Read" } },
+          ],
+        },
+      ],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 890e3).toISOString(),
+    },
+    {
+      _id: "sc-3",
+      role: "user",
+      text: "who could Bella meet this weekend?",
+      blocks: [],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 810e3).toISOString(),
+    },
+    {
+      _id: "sc-4",
+      role: "assistant",
+      text: "Two pals are around. Tap one and I can fill in a playdate form for Saturday.",
+      blocks: [
+        {
+          type: "cards",
+          items: [
+            { title: "Sky", subtitle: "Whippet · with @alex", image: "https://placedog.net/300/200?id=12", chip: { screen: "PetDetails", params: { petId: "pet-9" }, label: "Open Sky" } },
+            { title: "Max", subtitle: "Labrador · with @sam", image: "https://placedog.net/300/200?id=7", chip: { screen: "PetDetails", params: { petId: "pet-7" }, label: "Open Max" } },
+          ],
+        },
+      ],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 800e3).toISOString(),
+    },
+  ],
 };
 
 export const SPOT_CONVERSATION = {
@@ -945,6 +1032,8 @@ export const ROUTES = {
   // The first exchange alone, so the opening of the reading column fits a viewport.
   "/api/spot/conversations/conv-2": { ...SPOT_CONVERSATION, _id: "conv-2", messages: SPOT_CONVERSATION.messages.slice(0, 2) },
   "/api/spot/conversations/conv-3": SPOT_ACTIONS,
+  "/api/spot/conversations/conv-4": SPOT_CARDS,
+  "/api/spot/noticed": SPOT_NOTICED,
   "/api/spot/conversations": [SPOT_ACTIONS, SPOT_CONVERSATION].map(({ messages, ...row }) => ({
     ...row,
     messageCount: messages.length,

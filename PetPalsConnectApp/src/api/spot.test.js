@@ -1,5 +1,5 @@
 import api from "./axios";
-import { UNDO, undo, sendSpotMessage, SPOT_ERRORS } from "./spot";
+import { UNDO, undo, sendSpotMessage, SPOT_ERRORS, audioSource, fetchNoticed, fetchSpotStatus } from "./spot";
 import { removeWeight } from "./weight";
 import { removeHealthRecord } from "./health";
 import { saveSettings } from "./settings";
@@ -8,6 +8,8 @@ jest.mock("./axios", () => ({ get: jest.fn(), post: jest.fn(), put: jest.fn(), d
 jest.mock("./weight", () => ({ removeWeight: jest.fn() }));
 jest.mock("./health", () => ({ removeHealthRecord: jest.fn() }));
 jest.mock("./settings", () => ({ saveSettings: jest.fn() }));
+jest.mock("../config/env", () => ({ API_URL: "https://api.test" }));
+jest.mock("../../utils/tokenutil", () => ({ getStoredToken: jest.fn(async () => "tok-1") }));
 
 /**
  * The undo table is one of two copies: the server's tool file names the undo
@@ -64,4 +66,22 @@ test("a quota refusal comes back with its code and body on the error", async () 
     "/api/spot/conversations/c1/messages",
     expect.objectContaining({ text: "hi", utcOffsetMinutes: expect.any(Number) })
   );
+});
+
+test("the audio source is the answer's route with the same bearer token every call carries", async () => {
+  await expect(audioSource("c1", "m2")).resolves.toEqual({
+    uri: "https://api.test/api/spot/conversations/c1/messages/m2/audio",
+    headers: { Authorization: "Bearer tok-1" },
+  });
+});
+
+test("noticed is a list or nothing, and the status carries whether a voice is configured", async () => {
+  api.get.mockResolvedValueOnce({ data: [{ id: "x", kind: "weight", text: "t", question: "q", screen: "PetWeight", params: {} }] });
+  await expect(fetchNoticed()).resolves.toHaveLength(1);
+  api.get.mockResolvedValueOnce({ data: { message: "nope" } });
+  await expect(fetchNoticed()).resolves.toEqual([]);
+  api.get.mockResolvedValueOnce({ data: { enabled: true, consented: true, voice: true, quota: null } });
+  await expect(fetchSpotStatus()).resolves.toMatchObject({ voice: true });
+  api.get.mockResolvedValueOnce({ data: { enabled: true, consented: true, quota: null } });
+  await expect(fetchSpotStatus()).resolves.toMatchObject({ voice: false });
 });

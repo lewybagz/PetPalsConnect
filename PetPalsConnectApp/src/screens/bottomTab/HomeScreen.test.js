@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react-native";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 
 import HomeScreen from "./HomeScreen";
 import api from "../../api/axios";
@@ -21,10 +21,11 @@ jest.mock("../../hooks/useSpotEnabled", () => ({ useSpotEnabled: jest.fn(() => t
 const navigation = { navigate: jest.fn() };
 const route = { params: {} };
 
-const respondWith = ({ pets = [], favorites = [], article = null } = {}) => {
+const respondWith = ({ pets = [], favorites = [], article = null, noticed = [] } = {}) => {
   api.get.mockImplementation((url) => {
     if (url === "/api/pets/latest") return Promise.resolve({ data: pets });
     if (url === "/api/favorites") return Promise.resolve({ data: favorites });
+    if (url === "/api/spot/noticed") return Promise.resolve({ data: noticed });
     if (url === "/api/articles/latest") return Promise.resolve({ data: article });
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
@@ -127,6 +128,52 @@ describe("Spot shortcut", () => {
 
     await waitFor(() => screen.getByTestId("shortcut-Settings"));
     expect(screen.queryByTestId("shortcut-Spot")).toBeNull();
+    useSpotEnabled.mockReturnValue(true);
+  });
+});
+
+describe("what Spot noticed", () => {
+  const notices = [
+    { id: "vaccine-p1", kind: "vaccine", text: "One of Bella's vaccinations is due within 30 days.", question: "Is Bella due for anything?", screen: "PetHealth", params: { petId: "p1" } },
+    { id: "weight-p1", kind: "weight", text: "Bella hasn't been weighed in 4 months.", question: "Log a weigh-in for Bella", screen: "PetWeight", params: { petId: "p1" } },
+  ];
+
+  it("shows the first notice, counts the rest, and a tap opens Spot with the question", async () => {
+    respondWith({ noticed: notices });
+    render(<HomeScreen navigation={navigation} route={route} />);
+    const card = await waitFor(() => screen.getByTestId("home-noticed"));
+    expect(screen.getByText("One of Bella's vaccinations is due within 30 days.")).toBeTruthy();
+    expect(screen.getByText("and 1 more")).toBeTruthy();
+    expect(screen.queryByText(/weighed in 4 months/)).toBeNull();
+    fireEvent.press(card);
+    expect(navigation.navigate).toHaveBeenCalledWith("Spot", {
+      prefill: "Is Bella due for anything?",
+      context: { screen: "home" },
+    });
+  });
+
+  it("is absent when there is nothing to say, and when the route fails", async () => {
+    respondWith({ noticed: [] });
+    render(<HomeScreen navigation={navigation} route={route} />);
+    await waitFor(() => expect(screen.getByTestId("shortcut-Profile")).toBeTruthy());
+    expect(screen.queryByTestId("home-noticed")).toBeNull();
+
+    api.get.mockImplementation((url) => {
+      if (url === "/api/spot/noticed") return Promise.reject(new Error("503"));
+      return Promise.resolve({ data: [] });
+    });
+    render(<HomeScreen navigation={navigation} route={route} />);
+    await waitFor(() => expect(screen.getAllByTestId("shortcut-Profile").length).toBeGreaterThan(0));
+    expect(screen.queryByTestId("home-noticed")).toBeNull();
+  });
+
+  it("is absent while Spot is off, whatever the route says", async () => {
+    const { useSpotEnabled } = require("../../hooks/useSpotEnabled");
+    useSpotEnabled.mockReturnValueOnce(false).mockReturnValue(false);
+    respondWith({ noticed: notices });
+    render(<HomeScreen navigation={navigation} route={route} />);
+    await waitFor(() => expect(screen.getByTestId("shortcut-Profile")).toBeTruthy());
+    expect(screen.queryByTestId("home-noticed")).toBeNull();
     useSpotEnabled.mockReturnValue(true);
   });
 });

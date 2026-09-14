@@ -28,6 +28,7 @@ const WEB_STUBS = {
   "react-native-purchases": "tools/web-stubs/purchases.js",
   "@gorhom/bottom-sheet": "tools/web-stubs/bottom-sheet.js",
   "expo-location": "tools/web-stubs/location.js",
+  "expo-speech-recognition": "tools/web-stubs/speech-recognition.js",
 };
 
 const defaultResolveRequest = config.resolver.resolveRequest;

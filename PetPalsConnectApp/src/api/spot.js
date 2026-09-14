@@ -1,4 +1,6 @@
 import api from "./axios";
+import { API_URL } from "../config/env";
+import { getStoredToken } from "../../utils/tokenutil";
 import { removeWeight } from "./weight";
 import { removeHealthRecord } from "./health";
 import { saveSettings } from "./settings";
@@ -42,6 +44,7 @@ export const fetchSpotStatus = async () => {
     enabled: Boolean(data?.enabled),
     consented: Boolean(data?.consented),
     readChats: Boolean(data?.readChats),
+    voice: Boolean(data?.voice),
     quota: data?.quota ?? null,
   };
 };
@@ -102,6 +105,25 @@ export const flagSpotMessage = async (conversationId, messageId, reason) => {
     .catch(rethrow);
   return Boolean(data?.flagged);
 };
+
+/**
+ * What Spot noticed: software over the app's own data, at most three, each
+ * with the question a tap should ask. Empty when there is nothing to say.
+ */
+export const fetchNoticed = async () => {
+  const { data } = await api.get("/api/spot/noticed").catch(rethrow);
+  return Array.isArray(data) ? data : [];
+};
+
+/**
+ * Where the AI voice for one answer streams from, as an audio source the
+ * player can open directly: the route needs the same bearer token every
+ * other call carries, and `expo-audio` sends headers with a remote source.
+ */
+export const audioSource = async (conversationId, messageId) => ({
+  uri: `${API_URL}/api/spot/conversations/${conversationId}/messages/${messageId}/audio`,
+  headers: { Authorization: `Bearer ${await getStoredToken()}` },
+});
 
 /** What Spot remembers for this account, in the owner's words. */
 export const listNotes = async () => {

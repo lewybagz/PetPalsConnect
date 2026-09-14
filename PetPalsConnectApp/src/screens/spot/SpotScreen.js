@@ -9,6 +9,8 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Speech from "expo-speech";
+import { createAudioPlayer } from "expo-audio";
 
 import { Button, Card, EmptyState, Screen, Text, useToast } from "../../components/ui";
 import SpotMessage from "../../components/spot/SpotMessage";
@@ -21,6 +23,7 @@ import { useSettings } from "../../context/SettingsContext";
 import { useSpotDelta } from "../../hooks/useSocketEvents";
 import {
   SPOT_ERRORS,
+  audioSource,
   createConversation,
   deleteConversation,
   deleteNote,
@@ -37,6 +40,7 @@ import { addWeight } from "../../api/weight";
 import { fetchVaccinationStatus } from "../../api/health";
 import { fetchToxins } from "../../api/toxins";
 import { pickPhoto, compressForSpot } from "../../services/photos";
+import { requestDictationPermission, startDictation } from "../../services/dictation";
 import {
   answerConvert,
   answerDue,
@@ -104,6 +108,16 @@ const SpotScreen = ({ navigation, route }) => {
   const [panel, setPanel] = useState(route?.params?.panel ?? null);
   const [recent, setRecent] = useState(null);
   const [notes, setNotes] = useState(null);
+  // Voice. `listening` while the phone transcribes; `handsFree` once a
+  // question came in by voice, so the answer is read back and the mic
+  // re-arms - the car-park case. Typing turns it off. `speakingId` is the
+  // message being read, by the phone's voice or the configured AI voice.
+  const [listening, setListening] = useState(false);
+  const [handsFree, setHandsFree] = useState(false);
+  const [speakingId, setSpeakingId] = useState(null);
+  const stopListeningRef = useRef(null);
+  const playerRef = useRef(null);
+  const speakRef = useRef(null);
 
   const scrollRef = useRef(null);
   // The socket listener is registered once and needs the current id without
@@ -257,10 +271,12 @@ const SpotScreen = ({ navigation, route }) => {
     [append, pets, units, toxinTable]
   );
 
-  const send = useCallback(async () => {
-    const text = draft.trim();
+  const send = useCallback(async (spoken) => {
+    const text = (typeof spoken === "string" ? spoken : draft).trim();
     if (!text && !photo) return;
     if (sending) return;
+    const byVoice = typeof spoken === "string";
+    if (!byVoice) setHandsFree(false);
 
     setDraft("");
     setOverQuota(null);
@@ -294,6 +310,7 @@ const SpotScreen = ({ navigation, route }) => {
         prev.map((m) => (m._id === pending._id ? result.userMessage ?? m : m)).concat(result.message ?? [])
       );
       if (result.quota) setQuota(result.quota);
+      if (byVoice && result.message?.text) speakRef.current?.speak(result.message, { thenListen: true });
     } catch (error) {
       if (error.code === SPOT_ERRORS.quota) {
         setOverQuota(error.body);
@@ -335,6 +352,101 @@ const SpotScreen = ({ navigation, route }) => {
     },
     [toast]
   );
+
+  const stopSpeaking = useCallback(() => {
+    Speech.stop().catch?.(() => {});
+    if (playerRef.current) {
+      try {
+        playerRef.current.pause();
+        playerRef.current.remove();
+      } catch {
+        // already gone
+      }
+      playerRef.current = null;
+    }
+    setSpeakingId(null);
+  }, []);
+
+  /**
+   * Reads one answer aloud: the AI voice when the server has one, the
+   * phone's own voice otherwise. Tapping the one being read stops it.
+   */
+  const speak = useCallback(
+    async (message, { thenListen = false } = {}) => {
+      if (speakingId === message._id) {
+        stopSpeaking();
+        return;
+      }
+      stopSpeaking();
+      setSpeakingId(message._id);
+      const finished = () => {
+        setSpeakingId((current) => (current === message._id ? null : current));
+        if (thenListen) speakRef.current?.listen();
+      };
+      if (status?.voice && conversationRef.current && !String(message._id).startsWith("local-")) {
+        try {
+          const player = createAudioPlayer(await audioSource(conversationRef.current, message._id));
+          playerRef.current = player;
+          player.addListener("playbackStatusUpdate", (state) => {
+            if (state?.didJustFinish) {
+              player.remove();
+              if (playerRef.current === player) playerRef.current = null;
+              finished();
+            }
+          });
+          player.play();
+          return;
+        } catch {
+          // fall through to the phone's voice
+        }
+      }
+      Speech.speak(message.text, { onDone: finished, onStopped: () => setSpeakingId(null), onError: finished });
+    },
+    [speakingId, status?.voice, stopSpeaking]
+  );
+
+  /** Listens once; the words land in the box, and in hands-free mode they send. */
+  const listen = useCallback(async () => {
+    if (listening) {
+      stopListeningRef.current?.();
+      return;
+    }
+    stopSpeaking();
+    const permission = await requestDictationPermission();
+    if (permission !== "granted") {
+      if (permission === "denied") toast.error("Allow the microphone in your phone's settings to speak to Spot.");
+      return;
+    }
+    setListening(true);
+    setHandsFree(true);
+    stopListeningRef.current = startDictation({
+      onInterim: (text) => setDraft(text),
+      onFinal: (text) => {
+        setDraft(text);
+        if (text.trim()) speakRef.current?.sendNow(text);
+      },
+      onError: (sentence) => toast.error(sentence),
+      onEnd: () => {
+        setListening(false);
+        stopListeningRef.current = null;
+      },
+    });
+  }, [listening, stopSpeaking, toast]);
+
+  useEffect(
+    () => () => {
+      stopListeningRef.current?.();
+      Speech.stop().catch?.(() => {});
+      playerRef.current?.remove?.();
+    },
+    []
+  );
+
+  // The handlers reach each other through a ref: `listen` sends what it heard
+  // and `send` reads the answer back, and neither can be defined before the other.
+  useEffect(() => {
+    speakRef.current = { speak, listen, sendNow: (text) => send(text) };
+  }, [speak, listen, send]);
 
   const startNew = useCallback(() => {
     setMessages([]);
@@ -558,6 +670,8 @@ const SpotScreen = ({ navigation, route }) => {
               onNavigate={navigate}
               onUndo={undo}
               onFlag={conversationId ? flag : undefined}
+              onSpeak={message.role === "assistant" ? speak : undefined}
+              speaking={speakingId === message._id}
             />
           ))}
 
@@ -610,11 +724,25 @@ const SpotScreen = ({ navigation, route }) => {
             >
               <Ionicons name="camera-outline" size={24} color={tokens.textMuted} />
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={listening ? "Stop listening" : "Speak to Spot"}
+              accessibilityState={{ selected: listening }}
+              testID="spot-mic"
+              onPress={listen}
+              disabled={sending}
+              style={{ minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center" }}
+            >
+              <Ionicons name={listening ? "mic" : "mic-outline"} size={24} color={listening ? tokens.danger : tokens.textMuted} />
+            </Pressable>
             <TextInput
               testID="spot-input"
               value={draft}
-              onChangeText={setDraft}
-              placeholder="Ask Spot…"
+              onChangeText={(text) => {
+                setDraft(text);
+                if (handsFree) setHandsFree(false);
+              }}
+              placeholder={listening ? "Listening…" : "Ask Spot…"}
               placeholderTextColor={tokens.textFaint}
               multiline
               accessibilityLabel="Message Spot"
@@ -636,6 +764,7 @@ const SpotScreen = ({ navigation, route }) => {
           {quota ? (
             <Text variant="caption" tone="faint" style={tailwind("mt-xs")} testID="spot-quota-caption">
               {quota.used} of {quota.limit} Spot messages today
+              {handsFree ? " · hands-free: Spot reads answers aloud" : ""}
             </Text>
           ) : null}
         </View>

@@ -93,7 +93,14 @@
           "microphonePermission": false
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "PetPals uses the microphone so you can speak to Spot instead of typing.",
+          "speechRecognitionPermission": "Your phone's dictation service turns what you say to Spot into text. The audio never reaches PetPals."
+        }
+      ]
     ],
     "extra": {
       "eas": {

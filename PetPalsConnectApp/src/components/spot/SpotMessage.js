@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Pressable, Linking } from "react-native";
+import { View, Pressable, Linking, Image, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Button, Card, Text } from "../ui";
@@ -80,6 +80,51 @@ const Done = ({ block, onUndo }) => {
   );
 };
 
+/** An article, a place, a pal's pet: a picture, two lines, and the tap the chip had. */
+const Cards = ({ items = [], onNavigate }) => {
+  const tailwind = useTailwind();
+  const tokens = useTokens();
+  if (items.length === 0) return null;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={tailwind("mt-sm")} testID="spot-cards">
+      {items.map((item) => (
+        <Pressable
+          key={`${item.chip.screen}-${JSON.stringify(item.chip.params)}`}
+          testID={`spot-card-${item.chip.screen}`}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.chip.label}: ${item.title}`}
+          onPress={() => onNavigate?.(item.chip.screen, item.chip.params)}
+          style={[tailwind("mr-sm"), { width: 180 }]}
+        >
+          <Card style={tailwind("p-0 overflow-hidden")}>
+            {item.image ? (
+              <Image source={{ uri: item.image }} style={{ width: "100%", height: 100 }} accessibilityIgnoresInvertColors />
+            ) : (
+              <View style={[tailwind("bg-primarySoft items-center justify-center"), { height: 64 }]}>
+                <Ionicons
+                  name={item.chip.screen === "ArticleDetail" ? "book-outline" : item.chip.screen === "PetDetails" ? "paw-outline" : "location-outline"}
+                  size={24}
+                  color={tokens.primary}
+                />
+              </View>
+            )}
+            <View style={tailwind("p-sm")}>
+              <Text weight="600" numberOfLines={1}>
+                {item.title}
+              </Text>
+              {item.subtitle ? (
+                <Text variant="caption" tone="muted" numberOfLines={2}>
+                  {item.subtitle}
+                </Text>
+              ) : null}
+            </View>
+          </Card>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+};
+
 /** Retailer searches from the picks table. Opens the browser; never a named product. */
 const Web = ({ items = [] }) => {
   const tailwind = useTailwind();
@@ -154,12 +199,14 @@ const Block = ({ block, onNavigate, onUndo }) => {
       return <Contacts items={block.items} />;
     case "web":
       return <Web items={block.items} />;
+    case "cards":
+      return <Cards items={block.items} onNavigate={onNavigate} />;
     default:
       return null;
   }
 };
 
-const SpotMessage = ({ message, onNavigate, onUndo, onFlag }) => {
+const SpotMessage = ({ message, onNavigate, onUndo, onFlag, onSpeak, speaking = false }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
   const [flagged, setFlagged] = useState(Boolean(message.flagged));
@@ -198,6 +245,20 @@ const SpotMessage = ({ message, onNavigate, onUndo, onFlag }) => {
       {(message.blocks ?? []).map((block, index) => (
         <Block key={index} block={block} onNavigate={onNavigate} onUndo={onUndo} />
       ))}
+      {onSpeak && message.text ? (
+        <Pressable
+          testID="spot-speak"
+          accessibilityRole="button"
+          accessibilityLabel={speaking ? "Stop reading" : "Read aloud"}
+          onPress={() => onSpeak(message)}
+          style={[tailwind("mt-sm self-start flex-row items-center"), { minHeight: 44 }]}
+        >
+          <Ionicons name={speaking ? "stop-circle-outline" : "volume-medium-outline"} size={18} color={tokens.textMuted} />
+          <Text variant="caption" tone="muted" style={tailwind("ml-xs")}>
+            {speaking ? "Stop" : "Read aloud"}
+          </Text>
+        </Pressable>
+      ) : null}
       {message.source === "model" && onFlag ? (
         <Pressable
           testID="spot-flag"

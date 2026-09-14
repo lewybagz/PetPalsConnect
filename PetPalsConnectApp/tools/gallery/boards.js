@@ -846,6 +846,14 @@ export const BOARDS = [
     ),
   },
   {
+    id: "spot-cards",
+    label: "Spot - articles and pals as cards",
+    routes: ROUTES,
+    render: () => (
+      <SpotScreen navigation={navigation} route={{ params: { conversationId: "conv-4" } }} />
+    ),
+  },
+  {
     id: "spot-recent",
     label: "Spot - the conversations you can go back to",
     // Five are kept; for a phase nothing on screen could open them.

@@ -16,6 +16,9 @@ import {
   deleteNote,
 } from "../../api/spot";
 import { addWeight, removeWeight } from "../../api/weight";
+import * as Speech from "expo-speech";
+import { createAudioPlayer } from "expo-audio";
+import { requestDictationPermission, startDictation } from "../../services/dictation";
 import { fetchVaccinationStatus } from "../../api/health";
 import { fetchToxins } from "../../api/toxins";
 import { useAuthSession } from "../../context/AuthSessionContext";
@@ -46,6 +49,18 @@ jest.mock("../../api/toxins", () => ({
   fetchToxins: jest.fn(),
 }));
 jest.mock("../../services/photos", () => ({ pickPhoto: jest.fn(), compressForSpot: jest.fn() }));
+jest.mock("../../services/dictation", () => ({
+  requestDictationPermission: jest.fn(),
+  startDictation: jest.fn(),
+}));
+jest.mock("expo-speech", () => ({ speak: jest.fn(), stop: jest.fn(async () => {}) }));
+const mockToast = { error: jest.fn(), success: jest.fn(), show: jest.fn() };
+jest.mock("../../components/ui", () => ({
+  ...jest.requireActual("../../components/ui"),
+  useToast: () => mockToast,
+}));
+jest.mock("expo-audio", () => ({ createAudioPlayer: jest.fn() }));
+jest.mock("../../../utils/tokenutil", () => ({ getStoredToken: jest.fn(async () => "id-token") }));
 jest.mock("../../context/AuthSessionContext", () => ({ useAuthSession: jest.fn() }));
 jest.mock("../../context/SettingsContext", () => ({
   useSettings: () => ({ units: { distance: "mi", weight: "lb" } }),
@@ -459,4 +474,149 @@ test("software answers a fact and a conversion without the model", async () => {
   await type("12 kg in pounds");
   await waitFor(() => expect(screen.getByText("12 kg is 26.5 lb.")).toBeTruthy());
   expect(sendSpotMessage).not.toHaveBeenCalled();
+});
+
+// ---------------------------------------------------------------------------
+// Phase 5: cards, the mic, hands-free, and read aloud
+// ---------------------------------------------------------------------------
+
+const answered = (text, blocks = []) => ({
+  userMessage: { _id: "m1", role: "user", text: "q", blocks: [], attachments: [], source: "model" },
+  message: { _id: "m2", role: "assistant", text, blocks, attachments: [], source: "model" },
+  quota: { used: 1, limit: 3, premium: false },
+});
+
+test("a cards block renders each card and its tap goes where the chip went", async () => {
+  sendSpotMessage.mockResolvedValue(
+    answered("Two pals are around.", [
+      {
+        type: "cards",
+        items: [
+          { title: "Sky", subtitle: "Whippet · with @alex", image: "https://x/sky.jpg", chip: { screen: "PetDetails", params: { petId: "pet-9" }, label: "Open Sky" } },
+          { title: "Kennel cough, plainly", subtitle: "What it is.", image: null, chip: { screen: "ArticleDetail", params: { articleId: "a1" }, label: "Read" } },
+        ],
+      },
+    ])
+  );
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+  await type("who could Bella meet?");
+  await waitFor(() => expect(screen.getByTestId("spot-cards")).toBeTruthy());
+  expect(screen.getByText("Whippet · with @alex")).toBeTruthy();
+  await fireEvent.press(screen.getByTestId("spot-card-PetDetails"));
+  expect(navigation.navigate).toHaveBeenCalledWith("PetDetails", { petId: "pet-9" });
+  await fireEvent.press(screen.getByTestId("spot-card-ArticleDetail"));
+  expect(navigation.navigate).toHaveBeenCalledWith("ArticleDetail", { articleId: "a1" });
+});
+
+/** Drives the mocked dictation: returns the handlers the screen passed in. */
+const listenAndCapture = async () => {
+  let handlers = null;
+  const stop = jest.fn();
+  startDictation.mockImplementation((given) => {
+    handlers = given;
+    return stop;
+  });
+  await fireEvent.press(screen.getByTestId("spot-mic"));
+  await waitFor(() => expect(startDictation).toHaveBeenCalled());
+  return { handlers, stop };
+};
+
+test("the mic asks first; a refusal is a sentence and nothing listens", async () => {
+  requestDictationPermission.mockResolvedValue("denied");
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+  await fireEvent.press(screen.getByTestId("spot-mic"));
+  await waitFor(() => expect(requestDictationPermission).toHaveBeenCalled());
+  expect(startDictation).not.toHaveBeenCalled();
+  await waitFor(() => expect(mockToast.error).toHaveBeenCalledWith("Allow the microphone in your phone's settings to speak to Spot."));
+  expect(screen.getByTestId("spot-input").props.placeholder).toBe("Ask Spot…");
+});
+
+test("dictation fills the box as words arrive, the final words send, and the answer is read back hands-free", async () => {
+  requestDictationPermission.mockResolvedValue("granted");
+  sendSpotMessage.mockResolvedValue(answered("Bella is not due for anything."));
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+
+  const { handlers } = await listenAndCapture();
+  expect(screen.getByTestId("spot-input").props.placeholder).toBe("Listening…");
+  await act(async () => handlers.onInterim("is bella"));
+  expect(screen.getByTestId("spot-input").props.value).toBe("is bella");
+  await act(async () => {
+    handlers.onFinal("what should I know about beagles");
+    handlers.onEnd();
+  });
+  await waitFor(() =>
+    expect(sendSpotMessage).toHaveBeenCalledWith("c1", { text: "what should I know about beagles", image: null })
+  );
+  // Hands-free: the answer is spoken without a tap, by the phone's voice, and the mic re-arms after it.
+  await waitFor(() => expect(Speech.speak).toHaveBeenCalled());
+  expect(Speech.speak.mock.calls[0][0]).toBe("Bella is not due for anything.");
+  expect(screen.getByText(/hands-free/)).toBeTruthy();
+  const callsBefore = startDictation.mock.calls.length;
+  await act(async () => Speech.speak.mock.calls[0][1].onDone());
+  await waitFor(() => expect(startDictation.mock.calls.length).toBe(callsBefore + 1));
+});
+
+test("typing turns hands-free off, so a typed question is not read back", async () => {
+  requestDictationPermission.mockResolvedValue("granted");
+  sendSpotMessage.mockResolvedValueOnce(answered("Voice answer.")).mockResolvedValueOnce({
+    ...answered("Typed answer."),
+    userMessage: { _id: "m3", role: "user", text: "q2", blocks: [], attachments: [], source: "model" },
+    message: { _id: "m4", role: "assistant", text: "Typed answer.", blocks: [], attachments: [], source: "model" },
+  });
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+  const { handlers } = await listenAndCapture();
+  await act(async () => {
+    handlers.onFinal("first by voice");
+    handlers.onEnd();
+  });
+  await waitFor(() => expect(Speech.speak).toHaveBeenCalledTimes(1));
+  await act(async () => Speech.speak.mock.calls[0][1].onDone());
+  Speech.speak.mockClear();
+
+  await type("now by keyboard");
+  await waitFor(() => expect(sendSpotMessage).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(screen.getByText("Typed answer.")).toBeTruthy());
+  expect(Speech.speak).not.toHaveBeenCalled();
+  expect(screen.queryByText(/hands-free/)).toBeNull();
+});
+
+test("Read aloud uses the phone's voice when the server has none, and tapping again stops it", async () => {
+  sendSpotMessage.mockResolvedValue(answered("Read me."));
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+  await type("say something");
+  await waitFor(() => expect(screen.getByTestId("spot-speak")).toBeTruthy());
+  await fireEvent.press(screen.getByTestId("spot-speak"));
+  expect(Speech.speak).toHaveBeenCalledWith("Read me.", expect.any(Object));
+  expect(createAudioPlayer).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.getByText("Stop")).toBeTruthy());
+  await fireEvent.press(screen.getByTestId("spot-speak"));
+  expect(Speech.stop).toHaveBeenCalled();
+  await waitFor(() => expect(screen.getByText("Read aloud")).toBeTruthy());
+});
+
+test("with an AI voice configured, Read aloud streams the answer's audio with the bearer token", async () => {
+  fetchSpotStatus.mockResolvedValue({ ...on, voice: true });
+  sendSpotMessage.mockResolvedValue(answered("In a warmer voice."));
+  const player = { play: jest.fn(), pause: jest.fn(), remove: jest.fn(), addListener: jest.fn() };
+  createAudioPlayer.mockReturnValue(player);
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+  await type("say it nicely");
+  await waitFor(() => expect(screen.getByTestId("spot-speak")).toBeTruthy());
+  await fireEvent.press(screen.getByTestId("spot-speak"));
+  await waitFor(() => expect(player.play).toHaveBeenCalled());
+  const source = createAudioPlayer.mock.calls[0][0];
+  expect(source.uri).toMatch(/\/api\/spot\/conversations\/c1\/messages\/m2\/audio$/);
+  expect(source.headers).toEqual({ Authorization: "Bearer id-token" });
+  expect(Speech.speak).not.toHaveBeenCalled();
+  // The end of playback clears the control.
+  const [, onStatus] = player.addListener.mock.calls[0];
+  await act(async () => onStatus({ didJustFinish: true }));
+  await waitFor(() => expect(screen.getByText("Read aloud")).toBeTruthy());
+  expect(player.remove).toHaveBeenCalled();
 });

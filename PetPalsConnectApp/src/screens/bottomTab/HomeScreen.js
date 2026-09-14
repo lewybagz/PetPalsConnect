@@ -99,6 +99,9 @@ const HomeScreen = ({ navigation, route, start }) => {
   const [latestPets, setLatestPets] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [latestArticle, setLatestArticle] = useState(null);
+  // What Spot noticed: software over the app's own data, fetched with the rest
+  // and empty on any failure. Shown only while Spot is on.
+  const [noticed, setNoticed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   // Bumped by pull-to-refresh. Using `refreshing` itself as the effect's
@@ -117,18 +120,21 @@ const HomeScreen = ({ navigation, route, start }) => {
      * the whole home screen.
      */
     const load = async () => {
-      const [pets, favouriteRows, article] = await Promise.all([
+      const [pets, favouriteRows, article, notices] = await Promise.all([
         api.get("/api/pets/latest").then((r) => r.data, () => []),
         // Scoped by the token, so this does not wait on the profile to load.
         api.get("/api/favorites").then((r) => r.data, () => []),
         // /latest is the list (an array of twenty); /recent is the single
         // newest article, which is all this shelf renders.
         api.get("/api/articles/recent").then((r) => r.data, () => null),
+        // 503 when Spot is off, an empty list when there is nothing to say.
+        api.get("/api/spot/noticed").then((r) => r.data, () => []),
       ]);
 
       if (cancelled) return;
       setLatestPets(Array.isArray(pets) ? pets : []);
       setFavorites(Array.isArray(favouriteRows) ? favouriteRows : []);
+      setNoticed(Array.isArray(notices) ? notices : []);
       setLatestArticle(article);
       setLoading(false);
       setRefreshing(false);
@@ -190,6 +196,32 @@ const HomeScreen = ({ navigation, route, start }) => {
           </WalkthroughableTouchableOpacity>
         ))}
       </View>
+
+      {spotEnabled && noticed.length > 0 ? (
+        <TouchableOpacity
+          testID="home-noticed"
+          accessibilityRole="button"
+          accessibilityLabel={`Spot noticed: ${noticed[0].text}`}
+          onPress={() =>
+            navigation.navigate("Spot", { prefill: noticed[0].question, context: { screen: "home" } })
+          }
+          style={tailwind("flex-row items-center bg-primarySoft rounded-card p-md mb-xl")}
+        >
+          <Ionicons name="sparkles-outline" size={22} color={tokens.primary} />
+          <View style={tailwind("ml-md flex-1")}>
+            <Text variant="caption" tone="primary">
+              Spot noticed
+            </Text>
+            <Text>{noticed[0].text}</Text>
+            {noticed.length > 1 ? (
+              <Text variant="caption" tone="muted">
+                and {noticed.length - 1} more
+              </Text>
+            ) : null}
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
+        </TouchableOpacity>
+      ) : null}
 
       <CopilotStep text="Check out the latest pets here" order={3} name="latestPets">
         <View style={tailwind("mb-xl")}>

@@ -547,7 +547,22 @@ export type SpotBlock =
   | { type: "done"; kind: string; summary: string; undo: { kind: string; [key: string]: unknown } | null }
   | { type: "contacts"; items: EmergencyContact[] }
   /** Retailer searches from the picks table, opened in the browser. */
-  | { type: "web"; items: { label: string; url: string }[] };
+  | { type: "web"; items: { label: string; url: string }[] }
+  /** An article, a place or a pal's pet: a picture, a subtitle, and the tap the chip had. */
+  | {
+      type: "cards";
+      items: { title: string; subtitle: string | null; image: string | null; chip: { screen: string; params: Record<string, string>; label: string } }[];
+    };
+
+/** One thing Spot noticed, computed by software: a sentence and the question a tap asks. */
+export interface SpotNotice {
+  id: string;
+  kind: "invitation" | "vaccine" | "treatment" | "weight" | "records";
+  text: string;
+  question: string;
+  screen: string;
+  params: Record<string, string>;
+}
 
 /** What a model turn cost, on the answer it produced. Absent on software turns. */
 export interface SpotUsage {
