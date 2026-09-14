@@ -104,10 +104,17 @@ const run = async ({ userId, history, text, image, context, readChats = false, o
 
   const startedAt = Date.now();
   let iterations = 0;
+  // Every iteration's prose, in order. The model often says the substance
+  // ("Grapes are an emergency for dogs...") before it calls a tool and only
+  // "Please call now" after, and the first live eval showed the runner
+  // keeping the last message alone - the answer streamed to the phone and
+  // then vanished when the stored one replaced it.
+  const parts = [];
   for await (const stream of runner) {
     iterations += 1;
     if (onDelta) stream.on("text", (delta) => onDelta(delta));
     const message = await stream.finalMessage();
+    parts.push(textOf(message));
     // A long server-side turn can pause; pushing the paused turn back resumes it.
     if (message.stop_reason === "pause_turn") {
       runner.pushMessages({ role: "assistant", content: message.content });
@@ -127,7 +134,7 @@ const run = async ({ userId, history, text, image, context, readChats = false, o
   }
 
   return {
-    text: stripMarkdown(textOf(final)),
+    text: stripMarkdown(parts.filter(Boolean).join("\n\n")),
     blocks: blocksFrom(effects),
     usage,
     stopReason: final.stop_reason,

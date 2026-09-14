@@ -1,5 +1,8 @@
+const mongoose = require("mongoose");
+
 const User = require("../../models/User");
 const Pet = require("../../models/Pet");
+const WeightEntry = require("../../models/WeightEntry");
 const vaccinations = require("../vaccinations");
 const settings = require("../settings");
 
@@ -46,7 +49,8 @@ const describePet = (pet, weightUnit) => {
   if (pet.age != null) parts.push(`${pet.age} ${pet.age === 1 ? "year" : "years"}`);
   if (pet.weight != null) {
     parts.push(
-      weightUnit === "kg" ? `${pet.weight} lb (${(pet.weight * 0.45359237).toFixed(1)} kg)` : `${pet.weight} lb`
+      (weightUnit === "kg" ? `${pet.weight} lb (${(pet.weight * 0.45359237).toFixed(1)} kg)` : `${pet.weight} lb`) +
+        (pet.weighedOn ? ` weighed ${pet.weighedOn}` : "")
     );
   }
   parts.push(`vaccinations ${pet.vaccinationStatus ?? "unknown"}`);
@@ -56,8 +60,9 @@ const describePet = (pet, weightUnit) => {
 /**
  * The block, as text. Pure, so the exact wording is tested.
  *
- * `pets` are `{ petId, name, species, breed, age, weight, vaccinationStatus }`;
- * `notes` are strings. Weights are always pounds - storage is canonical - and
+ * `pets` are `{ petId, name, species, breed, age, weight, weighedOn,
+ * vaccinationStatus }`; `notes` are strings. The weigh-in date is here because
+ * the first live eval showed the model calling `my_pets` just to get it. Weights are always pounds - storage is canonical - and
  * the kilogram figure is added when that is what the owner reads.
  */
 const contextBlock = ({ now = new Date(), utcOffsetMinutes = 0, units = {}, pets = [], notes = [] } = {}) => {
@@ -70,7 +75,7 @@ const contextBlock = ({ now = new Date(), utcOffsetMinutes = 0, units = {}, pets
   if (pets.length === 0) {
     lines.push("Pets: none on the profile yet.");
   } else {
-    lines.push("Pets on the profile (current; call my_pets only for temperament, activity or the latest weigh-in date):");
+    lines.push("Pets on the profile (current; call my_pets only for temperament, activity or socialisation):");
     lines.push(...pets.map((pet) => describePet(pet, units.weight)));
   }
   if (notes.length > 0) {
@@ -87,6 +92,14 @@ const gather = async (userId, { now = new Date(), utcOffsetMinutes = 0 } = {}) =
     .select("name species breed age weight")
     .lean();
   const statuses = await vaccinations.statusForPets(pets.map((pet) => pet._id));
+  const latest = pets.length
+    ? await WeightEntry.aggregate([
+        { $match: { owner: new mongoose.Types.ObjectId(String(userId)) } },
+        { $sort: { takenAt: -1 } },
+        { $group: { _id: "$pet", takenAt: { $first: "$takenAt" } } },
+      ])
+    : [];
+  const weighedOn = new Map(latest.map((row) => [String(row._id), row.takenAt.toISOString().slice(0, 10)]));
   const notes = (owner?.spotNotes ?? []).map((note) => note.text);
   return contextBlock({
     now,
@@ -99,6 +112,7 @@ const gather = async (userId, { now = new Date(), utcOffsetMinutes = 0 } = {}) =
       breed: pet.breed,
       age: pet.age,
       weight: pet.weight,
+      weighedOn: weighedOn.get(String(pet._id)) ?? null,
       vaccinationStatus: statuses.get(String(pet._id)) ?? "unknown",
     })),
     notes,

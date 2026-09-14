@@ -28,14 +28,14 @@ test("the block names every pet with its id, the units, and the notes", () => {
     utcOffsetMinutes: -420,
     units: { distance: "km", weight: "kg" },
     pets: [
-      { petId: "p1", name: "Bella", species: "dog", breed: "Beagle", age: 4, weight: 40, vaccinationStatus: "current" },
+      { petId: "p1", name: "Bella", species: "dog", breed: "Beagle", age: 4, weight: 40, weighedOn: "2026-09-12", vaccinationStatus: "current" },
       { petId: "p2", name: "Miso", species: "cat", age: 1, weight: 8.5, vaccinationStatus: "unknown" },
     ],
     notes: ["Bella is scared of thunderstorms"],
   });
   assert.match(text, /^Today is Sunday 2026-09-13, 12:05 where the owner is\./);
   assert.match(text, /reads kilometres and kilograms; weights below are stored in pounds/);
-  assert.match(text, /- Bella \(petId p1\): dog, Beagle, 4 years, 40 lb \(18\.1 kg\), vaccinations current/);
+  assert.match(text, /- Bella \(petId p1\): dog, Beagle, 4 years, 40 lb \(18\.1 kg\) weighed 2026-09-12, vaccinations current/);
   assert.match(text, /- Miso \(petId p2\): cat, 1 year, 8\.5 lb \(3\.9 kg\), vaccinations unknown/);
   assert.match(text, /Things the owner asked you to remember:\n- Bella is scared of thunderstorms/);
 });

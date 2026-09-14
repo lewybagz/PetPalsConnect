@@ -7,6 +7,7 @@ const harness = require("./helpers/harness");
 let app;
 let User;
 let Pet;
+let WeightEntry;
 let SpotConversation;
 let SpotUsage;
 let client;
@@ -32,8 +33,10 @@ const stub = {
       toolRunner(params) {
         stub.requests.push(params);
         let pending = null;
-        const run = async () => {
-          const plan = await stub.script(params);
+        // A plan is one step, or `steps`: several iterations, each with its
+        // own text and tool calls, the way a real turn says something, calls
+        // a tool, and says something more.
+        const step = async (plan) => {
           for (const call of plan.calls ?? []) {
             const tool = params.tools.find((t) => t.name === call.name);
             if (!tool) throw new Error(`the model asked for ${call.name}, which is not offered`);
@@ -45,18 +48,25 @@ const stub = {
             usage: { input_tokens: 12, output_tokens: 8, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
           };
         };
+        const run = async () => {
+          const plan = await stub.script(params);
+          const messages = [];
+          for (const one of plan.steps ?? [plan]) messages.push(await step(one));
+          return messages;
+        };
         return {
           async *[Symbol.asyncIterator]() {
             pending = run();
-            const message = await pending;
-            yield {
-              on(event, fn) {
-                if (event === "text") fn(message.content[0].text, message.content[0].text);
-              },
-              finalMessage: async () => message,
-            };
+            for (const message of await pending) {
+              yield {
+                on(event, fn) {
+                  if (event === "text") fn(message.content[0].text, message.content[0].text);
+                },
+                finalMessage: async () => message,
+              };
+            }
           },
-          done: () => pending ?? run(),
+          done: async () => (await (pending ?? run())).at(-1),
           pushMessages() {},
         };
       },
@@ -72,6 +82,7 @@ test.before(async () => {
   app = await harness.start();
   User = require("../models/User");
   Pet = require("../models/Pet");
+  WeightEntry = require("../models/WeightEntry");
   SpotConversation = require("../models/SpotConversation");
   SpotUsage = require("../models/SpotUsage");
   client = require("../services/spot/client");
@@ -535,4 +546,29 @@ test("notes are the caller's own, and the usage summary is a moderator's", async
   assert.equal(usage.body.models[0].input, 12);
   assert.equal(usage.body.models[0].iterationsPerTurn, 1);
   assert.equal(usage.body.estimatedUsd, client.costOf({ input: 12, output: 8 }));
+});
+
+test("what the model said before a tool call is kept, not just its last line", async () => {
+  const alice = await makeOwner("alice");
+  await WeightEntry.create({
+    pet: alice.pet._id, owner: alice.user._id, creator: alice.user._id, pounds: 20, takenAt: new Date("2026-09-10T12:00:00Z"),
+  });
+  const id = await startConversation("alice");
+  stub.script = async () => ({
+    steps: [
+      { text: "Grapes are an emergency for dogs. Do not wait for symptoms.", calls: [{ name: "toxin_lookup", input: { query: "grape" } }] },
+      { text: "Please call now rather than watching for symptoms." },
+    ],
+  });
+  const res = await send("alice", id, "my dog ate a grape").expect(201);
+  assert.equal(
+    res.body.message.text,
+    "Grapes are an emergency for dogs. Do not wait for symptoms.\n\nPlease call now rather than watching for symptoms."
+  );
+  assert.equal(res.body.message.usage.iterations, 2);
+  assert.ok(res.body.message.blocks.some((block) => block.type === "contacts"));
+
+  // The roster carries the weigh-in date, so "when was she last weighed" is answered without a tool.
+  const note = stub.requests[0].messages.at(-1).content[1].text;
+  assert.match(note, /20 lb weighed 2026-09-10/);
 });
