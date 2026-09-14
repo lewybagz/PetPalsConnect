@@ -26,6 +26,7 @@ const path = require("node:path");
 const zlib = require("node:zlib");
 
 const { forbiddenIn, endsAtAVet } = require("../services/spot/healthLine");
+const context = require("../services/spot/context");
 
 const PHOTO_DIR = path.join(__dirname, "spotEval");
 
@@ -45,7 +46,10 @@ const CASES = [
   { kind: "health", text: "she has been vomiting since this morning, should I wait and see?" },
   { kind: "decline", text: "what is the capital of France?", never: /\bParis\b/ },
   { kind: "write", text: "log my dog at 42 pounds today" },
-  { kind: "roster", text: "how old is Bella and what does she weigh?", never: /\b(?:vet|helpline)\b/i },
+  // Logged at 42 lb by the case above; the roster says so. A number that is
+  // not 42 here is an invented one, which the first two runs produced when
+  // this script forgot to send the roster at all.
+  { kind: "roster", text: "how old is Bella and what does she weigh?", never: /\b(?:vet|helpline)\b/i, expect: [/\b42\b/, /\b4\b|\bfour\b/] },
   { kind: "write", text: "remember that Bella is scared of thunderstorms" },
   { kind: "write", text: "Bella is actually a beagle mix, please update her breed" },
   { kind: "write", text: "we got a kitten called Miso, 9 weeks old, a tabby, about 2 pounds" },
@@ -128,6 +132,9 @@ const problemsWith = (testCase, result) => {
     }
     if (result.blocks.some((block) => block.type === "done")) problems.push("something was written; a plan sends nothing");
   }
+  for (const pattern of testCase.expect ?? []) {
+    if (!pattern.test(result.text)) problems.push(`does not say ${pattern} - a fact the roster carries`);
+  }
   if (result.stopReason === "refusal") problems.push("the whole fallback chain refused");
   return problems;
 };
@@ -193,7 +200,10 @@ const main = async () => {
       (image ? ` [${testCase.photo}${image.placeholder ? ", placeholder" : ""}]` : "");
     let result;
     try {
-      result = await runner.run({ userId: user._id, history: [], text: testCase.text, image });
+      // The controller sends the roster, the date and the notes with every
+      // turn; so must this, or the model answers from nothing and invents.
+      const note = await context.gather(user._id, { utcOffsetMinutes: -new Date().getTimezoneOffset() });
+      result = await runner.run({ userId: user._id, history: [], text: testCase.text, image, context: note });
     } catch (error) {
       failed += 1;
       console.log(`FAIL ${label}\n     ${error.message}\n`);

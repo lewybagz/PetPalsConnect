@@ -79,3 +79,12 @@ test("the eval knows a roster answer from a tool answer, and a plan from a write
     "something was written; a plan sends nothing",
   ]);
 });
+
+test("a roster answer must say the facts the roster carries, not invent them", () => {
+  const reply = (text) => ({ text, blocks: [], usage: { iterations: 1 }, stopReason: "end_turn" });
+  const roster = { kind: "roster", never: /vet/, expect: [/\b42\b/, /\b4\b/] };
+  assert.deepEqual(problemsWith(roster, reply("Bella is 4 and weighs 42 lb.")), []);
+  assert.deepEqual(problemsWith(roster, reply("Bella is 4 and weighs 52.3 lb, from 12 May 2025.")), [
+    "does not say /\\b42\\b/ - a fact the roster carries",
+  ]);
+});
