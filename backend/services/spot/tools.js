@@ -293,6 +293,17 @@ const toolsFor = ({ userId, readChats = false }) => {
           .select("title summary tags slug")
           .limit(6)
           .lean();
+        for (const article of articles) {
+          effects.push({
+            type: "card",
+            item: {
+              title: article.title,
+              subtitle: article.summary ?? null,
+              image: null,
+              chip: link("ArticleDetail", article._id, "Read"),
+            },
+          });
+        }
         return json({
           articles: articles.map((article) => ({
             articleId: String(article._id),
@@ -359,7 +370,18 @@ const toolsFor = ({ userId, readChats = false }) => {
           limit: 8,
         });
         for (const place of found) {
-          effects.push({ type: "link", chip: link("PotentialPlaydateLocation", place._id, place.name) });
+          const distance = place.geoLocation?.coordinates
+            ? formatMiles(milesBetween(coordinates, place.geoLocation.coordinates))
+            : null;
+          effects.push({
+            type: "card",
+            item: {
+              title: place.name,
+              subtitle: [place.address, distance ? `${distance} mi` : null].filter(Boolean).join(" · ") || null,
+              image: place.photo ?? null,
+              chip: link("PotentialPlaydateLocation", place._id, "Open place"),
+            },
+          });
         }
         return json({
           locationKnown: true,
@@ -663,8 +685,8 @@ const toolsFor = ({ userId, readChats = false }) => {
         const rows = await Friend.find({ status: true, $or: [{ user1: userId }, { user2: userId }] })
           .populate("user1", "username")
           .populate("user2", "username")
-          .populate("pet1", "name breed species owner")
-          .populate("pet2", "name breed species owner")
+          .populate("pet1", "name breed species owner photos")
+          .populate("pet2", "name breed species owner photos")
           .sort({ timestamp: -1 })
           .limit(20)
           .lean();
@@ -674,6 +696,17 @@ const toolsFor = ({ userId, readChats = false }) => {
           const owner = mineIsUser1 ? row.user2 : row.user1;
           const pet = mineIsUser1 ? row.pet2 : row.pet1;
           if (!owner || blocked.has(String(owner._id))) continue;
+          if (pet) {
+            effects.push({
+              type: "card",
+              item: {
+                title: pet.name,
+                subtitle: [pet.breed, `with @${owner.username}`].filter(Boolean).join(" · "),
+                image: pet.photos?.[0] ?? null,
+                chip: link("PetDetails", pet._id, `Open ${pet.name}`),
+              },
+            });
+          }
           pals.push({
             username: owner.username,
             petId: pet ? String(pet._id) : null,

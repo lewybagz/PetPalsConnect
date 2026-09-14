@@ -148,10 +148,16 @@ const ingest = rateLimit({
  * limit; this is the abuse ceiling underneath it, so a script cannot spend a
  * whole day's premium allowance in a second. Reads are the screen opening.
  */
+/**
+ * Reads are the screen opening and do not count - except the audio route,
+ * which is a GET that pays a voice provider per character.
+ */
+const countsAgainstSpot = (req) => req.method !== "GET" || /\/audio\/?$/.test(req.path);
+
 const spot = make({
   windowMs: 10 * 60 * 1000,
   limit: 30,
-  skip: (req) => req.method === "GET",
+  skip: (req) => !countsAgainstSpot(req),
   message: "You're doing that too quickly. Give it a moment.",
 });
 
@@ -171,6 +177,7 @@ const analytics = make({
 });
 
 module.exports = {
+  countsAgainstSpot,
   setEnabled,
   analytics,
   general,

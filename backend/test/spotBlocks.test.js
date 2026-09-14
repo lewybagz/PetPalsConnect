@@ -142,3 +142,30 @@ test("web links are one block, deduped by url and capped", () => {
   assert.equal(new Set(web[0].items.map((item) => item.url)).size, 8);
   assert.deepEqual(blocksFrom([{ type: "web", item: { label: "no url" } }]), []);
 });
+
+test("cards are one block, deduped by chip, capped at six, and the plain chip for the same screen is dropped", () => {
+  const card = (n) => ({
+    type: "card",
+    item: { title: `Article ${n}`, subtitle: "s", image: null, chip: link("ArticleDetail", `a${n}`, "Read") },
+  });
+  const effects = [
+    { type: "link", chip: link("ArticleDetail", "a1", "Read article") },
+    { type: "link", chip: link("Articles") },
+    ...Array.from({ length: 8 }, (_, i) => card(i + 1)),
+    card(1),
+  ];
+  const blocks = blocksFrom(effects);
+  const cards = blocks.find((block) => block.type === "cards");
+  assert.equal(cards.items.length, 6);
+  assert.deepEqual(
+    cards.items.map((item) => item.title),
+    ["Article 1", "Article 2", "Article 3", "Article 4", "Article 5", "Article 6"]
+  );
+  assert.equal(cards.items[0].chip.screen, "ArticleDetail");
+  const links = blocks.find((block) => block.type === "links");
+  assert.deepEqual(links.items.map((chip) => chip.screen), ["Articles"], "the card carries the tap; the chip goes");
+  assert.ok(blocks.findIndex((b) => b.type === "cards") < blocks.findIndex((b) => b.type === "links"));
+  // A card with no chip or no title is not a card.
+  assert.deepEqual(blocksFrom([{ type: "card", item: { title: "x" } }]), []);
+  assert.deepEqual(blocksFrom([{ type: "card", item: { chip: link("Articles") } }]), []);
+});

@@ -4,6 +4,10 @@ const client = require("../services/spot/client");
 const quota = require("../services/spot/quota");
 const runner = require("../services/spot/runner");
 const context = require("../services/spot/context");
+const noticed = require("../services/spot/noticed");
+const route = require("../services/spot/route");
+const voice = require("../services/spot/voice");
+const { Readable } = require("node:stream");
 const { NOTE_LIMIT, NOTE_LENGTH } = context;
 const { emitToUser } = require("../services/realtime");
 
@@ -102,6 +106,8 @@ const SpotController = {
         enabled,
         consented: Boolean(user?.spotConsentAt),
         readChats: Boolean(user?.spot?.readChats),
+        // Whether an AI voice is configured; the phone's own voice needs nothing.
+        voice: enabled && voice.isEnabled(),
         quota: enabled
           ? {
               used: await quota.usedToday({ userId: req.userId, day }),
@@ -237,6 +243,12 @@ const SpotController = {
       }
 
       const history = conversation.messages.map((m) => ({ role: m.role, text: m.text }));
+      // Software picks the model; off (always the default) until SPOT_MODEL_LIGHT is set.
+      const model = route.modelFor({
+        text,
+        image: Boolean(image),
+        historyModels: conversation.messages.map((m) => m.usage?.model).filter(Boolean),
+      });
       const userMessage = conversation.messages.create({
         role: "user",
         text,
@@ -256,6 +268,7 @@ const SpotController = {
           image,
           context: await context.gather(req.userId, { utcOffsetMinutes: req.body?.utcOffsetMinutes }),
           readChats: Boolean(user.spot?.readChats),
+          model,
           onDelta: (delta) =>
             emitToUser(req.userId, "spotDelta", {
               conversationId: String(conversation._id),
@@ -307,6 +320,49 @@ const SpotController = {
       await conversation.save();
       res.json({ flagged: true });
     } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  /**
+   * What Spot would say first, if it spoke first - computed by software on
+   * read (`services/spot/noticed.js`), never stored, never a model turn.
+   */
+  async getNoticed(req, res) {
+    if (!client.isEnabled()) return disabled(res);
+    try {
+      res.json(await noticed.gather(req.userId));
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  /**
+   * Spot's stored answer, spoken by the configured AI voice, streamed as
+   * audio. Only an assistant turn in the caller's own conversation, only its
+   * text; nothing is stored. 503 until a provider is configured.
+   */
+  async getAudio(req, res) {
+    if (!client.isEnabled()) return disabled(res);
+    if (!voice.isEnabled()) {
+      return res.status(503).json({ message: "No voice is configured on this server.", code: "SPOT_VOICE_OFF" });
+    }
+    try {
+      const conversation = await ownConversation(req.params.id, req.userId).lean();
+      if (!conversation) return notFound(res);
+      const message = (conversation.messages ?? []).find((m) => String(m._id) === String(req.params.messageId));
+      if (!message || message.role !== "assistant" || !message.text) return notFound(res);
+
+      const spoken = await voice.speak({ text: message.text });
+      if (!spoken.ok || !spoken.body) {
+        console.error("[spot] voice failed:", spoken.status);
+        return res.status(502).json({ message: "Spot couldn't speak just now.", code: "SPOT_VOICE_FAILED" });
+      }
+      res.setHeader("Content-Type", spoken.contentType);
+      res.setHeader("Cache-Control", "no-store");
+      Readable.fromWeb(spoken.body).pipe(res);
+    } catch (err) {
+      if (err.status) return res.status(err.status).json({ message: err.message });
       res.status(500).json({ message: err.message });
     }
   },

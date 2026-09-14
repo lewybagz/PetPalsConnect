@@ -85,20 +85,28 @@ const key = (chip) => `${chip.screen}:${JSON.stringify(chip.params)}`;
  * - `link` effects are deduped and gathered into one `links` block.
  * - `web` effects (a retailer search from the picks table) are deduped by url
  *   into one `web` block, capped, and the app opens them in the browser.
+ * - `card` effects (an article, a place, a pal's pet) are one `cards` block,
+ *   capped, deduped by the chip they carry - and a plain chip for the same
+ *   screen and params is dropped, so nothing is offered twice.
  * - Each `done` effect is its own block, in order. One with no `undo` is an
  *   action that reached another person and cannot be taken back.
  */
 const WEB_LIMIT = 8;
+const CARD_LIMIT = 6;
 
 const blocksFrom = (effects = []) => {
   const blocks = [];
   const chips = new Map();
   const web = new Map();
+  const cards = new Map();
   let contacts = false;
 
   for (const effect of effects) {
     if (effect.type === "toxin") contacts = true;
     if (effect.type === "link" && effect.chip) chips.set(key(effect.chip), effect.chip);
+    if (effect.type === "card" && effect.item?.chip && effect.item.title && cards.size < CARD_LIMIT) {
+      cards.set(key(effect.item.chip), effect.item);
+    }
     if (effect.type === "web" && effect.item?.url && web.size < WEB_LIMIT) web.set(effect.item.url, effect.item);
     if (effect.type === "done") {
       blocks.push({
@@ -110,6 +118,8 @@ const blocksFrom = (effects = []) => {
     }
   }
 
+  for (const cardKey of cards.keys()) chips.delete(cardKey);
+  if (cards.size > 0) blocks.push({ type: "cards", items: [...cards.values()] });
   if (chips.size > 0) blocks.push({ type: "links", items: [...chips.values()] });
   if (web.size > 0) blocks.push({ type: "web", items: [...web.values()] });
   if (contacts) blocks.push({ type: "contacts", items: EMERGENCY_CONTACTS });

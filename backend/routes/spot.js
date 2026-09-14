@@ -12,6 +12,7 @@ router.get("/flagged", requireModerator, SpotController.getFlagged);
 // What Spot costs, across accounts: the same guard, checked the same way.
 router.get("/usage", requireModerator, SpotController.getUsage);
 
+router.get("/noticed", SpotController.getNoticed);
 router.get("/notes", SpotController.getNotes);
 router.post("/notes", SpotController.addNote);
 router.delete("/notes/:noteId", SpotController.deleteNote);
@@ -22,5 +23,7 @@ router.get("/conversations/:id", SpotController.getConversation);
 router.delete("/conversations/:id", SpotController.deleteConversation);
 router.post("/conversations/:id/messages", SpotController.sendMessage);
 router.post("/conversations/:id/messages/:messageId/flag", SpotController.flagMessage);
+// A paid call on a GET: the Spot limiter counts it (see rateLimits.countsAgainstSpot).
+router.get("/conversations/:id/messages/:messageId/audio", SpotController.getAudio);
 
 module.exports = router;

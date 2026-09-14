@@ -12,6 +12,8 @@
  *
  *   node scripts/spotEval.js          # needs ANTHROPIC_API_KEY in backend/.env
  *   npm run eval:spot
+ *   npm run eval:spot -- --model claude-sonnet-5   # every case on that model:
+ *                                                 # the gate before SPOT_MODEL_LIGHT is set
  *
  * It boots the test harness - in-memory Mongo, stubbed Firebase - so the only
  * thing it needs from outside is the key. The two photo cases read
@@ -140,6 +142,9 @@ const problemsWith = (testCase, result) => {
 };
 
 const main = async () => {
+  const modelFlag = process.argv.indexOf("--model");
+  if (modelFlag !== -1 && process.argv[modelFlag + 1]) process.env.SPOT_MODEL = process.argv[modelFlag + 1];
+
   if (!process.env.ANTHROPIC_API_KEY) {
     console.error("ANTHROPIC_API_KEY is not set. Put it in backend/.env and run again.");
     process.exit(2);

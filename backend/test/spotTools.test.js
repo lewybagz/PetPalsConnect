@@ -614,3 +614,32 @@ test("plan_playdate prefills the form and sends nothing", async () => {
   assert.ok((await call(toolset, "plan_playdate", { theirPetId: String(bob.pet._id), date: "next friday" })).error);
   assert.ok((await call(toolset, "plan_playdate", { theirPetId: String(bob.pet._id), myPetId: String(bob.pet._id) })).error, "myPetId has to be yours");
 });
+
+test("pals, articles and places come back as cards with a photo, a subtitle and the tap", async () => {
+  const alice = await makeOwner("alice");
+  const bob = await makeOwner("bob", { photos: ["https://firebasestorage.googleapis.com/v0/b/x/o/bob.jpg"] });
+  await Friend.create({
+    status: true, user1: alice.user._id, user2: bob.user._id, pet1: alice.pet._id, pet2: bob.pet._id, creator: alice.user._id,
+  });
+  const Article = require("../models/Article");
+  await Article.create({ title: "Kennel cough, plainly", summary: "What Bordetella is and is not.", content: "Body.", tags: ["dogs"], sources: [{ title: "AAHA", publisher: "AAHA", url: "https://aaha.org" }] });
+
+  const toolset = toolsFor({ userId: alice.user._id });
+  await call(toolset, "my_pals");
+  await call(toolset, "search_articles", { query: "kennel" });
+  const cards = blocksFrom(toolset.effects).find((block) => block.type === "cards");
+  assert.ok(cards, "a cards block");
+  const pal = cards.items.find((item) => item.title === "bob-dog");
+  assert.deepEqual(pal, {
+    title: "bob-dog",
+    subtitle: "Beagle · with @bob",
+    image: "https://firebasestorage.googleapis.com/v0/b/x/o/bob.jpg",
+    chip: { screen: "PetDetails", params: { petId: String(bob.pet._id) }, label: "Open bob-dog" },
+  });
+  const article = cards.items.find((item) => item.title === "Kennel cough, plainly");
+  assert.equal(article.subtitle, "What Bordetella is and is not.");
+  assert.equal(article.chip.screen, "ArticleDetail");
+  const links = blocksFrom(toolset.effects).find((block) => block.type === "links");
+  assert.ok(!links.items.some((chip) => chip.screen === "ArticleDetail"), "no duplicate chip beside the card");
+  assert.ok(links.items.some((chip) => chip.screen === "FriendsList"), "the list chip stays");
+});

@@ -572,3 +572,67 @@ test("what the model said before a tool call is kept, not just its last line", a
   const note = stub.requests[0].messages.at(-1).content[1].text;
   assert.match(note, /20 lb weighed 2026-09-10/);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 5: noticed, and the router on the wire
+// ---------------------------------------------------------------------------
+
+test("what Spot noticed is the caller's own, in priority order, and an invitation they organised is not one", async () => {
+  const alice = await makeOwner("alice");
+  const bob = await makeOwner("bob");
+  const Playdate = require("../models/Playdate");
+  const Location = require("../models/Location");
+  const park = await Location.create({ name: "Park", address: "1 Lane", placeId: "n-1", geoLocation: { type: "Point", coordinates: [-112, 33] } });
+  const DAY = 24 * 60 * 60 * 1000;
+  const make = (creator, invitee) =>
+    Playdate.create({
+      date: new Date(Date.now() + DAY), startTime: new Date(Date.now() + DAY), location: park._id,
+      participants: [creator.user._id, invitee.user._id], petsInvolved: [creator.pet._id, invitee.pet._id],
+      status: "pending", creator: creator.user._id,
+    });
+  const invitation = await make(bob, alice);
+  await make(alice, bob);
+
+  const mine = await request(app).get("/api/spot/noticed").set(...auth("alice")).expect(200);
+  // Alice's dog has no records, so: the invitation, then never weighed, then no records.
+  assert.deepEqual(mine.body.map((n) => n.kind), ["invitation", "weight", "records"]);
+  assert.equal(mine.body[0].text, "@bob's playdate invitation is waiting for an answer.");
+  assert.deepEqual(mine.body[0].params, { playdateId: String(invitation._id) });
+
+  assert.equal(mine.body.filter((n) => n.kind === "invitation").length, 1, "the one she organised is not a nudge");
+  const theirs = await request(app).get("/api/spot/noticed").set(...auth("bob")).expect(200);
+  const bobs = theirs.body.filter((n) => n.kind === "invitation");
+  assert.equal(bobs.length, 1);
+  assert.equal(bobs[0].text, "@alice's playdate invitation is waiting for an answer.");
+
+  delete process.env.ANTHROPIC_API_KEY;
+  await request(app).get("/api/spot/noticed").set(...auth("alice")).expect(503);
+});
+
+test("with a light model set, the software router picks the model per turn and the row records it", async () => {
+  await makeOwner("alice", { subscribed: true });
+  const id = await startConversation("alice");
+  process.env.SPOT_MODEL_LIGHT = "claude-sonnet-5";
+  try {
+    say("Saturday at ten.");
+    const light = await send("alice", id, "when is my next playdate?").expect(201);
+    assert.equal(stub.requests.at(-1).model, "claude-sonnet-5");
+    assert.equal(light.body.message.usage.model, "claude-sonnet-5");
+
+    say("Call your vet.");
+    const heavy = await send("alice", id, "she has been vomiting").expect(201);
+    assert.equal(stub.requests.at(-1).model, client.model());
+    assert.equal(heavy.body.message.usage.model, client.model());
+
+    // The thread has run heavy now, so a light-looking question stays heavy.
+    say("Ten.");
+    await send("alice", id, "and what time?").expect(201);
+    assert.equal(stub.requests.at(-1).model, client.model());
+  } finally {
+    delete process.env.SPOT_MODEL_LIGHT;
+  }
+  say("Ten.");
+  const fresh = await startConversation("alice");
+  await send("alice", fresh, "when is my next playdate?").expect(201);
+  assert.equal(stub.requests.at(-1).model, client.model(), "unset means the default for everything");
+});

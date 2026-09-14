@@ -81,7 +81,7 @@ const textOf = (message) =>
  * Throws when Spot is off or the API fails; the controller turns the first
  * into a 503 and the second into a 502 with the turn refunded.
  */
-const run = async ({ userId, history, text, image, context, readChats = false, onDelta }) => {
+const run = async ({ userId, history, text, image, context, readChats = false, onDelta, model = client.model() }) => {
   const anthropic = client.get();
   if (!anthropic) {
     throw Object.assign(new Error("Spot isn't available on this server."), { status: 503 });
@@ -90,7 +90,7 @@ const run = async ({ userId, history, text, image, context, readChats = false, o
   const { tools, effects } = toolsFor({ userId, readChats });
 
   const runner = anthropic.beta.messages.toolRunner({
-    model: client.model(),
+    model,
     max_tokens: MAX_TOKENS,
     max_iterations: MAX_ITERATIONS,
     stream: true,
@@ -122,7 +122,7 @@ const run = async ({ userId, history, text, image, context, readChats = false, o
   }
 
   const final = await runner.done();
-  const usage = { ...(final.usage ?? {}), iterations, ms: Date.now() - startedAt, model: client.model() };
+  const usage = { ...(final.usage ?? {}), iterations, ms: Date.now() - startedAt, model };
   console.log(
     `[spot] ${final.stop_reason} in=${usage.input_tokens ?? 0} out=${usage.output_tokens ?? 0} ` +
       `cache_read=${usage.cache_read_input_tokens ?? 0} cache_write=${usage.cache_creation_input_tokens ?? 0} ` +
