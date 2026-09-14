@@ -1,7 +1,7 @@
 # Spot, phase 4: reach, hands, and cost
 
-Status: **planned, not started.** Written 2026-09-13 against `9ec369e`, on
-`feat/store-and-tracking`. Follows [spot-assistant.plan.md](spot-assistant.plan.md),
+Status: **todos 1 to 5 built** in `0cf17c9` (2026-09-13); 6 to 8, the app, not
+started. Written 2026-09-13 against `9ec369e`, on `feat/store-and-tracking`. Follows [spot-assistant.plan.md](spot-assistant.plan.md),
 whose three phases are built (todo 8 `7cca3b3`). Brief from Lewy: "give Spot
 more features, more tools, better efficiency; ensure it is A1 from day 1."
 
@@ -238,17 +238,28 @@ does, so the `hasPet` gate reads it.
 
 | id | content | status |
 | --- | --- | --- |
-| 1 | Context block, history window with cache breakpoint, usage stored on the message; `context.js` tests, runner tests | pending |
-| 2 | Lift playdate accept/decline/cancel into `services/playdates.js` and pet create/update into `services/pets.js`; controllers call them; existing tests stay green | pending |
-| 3 | Six read tools with result caps and a two-account test each | pending |
-| 4 | Seven write tools, `User.spotNotes`, notes routes, `WRITE_TOOLS`, two-account tests, `SchedulePlaydate` extra params in `blocks.js` | pending |
-| 5 | `PRICES`, `GET /api/spot/usage` behind `requireModerator`, `GUARDED_READS`, test | pending |
+| 1 | Context block, history window with cache breakpoint, usage stored on the message; `context.js` tests, runner tests | done `0cf17c9` |
+| 2 | Lift playdate accept/decline/cancel into `services/playdates.js` and pet create/update into `services/pets.js`; controllers call them; existing tests stay green | done `0cf17c9` |
+| 3 | Six read tools with result caps and a two-account test each | done `0cf17c9` |
+| 4 | Seven write tools, `User.spotNotes`, notes routes, `WRITE_TOOLS`, two-account tests, `SchedulePlaydate` extra params in `blocks.js` | done `0cf17c9` |
+| 5 | `PRICES`, `GET /api/spot/usage` behind `requireModerator`, `GUARDED_READS`, test | done `0cf17c9` |
 | 6 | App: `cards` and `web` blocks, `done` without undo, `UNDO` entries, `SchedulePlaydate` presets, Recent conversations, notes list, types | pending |
 | 7 | App: new intents and context chips with tests; `AskSpotButton` on four more screens; `describeContext` | pending |
 | 8 | Prompt update, eval cases, gallery boards and screenshots reviewed, results recorded here | pending |
 
 Todos 1 and 2 first, in either order; 3 to 5 on the backend; 6 and 7 on the
 app; 8 last. Two sessions of work: 1 to 5 in one, 6 to 8 in the next.
+
+Built as planned, with four departures worth knowing: `POST /api/spot/notes`
+exists as well as the get and delete, because undoing a "forget" needs a
+way to put the note back; `whats_new` names a destination screen but only
+offers a chip for screens that take no id, since a notification row stores
+no id to open with; the lift of `cancelPlaydate` closed a hole (it updated
+whatever id it was given - now 403 for anyone not on the playdate, tested);
+and the support mailer is silent under `NODE_ENV=test` so a developer's
+real credentials never mail a test inbox. The app's undo table already
+carries `restorePet`, `forget` and `remember`, because the backend contract
+test demands it; the rest of todo 6 is still to do.
 
 ## Env vars and dashboard prerequisites
 
