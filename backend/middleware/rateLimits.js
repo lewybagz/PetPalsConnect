@@ -155,8 +155,24 @@ const spot = make({
   message: "You're doing that too quickly. Give it a moment.",
 });
 
+/**
+ * Analytics batches. Buffered client-side and flushed on a timer, so a busy
+ * session is a handful of calls rather than one per event - but this is a
+ * write endpoint every signed-in device talks to, so it gets a ceiling of its
+ * own rather than sharing the general one. Well above what the app does;
+ * enough to make a script writing junk into the funnel expensive.
+ */
+const analytics = make({
+  windowMs: 10 * 60 * 1000,
+  limit: 120,
+  // Reading the funnel is a moderator opening a page; only writes count.
+  skip: (req) => req.method === "GET",
+  message: "You're doing that too quickly. Give it a moment.",
+});
+
 module.exports = {
   setEnabled,
+  analytics,
   general,
   usernameChecks,
   signup,

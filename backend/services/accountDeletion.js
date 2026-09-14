@@ -17,7 +17,7 @@ const UserPreferences = require("../models/UserPreferences");
 const Subscription = require("../models/Subscription");
 const Media = require("../models/Media");
 const BlockList = require("../models/BlockList");
-const ActivityLog = require("../models/ActivityLog");
+const AnalyticsEvent = require("../models/AnalyticsEvent");
 const Event = require("../models/Event");
 const Waitlist = require("../models/Waitlist");
 const Device = require("../models/Device");
@@ -89,7 +89,12 @@ const deleteAccountData = async (user, firebaseUid) => {
   await Subscription.deleteMany({ user: userId });
   await Media.deleteMany({ createdBy: userId });
   await BlockList.deleteMany({ owner: userId });
-  await ActivityLog.deleteMany({ user: userId });
+  // Matched on the Firebase uid as well as the profile id, because the whole
+  // reason this model keys on the uid is that the most interesting events -
+  // the ones between creating a Firebase account and finishing a profile -
+  // have no `userId` at all. Deleting by `userId` alone would leave exactly
+  // those behind, which is the half of somebody's funnel they never completed.
+  await AnalyticsEvent.deleteMany({ $or: [{ userId }, { firebaseUid }] });
   await Waitlist.deleteMany({ user: userId });
   // What was said to Spot, and how much of it. Photos were never stored.
   await SpotConversation.deleteMany({ owner: userId });

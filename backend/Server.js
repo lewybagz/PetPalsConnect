@@ -79,7 +79,7 @@ app.get("/health", (req, res) => {
 // API routes (all authenticated)
 // ---------------------------------------------------------------------------
 const routes = {
-  activitylogs: "activityLogs",
+  analytics: "analytics",
   articles: "articles",
   blocklists: "blockLists",
   chats: "chats",
@@ -117,6 +117,7 @@ const routes = {
  * should not be able to spend everybody's allowance.
  */
 const TIGHTER = {
+  analytics: limits.analytics,
   reports: limits.reporting,
   supportmessages: limits.reporting,
   friendrequests: limits.outreach,

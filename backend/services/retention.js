@@ -1,6 +1,7 @@
 const Report = require("../models/Report");
 const SupportMessage = require("../models/SupportMessage");
 const Order = require("../models/Order");
+const AnalyticsEvent = require("../models/AnalyticsEvent");
 
 /**
  * The retention windows the privacy policy promises, enforced.
@@ -26,6 +27,21 @@ const RETENTION_DAYS = 3 * 365;
  */
 const ORDER_RETENTION_DAYS = 7 * 365;
 
+/**
+ * Ninety days for analytics events.
+ *
+ * Much shorter than the rest, and for the opposite reason: reports and orders
+ * are kept because somebody may need them, and these are deleted because
+ * nobody will. A funnel is read as "what happened over the last few weeks" -
+ * the counts stop informing anything long before they stop accumulating, and
+ * an event nobody will ever query is just a record of somebody's behaviour
+ * sitting around.
+ *
+ * These are also cascade-deleted with the account (`accountDeletion.js`), so
+ * this window is what bounds events belonging to accounts that still exist.
+ */
+const ANALYTICS_RETENTION_DAYS = 90;
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const cutoffFor = (now = new Date(), days = RETENTION_DAYS) =>
@@ -34,18 +50,28 @@ const cutoffFor = (now = new Date(), days = RETENTION_DAYS) =>
 const purgeExpired = async (now = new Date()) => {
   const cutoff = cutoffFor(now);
   const orderCutoff = cutoffFor(now, ORDER_RETENTION_DAYS);
-  const [reports, support, orders] = await Promise.all([
+  const analyticsCutoff = cutoffFor(now, ANALYTICS_RETENTION_DAYS);
+  const [reports, support, orders, analytics] = await Promise.all([
     Report.deleteMany({ createdDate: { $lt: cutoff } }),
     SupportMessage.deleteMany({ createdAt: { $lt: cutoff } }),
     Order.deleteMany({ createdDate: { $lt: orderCutoff } }),
+    AnalyticsEvent.deleteMany({ at: { $lt: analyticsCutoff } }),
   ]);
   return {
     reports: reports.deletedCount,
     support: support.deletedCount,
     orders: orders.deletedCount,
+    analytics: analytics.deletedCount,
     cutoff,
     orderCutoff,
+    analyticsCutoff,
   };
 };
 
-module.exports = { RETENTION_DAYS, ORDER_RETENTION_DAYS, cutoffFor, purgeExpired };
+module.exports = {
+  RETENTION_DAYS,
+  ORDER_RETENTION_DAYS,
+  ANALYTICS_RETENTION_DAYS,
+  cutoffFor,
+  purgeExpired,
+};

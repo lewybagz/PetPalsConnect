@@ -62,6 +62,11 @@ const GUARDED_READS = {
   "SpotController.getFlagged": "requireModerator",
   // Tokens and cost across accounts, for the person paying the bill.
   "SpotController.getUsage": "requireModerator",
+  // The onboarding funnel, which is a count across every account by
+  // definition - there is no per-account version of "where do people drop
+  // out". Nothing it returns names anybody: it is counts of distinct uids
+  // per step, never a uid.
+  "AnalyticsController.funnel": "requireModerator",
 };
 
 /**

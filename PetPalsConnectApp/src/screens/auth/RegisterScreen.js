@@ -29,6 +29,7 @@ import { passwordRules, scorePassword } from "../../utils/passwordStrength";
 import { useTokens } from "../../context/AppThemeContext";
 import AppleSignInButton from "../../components/AppleSignInButton";
 import { PRIVACY_URL, TERMS_URL } from "../../config/legal";
+import { track } from "../../services/analytics";
 
 GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
 
@@ -82,12 +83,14 @@ export default function RegisterScreen({ navigation }) {
     }
 
     setSubmitting(true);
+    track("signup_started", { method: "email" });
     try {
       const credential = await createUserWithEmailAndPassword(
         auth,
         email.trim(),
         password
       );
+      track("account_created", { method: "email" });
 
       // Best-effort: a failed verification email must not fail the signup, or
       // the user ends up with an account they think was never created.
@@ -104,6 +107,7 @@ export default function RegisterScreen({ navigation }) {
   const onGoogleButtonPress = async () => {
     setErrorMessage(null);
     setSubmitting(true);
+    track("signup_started", { method: "google" });
     try {
       await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
@@ -111,6 +115,9 @@ export default function RegisterScreen({ navigation }) {
       if (!idToken) throw new Error("Google sign-in returned no credential.");
 
       await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+      // Not necessarily a new account - Google sign-in is also how a returning
+      // user gets back in. `profile_created` is what separates the two.
+      track("account_created", { method: "google" });
       // As above: no navigation. A first-time Google user has no profile yet,
       // so the navigator routes them to CreateProfile automatically.
     } catch (error) {

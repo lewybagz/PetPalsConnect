@@ -20,6 +20,7 @@ import { PRIVACY_URL, TERMS_URL } from "../../config/legal";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import useUsernameAvailability from "../../hooks/useUsernameAvailability";
 import { describeApiError } from "../../utils/authErrors";
+import { track } from "../../services/analytics";
 import { useTokens } from "../../context/AppThemeContext";
 
 /**
@@ -55,6 +56,12 @@ export default function CreateProfileScreen() {
   const [agreed, setAgreed] = useState(false);
 
   const availability = useUsernameAvailability(username);
+
+  // Reaching this screen is the step, not submitting it - the gap between
+  // arriving here and `profile_created` is the zombie-account window.
+  React.useEffect(() => {
+    track("profile_started");
+  }, []);
 
   const zipValid = /^\d{5}$/.test(zip);
 

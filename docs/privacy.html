@@ -43,7 +43,7 @@
         <p><strong>In short.</strong></p>
         <ul>
           <li>We collect what the app needs to work: your sign-in details, your pets' profiles and photos, your location (only with your permission), your messages and playdates, and a push-notification token for your device.</li>
-          <li>We do <strong>not</strong> sell your personal information, do not show ads, and do not use advertising or analytics trackers. We do not collect your contacts, your card details or any biometric data.</li>
+          <li>We do <strong>not</strong> sell your personal information, do not show ads, and do not use advertising trackers or third-party analytics services. We record which steps of the app you reach (for example, that setup was finished) so we can see where it is confusing; this stays on our own servers, is deleted after 90 days, and is never linked to an advertising identifier. We do not collect your contacts, your card details or any biometric data.</li>
           <li>Other users see your pets, your username and profile photo, and - if you allow it - your pet's <em>approximate</em> location (rounded to about a kilometre). They never see your exact position.</li>
           <li>You can delete your account, and everything it owns, in Settings or by emailing us. Safety reports and support messages are kept for up to three years and shop orders for seven, as tax records; everything else goes.</li>
         </ul>
@@ -132,6 +132,11 @@
           <td>Security, abuse prevention and debugging. Kept for up to 30 days.</td>
         </tr>
         <tr>
+          <td>Product usage</td>
+          <td>Which steps of the app your account reaches and when - for example, that you opened the app, started creating a profile, finished setting up, swiped for the first time, or answered the notifications request. Each record holds your account identifier, the step, the time, your platform (iOS or Android) and the app version. It never holds an advertising identifier, a device identifier, your IP address, or anything you have typed.</td>
+          <td>To see where setup is confusing or where the app is failing people, so we can fix it. This is our own measurement on our own servers - we do not use a third-party analytics service and nothing here is shared with anyone or used for advertising. Kept for 90 days, and deleted with your account.</td>
+        </tr>
+        <tr>
           <td>Purchase records</td>
           <td>If you subscribe: your internal user id, the product bought, purchase and renewal dates, price and currency, store (Apple or Google) and subscription status, relayed to us by RevenueCat. <strong>We never receive your card or payment details</strong> - the App Store or Google Play holds those.</td>
           <td>To turn on PetPals Plus features and show you your subscription.</td>
@@ -140,8 +145,11 @@
 
       <h3>2.3 What we do not collect</h3>
       <p>
-        We do not use advertising SDKs, analytics or crash-reporting trackers, or
-        the advertising identifier. We do not read your contacts, calendar,
+        We do not use advertising SDKs, third-party analytics or crash-reporting
+        services, or the advertising identifier. Our own product-usage records
+        (section 2.2) are the only measurement we keep, they never leave our
+        servers, and they record which step of the app you reached - never what
+        you wrote, searched for or looked at. We do not read your contacts, calendar,
         microphone or files. We do not collect biometric information, and we do
         not run facial recognition on any photo. We do not collect payment card
         numbers, government identifiers or health information about you.
@@ -300,6 +308,7 @@
         <tr><td>Location</td><td>Only the most recent position; replaced on each sync; deleted with the account.</td></tr>
         <tr><td>Push token</td><td>Until you sign out or delete the account.</td></tr>
         <tr><td>Server logs</td><td>Up to 30 days.</td></tr>
+        <tr><td>Product usage records</td><td>90 days, then deleted automatically; deleted sooner if you delete your account.</td></tr>
         <tr><td>Reports you made or that were made about you</td><td>Up to three years after account deletion, referencing your former account by an internal id, so moderators can still see patterns across accounts.</td></tr>
         <tr><td>Support messages</td><td>Up to three years after account deletion.</td></tr>
         <tr><td>Collar positions</td><td>30 days from when the collar reported them, then deleted automatically; all deleted at once when you remove the collar or delete your account.</td></tr>
@@ -358,7 +367,8 @@
         categories of personal information listed in section 2: identifiers;
         personal information described in Cal. Civ. Code §1798.80 (name, contact
         details); commercial information (purchase history); internet or
-        network activity (server logs); geolocation data; audio, electronic or
+        network activity (server logs and the product-usage records in section 2.2);
+        geolocation data; audio, electronic or
         visual information (photos you upload); and inferences drawn from your
         pets' profiles for matching. Sources: you, your device, Apple, Google and
         RevenueCat. Purposes and recipients are in sections 3 and 4. We have not

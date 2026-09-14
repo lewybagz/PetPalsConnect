@@ -6,6 +6,7 @@ const harness = require("./helpers/harness");
 let User;
 let Report;
 let SupportMessage;
+let AnalyticsEvent;
 let retention;
 
 /**
@@ -18,6 +19,7 @@ test.before(async () => {
   User = require("../models/User");
   Report = require("../models/Report");
   SupportMessage = require("../models/SupportMessage");
+  AnalyticsEvent = require("../models/AnalyticsEvent");
   retention = require("../services/retention");
 });
 
@@ -74,4 +76,26 @@ test("the window is the three years the policy names", () => {
   const now = new Date("2029-01-01T00:00:00Z");
   const days = (now - retention.cutoffFor(now)) / (24 * 60 * 60 * 1000);
   assert.equal(days, 1095);
+});
+
+test("analytics events are purged on their own, much shorter, window", async () => {
+  const now = new Date("2029-01-01T00:00:00Z");
+  const days = retention.ANALYTICS_RETENTION_DAYS;
+  const old = new Date(now.getTime() - (days + 1) * DAY);
+  const recent = new Date(now.getTime() - (days - 1) * DAY);
+
+  await AnalyticsEvent.create({ firebaseUid: "u1", name: "app_opened", at: old });
+  await AnalyticsEvent.create({ firebaseUid: "u2", name: "app_opened", at: recent });
+
+  const result = await retention.purgeExpired(now);
+
+  assert.equal(result.analytics, 1);
+  assert.equal(await AnalyticsEvent.countDocuments(), 1);
+});
+
+test("the analytics window is far shorter than the ones for records people may need", () => {
+  // Reports and orders are kept because somebody may need them; a funnel
+  // event is deleted because nobody will.
+  assert.equal(retention.ANALYTICS_RETENTION_DAYS, 90);
+  assert.ok(retention.ANALYTICS_RETENTION_DAYS < retention.RETENTION_DAYS);
 });

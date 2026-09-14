@@ -16,6 +16,8 @@ import {
   Text,
   useToast,
 } from "../../components/ui";
+import { useAuthSession } from "../../context/AuthSessionContext";
+import { track, trackOnce } from "../../services/analytics";
 import SafetyMenu from "../../components/SafetyMenu";
 import VaccinationBadge from "../../components/VaccinationBadge";
 import SwipeableCard from "./SwipeableCard";
@@ -72,6 +74,10 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
   // stays in pounds and miles, because matching compares two pets' numbers.
   const units = useUnits();
   const { preferences } = useDevicePreferences();
+  // Milestones are per account: a shared phone has two people on it, and the
+  // second one's first swipe is still a first swipe.
+  const { userId } = useAuthSession();
+  const accountKey = userId ?? "unknown";
 
   const [myPet, setMyPet] = useState(null);
   const [candidates, setCandidates] = useState([]);
@@ -114,10 +120,30 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
 
   const current = candidates[index];
 
+  /**
+   * The deck ran out.
+   *
+   * An Arizona-only launch means a real user can reach the end of everybody in
+   * range in one sitting, and how often that happens is the question the
+   * cold-start work turns on. In an effect rather than in the render branch
+   * below, because that branch re-renders on every unrelated state change and
+   * would count one empty deck many times.
+   *
+   * Only after a load has finished: the deck is legitimately empty while the
+   * first request is still in flight, and that is not the same event.
+   */
+  useEffect(() => {
+    if (loading || current) return;
+    track("deck_emptied", { preview, hadCandidates: candidates.length > 0 });
+  }, [loading, current, preview, candidates.length]);
+
   const submit = async (decision) => {
     if (!current || !myPet || deciding) return;
 
     setDeciding(true);
+    // The swipe, not its result: this is the moment somebody used the app for
+    // the thing the app is for, and it counts whether or not the save lands.
+    void trackOnce("first_swipe", accountKey);
     // Advance immediately: waiting on the network before showing the next card
     // makes the whole screen feel broken on a slow connection.
     setIndex((position) => position + 1);
@@ -128,7 +154,10 @@ const DiscoverScreen = ({ navigation, previewTranslateX = 0 }) => {
         toPetId: current.pet._id,
         decision,
       });
-      if (result?.mutual) setMatch(result.matchedPet);
+      if (result?.mutual) {
+        setMatch(result.matchedPet);
+        void trackOnce("first_match", accountKey);
+      }
     } catch (error) {
       console.warn("[discover] decide failed:", error.message);
       // A modal here stops the deck dead for a transient network blip on the

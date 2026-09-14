@@ -14,6 +14,7 @@ import { onSessionInvalidated } from "../api/sessionEvents";
 import { isAppleAccount, revokeAppleAccess } from "../api/appleAuth";
 import { readCache, writeCache, removeCache, CacheKeys } from "../services/localCache";
 import { isLaunched } from "../api/waitlist";
+import { track, startAnalytics, resetAnalytics } from "../services/analytics";
 
 /**
  * The app's notion of "who is signed in".
@@ -202,6 +203,15 @@ export const AuthSessionProvider = ({ children }) => {
     }
   }, []);
 
+  // Buffering and flushing, for the whole life of the app. Started here rather
+  // than in App.js because this provider already wraps everything that could
+  // raise an event, and sign-out - which has to clear the buffer - lives here.
+  useEffect(() => startAnalytics(), []);
+
+  useEffect(() => {
+    track("app_opened");
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(getAuth(), (user) => {
       setFirebaseUser(user);
@@ -233,6 +243,7 @@ export const AuthSessionProvider = ({ children }) => {
     async (details) => {
       const { data } = await api.post("/api/users", details);
 
+      track("profile_created");
       setProfile(data);
       setError(null);
       // A profile created just now has no pets and cannot have a stored skip,
@@ -253,6 +264,7 @@ export const AuthSessionProvider = ({ children }) => {
   const createPet = useCallback(
     async (pet) => {
       const { data } = await api.post("/api/pets", pet);
+      track("pet_created", { species: pet?.species ?? "unknown" });
       // Adding a pet answers the prompt, so drop any stored skip.
       if (profile) await removeCache(skipKey(profile));
       await loadProfile(getAuth().currentUser);
@@ -269,6 +281,7 @@ export const AuthSessionProvider = ({ children }) => {
    * offer to add one instead.
    */
   const skipPetSetup = useCallback(async () => {
+    track("pet_skipped");
     if (profile) await writeCache(skipKey(profile), true);
     setSkippedPetSetup(true);
     setStatus(STATUS.ready);
@@ -284,12 +297,35 @@ export const AuthSessionProvider = ({ children }) => {
     setStatus(statusForProfile(profile, skippedPetSetup, true));
   }, [profile, skippedPetSetup]);
 
+  /**
+   * `ready` is reached, once per launch.
+   *
+   * The funnel's last onboarding step, and it is derived rather than raised at
+   * a call site because there are four ways to arrive: finishing the pet form,
+   * skipping it, continuing past the launch fence, and simply signing in with
+   * everything already done. A `track()` in each of those is four places to
+   * forget one.
+   *
+   * `reportedReady` keeps it to once per launch rather than once per profile
+   * re-read - the session re-reads on suspension, on revocation and after
+   * adding a pet, and none of those is a new user finishing onboarding.
+   */
+  const reportedReady = useRef(false);
+  useEffect(() => {
+    if (status !== STATUS.ready || reportedReady.current) return;
+    reportedReady.current = true;
+    track("onboarding_completed");
+  }, [status]);
+
   const refresh = useCallback(
     () => loadProfile(getAuth().currentUser),
     [loadProfile]
   );
 
   const signOut = useCallback(async () => {
+    // Before the auth state changes: a buffer flushed after the next person
+    // signs in on a shared phone would write one person's funnel as another's.
+    await resetAnalytics();
     await removeCache(CacheKeys.userData);
     await getAuth().signOut();
   }, []);

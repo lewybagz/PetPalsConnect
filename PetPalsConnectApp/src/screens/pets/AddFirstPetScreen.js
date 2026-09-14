@@ -20,6 +20,7 @@ import { useTailwind } from "../../styles/tailwind";
 import { OnboardingProgress, useToast } from "../../components/ui";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { describeApiError } from "../../utils/authErrors";
+import { track } from "../../services/analytics";
 import { SPECIES, DEFAULT_SPECIES, speciesInfo } from "../../data/species";
 import { useTokens } from "../../context/AppThemeContext";
 
@@ -63,6 +64,10 @@ export default function AddFirstPetScreen() {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  React.useEffect(() => {
+    track("pet_started");
+  }, []);
 
   // What this species is asked for: a breed list, a weight, or neither.
   const speciesRules = speciesInfo(species);
