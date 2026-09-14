@@ -200,6 +200,9 @@ const SESSION = {
   error: null,
   userId: "user-me",
   hasPet: true,
+  // Both pets are dogs, so the matching screens and the intro's dog-owner
+  // copy render the way most users will see them.
+  hasDog: true,
   profile: {
     _id: "user-me",
     username: "sam",
@@ -212,6 +215,7 @@ const SESSION = {
   signOut: async () => {},
   createPet: async () => {},
   skipPetSetup: () => {},
+  finishIntro: async () => {},
 };
 
 /** For the one board about an account that has been paused. */

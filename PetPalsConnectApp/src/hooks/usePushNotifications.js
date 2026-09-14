@@ -2,17 +2,14 @@ import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import {
   getMessaging,
-  getToken,
   onMessage,
   onNotificationOpenedApp,
   getInitialNotification,
-  requestPermission,
-  AuthorizationStatus,
 } from "@react-native-firebase/messaging";
 
 import { navigate } from "../navigation/navigationRef";
-import api from "../api/axios";
 import { useToast } from "../components/ui";
+import { registerDeviceToken } from "../services/pushPermission";
 import { destinationFor, fetchUnreadCount } from "../api/notifications";
 import { setUnreadCount } from "../redux/actions";
 
@@ -34,11 +31,25 @@ const openNotification = (remoteMessage) => {
 };
 
 /**
- * Registers for push notifications and routes taps to the right screen.
+ * Keeps this device's push token current and routes taps to the right screen.
  *
- * Only runs while signed in - registering a device token for a signed-out user
- * would attach it to nobody, and the previous implementation fired on every
- * app start regardless of auth state.
+ * It deliberately does **not** ask for the permission. It used to: this effect
+ * called `requestPermission` the moment the session reached `ready`, so the OS
+ * dialog landed on somebody who had just finished a signup form and had not
+ * seen the app yet. On iOS that prompt fires once, permanently, so a "no"
+ * there was unrecoverable from inside the app forever - and push is how every
+ * re-engagement mechanism here reaches anybody.
+ *
+ * `services/pushPermission.js` owns the asking now, in context, with the app's
+ * own explanation first - the same shape `services/location.js` already used
+ * for the location permission, which this was the odd one out against.
+ *
+ * Registering the token still happens on every launch, because tokens rotate
+ * and a stale one is a push that silently goes nowhere. `registerDeviceToken`
+ * checks the permission and does nothing without it, so it never prompts.
+ *
+ * Only runs while signed in - a token registered for a signed-out user would
+ * attach to nobody.
  */
 export default function usePushNotifications(enabled) {
   const toast = useToast();
@@ -47,32 +58,10 @@ export default function usePushNotifications(enabled) {
   useEffect(() => {
     if (!enabled) return undefined;
 
-    let cancelled = false;
     const instance = getMessaging();
 
-    const register = async () => {
-      try {
-        const status = await requestPermission(instance);
-        const granted =
-          status === AuthorizationStatus.AUTHORIZED ||
-          status === AuthorizationStatus.PROVISIONAL;
-
-        if (!granted) {
-          console.warn("[push] Permission not granted:", status);
-          return;
-        }
-
-        const token = await getToken(instance);
-        if (token && !cancelled) {
-          await api.post("/api/notifications/device-token", { fcmToken: token });
-        }
-      } catch (error) {
-        // A failed registration should never block app start.
-        console.warn("[push] Registration failed:", error.message);
-      }
-    };
-
-    register();
+    // No prompt: this posts a token only where permission is already held.
+    registerDeviceToken();
 
     // Foreground message: surface it rather than silently dropping it.
     //
@@ -104,7 +93,6 @@ export default function usePushNotifications(enabled) {
     });
 
     return () => {
-      cancelled = true;
       unsubscribeOnMessage();
       unsubscribeOnOpen();
     };

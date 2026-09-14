@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
@@ -8,6 +8,7 @@ import CreateProfileScreen from "../auth/CreateProfileScreen";
 import AddFirstPetScreen from "../pets/AddFirstPetScreen";
 import AccountSuspendedScreen from "../auth/AccountSuspendedScreen";
 import WaitlistScreen from "../auth/WaitlistScreen";
+import FirstRunScreen from "../auth/FirstRunScreen";
 import usePushNotifications from "../../hooks/usePushNotifications";
 import { useSocketSession } from "../../hooks/useSocketEvents";
 import useSessionStore from "../../hooks/useSessionStore";
@@ -41,7 +42,7 @@ const Centered = ({ children }) => (
  * out cannot leave authenticated screens on the back stack.
  */
 export default function RootNavigator() {
-  const { status, error, refresh, signOut } = useAuthSession();
+  const { status, error, refresh, signOut, hasDog } = useAuthSession();
   const tokens = useTokens();
 
   usePushNotifications(status === AuthStatus.ready);
@@ -54,6 +55,39 @@ export default function RootNavigator() {
   useSessionStore();
   // Discovery filters by distance, so the server has to know where we are.
   useLocationSync(status === AuthStatus.ready);
+
+  /**
+   * Did this session pass through the intro on its way here?
+   *
+   * State rather than a ref, because it is read during render to pick the
+   * landing tab and reading a ref there is what React Compiler forbids - the
+   * rule exists for exactly this shape, where a value written in an effect is
+   * used to decide what to render.
+   *
+   * It has to be remembered at all because `finishIntro` flips both the stored
+   * flag and the status in the same tick: by the time `ready` renders, nothing
+   * in the session still says where the user came from.
+   *
+   * Never cleared. Its scope is one mount of the navigator, which remounts on
+   * sign-out - exactly right, since the next account on this phone gets its
+   * own intro.
+   */
+  const [cameFromIntro, setCameFromIntro] = React.useState(false);
+  useEffect(() => {
+    if (status === AuthStatus.needsIntro) setCameFromIntro(true);
+  }, [status]);
+
+  /**
+   * Where the tab bar opens.
+   *
+   * Only on the launch that came through the intro. Every other launch gets
+   * Home, which is where the app has always opened.
+   *
+   * A petless or cat-only owner goes to Care, not Discover - sending them to
+   * a deck they cannot swipe is the empty state this whole screen exists to
+   * avoid.
+   */
+  const landingTab = cameFromIntro ? (hasDog ? "Discover" : "Care") : "Home";
 
   if (status === AuthStatus.loading) {
     return (
@@ -119,7 +153,21 @@ export default function RootNavigator() {
         <Root.Screen name="Waitlist" component={WaitlistScreen} />
       )}
 
-      {status === AuthStatus.ready && <Root.Screen name="App" component={AppStack} />}
+      {/* One screen between finishing setup and the app. It is where the
+          notification permission is asked, in context and with the app's own
+          explanation - it used to fire from a mount effect the instant the
+          session went ready, over a Home screen with nothing on it. */}
+      {status === AuthStatus.needsIntro && (
+        <Root.Screen name="FirstRun" component={FirstRunScreen} />
+      )}
+
+      {status === AuthStatus.ready && (
+        <Root.Screen
+          name="App"
+          component={AppStack}
+          initialParams={{ initialTab: landingTab }}
+        />
+      )}
     </Root.Navigator>
   );
 }

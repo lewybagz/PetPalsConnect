@@ -26,10 +26,18 @@ const ICONS = {
   Care: ["medkit", "medkit-outline"],
 };
 
-export default function BottomTabNavigator() {
+export default function BottomTabNavigator({ route }) {
+  // Set by AppStack from the session; "Home" is where the app has always
+  // opened and is what every launch after the first one gets.
+  const initialTab = route?.params?.initialTab ?? "Home";
   const tokens = useTokens();
   return (
     <Tab.Navigator
+      // Where a first launch lands. `RootNavigator` passes "Discover" to
+      // somebody who has just come off the intro with a dog, "Care" to
+      // somebody without one, and nothing at all to everybody else - who get
+      // Home, which is where the app has always opened.
+      initialRouteName={initialTab}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: tokens.primary,

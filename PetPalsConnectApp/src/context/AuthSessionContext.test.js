@@ -43,6 +43,17 @@ const withPet = {
 };
 const withoutPet = { _id: "user-2", username: "newbie", pets: [] };
 
+/**
+ * Marks an account as having already seen the first-run intro.
+ *
+ * `needsIntro` sits between the pet gate and `ready`, so without this every
+ * test below that only wanted "they got in" would stop one screen short. The
+ * tests that are *about* the intro seed nothing and assert `needsIntro`
+ * directly.
+ */
+const seenIntro = (profile) =>
+  AsyncStorage.setItem(`@petpals/intro-seen:${profile._id}`, JSON.stringify(true));
+
 beforeEach(async () => {
   jest.clearAllMocks();
   await AsyncStorage.clear();
@@ -77,6 +88,7 @@ describe("AuthSessionContext", () => {
   });
 
   it("reports ready when the profile has a pet", async () => {
+    await seenIntro(withPet);
     firebaseAuth.__setCurrentUser({ uid: "abc" });
     api.get.mockResolvedValue({ data: withPet });
 
@@ -93,6 +105,7 @@ describe("AuthSessionContext", () => {
       `@petpals/pet-setup-skipped:${withoutPet._id}`,
       JSON.stringify(true)
     );
+    await seenIntro(withoutPet);
     firebaseAuth.__setCurrentUser({ uid: "abc" });
     api.get.mockResolvedValue({ data: withoutPet });
 
@@ -118,6 +131,7 @@ describe("AuthSessionContext", () => {
 
   it("falls back to the cached profile when the API is unreachable", async () => {
     await AsyncStorage.setItem("@petpals/user-data", JSON.stringify(withPet));
+    await seenIntro(withPet);
     firebaseAuth.__setCurrentUser({ uid: "abc" });
     api.get.mockRejectedValue({ message: "Network Error" });
 
@@ -148,6 +162,9 @@ describe("AuthSessionContext", () => {
   });
 
   it("moves to ready when a pet is created", async () => {
+    // Both: the reload after createPet returns `withPet`, a different id.
+    await seenIntro(withoutPet);
+    await seenIntro(withPet);
     firebaseAuth.__setCurrentUser({ uid: "abc" });
     api.get.mockResolvedValue({ data: withoutPet });
     api.post.mockResolvedValue({ data: { pet: { _id: "pet-9" } } });
@@ -178,6 +195,7 @@ describe("AuthSessionContext", () => {
 
   it("signing out returns to signedOut and clears the cached profile", async () => {
     await AsyncStorage.setItem("@petpals/user-data", JSON.stringify(withPet));
+    await seenIntro(withPet);
     firebaseAuth.__setCurrentUser({ uid: "abc" });
     api.get.mockResolvedValue({ data: withPet });
 
@@ -247,6 +265,7 @@ describe("a suspended account", () => {
   });
 
   it("clears once the account is reinstated", async () => {
+    await seenIntro(suspended);
     firebaseAuth.__setCurrentUser({ uid: "abc" });
     api.get.mockResolvedValue({ data: suspended });
     renderSession();
@@ -265,6 +284,8 @@ describe("a suspended account", () => {
   });
 
   it("moves there when the API says so mid-session", async () => {
+    await seenIntro(withPet);
+    await seenIntro(suspended);
     firebaseAuth.__setCurrentUser({ uid: "abc" });
     api.get.mockResolvedValue({ data: withPet });
     renderSession();
@@ -312,6 +333,7 @@ describe("the launch fence", () => {
   });
 
   it("lets a profile with no region through - it predates the field", async () => {
+    await seenIntro(withPet);
     firebaseAuth.__setCurrentUser({ uid: "abc" });
     api.get.mockResolvedValue({ data: withPet });
 
@@ -329,5 +351,141 @@ describe("the launch fence", () => {
 
     // Past the fence, and on to the next gate rather than straight to ready.
     await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("needsPet"));
+  });
+});
+
+/**
+ * The first-run intro, and above all where it sits in the sequence.
+ *
+ * It is the ninth state in a machine that decides which navigation tree
+ * mounts, and the ordering is the whole risk: an intro before the suspension
+ * or waitlist checks welcomes somebody to an app that is about to refuse them,
+ * and an intro before the pet gate introduces a deck they cannot use yet.
+ */
+describe("the first-run intro", () => {
+  const suspendedElsewhere = {
+    _id: "user-s",
+    username: "under-review",
+    pets: [{ _id: "pet-s", name: "Bo" }],
+    suspended: true,
+  };
+  const outside = {
+    _id: "user-out",
+    username: "la_owner",
+    zip: "90210",
+    region: "other",
+    pets: [{ _id: "pet-o", name: "Sky" }],
+  };
+
+  it("sits between finishing setup and the app", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: withPet });
+
+    renderSession();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("needsIntro")
+    );
+  });
+
+  it("is not shown again once it has been finished", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: withPet });
+
+    let session;
+    const Capture = () => {
+      session = useAuthSession();
+      return <Text testID="status">{session.status}</Text>;
+    };
+    render(
+      <AuthSessionProvider>
+        <Capture />
+      </AuthSessionProvider>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("needsIntro")
+    );
+
+    await act(async () => {
+      await session.finishIntro();
+    });
+
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("ready"));
+    // Remembered, so a relaunch does not introduce the app again.
+    expect(await AsyncStorage.getItem(`@petpals/intro-seen:${withPet._id}`)).toBe("true");
+  });
+
+  it("is remembered per user, so the next account on the phone still gets one", async () => {
+    await seenIntro(withPet);
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: { ...withoutPet, pets: [{ _id: "p", name: "Pip" }] } });
+
+    renderSession();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("needsIntro")
+    );
+  });
+
+  it("never precedes a suspension", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: suspendedElsewhere });
+
+    renderSession();
+
+    // Welcoming somebody to an app that refuses them everything is worse than
+    // no welcome at all.
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("suspended")
+    );
+  });
+
+  it("never precedes the launch fence", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: outside });
+
+    renderSession();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("waitlisted")
+    );
+  });
+
+  it("never precedes the add-a-pet prompt", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: withoutPet });
+
+    renderSession();
+
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("needsPet"));
+  });
+
+  it("still comes after skipping the pet prompt", async () => {
+    firebaseAuth.__setCurrentUser({ uid: "abc" });
+    api.get.mockResolvedValue({ data: withoutPet });
+
+    let session;
+    const Capture = () => {
+      session = useAuthSession();
+      return <Text testID="status">{session.status}</Text>;
+    };
+    render(
+      <AuthSessionProvider>
+        <Capture />
+      </AuthSessionProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("needsPet"));
+
+    await act(async () => {
+      await session.skipPetSetup();
+    });
+
+    // Somebody who skipped has still not seen the app, and the intro is where
+    // the care hub - the half that works without a pet - is pointed out.
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("needsIntro")
+    );
   });
 });

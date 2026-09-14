@@ -247,7 +247,7 @@ flowchart TD
 
 ---
 
-## Phase 1 — Measure it (do this first, merge alone)
+## Phase 1 — Measure it — **SHIPPED** (`e7f4cd1`)
 
 Nothing else in this plan can be evaluated without it. Ship it, let it run, then
 optimize against real numbers rather than Adjust's.
@@ -301,7 +301,7 @@ Add when the funnel counts are no longer enough to answer the next question.
 
 ---
 
-## Phase 2 — Push priming and the first-run destination
+## Phase 2 — Push priming and the first-run destination — **SHIPPED**
 
 The two highest-leverage fixes, and they belong in one screen.
 
@@ -340,6 +340,35 @@ endorses requesting it at first launch. Deferred because it needs
 and there is no iOS device here. Revisit with the numbers Phase 1 produces.
 
 ---
+
+### What Phase 2 actually landed
+
+Three things differed from the plan and are worth recording:
+
+- **The landing tab travels as a route param, not a prop.** Passing it as a
+  render prop (`<Root.Screen name="App">{() => <AppStack .../>}</Root.Screen>`)
+  took "Tabs" out of the set of routes `navigation.test.js` can parse - it
+  matches `name="X" component={Y}` - so every `navigate("Tabs")` in the app
+  started reading as a typo. `initialParams` keeps the parseable shape.
+- **`onboarding_completed` now fires on `needsIntro` as well as `ready`.**
+  Onboarding is the three writes; the intro is the app. Measuring only at
+  `ready` would report every new user finishing one screen later than they do,
+  and would report somebody who quit on the intro as never having finished.
+- **`AddFirstPetScreen.test.js` was written here** rather than left for Phase 3,
+  since Phase 3 edits that form and the gate needed to exist first.
+
+Two bugs the tests caught, both real:
+
+- `trackOnce` double-sent, because two calls in one tick both read the
+  "already seen" flag before either wrote it (fixed with a synchronous
+  in-memory claim ahead of the async storage read).
+- `FirstRunScreen.onContinue` had `try/finally` with no `catch`, so a rejected
+  permission call became an unhandled rejection that would have trapped
+  somebody on the welcome screen.
+
+And one the gallery caught that reading could not: the apostrophes were mixed
+straight and curly, because JSX entity escaping produces one and a JS string
+literal the other.
 
 ## Phase 3 — Fewer fields
 
@@ -416,11 +445,11 @@ applies.
 
 | # | Todo | Status |
 | --- | --- | --- |
-| 1 | Add `AnalyticsEvent` model, `services/analytics/events.js` name table, `POST /api/events` batch route with rate limit, and moderator-guarded funnel read | pending |
-| 2 | Delete `ActivityLog` (model, controller, route, deletion-cascade line); wire `AnalyticsEvent` into `retention.js` and `accountDeletion.js`; add the privacy-policy row | pending |
-| 3 | Add `src/services/analytics.js` (buffered, never-throwing) and instrument the 14 funnel events | pending |
-| 4 | Extract `services/pushPermission.js` on the `services/location.js` pattern and remove the cold `requestPermission` from `usePushNotifications` | pending |
-| 5 | Add `AuthStatus.needsIntro` + per-user intro flag to `AuthSessionContext`; register `FirstRunScreen` on `RootNavigator`; land the user on Discover | pending |
+| 1 | Add `AnalyticsEvent` model, `services/analytics/events.js` name table, `POST /api/analytics/events` batch route with rate limit, and moderator-guarded funnel read | **done** |
+| 2 | Delete `ActivityLog` (model, controller, route, deletion-cascade line); wire `AnalyticsEvent` into `retention.js` and `accountDeletion.js`; add the privacy-policy row | **done** |
+| 3 | Add `src/services/analytics.ts` (buffered, never-throwing) and instrument the 14 funnel events | **done** |
+| 4 | Extract `services/pushPermission.js` on the `services/location.js` pattern and remove the cold `requestPermission` from `usePushNotifications` | **done** |
+| 5 | Add `AuthStatus.needsIntro` + per-user intro flag to `AuthSessionContext`; register `FirstRunScreen` on `RootNavigator`; land the user on Discover | **done** |
 | 6 | Reduce fields: drop confirm-password, auto-accept a free suggested username, replace exact age with a life-stage control | pending |
 | 7 | Add `newPetNearby` notification type both sides + the notify-me button on Discover's empty state, raised through `notify()` via `reachableCandidates` | pending |
 | 8 | Add the 48h "finish your pet's profile" scheduler job and handler | pending |

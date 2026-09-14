@@ -25,6 +25,7 @@ import SchedulePlaydateScreen from "../../src/screens/playdate/SchedulePlaydateS
 import PlaydateModificationScreen from "../../src/screens/playdate/PlaydateModificationScreen";
 import AccountSuspendedScreen from "../../src/screens/auth/AccountSuspendedScreen";
 import WaitlistScreen from "../../src/screens/auth/WaitlistScreen";
+import FirstRunScreen from "../../src/screens/auth/FirstRunScreen";
 import FriendsListScreen from "../../src/screens/profile/FriendsListScreen";
 import FriendRequestsCard from "../../src/components/FriendRequestsCard";
 import MoreScreen from "../../src/screens/bottomTab/MoreScreen";
@@ -356,6 +357,16 @@ export const BOARDS = [
         route={{ params: { locationId: "loc-1" } }}
       />
     ),
+  },
+  {
+    id: "first-run",
+    label: "The first screen after setup",
+    routes: ROUTES,
+    // Where a brand-new user lands, and where the notification permission is
+    // asked. Worth looking at rather than only reading: it is the app's first
+    // impression, and it has to read as an introduction rather than a fourth
+    // form - which is why it carries no progress bar.
+    render: () => <FirstRunScreen />,
   },
   {
     id: "waitlist",

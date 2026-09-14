@@ -38,6 +38,8 @@ import { track, startAnalytics, resetAnalytics } from "../services/analytics";
  *                  nearly everything, so the app must not pretend otherwise
  *   waitlisted   - the profile's ZIP is outside the launch region; a screen
  *                  with a "notify me" button, and a way through to the care hub
+ *   needsIntro   - everything is set up, but this account has not been shown
+ *                  the app yet; one screen, then Discover
  *   ready        - the app can be entered
  *   error        - profile lookup failed for a reason that isn't "absent"
  *
@@ -59,6 +61,7 @@ const STATUS = {
   needsPet: "needsPet",
   suspended: "suspended",
   waitlisted: "waitlisted",
+  needsIntro: "needsIntro",
   ready: "ready",
   error: "error",
 };
@@ -115,6 +118,20 @@ const skipKey = (profile) => `pet-setup-skipped:${profile?._id ?? "unknown"}`;
 const continueKey = (profile) => `launch-continue:${profile?._id ?? "unknown"}`;
 
 /**
+ * Whether this account has been shown the app once, remembered per user.
+ *
+ * Finishing onboarding used to drop somebody on Home - shelves of other
+ * people's pets, an empty favourites row and an article - with nothing taking
+ * them to Discover, which is the one screen the product is about. The tour
+ * only auto-starts on Home, More and Favourites, so a new user's first
+ * destination was the least representative screen in the app.
+ *
+ * Per user for the same reason the other two flags are: a shared phone has two
+ * people on it, and the second one has not seen anything.
+ */
+const introKey = (profile) => `intro-seen:${profile?._id ?? "unknown"}`;
+
+/**
  * The onboarding step a profile still needs, if any.
  *
  * Having a pet always wins over a stored skip, so adding one later clears the
@@ -128,12 +145,18 @@ const continueKey = (profile) => `launch-continue:${profile?._id ?? "unknown"}`;
  * and a toast that said nothing about why. It is the same shape as the other
  * gates: a state the session reports, and one tree the navigator picks from it.
  */
-const statusForProfile = (profile, skipped, continued = false) => {
+const statusForProfile = (profile, skipped, continued = false, introSeen = true) => {
   if (profile?.suspended) return STATUS.suspended;
   // Outside the launch region, and has not chosen to go on regardless. A
   // profile with no region predates the field and is let in.
   if (!isLaunched(profile?.region) && !continued) return STATUS.waitlisted;
-  return profileHasPet(profile) || skipped ? STATUS.ready : STATUS.needsPet;
+  if (!profileHasPet(profile) && !skipped) return STATUS.needsPet;
+  // Last, and only once everything else has cleared. The order is the point:
+  // an intro before the suspension or waitlist checks would welcome somebody
+  // to an app that is about to refuse them, and an intro before the pet gate
+  // would introduce a deck they cannot use yet.
+  if (!introSeen) return STATUS.needsIntro;
+  return STATUS.ready;
 };
 
 export const AuthSessionProvider = ({ children }) => {
@@ -143,6 +166,9 @@ export const AuthSessionProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [skippedPetSetup, setSkippedPetSetup] = useState(false);
   const [continuedPastFence, setContinuedPastFence] = useState(false);
+  // Defaults to true so an existing account never flashes the intro while the
+  // stored flag is still being read - only a genuine "no" moves them there.
+  const [introSeen, setIntroSeen] = useState(true);
 
   // Guards against a slow response for a previous user overwriting a newer one.
   const requestId = useRef(0);
@@ -163,12 +189,14 @@ export const AuthSessionProvider = ({ children }) => {
         ? false
         : Boolean(await readCache(skipKey(data), false));
       const continued = Boolean(await readCache(continueKey(data), false));
+      const seen = Boolean(await readCache(introKey(data), false));
 
       setProfile(data);
       setSkippedPetSetup(skipped);
       setContinuedPastFence(continued);
+      setIntroSeen(seen);
       setError(null);
-      setStatus(statusForProfile(data, skipped, continued));
+      setStatus(statusForProfile(data, skipped, continued, seen));
       writeCache(CacheKeys.userData, data);
       return data;
     } catch (err) {
@@ -190,10 +218,12 @@ export const AuthSessionProvider = ({ children }) => {
           ? false
           : Boolean(await readCache(skipKey(cached), false));
         const continued = Boolean(await readCache(continueKey(cached), false));
+        const seen = Boolean(await readCache(introKey(cached), false));
         setProfile(cached);
         setSkippedPetSetup(skipped);
         setContinuedPastFence(continued);
-        setStatus(statusForProfile(cached, skipped, continued));
+        setIntroSeen(seen);
+        setStatus(statusForProfile(cached, skipped, continued, seen));
         return cached;
       }
 
@@ -247,9 +277,11 @@ export const AuthSessionProvider = ({ children }) => {
       setProfile(data);
       setError(null);
       // A profile created just now has no pets and cannot have a stored skip,
-      // so this always moves to the add-a-pet prompt.
+      // so this always moves to the add-a-pet prompt - and it has certainly
+      // not seen the intro, which is what it reaches after the pet step.
       setSkippedPetSetup(false);
-      setStatus(statusForProfile(data, false));
+      setIntroSeen(false);
+      setStatus(statusForProfile(data, false, false, false));
       writeCache(CacheKeys.userData, data);
       return data;
     },
@@ -284,8 +316,11 @@ export const AuthSessionProvider = ({ children }) => {
     track("pet_skipped");
     if (profile) await writeCache(skipKey(profile), true);
     setSkippedPetSetup(true);
-    setStatus(STATUS.ready);
-  }, [profile]);
+    // Not straight to `ready`: somebody who skipped the pet step still has not
+    // seen the app, and the intro is where the care hub - the half that works
+    // without a pet - is pointed out to them.
+    setStatus(statusForProfile(profile, true, continuedPastFence, introSeen));
+  }, [profile, continuedPastFence, introSeen]);
 
   /**
    * Goes on past the launch fence. Remembered per user so the screen is not
@@ -294,17 +329,22 @@ export const AuthSessionProvider = ({ children }) => {
   const continueAnyway = useCallback(async () => {
     if (profile) await writeCache(continueKey(profile), true);
     setContinuedPastFence(true);
-    setStatus(statusForProfile(profile, skippedPetSetup, true));
-  }, [profile, skippedPetSetup]);
+    setStatus(statusForProfile(profile, skippedPetSetup, true, introSeen));
+  }, [profile, skippedPetSetup, introSeen]);
 
   /**
-   * `ready` is reached, once per launch.
+   * The forms are behind them, once per launch.
    *
-   * The funnel's last onboarding step, and it is derived rather than raised at
-   * a call site because there are four ways to arrive: finishing the pet form,
-   * skipping it, continuing past the launch fence, and simply signing in with
-   * everything already done. A `track()` in each of those is four places to
-   * forget one.
+   * `needsIntro` counts as well as `ready`, because onboarding is the three
+   * writes - account, profile, pet - and the intro is the app, not a fourth
+   * form. Measuring this at `ready` alone would report every new user's
+   * onboarding as finishing one screen later than it does, and would report
+   * somebody who quit on the intro as never having finished at all.
+   *
+   * Derived rather than raised at a call site because there are several ways
+   * to arrive: finishing the pet form, skipping it, continuing past the launch
+   * fence, and simply signing in with everything already done. A `track()` in
+   * each is that many places to forget one.
    *
    * `reportedReady` keeps it to once per launch rather than once per profile
    * re-read - the session re-reads on suspension, on revocation and after
@@ -312,10 +352,24 @@ export const AuthSessionProvider = ({ children }) => {
    */
   const reportedReady = useRef(false);
   useEffect(() => {
-    if (status !== STATUS.ready || reportedReady.current) return;
+    if (reportedReady.current) return;
+    if (status !== STATUS.ready && status !== STATUS.needsIntro) return;
     reportedReady.current = true;
     track("onboarding_completed");
   }, [status]);
+
+  /**
+   * Leaves the intro and enters the app, remembered per user.
+   *
+   * Written however the intro ended, including a skip: somebody who dismissed
+   * it has said something, and the answer was no. Same rule the walkthrough
+   * already follows for `seen`.
+   */
+  const finishIntro = useCallback(async () => {
+    if (profile) await writeCache(introKey(profile), true);
+    setIntroSeen(true);
+    setStatus(statusForProfile(profile, skippedPetSetup, continuedPastFence, true));
+  }, [profile, skippedPetSetup, continuedPastFence]);
 
   const refresh = useCallback(
     () => loadProfile(getAuth().currentUser),
@@ -361,10 +415,12 @@ export const AuthSessionProvider = ({ children }) => {
       hasDog: profileHasDog(profile),
       skippedPetSetup,
       continuedPastFence,
+      introSeen,
       createProfile,
       createPet,
       skipPetSetup,
       continueAnyway,
+      finishIntro,
       refresh,
       signOut,
       deleteAccount,
@@ -376,10 +432,12 @@ export const AuthSessionProvider = ({ children }) => {
       profile,
       skippedPetSetup,
       continuedPastFence,
+      introSeen,
       createProfile,
       createPet,
       skipPetSetup,
       continueAnyway,
+      finishIntro,
       refresh,
       signOut,
       deleteAccount,

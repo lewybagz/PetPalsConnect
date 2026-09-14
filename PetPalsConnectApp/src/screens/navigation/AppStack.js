@@ -115,13 +115,29 @@ const SchedulePlaydateWithPet = withRequiredPet(SchedulePlaydateScreen, {
   message: "Playdates are arranged between dogs, so add yours to get started.",
 });
 
-export default function AppStack() {
+/**
+ * `initialTab` is where the tab bar opens on the very first launch after the
+ * intro - Discover for a dog owner, Care for somebody without one. Everybody
+ * else gets Home, which is where the app has always opened.
+ *
+ * Carried as an initial route param rather than a render prop, so the `Tabs`
+ * registration keeps the `name=... component=...` shape `navigation.test.js`
+ * parses. A render prop there took "Tabs" out of the set of known routes, and
+ * every `navigate("Tabs")` in the app started reading as a typo.
+ */
+export default function AppStack({ route }) {
+  const initialTab = route?.params?.initialTab ?? "Home";
   return (
     <Stack.Navigator
       initialRouteName="Tabs"
       screenOptions={{ headerBackTitleVisible: false, gestureEnabled: true }}
     >
-      <Stack.Screen name="Tabs" component={BottomTabNavigator} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="Tabs"
+        component={BottomTabNavigator}
+        initialParams={{ initialTab }}
+        options={{ headerShown: false }}
+      />
 
       {/* Chat */}
       <Stack.Screen name="Chat" component={ChatScreen} options={{ title: "Chat" }} />
