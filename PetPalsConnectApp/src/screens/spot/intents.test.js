@@ -1,6 +1,8 @@
 import {
   resolveIntent,
+  answerConvert,
   answerDue,
+  answerFact,
   answerEmergency,
   answerWeight,
   answerToxin,
@@ -150,5 +152,62 @@ describe("answers", () => {
     expect(resolveIntent(chips[0], one)).toEqual({ kind: "due", pet: bella });
     expect(resolveIntent(chips[1], one)).toEqual({ kind: "emergency" });
     expect(chipsFor([])).not.toContain(null);
+  });
+});
+
+describe("phase 4: facts, arithmetic, more screens, chips that follow the screen", () => {
+  const full = { _id: "p1", name: "Bella", species: "dog", breed: "Beagle", weight: 40, age: 4 };
+  const ctx = { pets: [full], units: { distance: "mi", weight: "lb" } };
+
+  test("a fact the profile already holds never reaches the model", () => {
+    expect(resolveIntent("how much does Bella weigh?", ctx)).toEqual({ kind: "fact", pet: full, fact: "weight" });
+    expect(resolveIntent("what's Bella's weight", ctx)).toEqual({ kind: "fact", pet: full, fact: "weight" });
+    expect(resolveIntent("how old is Bella?", ctx)).toEqual({ kind: "fact", pet: full, fact: "age" });
+    // A profile with no weight has nothing to say; the model can ask.
+    expect(resolveIntent("how much does Bella weigh?", one)).toBeNull();
+    // Two pets, no name: ambiguous.
+    expect(resolveIntent("how old is she?", { ...two, pets: [full, { ...max, age: 2 }] })).toBeNull();
+  });
+
+  test("a conversion is arithmetic, and only between units of the same kind", () => {
+    expect(resolveIntent("12 kg in pounds", one)).toEqual({ kind: "convert", value: 12, from: "kg", to: "lb" });
+    expect(resolveIntent("what is 5 miles in km?", one)).toEqual({ kind: "convert", value: 5, from: "mi", to: "km" });
+    expect(resolveIntent("convert 20 lb to kilograms", one)).toEqual({ kind: "convert", value: 20, from: "lb", to: "kg" });
+    expect(resolveIntent("12 kg in miles", one)).toBeNull();
+    expect(resolveIntent("12 kg in kg", one)).toBeNull();
+  });
+
+  test("bare 'my orders' opens the screen; 'my dog ate' is still a toxin question", () => {
+    expect(resolveIntent("my orders", one)).toEqual({ kind: "open", screen: "Orders", params: {} });
+    expect(resolveIntent("my pals", one)).toEqual({ kind: "open", screen: "FriendsList", params: {} });
+    expect(resolveIntent("show me my saved places", one)).toEqual({ kind: "open", screen: "Favorites", params: {} });
+    expect(resolveIntent("my dog just ate some chocolate", one)).toEqual({ kind: "toxin", query: "chocolate" });
+    expect(resolveIntent("my vet is great", one)).toBeNull();
+  });
+
+  test("the answers, in the owner's units", () => {
+    const metric = { distance: "km", weight: "kg" };
+    expect(answerFact(full, "weight", metric).text).toBe("Bella weighs 18.1 kg, as of the last weigh-in.");
+    expect(answerFact(full, "weight", ctx.units).blocks[0].items[0].screen).toBe("PetWeight");
+    expect(answerFact(full, "age").text).toBe("Bella is 4 years old.");
+    expect(answerFact({ ...full, age: 1 }, "age").text).toBe("Bella is 1 year old.");
+    expect(answerConvert({ value: 12, from: "kg", to: "lb" }).text).toBe("12 kg is 26.5 lb.");
+    expect(answerConvert({ value: 5, from: "mi", to: "km" }).text).toBe("5 mi is 8 km.");
+    expect(answerConvert({ value: 12, from: "kg", to: "lb" }).source).toBe("software");
+  });
+
+  test("chips follow the screen Spot was opened from, and stay four", () => {
+    expect(chipsFor([bella], { petId: "p1", screen: "weight" })[0]).toBe("Log a weigh-in for Bella");
+    expect(chipsFor([bella], { screen: "toxin" })[0]).toBe("My pet ate something");
+    expect(chipsFor([bella], { playdateId: "pd", screen: "playdate" })[0]).toBe("Reply to this playdate");
+    // The health chip is already in the default list, so it is not repeated.
+    const health = chipsFor([bella], { petId: "p1", screen: "health" });
+    expect(health[0]).toBe("Is Bella due for anything?");
+    expect(new Set(health).size).toBe(health.length);
+    expect(chipsFor([bella, max], { petId: "p2", screen: "tracking" })[0]).toBe("Where was Max last seen?");
+    for (const chips of [chipsFor([bella]), chipsFor([]), chipsFor([bella], { screen: "order" })]) {
+      expect(chips.length).toBeLessThanOrEqual(4);
+      expect(chips).not.toContain(null);
+    }
   });
 });

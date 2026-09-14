@@ -763,6 +763,82 @@ export const SHARED_POSITIONS = {
  * paragraphs, the vet at the end - because the gallery is the one place the
  * reading column can be judged.
  */
+/**
+ * A conversation with the phase 4 blocks: a done card with no undo (the
+ * organiser has been told) and the retailer searches from the picks table.
+ */
+export const SPOT_ACTIONS = {
+  _id: "conv-3",
+  title: "accept the playdate from alex",
+  createdAt: new Date(Date.now() - 7200e3).toISOString(),
+  updatedAt: new Date(Date.now() - 600e3).toISOString(),
+  messages: [
+    {
+      _id: "sa-1",
+      role: "user",
+      text: "accept the playdate from alex on saturday",
+      blocks: [],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 7000e3).toISOString(),
+    },
+    {
+      _id: "sa-2",
+      role: "assistant",
+      text: "Done. Saturday at Dolores Park is on, and alex has been told.",
+      blocks: [
+        {
+          type: "done",
+          kind: "respondToPlaydate",
+          summary: "Accepted the playdate on 2026-10-03; @alex has been told",
+          undo: null,
+        },
+        { type: "links", items: [{ screen: "PlaydateDetails", params: { playdateId: "pd-1" }, label: "Open playdate" }] },
+      ],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 6900e3).toISOString(),
+    },
+    {
+      _id: "sa-3",
+      role: "user",
+      text: `what food should I be buying for ${MY_PET.name}?`,
+      blocks: [],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 700e3).toISOString(),
+    },
+    {
+      _id: "sa-4",
+      role: "assistant",
+      text: `For an adult, medium dog the care hub suggests these categories. They are kinds of thing to look for, not brands, and the reason sits beside each one on the hub. Your vet is the one to ask about amounts.`,
+      blocks: [
+        {
+          type: "web",
+          items: [
+            { label: "Adult dog food", url: "https://www.google.com/search?q=adult+dog+food" },
+            { label: "Slow feeder bowl", url: "https://www.google.com/search?q=slow+feeder+bowl" },
+            { label: "Medium dog harness", url: "https://www.google.com/search?q=medium+dog+harness" },
+          ],
+        },
+        { type: "links", items: [{ screen: "Shop", params: {}, label: "Shop" }] },
+      ],
+      attachments: [],
+      flagged: false,
+      source: "model",
+      createdAt: new Date(Date.now() - 600e3).toISOString(),
+    },
+  ],
+};
+
+export const SPOT_NOTES = [
+  { _id: "n-1", text: `${MY_PET.name} is scared of thunderstorms`, createdAt: new Date(Date.now() - 86400e3 * 3).toISOString() },
+  { _id: "n-2", text: "We use the vet on 7th Street", createdAt: new Date(Date.now() - 86400e3).toISOString() },
+];
+
 export const SPOT_STATUS = {
   enabled: true,
   consented: true,
@@ -868,7 +944,12 @@ export const ROUTES = {
   "/api/spot/conversations/conv-1": SPOT_CONVERSATION,
   // The first exchange alone, so the opening of the reading column fits a viewport.
   "/api/spot/conversations/conv-2": { ...SPOT_CONVERSATION, _id: "conv-2", messages: SPOT_CONVERSATION.messages.slice(0, 2) },
-  "/api/spot/conversations": [SPOT_CONVERSATION],
+  "/api/spot/conversations/conv-3": SPOT_ACTIONS,
+  "/api/spot/conversations": [SPOT_ACTIONS, SPOT_CONVERSATION].map(({ messages, ...row }) => ({
+    ...row,
+    messageCount: messages.length,
+  })),
+  "/api/spot/notes": SPOT_NOTES,
   "/api/tracking/status": { enabled: true, vendor: "generic", acceptsIngest: true },
   [`/api/tracking/pets/${MY_PET._id}/positions`]: TRACKING_POSITIONS,
   "/api/tracking/pets/pet-9/positions": SHARED_POSITIONS,

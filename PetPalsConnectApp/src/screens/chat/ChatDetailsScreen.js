@@ -10,12 +10,17 @@ import {
 import LoadingScreen from "../../components/LoadingScreenComponent";
 import UserPetCard from "../../components/UserPetCardComponent";
 import { useTailwind } from "../../styles/tailwind";
+import { useSettings } from "../../context/SettingsContext";
+import AskSpotButton from "../../components/spot/AskSpotButton";
 import { getStoredToken } from "../../../utils/tokenutil";
 
 import api from "../../api/axios";
 
 const ChatDetailsScreen = ({ route, navigation }) => {
   const { chatId, isGroupChat } = route.params;
+  // Spot can only read a chat when the owner turned that on in Privacy.
+  const { settings } = useSettings();
+  const spotReadsChats = settings?.spot?.readChats === true;
   const [chatDetails, setChatDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const tailwind = useTailwind();
@@ -120,7 +125,9 @@ const ChatDetailsScreen = ({ route, navigation }) => {
           <Text style={tailwind("text-primary")}>View All</Text>
         </TouchableOpacity>
       )}
-      {/* Additional details as needed */}
+      {spotReadsChats && !isGroupChat ? (
+        <AskSpotButton inline navigation={navigation} context={{ chatId: String(chatId), screen: "chat" }} />
+      ) : null}
     </ScrollView>
   );
 };

@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 
 import { useTailwind } from "../../styles/tailwind";
+import AskSpotButton from "../../components/spot/AskSpotButton";
 import { useAppTheme, useTokens } from "../../context/AppThemeContext";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { darkMapStyle } from "../../styles/mapStyle";
@@ -512,6 +513,9 @@ const PetTrackingScreen = ({ route, navigation }) => {
             </Card>
           </>
         ) : null}
+      </View>
+      <View style={tailwind("px-lg pb-lg")}>
+        <AskSpotButton inline navigation={navigation} context={{ petId: String(pet?._id ?? petId), screen: "tracking" }} />
       </View>
     </Screen>
   );

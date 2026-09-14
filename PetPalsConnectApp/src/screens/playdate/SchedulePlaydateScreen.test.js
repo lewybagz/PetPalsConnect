@@ -319,3 +319,41 @@ describe("choosing which of your own pets is coming", () => {
     expect(screen.queryByTestId("my-pet-my-pet")).toBeNull();
   });
 });
+
+describe("arriving from Spot, prefilled", () => {
+  it("takes the pet, the owner's pet, the place, the date, the time and the notes, and still waits for Send", async () => {
+    useAuthSession.mockReturnValue({
+      profile: { _id: "me", pets: [{ _id: "my-pet", name: "Sky" }, { _id: "my-pet-2", name: "Rex" }] },
+    });
+    renderWith({
+      petId: "their-pet",
+      myPetId: "my-pet-2",
+      locationId: "loc-9",
+      presetDate: "2026-10-03",
+      presetTime: "10:30",
+      notes: "Bring a ball",
+    });
+
+    await waitFor(() => expect(screen.getByTestId("location-loc-9")).toBeTruthy());
+    expect(api.post).not.toHaveBeenCalled();
+
+    await tapById("playdate-submit");
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = api.post.mock.calls[0][1];
+    expect(body.petsInvolved).toEqual(["my-pet-2", "their-pet"]);
+    expect(body.location).toBe("loc-9");
+    expect(body.notes).toBe("Bring a ball");
+    const when = new Date(body.startTime);
+    expect([when.getFullYear(), when.getMonth() + 1, when.getDate()]).toEqual([2026, 10, 3]);
+    expect([when.getHours(), when.getMinutes()]).toEqual([10, 30]);
+  });
+
+  it("ignores a preset it cannot read", async () => {
+    renderWith({ petId: "their-pet", presetDate: "next friday", presetTime: "ten" });
+    await tapById("location-loc-1");
+    await tapById("playdate-submit");
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const when = new Date(api.post.mock.calls[0][1].startTime);
+    expect(Math.abs(when.getTime() - Date.now())).toBeLessThan(60 * 60 * 1000);
+  });
+});

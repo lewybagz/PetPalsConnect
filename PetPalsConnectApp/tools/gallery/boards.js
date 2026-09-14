@@ -801,6 +801,29 @@ export const BOARDS = [
     render: () => <SpotScreen navigation={navigation} route={{ params: {} }} />,
   },
   {
+    id: "spot-actions",
+    label: "Spot - a playdate accepted, and the picks",
+    // A done card with no undo, because the organiser has already been told,
+    // and the retailer searches as a card that says PetPals is not paid.
+    routes: ROUTES,
+    render: () => (
+      <SpotScreen navigation={navigation} route={{ params: { conversationId: "conv-3" } }} />
+    ),
+  },
+  {
+    id: "spot-recent",
+    label: "Spot - the conversations you can go back to",
+    // Five are kept; for a phase nothing on screen could open them.
+    routes: ROUTES,
+    render: () => <SpotScreen navigation={navigation} route={{ params: { panel: "recent" } }} />,
+  },
+  {
+    id: "spot-notes",
+    label: "Spot - what it remembers",
+    routes: ROUTES,
+    render: () => <SpotScreen navigation={navigation} route={{ params: { panel: "notes" } }} />,
+  },
+  {
     id: "spot-off",
     label: "Spot - no key on the server",
     // An ordinary state, not an error: the poison lookup is one tap away.

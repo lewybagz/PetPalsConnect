@@ -6,6 +6,7 @@ import LoadingScreen from "../../components/LoadingScreenComponent";
 import UserPetCard from "../../components/UserPetCardComponent";
 import ReviewComponent from "../../components/ReviewComponent";
 import { Button, Text, useToast } from "../../components/ui";
+import AskSpotButton from "../../components/spot/AskSpotButton";
 import { useAuthSession } from "../../context/AuthSessionContext";
 import { space } from "../../styles/tokens";
 
@@ -164,6 +165,7 @@ const PlaydateDetailsScreen = ({ route, navigation }) => {
           ))}
         </>
       ) : null}
+      <AskSpotButton inline navigation={navigation} context={{ playdateId: String(playdateId), screen: "playdate" }} />
     </ScrollView>
   );
 };

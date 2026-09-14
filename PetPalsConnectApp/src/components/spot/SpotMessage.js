@@ -80,6 +80,35 @@ const Done = ({ block, onUndo }) => {
   );
 };
 
+/** Retailer searches from the picks table. Opens the browser; never a named product. */
+const Web = ({ items = [] }) => {
+  const tailwind = useTailwind();
+  const tokens = useTokens();
+  if (items.length === 0) return null;
+  return (
+    <Card testID="spot-web" style={tailwind("mt-sm")}>
+      {items.map((item) => (
+        <Pressable
+          key={item.url}
+          testID="spot-web-link"
+          accessibilityRole="link"
+          accessibilityLabel={`Search for ${item.label}`}
+          onPress={() => Linking.openURL(item.url).catch(() => {})}
+          style={[tailwind("flex-row items-center"), { minHeight: 44 }]}
+        >
+          <Ionicons name="open-outline" size={18} color={tokens.primary} />
+          <Text tone="primary" style={tailwind("ml-sm flex-1")}>
+            {item.label}
+          </Text>
+        </Pressable>
+      ))}
+      <Text variant="caption" tone="faint" style={tailwind("mt-xs")}>
+        Categories to search for, not products. PetPals is not paid for these.
+      </Text>
+    </Card>
+  );
+};
+
 const Contacts = ({ items = [] }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
@@ -123,6 +152,8 @@ const Block = ({ block, onNavigate, onUndo }) => {
       return <Done block={block} onUndo={onUndo} />;
     case "contacts":
       return <Contacts items={block.items} />;
+    case "web":
+      return <Web items={block.items} />;
     default:
       return null;
   }

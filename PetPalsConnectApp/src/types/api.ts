@@ -545,7 +545,20 @@ export interface Article {
 export type SpotBlock =
   | { type: "links"; items: { screen: string; params: Record<string, string>; label: string }[] }
   | { type: "done"; kind: string; summary: string; undo: { kind: string; [key: string]: unknown } | null }
-  | { type: "contacts"; items: EmergencyContact[] };
+  | { type: "contacts"; items: EmergencyContact[] }
+  /** Retailer searches from the picks table, opened in the browser. */
+  | { type: "web"; items: { label: string; url: string }[] };
+
+/** What a model turn cost, on the answer it produced. Absent on software turns. */
+export interface SpotUsage {
+  model: string;
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+  iterations: number;
+  ms: number;
+}
 
 /**
  * One turn with Spot. `source` says whether the model answered or software
@@ -559,6 +572,14 @@ export interface SpotMessage {
   attachments: { kind: "photo"; width?: number; height?: number }[];
   flagged: boolean;
   source: "model" | "software";
+  usage?: SpotUsage | null;
+  createdAt: IsoDate;
+}
+
+/** Something the owner asked Spot to remember, in their words. */
+export interface SpotNote {
+  _id: ObjectId;
+  text: string;
   createdAt: IsoDate;
 }
 

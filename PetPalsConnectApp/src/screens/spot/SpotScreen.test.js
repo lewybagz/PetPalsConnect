@@ -10,6 +10,10 @@ import {
   fetchConversation,
   sendSpotMessage,
   flagSpotMessage,
+  listConversations,
+  deleteConversation,
+  listNotes,
+  deleteNote,
 } from "../../api/spot";
 import { addWeight, removeWeight } from "../../api/weight";
 import { fetchVaccinationStatus } from "../../api/health";
@@ -25,6 +29,10 @@ jest.mock("../../api/spot", () => ({
   fetchConversation: jest.fn(),
   sendSpotMessage: jest.fn(),
   flagSpotMessage: jest.fn(),
+  listConversations: jest.fn(),
+  deleteConversation: jest.fn(),
+  listNotes: jest.fn(),
+  deleteNote: jest.fn(),
 }));
 jest.mock("../../api/weight", () => ({ addWeight: jest.fn(), removeWeight: jest.fn() }));
 jest.mock("../../api/health", () => ({
@@ -337,4 +345,118 @@ test("the screen never says verified or safe about a pet", async () => {
   const rendered = JSON.stringify(toJSON());
   expect(rendered).not.toMatch(/\bverified\b/i);
   expect(rendered).not.toMatch(/\bsafe\b/i);
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4: the conversations you can reach, the notes you can see, and web links
+// ---------------------------------------------------------------------------
+
+test("Recent lists the kept conversations, opens one, deletes one, and starts a new one", async () => {
+  listConversations.mockResolvedValue([
+    { _id: "c1", title: "Bella's ears", messageCount: 4, updatedAt: "2026-09-12T10:00:00.000Z" },
+    { _id: "c2", title: "grapes", messageCount: 2, updatedAt: "2026-09-11T10:00:00.000Z" },
+  ]);
+  fetchConversation.mockResolvedValue({
+    _id: "c1",
+    messages: [{ _id: "a", role: "assistant", text: "About her ears.", blocks: [], attachments: [], source: "model" }],
+  });
+  deleteConversation.mockResolvedValue(true);
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+
+  await fireEvent.press(screen.getByTestId("spot-open-recent"));
+  await waitFor(() => expect(screen.getByTestId("spot-recent-c1")).toBeTruthy());
+  expect(screen.getByText("Bella's ears")).toBeTruthy();
+  expect(screen.getByText(/4 messages/)).toBeTruthy();
+
+  await fireEvent.press(screen.getByTestId("spot-open-c1"));
+  await waitFor(() => expect(screen.getByText("About her ears.")).toBeTruthy());
+  expect(fetchConversation).toHaveBeenCalledWith("c1");
+  expect(screen.queryByTestId("spot-panel-recent")).toBeNull();
+
+  // A send now lands on the opened conversation, not a new one.
+  await type("and now?");
+  await waitFor(() => expect(sendSpotMessage).toHaveBeenCalledWith("c1", { text: "and now?", image: null }));
+  expect(createConversation).not.toHaveBeenCalled();
+
+  await fireEvent.press(screen.getByTestId("spot-open-recent"));
+  await waitFor(() => expect(screen.getByTestId("spot-delete-c2")).toBeTruthy());
+  await fireEvent.press(screen.getByTestId("spot-delete-c2"));
+  await waitFor(() => expect(screen.queryByTestId("spot-recent-c2")).toBeNull());
+  expect(deleteConversation).toHaveBeenCalledWith("c2");
+
+  await fireEvent.press(screen.getByTestId("spot-new"));
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+});
+
+test("what Spot remembers is listed in the owner's words and can be forgotten", async () => {
+  listNotes.mockResolvedValue([{ _id: "n1", text: "Bella is scared of thunderstorms", createdAt: "2026-09-12T10:00:00.000Z" }]);
+  deleteNote.mockResolvedValue(true);
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+
+  await fireEvent.press(screen.getByTestId("spot-open-notes"));
+  await waitFor(() => expect(screen.getByText("Bella is scared of thunderstorms")).toBeTruthy());
+  await fireEvent.press(screen.getByTestId("spot-forget-n1"));
+  await waitFor(() => expect(screen.getByTestId("spot-notes-empty")).toBeTruthy());
+  expect(deleteNote).toHaveBeenCalledWith("n1");
+
+  await fireEvent.press(screen.getByTestId("spot-panel-close"));
+  await waitFor(() => expect(screen.queryByTestId("spot-panel-notes")).toBeNull());
+});
+
+test("a web block opens the retailer search in the browser and says PetPals is not paid", async () => {
+  const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  sendSpotMessage.mockResolvedValue({
+    userMessage: { _id: "m1", role: "user", text: "what food?", blocks: [], attachments: [], source: "model" },
+    message: {
+      _id: "m2",
+      role: "assistant",
+      text: "For an adult, medium dog the hub suggests these categories.",
+      blocks: [{ type: "web", items: [{ label: "Adult dog food", url: "https://www.google.com/search?q=adult+dog+food" }] }],
+      attachments: [],
+      source: "model",
+    },
+    quota: { used: 1, limit: 3, premium: false },
+  });
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+
+  await type("what food should I buy?");
+  await waitFor(() => expect(screen.getByTestId("spot-web")).toBeTruthy());
+  expect(screen.getByText(/PetPals is not paid/)).toBeTruthy();
+  await fireEvent.press(screen.getByText("Adult dog food"));
+  expect(open).toHaveBeenCalledWith("https://www.google.com/search?q=adult+dog+food");
+});
+
+test("a done block with no undo shows no undo button", async () => {
+  sendSpotMessage.mockResolvedValue({
+    userMessage: { _id: "m1", role: "user", text: "accept it", blocks: [], attachments: [], source: "model" },
+    message: {
+      _id: "m2",
+      role: "assistant",
+      text: "Done.",
+      blocks: [{ type: "done", kind: "respondToPlaydate", summary: "Accepted the playdate on 2026-10-01; @alex has been told", undo: null }],
+      attachments: [],
+      source: "model",
+    },
+    quota: { used: 1, limit: 3, premium: false },
+  });
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+  await type("accept the playdate from alex");
+  await waitFor(() => expect(screen.getByTestId("spot-done")).toBeTruthy());
+  expect(screen.getByText(/@alex has been told/)).toBeTruthy();
+  expect(screen.queryByTestId("spot-undo")).toBeNull();
+});
+
+test("software answers a fact and a conversion without the model", async () => {
+  useAuthSession.mockReturnValue({ profile: { _id: "u1", pets: [{ ...bella, weight: 40, age: 4 }] }, userId: "u1" });
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+  await type("how much does Bella weigh?");
+  await waitFor(() => expect(screen.getByText(/Bella weighs 40 lb/)).toBeTruthy());
+  await type("12 kg in pounds");
+  await waitFor(() => expect(screen.getByText("12 kg is 26.5 lb.")).toBeTruthy());
+  expect(sendSpotMessage).not.toHaveBeenCalled();
 });

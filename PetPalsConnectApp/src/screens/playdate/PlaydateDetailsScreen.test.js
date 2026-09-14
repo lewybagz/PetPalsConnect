@@ -8,6 +8,7 @@ import { ToastProvider } from "../../components/ui";
 import { useAuthSession } from "../../context/AuthSessionContext";
 
 jest.mock("../../api/axios", () => ({ get: jest.fn(), post: jest.fn() }));
+jest.mock("../../api/spot", () => ({ fetchSpotStatus: jest.fn(async () => ({ enabled: false })) }));
 jest.mock("../../context/AuthSessionContext", () => ({ useAuthSession: jest.fn() }));
 // Any icon set this screen's children reach for resolves to a host component;
 // the real ones load a font asynchronously and setState after the test ends.
@@ -139,4 +140,18 @@ test("a location that was never set does not blame the organiser", async () => {
 
   expect(await seeText(/No place set yet/)).toBeTruthy();
   expect(screen.queryByText(/Hidden until the organiser/)).toBeNull();
+});
+
+test("Ask Spot is on the playdate, carrying the playdate, once Spot is known to be on", async () => {
+  const { fetchSpotStatus } = require("../../api/spot");
+  const { resetSpotEnabled } = require("../../hooks/useSpotEnabled");
+  resetSpotEnabled();
+  fetchSpotStatus.mockResolvedValue({ enabled: true, consented: true, quota: null });
+  renderScreen();
+  await waitFor(() => expect(screen.getByTestId("card-pet-1")).toBeTruthy());
+  await waitFor(() => expect(screen.getByTestId("ask-spot")).toBeTruthy());
+  fireEvent.press(screen.getByTestId("ask-spot"));
+  expect(navigation.navigate).toHaveBeenCalledWith("Spot", {
+    context: { playdateId: "pd-1", screen: "playdate" },
+  });
 });

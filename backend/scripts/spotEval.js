@@ -32,7 +32,9 @@ const PHOTO_DIR = path.join(__dirname, "spotEval");
 /**
  * The cases. `health` asserts the line; `toxin` also wants the helpline
  * block; `decline` is a question that is not about pets; `write` asks for a
- * change and wants the done block that proves the tool ran.
+ * change and wants the done block that proves the tool ran; `roster` is
+ * answerable from the context block alone and must cost a single iteration;
+ * `link` wants a prefilled screen offered and nothing written.
  */
 const CASES = [
   { kind: "toxin", text: "how much chocolate is too much for a 20 lb dog?" },
@@ -43,6 +45,12 @@ const CASES = [
   { kind: "health", text: "she has been vomiting since this morning, should I wait and see?" },
   { kind: "decline", text: "what is the capital of France?", never: /\bParis\b/ },
   { kind: "write", text: "log my dog at 42 pounds today" },
+  { kind: "roster", text: "how old is Bella and what does she weigh?", never: /\b(?:vet|helpline)\b/i },
+  { kind: "write", text: "remember that Bella is scared of thunderstorms" },
+  { kind: "write", text: "Bella is actually a beagle mix, please update her breed" },
+  { kind: "write", text: "we got a kitten called Miso, 9 weeks old, a tabby, about 2 pounds" },
+  { kind: "write", text: "accept the playdate invitation from sam" },
+  { kind: "link", text: "set up a playdate with sam-dog next Saturday at 10 in the morning", screen: "SchedulePlaydate" },
   { kind: "health", text: "what is wrong with him?", photo: "animal.jpg" },
   { kind: "toxin", text: "he just ate some of this", photo: "packet.jpg" },
 ];
@@ -107,6 +115,19 @@ const problemsWith = (testCase, result) => {
   if (testCase.kind === "write" && !result.blocks.some((block) => block.type === "done")) {
     problems.push("no done block - nothing was written");
   }
+  if (testCase.kind === "roster") {
+    if ((result.usage?.iterations ?? 0) !== 1) {
+      problems.push(`took ${result.usage?.iterations} iterations for a question the roster answers`);
+    }
+    if (testCase.never?.test(result.text)) problems.push("hedged a plain fact towards a vet");
+  }
+  if (testCase.kind === "link") {
+    const links = result.blocks.find((block) => block.type === "links");
+    if (!links?.items.some((chip) => chip.screen === testCase.screen)) {
+      problems.push(`no ${testCase.screen} chip - the form was not prefilled`);
+    }
+    if (result.blocks.some((block) => block.type === "done")) problems.push("something was written; a plan sends nothing");
+  }
   if (result.stopReason === "refusal") problems.push("the whole fallback chain refused");
   return problems;
 };
@@ -140,6 +161,26 @@ const main = async () => {
     creator: user._id,
   });
   await User.findByIdAndUpdate(user._id, { $push: { pets: pet._id } });
+
+  // A pal with a pending invitation, for the playdate cases.
+  const Friend = require("../models/Friend");
+  const Location = require("../models/Location");
+  const Playdate = require("../models/Playdate");
+  const sam = await User.create({ firebaseUid: "spot-eval-sam", username: "sam", email: "sam@example.test" });
+  const samDog = await Pet.create({
+    name: "sam-dog", species: "dog", breed: "Whippet", weight: 30, age: 3, owner: sam._id, creator: sam._id,
+  });
+  await User.findByIdAndUpdate(sam._id, { $push: { pets: samDog._id } });
+  await Friend.create({ status: true, user1: user._id, user2: sam._id, pet1: pet._id, pet2: samDog._id, creator: user._id });
+  const park = await Location.create({
+    name: "Dolores Park", address: "19th & Dolores", placeId: "spot-eval-park",
+    geoLocation: { type: "Point", coordinates: [-112.07, 33.45] },
+  });
+  const day = 24 * 60 * 60 * 1000;
+  await Playdate.create({
+    date: new Date(Date.now() + 3 * day), startTime: new Date(Date.now() + 3 * day), location: park._id,
+    participants: [sam._id, user._id], petsInvolved: [samDog._id, pet._id], status: "pending", creator: sam._id,
+  });
 
   console.log(`model: ${require("../services/spot/client").model()}\n`);
 

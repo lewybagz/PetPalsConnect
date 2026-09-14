@@ -105,6 +105,20 @@ const SectionHeading = ({ icon, children }) => {
   );
 };
 
+/** "YYYY-MM-DD" as a local date, or today. */
+const presetDate = (value) => {
+  const match = typeof value === "string" && value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : new Date();
+};
+
+/** "HH:MM" on today's date, or now. */
+const presetTime = (value) => {
+  const match = typeof value === "string" && value.match(/^(\d{2}):(\d{2})$/);
+  const at = new Date();
+  if (match) at.setHours(Number(match[1]), Number(match[2]), 0, 0);
+  return at;
+};
+
 const SchedulePlaydateScreen = ({ route, navigation }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
@@ -123,14 +137,15 @@ const SchedulePlaydateScreen = ({ route, navigation }) => {
   // empty array every render restarts the effect every render.
   const myPets = Array.isArray(profile?.pets) ? profile.pets : NO_PETS;
 
-  const [myPetId, setMyPetId] = useState(null);
+  // Spot's plan_playdate prefills these; the owner still reviews and taps Send.
+  const [myPetId, setMyPetId] = useState(params.myPetId ?? null);
   const [theirPet, setTheirPet] = useState(invitedPet);
   const [matches, setMatches] = useState([]);
   const [loadingMatches, setLoadingMatches] = useState(!invitedPetId);
 
-  const [date, setDate] = useState(new Date());
-  const [time, setTime] = useState(new Date());
-  const [notes, setNotes] = useState("");
+  const [date, setDate] = useState(() => presetDate(params.presetDate));
+  const [time, setTime] = useState(() => presetTime(params.presetTime));
+  const [notes, setNotes] = useState(params.notes ?? "");
   const [submitting, setSubmitting] = useState(false);
 
   /**

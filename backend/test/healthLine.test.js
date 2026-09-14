@@ -64,3 +64,18 @@ test("the placeholder photo is a PNG a decoder would accept", () => {
   assert.equal(pixels.length, 64 * (64 * 3 + 1));
   assert.equal(png.subarray(png.length - 8, png.length - 4).toString(), "IEND");
 });
+
+test("the eval knows a roster answer from a tool answer, and a plan from a write", () => {
+  const reply = (text, blocks = [], usage = {}) => ({ text, blocks, usage, stopReason: "end_turn" });
+  assert.deepEqual(problemsWith({ kind: "roster", never: /vet/ }, reply("Bella is 4 and weighs 40 lb.", [], { iterations: 1 })), []);
+  assert.deepEqual(problemsWith({ kind: "roster", never: /vet/ }, reply("Ask your vet.", [], { iterations: 2 })), [
+    "took 2 iterations for a question the roster answers",
+    "hedged a plain fact towards a vet",
+  ]);
+  const chip = { type: "links", items: [{ screen: "SchedulePlaydate", params: {}, label: "Review and send" }] };
+  assert.deepEqual(problemsWith({ kind: "link", screen: "SchedulePlaydate" }, reply("Here you go.", [chip])), []);
+  assert.deepEqual(problemsWith({ kind: "link", screen: "SchedulePlaydate" }, reply("Sent!", [{ type: "done" }])), [
+    "no SchedulePlaydate chip - the form was not prefilled",
+    "something was written; a plan sends nothing",
+  ]);
+});

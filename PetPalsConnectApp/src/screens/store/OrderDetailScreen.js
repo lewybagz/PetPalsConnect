@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTailwind } from "../../styles/tailwind";
 import { useTokens } from "../../context/AppThemeContext";
 import { Button, Card, CardSkeleton, EmptyState, Screen, Text, useToast } from "../../components/ui";
+import AskSpotButton from "../../components/spot/AskSpotButton";
 import {
   ORDER_STATUS_LABELS,
   fetchOrder,
@@ -280,6 +281,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
         variant="ghost"
         onPress={() => navigation.navigate("HelpSupport")}
       />
+      <AskSpotButton inline navigation={navigation} context={{ orderId: String(order._id), screen: "order" }} />
     </Screen>
   );
 };

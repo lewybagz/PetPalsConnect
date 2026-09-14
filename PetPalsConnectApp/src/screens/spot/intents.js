@@ -1,4 +1,10 @@
-import { weightToPounds, weightFromPounds, weightLabel } from "../../utils/units";
+import {
+  distanceFromMiles,
+  distanceToMiles,
+  weightToPounds,
+  weightFromPounds,
+  weightLabel,
+} from "../../utils/units";
 import { describeForOwner } from "../../api/health";
 import { searchToxins, SEVERITY_LABELS, SEVERITY_BLURBS } from "../../api/toxins";
 
@@ -50,6 +56,15 @@ const OPENABLE = {
   "missing pet": "LostPet",
   toxins: "ToxinLookup",
   poison: "ToxinLookup",
+  pals: "FriendsList",
+  friends: "FriendsList",
+  "friend requests": "FriendRequests",
+  favourites: "Favorites",
+  favorites: "Favorites",
+  saved: "Favorites",
+  chats: "Chats",
+  messages: "Chats",
+  profile: "Profile",
 };
 
 /** Screens that need a pet, by the word people use for them. */
@@ -69,6 +84,23 @@ const EMERGENCY =
   /\b(?:emergency|poison|helpline)\b.*\b(?:number|numbers|phone|line|hotline|contact)s?\b|\bwho (?:do|should|can) i (?:call|ring|phone)\b/i;
 const DUE = /\b(?:due|up to date|up-to-date|current|vaccin\w*|shots?|boosters?)\b/i;
 const OPEN = /^(?:open|go to|show(?: me)?|take me to|where (?:is|are))\s+(?:my |the )?(.+?)[.?!]*$/i;
+// "my orders", bare: only an exact screen word, or "my dog just ate..." is swallowed.
+const MINE = /^my\s+(.+?)[.?!]*$/i;
+const FACT_WEIGHT = /\bhow (?:much|heavy) (?:does|is) (.+?) weigh\b|\bwhat(?:'s| is) (.+?)(?:'s)? weight\b/i;
+const FACT_AGE = /\bhow old is (.+?)[.?!]*$|\bwhat(?:'s| is) (.+?)(?:'s)? age\b/i;
+const UNIT = "lbs?|pounds?|kgs?|kilos?|kilograms?|mi|miles?|km|kilomet(?:re|er)s?";
+const CONVERT = new RegExp(
+  `^(?:what(?:'s| is)\\s+|convert\\s+)?(\\d+(?:\\.\\d+)?)\\s*(${UNIT})\\s+(?:in|to|into)\\s+(${UNIT})\\b`,
+  "i"
+);
+
+const unitOf = (word = "") => {
+  const w = word.toLowerCase();
+  if (w.startsWith("lb") || w.startsWith("pound")) return "lb";
+  if (w.startsWith("k") && !w.startsWith("km") && !w.startsWith("kilom")) return "kg";
+  if (w.startsWith("mi")) return "mi";
+  return "km";
+};
 // Past tense only: "ate grapes" is an incident, "eats grass" is a habit and a
 // question for the model.
 const ATE = /\b(?:ate|eaten|swallowed|chewed|licked|got into|drank|nibbled)\s+(?:a |an |some |the |my |his |her |their |on )?(.+?)(?:\s+(?:is|was|it|this|that|earlier|today|yesterday|last night|just now)\b.*)?[.?!]*$/i;
@@ -92,6 +124,29 @@ export const resolveIntent = (rawText, { pets = [], units } = {}) => {
 
   if (EMERGENCY.test(text)) return { kind: "emergency" };
 
+  const convert = text.match(CONVERT);
+  if (convert) {
+    const from = unitOf(convert[2]);
+    const to = unitOf(convert[3]);
+    const weightPair = ["lb", "kg"].includes(from) && ["lb", "kg"].includes(to);
+    const distancePair = ["mi", "km"].includes(from) && ["mi", "km"].includes(to);
+    if (from !== to && (weightPair || distancePair)) {
+      return { kind: "convert", value: Number(convert[1]), from, to };
+    }
+    return null;
+  }
+
+  const weightFact = text.match(FACT_WEIGHT);
+  if (weightFact) {
+    const pet = petFrom(text, pets);
+    return pet && pet.weight != null ? { kind: "fact", pet, fact: "weight" } : null;
+  }
+  const ageFact = text.match(FACT_AGE);
+  if (ageFact) {
+    const pet = petFrom(text, pets);
+    return pet && pet.age != null ? { kind: "fact", pet, fact: "age" } : null;
+  }
+
   if (LOG_WEIGHT.test(text)) {
     const match = text.match(WEIGHT);
     const pet = petFrom(text, pets);
@@ -108,6 +163,10 @@ export const resolveIntent = (rawText, { pets = [], units } = {}) => {
     }
     return null;
   }
+
+  const mine = text.match(MINE);
+  const bare = mine && OPENABLE[mine[1].toLowerCase()];
+  if (bare) return { kind: "open", screen: bare, params: {} };
 
   const open = text.match(OPEN);
   if (open) {
@@ -187,6 +246,28 @@ export const answerWeight = (pet, entry, units) => {
 export const answerOpen = (screen, params, label) =>
   message("Here you go.", [links([{ screen, params, label: label ?? screen }])]);
 
+/** A fact straight off the profile: the weight the app holds, or the age. */
+export const answerFact = (pet, fact, units) => {
+  if (fact === "weight") {
+    const shown = Math.round(weightFromPounds(pet.weight, units?.weight ?? "lb") * 10) / 10;
+    return message(`${pet.name} weighs ${shown} ${weightLabel(units)}, as of the last weigh-in.`, [
+      links([{ screen: "PetWeight", params: { petId: String(pet._id) }, label: "Weight history" }]),
+    ]);
+  }
+  return message(`${pet.name} is ${pet.age} ${pet.age === 1 ? "year" : "years"} old.`, [
+    links([{ screen: "PetDetails", params: { petId: String(pet._id) }, label: `Open ${pet.name}` }]),
+  ]);
+};
+
+/** Arithmetic is software's. */
+export const answerConvert = ({ value, from, to }) => {
+  const result =
+    from === "lb" || from === "kg"
+      ? weightFromPounds(weightToPounds(value, from), to)
+      : distanceFromMiles(distanceToMiles(value, from), to);
+  return message(`${value} ${from} is ${Math.round(result * 10) / 10} ${to}.`);
+};
+
 /**
  * An exact hit in the cached poison table, said the way the toxin screen
  * says it, with the numbers attached. Returns null on a miss - a miss goes to
@@ -210,12 +291,30 @@ export const answerToxin = (query, toxins = [], contacts = []) => {
 };
 
 /** The chips on the empty screen. Each is a real question this file answers. */
-export const chipsFor = (pets = []) => {
-  const pet = pets[0];
+export const chipsFor = (pets = [], context = null) => {
+  const pet =
+    (context?.petId && pets.find((p) => String(p._id) === String(context.petId))) || pets[0];
+  const name = pet?.name;
+  const first = {
+    health: name ? `Is ${name} due for anything?` : null,
+    weight: name ? `Log a weigh-in for ${name}` : null,
+    pet: name ? `Tell me about ${name}'s records` : null,
+    article: "Sum this up for my pet",
+    toxin: "My pet ate something",
+    playdate: "Reply to this playdate",
+    order: "Where is my order?",
+    tracking: name ? `Where was ${name} last seen?` : null,
+    chat: "What did we last talk about?",
+  }[context?.screen];
   return [
-    pet ? `Is ${pet.name} due for anything?` : null,
-    "Emergency numbers",
-    "My pet ate something",
-    pet ? `What should I know about a ${pet.breed || pet.species || "dog"}?` : "What should I know about a new dog?",
-  ].filter(Boolean);
+    ...new Set(
+      [
+        first,
+        name ? `Is ${name} due for anything?` : null,
+        "Emergency numbers",
+        "My pet ate something",
+        name ? `What should I know about a ${pet.breed || pet.species || "dog"}?` : "What should I know about a new dog?",
+      ].filter(Boolean)
+    ),
+  ].slice(0, 4);
 };

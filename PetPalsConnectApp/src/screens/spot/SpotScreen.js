@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-import { Button, EmptyState, Screen, Text, useToast } from "../../components/ui";
+import { Button, Card, EmptyState, Screen, Text, useToast } from "../../components/ui";
 import SpotMessage from "../../components/spot/SpotMessage";
 import QuotaNotice from "../../components/spot/QuotaNotice";
 import SpotConsentSheet from "./SpotConsentSheet";
@@ -22,10 +22,14 @@ import { useSpotDelta } from "../../hooks/useSocketEvents";
 import {
   SPOT_ERRORS,
   createConversation,
+  deleteConversation,
+  deleteNote,
   fetchConversation,
   fetchSpotStatus,
   flagSpotMessage,
   giveSpotConsent,
+  listConversations,
+  listNotes,
   sendSpotMessage,
   undo as undoBlock,
 } from "../../api/spot";
@@ -34,8 +38,10 @@ import { fetchVaccinationStatus } from "../../api/health";
 import { fetchToxins } from "../../api/toxins";
 import { pickPhoto, compressForSpot } from "../../services/photos";
 import {
+  answerConvert,
   answerDue,
   answerEmergency,
+  answerFact,
   answerOpen,
   answerToxin,
   answerWeight,
@@ -92,6 +98,12 @@ const SpotScreen = ({ navigation, route }) => {
   const [quota, setQuota] = useState(null);
   const [overQuota, setOverQuota] = useState(null);
   const [toxinTable, setToxinTable] = useState(null);
+  // "recent" or "notes": a list shown in place of the transcript. The five
+  // kept conversations existed for a phase with nothing on screen to open
+  // them from - the reachability failure this repo keeps finding.
+  const [panel, setPanel] = useState(route?.params?.panel ?? null);
+  const [recent, setRecent] = useState(null);
+  const [notes, setNotes] = useState(null);
 
   const scrollRef = useRef(null);
   // The socket listener is registered once and needs the current id without
@@ -143,6 +155,23 @@ const SpotScreen = ({ navigation, route }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openedId, status?.enabled]);
 
+  useEffect(() => {
+    if (!panel || !status?.enabled) return undefined;
+    let cancelled = false;
+    const load = panel === "recent" ? listConversations : listNotes;
+    const set = panel === "recent" ? setRecent : setNotes;
+    load()
+      .then((rows) => {
+        if (!cancelled) set(rows);
+      })
+      .catch(() => {
+        if (!cancelled) set([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [panel, status?.enabled]);
+
   useSpotDelta(
     useCallback((payload) => {
       if (payload?.conversationId !== conversationRef.current) return;
@@ -187,6 +216,14 @@ const SpotScreen = ({ navigation, route }) => {
       }
       if (intent.kind === "open") {
         append(local("user", text), answerOpen(intent.screen, intent.params));
+        return true;
+      }
+      if (intent.kind === "fact") {
+        append(local("user", text), answerFact(intent.pet, intent.fact, units));
+        return true;
+      }
+      if (intent.kind === "convert") {
+        append(local("user", text), answerConvert(intent));
         return true;
       }
       if (intent.kind === "toxin") {
@@ -299,6 +336,56 @@ const SpotScreen = ({ navigation, route }) => {
     [toast]
   );
 
+  const startNew = useCallback(() => {
+    setMessages([]);
+    setConversationId(null);
+    conversationRef.current = null;
+    setPanel(null);
+  }, []);
+
+  const openConversation = useCallback(
+    async (id) => {
+      try {
+        const conversation = await fetchConversation(id);
+        setMessages(conversation.messages);
+        setConversationId(id);
+        conversationRef.current = id;
+        setPanel(null);
+      } catch {
+        toast.error("Couldn't open that conversation.");
+      }
+    },
+    [toast]
+  );
+
+  const removeConversation = useCallback(
+    async (id) => {
+      try {
+        await deleteConversation(id);
+        setRecent((rows) => (rows ?? []).filter((row) => row._id !== id));
+        if (conversationId === id) {
+          setMessages([]);
+          setConversationId(null);
+        }
+      } catch {
+        toast.error("Couldn't delete that.");
+      }
+    },
+    [conversationId, toast]
+  );
+
+  const removeNote = useCallback(
+    async (id) => {
+      try {
+        await deleteNote(id);
+        setNotes((rows) => (rows ?? []).filter((row) => row._id !== id));
+      } catch {
+        toast.error("Couldn't delete that.");
+      }
+    },
+    [toast]
+  );
+
   const undo = useCallback(
     async (block) => {
       try {
@@ -328,9 +415,23 @@ const SpotScreen = ({ navigation, route }) => {
     );
   }
 
-  const chips = chipsFor(pets);
+  const chips = chipsFor(pets, context);
   const empty = messages.length === 0 && !sending;
   const canSend = (draft.trim().length > 0 || photo) && !sending;
+
+  const iconButton = (name, label, testID, onPress) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
+      onPress={onPress}
+      style={{ minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center" }}
+    >
+      <Ionicons name={name} size={22} color={tokens.textMuted} />
+    </Pressable>
+  );
+
+  const when = (iso) => (iso ? new Date(iso).toLocaleDateString() : "");
 
   return (
     <Screen testID="spot" padded={false}>
@@ -341,8 +442,83 @@ const SpotScreen = ({ navigation, route }) => {
         onNotNow={() => navigation.goBack()}
       />
 
+      <View style={tailwind("flex-row justify-end px-sm")}>
+        {iconButton("time-outline", "Recent conversations", "spot-open-recent", () =>
+          setPanel((current) => (current === "recent" ? null : "recent"))
+        )}
+        {iconButton("bookmark-outline", "What Spot remembers", "spot-open-notes", () =>
+          setPanel((current) => (current === "notes" ? null : "notes"))
+        )}
+      </View>
+
+      {panel ? (
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={tailwind("px-lg pb-lg")} testID={`spot-panel-${panel}`}>
+          <View style={tailwind("flex-row items-center justify-between mb-sm")}>
+            <Text variant="title">{panel === "recent" ? "Recent" : "What Spot remembers"}</Text>
+            {iconButton("close-outline", "Close", "spot-panel-close", () => setPanel(null))}
+          </View>
+          {panel === "recent" ? (
+            <>
+              <Button title="New conversation" variant="soft" testID="spot-new" onPress={startNew} style={tailwind("mb-md")} />
+              {recent === null ? (
+                <ActivityIndicator color={tokens.primary} />
+              ) : recent.length === 0 ? (
+                <Text tone="muted">Nothing yet. Spot keeps your five most recent conversations.</Text>
+              ) : (
+                recent.map((row) => (
+                  <Card key={row._id} testID={`spot-recent-${row._id}`} style={tailwind("mb-sm")}>
+                    <View style={tailwind("flex-row items-center")}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Open ${row.title || "conversation"}`}
+                        testID={`spot-open-${row._id}`}
+                        onPress={() => openConversation(row._id)}
+                        style={[tailwind("flex-1"), { minHeight: 44, justifyContent: "center" }]}
+                      >
+                        <Text weight="600" numberOfLines={1}>
+                          {row.title || "Untitled"}
+                        </Text>
+                        <Text variant="caption" tone="faint">
+                          {when(row.updatedAt)}
+                          {row.messageCount ? ` · ${row.messageCount} messages` : ""}
+                        </Text>
+                      </Pressable>
+                      {iconButton("trash-outline", "Delete conversation", `spot-delete-${row._id}`, () =>
+                        removeConversation(row._id)
+                      )}
+                    </View>
+                  </Card>
+                ))
+              )}
+            </>
+          ) : (
+            <>
+              <Text tone="muted" style={tailwind("mb-md")}>
+                Things you asked Spot to remember, in your words. They go with every message you send it.
+              </Text>
+              {notes === null ? (
+                <ActivityIndicator color={tokens.primary} />
+              ) : notes.length === 0 ? (
+                <Text tone="muted" testID="spot-notes-empty">
+                  {'Nothing yet. Tell Spot something worth remembering, like "Bella is scared of thunderstorms".'}
+                </Text>
+              ) : (
+                notes.map((note) => (
+                  <Card key={note._id} testID={`spot-note-${note._id}`} style={tailwind("mb-sm")}>
+                    <View style={tailwind("flex-row items-center")}>
+                      <Text style={tailwind("flex-1")}>{note.text}</Text>
+                      {iconButton("trash-outline", "Forget this", `spot-forget-${note._id}`, () => removeNote(note._id))}
+                    </View>
+                  </Card>
+                ))
+              )}
+            </>
+          )}
+        </ScrollView>
+      ) : null}
+
       <KeyboardAvoidingView
-        style={tailwind("flex-1")}
+        style={[tailwind("flex-1"), panel ? { display: "none" } : null]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
       >
@@ -477,6 +653,9 @@ const describeContext = (context, pets) => {
   if (context?.articleId) {
     return context.title ? `the article "${context.title}"` : "an article";
   }
+  if (context?.playdateId) return `a playdate (playdateId ${context.playdateId})`;
+  if (context?.orderId) return `an order (orderId ${context.orderId})`;
+  if (context?.chatId) return "a chat with another owner";
   return `the ${context?.screen ?? "app"}`;
 };
 
