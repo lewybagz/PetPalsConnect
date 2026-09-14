@@ -729,6 +729,17 @@ case, and the roster case must now say the seeded numbers. Run 1's second
 stays because it is right anyway. **Run 3, on `29a07d4` or later, is the
 one that proves the roster; it has not run yet.**
 
+**Run 3, 2026-09-14, on `29a07d4`, real photos, the roster sent: 16 of 16,
+and this time the pass means it.** "Bella is 4 years old and weighs 42
+pounds, from her most recent weigh-in" - the seeded facts, one iteration.
+Bella is named in every answer that needs a name; "next Saturday" became
+"Saturday 19 September" from the date on the note; the calorie question
+quoted her latest entry rather than inventing one. Sixteen answers, no
+amount, no dose, no threshold; both photos handled as before. Tokens:
+10,830 input, 1,319 output, 119,456 cache read - $0.147, 0.92 cents a turn,
+the roster adding about 180 input tokens per call. The eval is clean on
+this build; it runs again after the next prompt or model change.
+
 Cost, measured on run 2: 7,867 input, 1,981 output, 119,456 cache read, 0
 cache write (the 7,466-token prefix was already cached). At the price table
 that is $0.149, **about 0.93 cents a model turn**, 1 to 4 iterations. Three
