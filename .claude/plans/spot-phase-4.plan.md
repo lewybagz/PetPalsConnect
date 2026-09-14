@@ -27,6 +27,9 @@ Standing rule, unchanged: **never assign to AI what software can do.** Every
 item below was checked against it; the ones that are software wear Spot's
 voice and cost nothing.
 
+**Phase 5 is planned in [spot-phase-5.plan.md](spot-phase-5.plan.md)**: the
+"Spot noticed" card, voice in and out, cards, and the router shipped off.
+
 ## What Spot has today, and what it cannot reach
 
 Built: 17 tools (9 reads, 6 writes, `open_screen`, `my_chats` behind the
