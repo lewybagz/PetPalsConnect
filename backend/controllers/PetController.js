@@ -1,8 +1,6 @@
 const Pet = require("../models/Pet");
-const { sanitisePhotos } = require("../services/photos");
 const User = require("../models/User");
-const SubscriptionController = require("./SubscriptionController");
-const PetMatchController = require("./PetMatchController");
+const pets = require("../services/pets");
 const Favorite = require("../models/Favorite"); // or Pet model, as needed
 const { matchableQuery } = require("../services/matching/eligibility");
 
@@ -46,42 +44,11 @@ const PetController = {
    * discarded.
    */
   async updatePet(req, res) {
-    const EDITABLE = [
-      "name",
-      "breed",
-      "age",
-      "weight",
-      "photos",
-      "specialNeeds",
-      "temperament",
-      "activityLevel",
-      "socialisation",
-      "favoriteActivities",
-      "location",
-    ];
-
     try {
-      const pet = await Pet.findById(req.params.petId);
-      if (!pet) {
-        return res.status(404).json({ message: "Cannot find pet" });
-      }
-      if (String(pet.owner) !== String(req.userId)) {
-        return res.status(403).json({ message: "That isn't your pet" });
-      }
-
-      // Same validation on the way in as on create.
-      if (req.body.photos !== undefined) {
-        req.body.photos = sanitisePhotos(req.body.photos);
-      }
-
-      for (const field of EDITABLE) {
-        if (req.body[field] !== undefined) pet[field] = req.body[field];
-      }
-      pet.modifiedDate = new Date();
-
-      const updatedPet = await pet.save();
-      res.json(updatedPet);
+      const { pet } = await pets.update({ ownerId: req.userId, petId: req.params.petId, fields: req.body });
+      res.json(pet);
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ message: err.message });
       if (err.name === "ValidationError") {
         return res.status(400).json({ message: err.message });
       }
@@ -160,49 +127,11 @@ const PetController = {
     if (!req.userId) {
       return res.status(404).json({ message: "No profile for this account yet" });
     }
-
-    const { name, species, breed, age, weight, photos, specialNeeds, temperament,
-            activityLevel, socialisation, favoriteActivities, location } = req.body;
-
     try {
-      const pet = await Pet.create({
-        name,
-        // Left undefined when a client does not send it, so the schema default
-        // ("dog") applies. Older builds of the app have no species picker and
-        // must keep working; they only ever created dogs anyway.
-        ...(species ? { species } : {}),
-        breed,
-        age,
-        weight,
-        // Only URLs from our own storage bucket: `photos` is rendered on every
-        // other user's device, and nothing validated it.
-        photos: sanitisePhotos(photos),
-        specialNeeds,
-        temperament,
-        activityLevel,
-        socialisation,
-        favoriteActivities: favoriteActivities ?? [],
-        location,
-        owner: req.userId,
-        creator: req.userId,
-      });
-
-      // Link it to the owner. $addToSet keeps this safe to retry.
-      await User.updateOne({ _id: req.userId }, { $addToSet: { pets: pet._id } });
-
-      // Matching is best-effort: a pet that saved must not fail the request
-      // because the matcher had a problem. `runMatching` returns nothing for a
-      // species that cannot match, so adding a cat is a save and no more.
-      let matches = [];
-      try {
-        const isSubscribed = await SubscriptionController.checkSubscriptionStatus(
-          req.userId
-        );
-        matches = await PetMatchController.runMatching(pet._id, { isSubscribed });
-      } catch (error) {
-        console.warn("[pets] Matching failed for new pet:", error.message);
-      }
-
+      // Ownership, the link onto `user.pets`, photo sanitising and the
+      // best-effort matching run all live in `services/pets.js`, which Spot's
+      // add_pet tool calls as well.
+      const { pet, matches } = await pets.create({ ownerId: req.userId, fields: req.body });
       res.status(201).json({ pet, matches });
     } catch (error) {
       if (error.name === "ValidationError") {

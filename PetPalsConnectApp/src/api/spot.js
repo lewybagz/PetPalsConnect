@@ -103,6 +103,28 @@ export const flagSpotMessage = async (conversationId, messageId, reason) => {
   return Boolean(data?.flagged);
 };
 
+/** What Spot remembers for this account, in the owner's words. */
+export const listNotes = async () => {
+  const { data } = await api.get("/api/spot/notes").catch(rethrow);
+  return Array.isArray(data) ? data : [];
+};
+
+export const addNote = async (text) => {
+  const { data } = await api.post("/api/spot/notes", { text }).catch(rethrow);
+  return data;
+};
+
+export const deleteNote = async (noteId) => {
+  const { data } = await api.delete(`/api/spot/notes/${noteId}`).catch(rethrow);
+  return Boolean(data?.removed);
+};
+
+/** Puts a pet's fields back; the same call `PetPhotosScreen` makes to save photos. */
+const restorePet = async (petId, set) => {
+  const { data } = await api.put(`/api/pets/${petId}`, set);
+  return data;
+};
+
 /** `{ "units.weight": "lb" }` back into `{ units: { weight: "lb" } }` for `saveSettings`. */
 const unflatten = (flat = {}) => {
   const patch = {};
@@ -131,6 +153,9 @@ export const UNDO = {
   removeWeight: ({ petId, entryId }) => removeWeight(petId, entryId),
   removeHealthRecord: ({ petId, recordId }) => removeHealthRecord(petId, recordId),
   updateSetting: ({ set }) => saveSettings(unflatten(set)),
+  restorePet: ({ petId, set }) => restorePet(petId, set),
+  forget: ({ noteId }) => deleteNote(noteId),
+  remember: ({ text }) => addNote(text),
 };
 
 /** Runs the undo on a `done` block, or throws if the kind is unknown. */

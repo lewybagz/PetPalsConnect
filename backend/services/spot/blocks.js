@@ -37,8 +37,18 @@ const SCREENS = {
   ArticleDetail: { param: "articleId", label: "Read article" },
   MyPlaydates: { param: null, label: "My playdates" },
   PlaydateDetails: { param: "playdateId", label: "Open playdate" },
-  SchedulePlaydate: { param: "petId", label: "Plan a playdate" },
+  // `extra` names the params a prefilled form may carry; anything else is dropped.
+  SchedulePlaydate: {
+    param: "petId",
+    label: "Plan a playdate",
+    extra: ["myPetId", "locationId", "presetDate", "presetTime", "notes"],
+  },
   Map: { param: null, label: "Nearby" },
+  Chat: { param: "chatId", label: "Open chat" },
+  GroupChat: { param: "chatId", label: "Open group" },
+  FriendsList: { param: null, label: "Pals" },
+  FriendRequests: { param: null, label: "Friend requests" },
+  Favorites: { param: null, label: "Saved" },
   PotentialPlaydateLocation: { param: "locationId", label: "Open place" },
   Shop: { param: null, label: "Shop" },
   Orders: { param: null, label: "Orders" },
@@ -54,11 +64,14 @@ const SCREENS = {
 };
 
 /** A `links` chip, or null when the screen is not one Spot may open. */
-const link = (screen, value, label) => {
+const link = (screen, value, label, extra = {}) => {
   const entry = SCREENS[screen];
   if (!entry) return null;
   const params = entry.param && value != null ? { [entry.param]: String(value) } : {};
   if (entry.param && !params[entry.param]) return null;
+  for (const key of entry.extra ?? []) {
+    if (extra[key] != null && extra[key] !== "") params[key] = String(extra[key]);
+  }
   return { screen, params, label: label || entry.label };
 };
 
@@ -70,16 +83,23 @@ const key = (chip) => `${chip.screen}:${JSON.stringify(chip.params)}`;
  * - Every `toxin` effect adds the contacts, once, whatever it found: a miss
  *   is an answer and it still ends at a phone number.
  * - `link` effects are deduped and gathered into one `links` block.
- * - Each `done` effect is its own block, in order.
+ * - `web` effects (a retailer search from the picks table) are deduped by url
+ *   into one `web` block, capped, and the app opens them in the browser.
+ * - Each `done` effect is its own block, in order. One with no `undo` is an
+ *   action that reached another person and cannot be taken back.
  */
+const WEB_LIMIT = 8;
+
 const blocksFrom = (effects = []) => {
   const blocks = [];
   const chips = new Map();
+  const web = new Map();
   let contacts = false;
 
   for (const effect of effects) {
     if (effect.type === "toxin") contacts = true;
     if (effect.type === "link" && effect.chip) chips.set(key(effect.chip), effect.chip);
+    if (effect.type === "web" && effect.item?.url && web.size < WEB_LIMIT) web.set(effect.item.url, effect.item);
     if (effect.type === "done") {
       blocks.push({
         type: "done",
@@ -91,6 +111,7 @@ const blocksFrom = (effects = []) => {
   }
 
   if (chips.size > 0) blocks.push({ type: "links", items: [...chips.values()] });
+  if (web.size > 0) blocks.push({ type: "web", items: [...web.values()] });
   if (contacts) blocks.push({ type: "contacts", items: EMERGENCY_CONTACTS });
 
   return blocks;

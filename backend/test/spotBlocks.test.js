@@ -116,3 +116,29 @@ test("every undo kind the server can emit has a handler in the app", () => {
   const missing = [...emitted].filter((kind) => !handled.has(kind));
   assert.deepEqual(missing, [], `the app cannot undo: ${missing.join(", ")}`);
 });
+
+test("a prefilled screen carries only the extra params its entry allows", () => {
+  const chip = link("SchedulePlaydate", "their-pet", "Review and send", {
+    myPetId: "mine",
+    presetDate: "2026-10-03",
+    presetTime: "",
+    notes: null,
+    creator: "somebody-else",
+  });
+  assert.deepEqual(chip.params, { petId: "their-pet", myPetId: "mine", presetDate: "2026-10-03" });
+  // A screen with no `extra` list drops everything but its own param.
+  assert.deepEqual(link("PetHealth", "p1", null, { presetDate: "2026-10-03" }).params, { petId: "p1" });
+});
+
+test("web links are one block, deduped by url and capped", () => {
+  const effects = Array.from({ length: 12 }, (_, i) => ({
+    type: "web",
+    item: { label: `Pick ${i % 10}`, url: `https://example.test/${i % 10}` },
+  }));
+  const blocks = blocksFrom(effects);
+  const web = blocks.filter((block) => block.type === "web");
+  assert.equal(web.length, 1);
+  assert.equal(web[0].items.length, 8);
+  assert.equal(new Set(web[0].items.map((item) => item.url)).size, 8);
+  assert.deepEqual(blocksFrom([{ type: "web", item: { label: "no url" } }]), []);
+});

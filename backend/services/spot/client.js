@@ -23,6 +23,28 @@ const isEnabled = () => Boolean(apiKey());
 /** The model Spot runs on. `SPOT_MODEL` is the one-line cost lever. */
 const model = () => process.env.SPOT_MODEL || DEFAULT_MODEL;
 
+/**
+ * Dollars per million tokens, from anthropic.com/pricing as of 2026-09-13.
+ * Cache reads are a tenth of input; a five-minute cache write is 1.25x. The
+ * usage route multiplies stored token counts by these, so a price change is
+ * a one-line diff here and the history re-prices itself.
+ */
+const PRICES = {
+  "claude-opus-5": { input: 5, output: 25 },
+  "claude-sonnet-5": { input: 3, output: 15 },
+  "claude-haiku-4-5-20251001": { input: 1, output: 5 },
+};
+
+/** Estimated USD for `{ input, output, cacheRead, cacheWrite }`, or null for an unknown model. */
+const costOf = ({ input = 0, output = 0, cacheRead = 0, cacheWrite = 0 } = {}, modelName = model()) => {
+  const price = PRICES[modelName];
+  if (!price) return null;
+  const usd =
+    (input * price.input + output * price.output + cacheRead * price.input * 0.1 + cacheWrite * price.input * 1.25) /
+    1_000_000;
+  return Number(usd.toFixed(4));
+};
+
 let client = null;
 let clientKey = "";
 
@@ -46,4 +68,4 @@ const setClient = (stub) => {
   clientKey = apiKey();
 };
 
-module.exports = { DEFAULT_MODEL, isEnabled, model, get, setClient };
+module.exports = { DEFAULT_MODEL, PRICES, costOf, isEnabled, model, get, setClient };

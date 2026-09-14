@@ -9,6 +9,12 @@ router.post("/consent", SpotController.consent);
 // Flagged answers across accounts: a moderator's read, and GUARDED_READS in
 // services/authAudit.js fails if this line stops carrying the guard.
 router.get("/flagged", requireModerator, SpotController.getFlagged);
+// What Spot costs, across accounts: the same guard, checked the same way.
+router.get("/usage", requireModerator, SpotController.getUsage);
+
+router.get("/notes", SpotController.getNotes);
+router.post("/notes", SpotController.addNote);
+router.delete("/notes/:noteId", SpotController.deleteNote);
 
 router.get("/conversations", SpotController.listConversations);
 router.post("/conversations", SpotController.createConversation);

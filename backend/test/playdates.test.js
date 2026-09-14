@@ -495,3 +495,23 @@ test("the response says why a location is missing", async () => {
   assert.equal(hidden.body.locationHidden, true);
   assert.equal(hidden.body.location, null);
 });
+
+test("someone who is not on a playdate cannot cancel it", async () => {
+  const { playdateId } = await scheduledBetween();
+  await makeOwnerWithPet("gatecrash");
+
+  // The cancel handler used to update whatever id it was given.
+  const res = await request(app)
+    .patch(`/api/playdates/${playdateId}/cancel`)
+    .set(...auth("gatecrash"))
+    .send({ message: "nope" });
+  assert.equal(res.status, 403);
+  assert.equal((await Playdate.findById(playdateId).lean()).status, "pending");
+
+  const ok = await request(app)
+    .patch(`/api/playdates/${playdateId}/cancel`)
+    .set(...auth("flow-bob"))
+    .send({ message: "rain" });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.equal((await Playdate.findById(playdateId).lean()).status, "cancelled");
+});

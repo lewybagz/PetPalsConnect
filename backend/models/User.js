@@ -243,6 +243,22 @@ const UserSchema = new Schema({
   spot: {
     readChats: { type: Boolean, default: false },
   },
+  /**
+   * Things the owner asked Spot to remember, in their words. Capped (see
+   * `services/spot/context.js`), shown and deletable on the Spot screen,
+   * and sent with every Spot turn. Nothing here is inferred.
+   */
+  spotNotes: {
+    type: [
+      new Schema(
+        {
+          text: { type: String, required: true, maxlength: 140 },
+          createdAt: { type: Date, default: Date.now },
+        }
+      ),
+    ],
+    default: () => [],
+  },
   modifiedDate: {
     type: Date,
     default: Date.now,

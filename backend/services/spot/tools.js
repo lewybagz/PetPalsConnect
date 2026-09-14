@@ -11,6 +11,11 @@ const Order = require("../../models/Order");
 const Device = require("../../models/Device");
 const Chat = require("../../models/Chat");
 const Message = require("../../models/Message");
+const Friend = require("../../models/Friend");
+const PetMatch = require("../../models/PetMatch");
+const Favorite = require("../../models/Favorite");
+const Notification = require("../../models/Notification");
+const SupportMessage = require("../../models/SupportMessage");
 
 const weights = require("../weights");
 const healthRecords = require("../healthRecords");
@@ -25,7 +30,13 @@ const { milesBetween, formatMiles } = require("../matching/distance");
 const visibility = require("../tracking/visibility");
 const positions = require("../tracking/positions");
 const vendors = require("../tracking/vendor");
+const playdates = require("../playdates");
+const pets = require("../pets");
+const recommend = require("../petCare/recommend");
+const notificationTypes = require("../notificationTypes");
+const supportMail = require("../supportMail");
 const { SCREENS, link } = require("./blocks");
+const { NOTE_LIMIT, NOTE_LENGTH } = require("./context");
 
 /**
  * What Spot can do, as tools the model may call.
@@ -44,8 +55,12 @@ const { SCREENS, link } = require("./blocks");
  *
  * Deliberately absent, and why - a list, not an omission:
  * - nothing on Order or Subscription: Stripe and RevenueCat are the writers
- * - no message, friend request or playdate invite to another person: it
- *   arrives on somebody else's phone, through audience and block rules
+ * - no message, friend request or playdate *invitation* to another person: it
+ *   arrives on somebody else's phone, through audience and block rules.
+ *   Answering an invitation already on the owner's table is allowed
+ *   (`respond_to_playdate`, `cancel_playdate`) through the one service the
+ *   playdate screens use; a new invitation is prefilled (`plan_playdate`)
+ *   and the owner taps Send
  * - no block, report, unblock: a safety action is a person's; `open_screen`
  *   can take them to Report
  * - no deleting a pet or the account: the existing confirmations stay the
@@ -82,6 +97,34 @@ const object = (properties, required = []) => ({
 });
 
 const toISODate = (value) => (value ? new Date(value).toISOString().slice(0, 10) : null);
+
+/**
+ * Change in pounds between the newest entry and the newest one at least
+ * `days` old, or null when nothing that old exists. Entries newest first.
+ */
+const changeSince = (entries, days, now = Date.now()) => {
+  const cutoff = now - days * 24 * 60 * 60 * 1000;
+  const older = entries.find((entry) => new Date(entry.takenAt).getTime() <= cutoff);
+  return older ? Number((entries[0].pounds - older.pounds).toFixed(1)) : null;
+};
+
+const UPDATABLE_PET_FIELDS = {
+  name: { type: "string", minLength: 1, maxLength: 40 },
+  breed: { type: "string", maxLength: 60 },
+  ageYears: { type: "number", minimum: 0, maximum: 40 },
+  temperament: { type: "string", maxLength: 60 },
+  activityLevel: { type: "string", enum: ["low", "moderate", "high"] },
+  socialisation: { type: "string", enum: ["introvert", "balanced", "extrovert"] },
+  favoriteActivities: { type: "array", items: { type: "string", maxLength: 40 }, maxItems: 10 },
+  specialNeeds: { type: "string", maxLength: 300, description: "The owner's own note; never a diagnosis" },
+};
+
+/** Tool field names to schema field names. */
+const petFields = ({ ageYears, weightPounds, ...rest }) => ({
+  ...rest,
+  ...(ageYears !== undefined ? { age: ageYears } : {}),
+  ...(weightPounds !== undefined ? { weight: weightPounds } : {}),
+});
 
 /** The pets on the profile - the same authority the deck and the gate use. */
 const ownPets = async (userId, select) => {
@@ -582,6 +625,362 @@ const toolsFor = ({ userId, readChats = false }) => {
       }),
     }),
 
+
+    betaTool({
+      name: "weight_history",
+      description:
+        "One pet's weigh-ins, newest first, with the change over the last 30 and 90 days. Describe the trend; never name a target weight, a calorie figure or a diet - that is the vet's.",
+      inputSchema: object({ petId: { type: "string" } }, ["petId"]),
+      run: guard(async ({ petId }) => {
+        const pet = await weights.ownPet(userId, petId, "owner name");
+        const entries = await WeightEntry.find({ pet: pet._id, owner: userId })
+          .sort({ takenAt: -1 })
+          .limit(40)
+          .lean();
+        effects.push({ type: "link", chip: link("PetWeight", petId) });
+        return json({
+          petName: pet.name,
+          entries: entries.slice(0, 12).map((entry) => ({
+            entryId: String(entry._id),
+            pounds: entry.pounds,
+            date: toISODate(entry.takenAt),
+            bodyCondition: entry.bodyCondition ?? null,
+            notes: entry.notes ?? null,
+          })),
+          change30Days: entries.length ? changeSince(entries, 30) : null,
+          change90Days: entries.length ? changeSince(entries, 90) : null,
+        });
+      }),
+    }),
+
+    betaTool({
+      name: "my_pals",
+      description:
+        "The owner's pals: each friend's pet (name, breed, petId) and the owner's username. Use a petId from here for plan_playdate.",
+      inputSchema: object({}),
+      run: guard(async () => {
+        const blocked = new Set((await blocking.blockedIdsFor(userId)).map(String));
+        const rows = await Friend.find({ status: true, $or: [{ user1: userId }, { user2: userId }] })
+          .populate("user1", "username")
+          .populate("user2", "username")
+          .populate("pet1", "name breed species owner")
+          .populate("pet2", "name breed species owner")
+          .sort({ timestamp: -1 })
+          .limit(20)
+          .lean();
+        const pals = [];
+        for (const row of rows) {
+          const mineIsUser1 = String(row.user1?._id) === String(userId);
+          const owner = mineIsUser1 ? row.user2 : row.user1;
+          const pet = mineIsUser1 ? row.pet2 : row.pet1;
+          if (!owner || blocked.has(String(owner._id))) continue;
+          pals.push({
+            username: owner.username,
+            petId: pet ? String(pet._id) : null,
+            petName: pet?.name ?? null,
+            breed: pet?.breed ?? null,
+            species: pet?.species ?? null,
+          });
+        }
+        effects.push({ type: "link", chip: link("FriendsList") });
+        return json({ pals });
+      }),
+    }),
+
+    betaTool({
+      name: "my_matches",
+      description:
+        "Pets the owner has matched with on Discover: name, breed, owner's username and petId. A match is who a playdate can be planned with.",
+      inputSchema: object({}),
+      run: guard(async () => {
+        const blocked = new Set((await blocking.blockedIdsFor(userId)).map(String));
+        const rows = await PetMatch.find({ relevantToUser: userId })
+          .populate({ path: "pet2", select: "name breed species owner", populate: { path: "owner", select: "username" } })
+          .sort({ matchScore: -1 })
+          .limit(30)
+          .lean();
+        const seen = new Set();
+        const matches = [];
+        for (const row of rows) {
+          const pet = row.pet2;
+          if (!pet || seen.has(String(pet._id)) || blocked.has(String(pet.owner?._id))) continue;
+          seen.add(String(pet._id));
+          matches.push({
+            petId: String(pet._id),
+            petName: pet.name,
+            breed: pet.breed ?? null,
+            species: pet.species ?? "dog",
+            username: pet.owner?.username ?? null,
+          });
+          if (matches.length === 10) break;
+        }
+        return json({ matches });
+      }),
+    }),
+
+    betaTool({
+      name: "my_saved_places",
+      description: "Places the owner saved from the care hub - their vet, their park - with locationId.",
+      inputSchema: object({}),
+      run: guard(async () => {
+        const rows = await Favorite.find({ user: userId, location: { $ne: null } })
+          .populate("location", "name address categories")
+          .sort({ createdDate: -1 })
+          .limit(10)
+          .lean();
+        const saved = rows.filter((row) => row.location);
+        for (const row of saved.slice(0, 5)) {
+          effects.push({ type: "link", chip: link("PotentialPlaydateLocation", row.location._id, row.location.name) });
+        }
+        return json({
+          places: saved.map((row) => ({
+            locationId: String(row.location._id),
+            name: row.location.name,
+            address: row.location.address ?? null,
+            categories: row.location.categories ?? [],
+          })),
+        });
+      }),
+    }),
+
+    betaTool({
+      name: "whats_new",
+      description: "The owner's unread notifications, newest first: what happened and where in the app it lives.",
+      inputSchema: object({}),
+      run: guard(async () => {
+        const rows = await Notification.find({ recipient: userId, readStatus: false })
+          .sort({ timestamp: -1 })
+          .limit(10)
+          .lean();
+        const screens = new Set();
+        const items = rows.map((row) => {
+          const [screen] = notificationTypes.destinationFor(row.type);
+          // Rows carry no id to open with, so the chip is the screen itself.
+          if (SCREENS[screen] && !SCREENS[screen].param) screens.add(screen);
+          return {
+            notificationId: String(row._id),
+            kind: notificationTypes.normalise(row.type),
+            title: notificationTypes.titleFor(row.type),
+            content: row.content,
+            petName: row.petName ?? null,
+            at: row.timestamp ? new Date(row.timestamp).toISOString() : null,
+            screen,
+          };
+        });
+        for (const screen of screens) effects.push({ type: "link", chip: link(screen) });
+        return json({ unread: items });
+      }),
+    }),
+
+    betaTool({
+      name: "care_picks",
+      description:
+        "The care hub's shopping picks for one of the owner's pets: categories of food, supplies and gear for its species, life stage and size, each with a search link and the reason. Never a named product, never an endorsement. If the owner wrote a special-needs note the hub shows vets instead, and so should you.",
+      inputSchema: object({ petId: { type: "string" } }, ["petId"]),
+      run: guard(async ({ petId }) => {
+        const pet = await weights.ownPet(userId, petId, "owner name species age weight specialNeeds");
+        const picks = recommend.forPet(pet);
+        if (picks.seeAVet) {
+          return json({
+            petName: pet.name,
+            seeAVet: true,
+            shelves: [],
+            note: "The owner wrote a special-needs note, so nothing is recommended; suggest their vet, and care_places_nearby for one.",
+          });
+        }
+        for (const shelf of picks.shelves) {
+          for (const pick of shelf.picks) effects.push({ type: "web", item: { label: pick.title, url: pick.url } });
+        }
+        effects.push({ type: "link", chip: link("Shop") });
+        return json({
+          petName: pet.name,
+          stage: picks.stage,
+          size: picks.size,
+          seeAVet: false,
+          shelves: picks.shelves.map((shelf) => ({
+            category: shelf.category,
+            picks: shelf.picks.map((pick) => ({ title: pick.title, why: pick.why })),
+          })),
+        });
+      }),
+    }),
+
+    betaTool({
+      name: "respond_to_playdate",
+      description:
+        "Accepts or declines a playdate invitation the owner received. Only when clearly asked - the organiser is notified at once and this cannot be undone. Not for one the owner organised.",
+      inputSchema: object(
+        { playdateId: { type: "string" }, decision: { type: "string", enum: ["accept", "decline"] } },
+        ["playdateId", "decision"]
+      ),
+      run: guard(async ({ playdateId, decision }) => {
+        const playdate = await playdates.respond({ userId, playdateId, decision });
+        const organiser = playdate.creator?.username ? `@${playdate.creator.username}` : "the organiser";
+        done({
+          kind: "respondToPlaydate",
+          summary: `${decision === "accept" ? "Accepted" : "Declined"} the playdate on ${toISODate(playdate.date)}; ${organiser} has been told`,
+        });
+        effects.push({ type: "link", chip: link("PlaydateDetails", playdateId) });
+        return json({ status: playdate.status, notified: organiser });
+      }),
+    }),
+
+    betaTool({
+      name: "cancel_playdate",
+      description:
+        "Cancels a playdate the owner is on. Only when clearly asked - everyone on it is notified at once and this cannot be undone.",
+      inputSchema: object({ playdateId: { type: "string" }, reason: { type: "string", maxLength: 200 } }, ["playdateId"]),
+      run: guard(async ({ playdateId, reason }) => {
+        const playdate = await playdates.cancel({ userId, playdateId, reason });
+        done({
+          kind: "cancelPlaydate",
+          summary: `Cancelled the playdate on ${toISODate(playdate.date)}; everyone on it has been told`,
+        });
+        effects.push({ type: "link", chip: link("MyPlaydates") });
+        return json({ status: playdate.status });
+      }),
+    }),
+
+    betaTool({
+      name: "update_pet",
+      description:
+        "Changes one of the owner's pets' profile: name, breed, age, temperament, activity level, socialisation, favourite activities, or the owner's special-needs note. Pass only what changes. Weight is logged with log_weight, never here.",
+      inputSchema: object({ petId: { type: "string" }, ...UPDATABLE_PET_FIELDS }, ["petId"]),
+      run: guard(async ({ petId, ...fields }) => {
+        const { pet, previous } = await pets.update({ ownerId: userId, petId, fields: petFields(fields) });
+        const changed = Object.keys(previous);
+        if (changed.length === 0) return json({ error: "Nothing to change" });
+        done({
+          kind: "updatePet",
+          summary: `Updated ${pet.name}'s ${changed.join(", ")}`,
+          undo: { kind: "restorePet", petId: String(petId), set: previous },
+        });
+        effects.push({ type: "link", chip: link("PetDetails", petId) });
+        return json({ updated: changed });
+      }),
+    }),
+
+    betaTool({
+      name: "add_pet",
+      description:
+        "Adds a new pet to the owner's profile, the same way the add-a-pet screen does. A dog or cat needs a breed and a weight in pounds - ask once if the owner did not say. Age is required for every species (years; a puppy of a few months is 0). Spot never removes a pet.",
+      inputSchema: object(
+        {
+          name: { type: "string", minLength: 1, maxLength: 40 },
+          species: { type: "string", enum: ["dog", "cat", "smallMammal", "bird", "reptile", "fish"] },
+          ageYears: { type: "number", minimum: 0, maximum: 40 },
+          breed: { type: "string", maxLength: 60 },
+          weightPounds: { type: "number", minimum: 0.1, maximum: 400 },
+          temperament: { type: "string", maxLength: 60 },
+        },
+        ["name", "species", "ageYears"]
+      ),
+      run: guard(async ({ name, species, ageYears, breed, weightPounds, temperament }) => {
+        if (weights.MEASURED_SPECIES.includes(species) && (weightPounds == null || !breed)) {
+          return json({ error: `A ${species} needs a breed and a weight in pounds before it can be added. Ask once.` });
+        }
+        const { pet } = await pets.create({
+          ownerId: userId,
+          fields: petFields({ name, species, ageYears, breed, weightPounds, temperament }),
+        });
+        done({ kind: "addPet", summary: `Added ${pet.name} to your pets` });
+        effects.push({ type: "link", chip: link("PetDetails", pet._id, `Open ${pet.name}`) });
+        return json({ petId: String(pet._id), name: pet.name, species: pet.species });
+      }),
+    }),
+
+    betaTool({
+      name: "remember",
+      description: `Keeps a short fact the owner asked you to remember, in their words ("Bella is scared of thunderstorms"). Shown to you on every turn and to the owner on the Spot screen. Up to ${NOTE_LIMIT} notes of ${NOTE_LENGTH} characters. Only when they ask; never infer.`,
+      inputSchema: object({ text: { type: "string", minLength: 1, maxLength: NOTE_LENGTH } }, ["text"]),
+      run: guard(async ({ text }) => {
+        const user = await User.findById(userId).select("spotNotes");
+        if (!user) return json({ error: "No profile" });
+        if (user.spotNotes.length >= NOTE_LIMIT) {
+          return json({ error: `Spot's notes are full (${NOTE_LIMIT}). Ask which one to forget.` });
+        }
+        user.spotNotes.push({ text: String(text).trim().slice(0, NOTE_LENGTH) });
+        await user.save();
+        const note = user.spotNotes[user.spotNotes.length - 1];
+        done({
+          kind: "remember",
+          summary: `Remembered: "${note.text}"`,
+          undo: { kind: "forget", noteId: String(note._id) },
+        });
+        return json({ noteId: String(note._id), notes: user.spotNotes.length });
+      }),
+    }),
+
+    betaTool({
+      name: "forget",
+      description: "Removes one of Spot's notes, by the noteId the owner's notes carry.",
+      inputSchema: object({ noteId: { type: "string" } }, ["noteId"]),
+      run: guard(async ({ noteId }) => {
+        const user = await User.findById(userId).select("spotNotes").lean();
+        const note = (user?.spotNotes ?? []).find((row) => String(row._id) === String(noteId));
+        if (!note) return json({ error: "No such note" });
+        await User.updateOne({ _id: userId }, { $pull: { spotNotes: { _id: note._id } } });
+        done({
+          kind: "forget",
+          summary: `Forgot: "${note.text}"`,
+          undo: { kind: "remember", text: note.text },
+        });
+        return json({ removed: true });
+      }),
+    }),
+
+    betaTool({
+      name: "contact_support",
+      description:
+        "Sends a message to PetPals support on the owner's behalf - a bug, a billing question, anything Spot cannot settle. Only when they ask to reach a person. They get a reply by email.",
+      inputSchema: object({ message: { type: "string", minLength: 1, maxLength: 2000 } }, ["message"]),
+      run: guard(async ({ message }) => {
+        const user = await User.findById(userId).select("username email").lean();
+        if (!user?.email) return json({ error: "This account has no email to reply to" });
+        const name = user.username ?? "there";
+        await SupportMessage.create({ name, email: user.email, message });
+        await supportMail.sendConfirmation({ name, email: user.email, message });
+        done({ kind: "contactSupport", summary: "Sent to PetPals support; they reply by email" });
+        effects.push({ type: "link", chip: link("HelpSupport") });
+        return json({ sent: true, replyTo: user.email });
+      }),
+    }),
+
+    betaTool({
+      name: "plan_playdate",
+      description:
+        "Prefills the playdate form with a pal's or a match's pet (petId from my_pals or my_matches), optionally which of the owner's pets, a place (locationId from my_saved_places or care_places_nearby), a date and a time. Returns a button; the owner reviews and taps Send. Nothing is sent by this tool.",
+      inputSchema: object(
+        {
+          theirPetId: { type: "string" },
+          myPetId: { type: "string" },
+          locationId: { type: "string" },
+          date: { type: "string", description: "YYYY-MM-DD" },
+          time: { type: "string", description: "HH:MM, 24-hour" },
+          notes: { type: "string", maxLength: 200 },
+        },
+        ["theirPetId"]
+      ),
+      run: guard(async ({ theirPetId, myPetId, locationId, date, time, notes }) => {
+        const theirs = await Pet.findById(theirPetId).select("name owner").lean();
+        if (!theirs || String(theirs.owner) === String(userId)) {
+          return json({ error: "Pick a pal's or a match's pet - see my_pals and my_matches" });
+        }
+        if (myPetId) await weights.ownPet(userId, myPetId, "owner");
+        if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "date must be YYYY-MM-DD" });
+        if (time && !/^\d{2}:\d{2}$/.test(time)) return json({ error: "time must be HH:MM" });
+        const chip = link("SchedulePlaydate", theirPetId, `Review and send to ${theirs.name}`, {
+          myPetId,
+          locationId,
+          presetDate: date,
+          presetTime: time,
+          notes,
+        });
+        effects.push({ type: "link", chip });
+        return json({ prefilled: chip.params, note: "The owner taps Send on the form; nothing has been sent." });
+      }),
+    }),
+
     betaTool({
       name: "open_screen",
       description: `Offers the person a button to a screen in the app. Screens: ${Object.keys(SCREENS).join(", ")}. Pass the id the screen needs (petId, articleId, playdateId, orderId, locationId, userId) as value.`,
@@ -657,6 +1056,13 @@ const WRITE_TOOLS = [
   "mark_record_done",
   "remove_health_record",
   "update_setting",
+  "respond_to_playdate",
+  "cancel_playdate",
+  "update_pet",
+  "add_pet",
+  "remember",
+  "forget",
+  "contact_support",
 ];
 
 module.exports = { toolsFor, WRITE_TOOLS };

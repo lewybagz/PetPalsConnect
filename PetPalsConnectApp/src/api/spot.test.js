@@ -4,7 +4,7 @@ import { removeWeight } from "./weight";
 import { removeHealthRecord } from "./health";
 import { saveSettings } from "./settings";
 
-jest.mock("./axios", () => ({ get: jest.fn(), post: jest.fn(), delete: jest.fn() }));
+jest.mock("./axios", () => ({ get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn() }));
 jest.mock("./weight", () => ({ removeWeight: jest.fn() }));
 jest.mock("./health", () => ({ removeHealthRecord: jest.fn() }));
 jest.mock("./settings", () => ({ saveSettings: jest.fn() }));
@@ -28,8 +28,27 @@ test("each undo goes through the ordinary API module", async () => {
   await undo({ undo: { kind: "updateSetting", set: { "units.weight": "lb", playdateRange: 25 } } });
   expect(saveSettings).toHaveBeenCalledWith({ units: { weight: "lb" }, playdateRange: 25 });
 
+  api.put.mockResolvedValue({ data: {} });
+  await undo({ undo: { kind: "restorePet", petId: "p", set: { breed: "Beagle", age: 3 } } });
+  expect(api.put).toHaveBeenCalledWith("/api/pets/p", { breed: "Beagle", age: 3 });
+
+  api.delete.mockResolvedValue({ data: { removed: true } });
+  await undo({ undo: { kind: "forget", noteId: "n1" } });
+  expect(api.delete).toHaveBeenCalledWith("/api/spot/notes/n1");
+
+  api.post.mockResolvedValue({ data: { _id: "n2", text: "Bella hates storms" } });
+  await undo({ undo: { kind: "remember", text: "Bella hates storms" } });
+  expect(api.post).toHaveBeenCalledWith("/api/spot/notes", { text: "Bella hates storms" });
+
   await expect(undo({ undo: { kind: "explode" } })).rejects.toThrow(/Cannot undo/);
-  expect(Object.keys(UNDO).sort()).toEqual(["removeHealthRecord", "removeWeight", "updateSetting"]);
+  expect(Object.keys(UNDO).sort()).toEqual([
+    "forget",
+    "remember",
+    "removeHealthRecord",
+    "removeWeight",
+    "restorePet",
+    "updateSetting",
+  ]);
 });
 
 test("a quota refusal comes back with its code and body on the error", async () => {

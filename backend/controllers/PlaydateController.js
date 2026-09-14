@@ -6,6 +6,14 @@ const {
 const { notify } = require("../services/NotificationService");
 const Pet = require("../models/Pet");
 const User = require("../models/User");
+const playdates = require("../services/playdates");
+
+/** A service error carries its status; anything else is a 500 with a log line. */
+const answer = (res, error, fallback) => {
+  if (error.status) return res.status(error.status).json({ message: error.message });
+  console.error(`${fallback}:`, error);
+  return res.status(500).json({ message: fallback, error });
+};
 
 const PlaydateController = {
   async getAllPlaydates(req, res) {
@@ -128,195 +136,39 @@ const PlaydateController = {
   },
 
   // In PlaydateController
+  /**
+   * Accept, decline, cancel: `services/playdates.js` holds the rules and the
+   * notifications, because Spot answers invitations through the same path and
+   * two writers for one thing is the bug shape this codebase keeps finding.
+   */
   async acceptPlaydate(req, res) {
-    const { playdateId } = req.params;
-    const userId = req.userId;
-
     try {
-      let playdate = await Playdate.findById(playdateId)
-        .populate({
-          path: "participants",
-          populate: { path: "pets" },
-        })
-        .populate({
-          path: "creator",
-          populate: { path: "pets" },
-        });
-
-      if (!playdate) {
-        return res.status(404).json({ message: "Playdate not found" });
-      }
-
-      // Anyone with a playdate id could accept somebody else's invitation, and
-      // doing so added them to it.
-      const isInvited = playdate.participants.some((participant) =>
-        participant._id.equals(userId)
-      );
-      if (!isInvited) {
-        return res.status(403).json({ message: "You were not invited to this" });
-      }
-      if (String(playdate.creator._id) === String(userId)) {
-        return res.status(400).json({ message: "You organised this one" });
-      }
-      if (playdate.status !== "pending") {
-        return res
-          .status(409)
-          .json({ message: `This playdate is already ${playdate.status}` });
-      }
-
-      playdate.status = "accepted";
-      playdate.modifiedDate = new Date();
-
-      const acceptersFirstPetName =
-        (await User.findById(userId).populate("pets")).pets[0]?.name ||
-        "Unknown Pet";
-      const requestSenderFirstPetName =
-        playdate.creator.pets[0]?.name || "Unknown Pet";
-
-      const content = `Hey ${requestSenderFirstPetName}! Your playdate with ${acceptersFirstPetName} has been confirmed.`;
-
-      // `sendPlaydateNotification` is Express middleware (req, res, next). Called
-      // with a plain object it threw "next is not a function" on every accept,
-      // which the catch below turned into a 500 - so accepting a playdate
-      // always failed even once the record was right.
-      await playdate.save();
-
-      // `notify` stores the row, emits the socket event and sends the push, so
-      // the three cannot come apart and the wording is written once.
-      await notify({
-        content,
-        recipientId: playdate.creator._id,
-        type: "playdateAccepted",
-        creatorId: userId,
-        petName: acceptersFirstPetName,
-        data: { playdateId },
-      });
-
+      await playdates.respond({ userId: req.userId, playdateId: req.params.playdateId, decision: "accept" });
       return res.status(200).json({ message: "Playdate accepted" });
     } catch (error) {
-      console.error("Error accepting playdate:", error);
-      return res
-        .status(500)
-        .json({ message: "Error accepting playdate", error });
+      return answer(res, error, "Error accepting playdate");
     }
   },
 
   async cancelPlaydate(req, res) {
-    const { playdateId } = req.params;
-    const { message } = req.body;
-    const userId = req.userId;
-
     try {
-      const playdate = await Playdate.findByIdAndUpdate(
-        playdateId,
-        {
-          status: "cancelled",
-          cancellationReason: message || "No specific reason provided",
-        },
-        { new: true }
-      )
-        .populate({
-          path: "participants",
-          populate: { path: "pets" },
-        })
-        .populate({
-          path: "creator",
-          populate: { path: "pets" },
-        });
-
-      if (!playdate) {
-        return res.status(404).json({ message: "Playdate not found" });
-      }
-
-      // Prepare notifications for participants
-      const notifications = playdate.participants
-        .filter((participant) => participant._id.toString() !== userId)
-        .map((participant) => {
-          const participantPetName = participant.pets[0]?.name || "Unknown Pet";
-          const cancellingUserPetName =
-            playdate.creator.pets[0]?.name || "Unknown Pet";
-
-          // `sendPushNotification(notificationData)` passed the payload where
-          // the recipient goes, so Mongoose was asked to cast an object to an
-          // ObjectId and threw - inside the `Promise.all` of the cancel path,
-          // which made every cancellation a 500.
-          return notify({
-            content: `${participantPetName}, a playdate with ${cancellingUserPetName} has been cancelled. Reason: ${
-              message || "no reason given"
-            }`,
-            recipientId: participant._id,
-            type: "playdateCancelled",
-            creatorId: userId,
-            petName: cancellingUserPetName,
-            data: { playdateId },
-          });
-        });
-
-      // Notify the creator if not the one cancelling
-      if (playdate.creator._id.toString() !== userId) {
-        const cancellingUserPetName =
-          playdate.creator.pets[0]?.name || "Unknown Pet";
-        notifications.push(
-          notify({
-            content: `Your playdate involving ${cancellingUserPetName} has been cancelled. Reason: ${
-              message || "no reason given"
-            }`,
-            recipientId: playdate.creator._id,
-            type: "playdateCancelled",
-            creatorId: userId,
-            petName: cancellingUserPetName,
-            data: { playdateId },
-          })
-        );
-      }
-
-      await Promise.all(notifications);
-
+      await playdates.cancel({
+        userId: req.userId,
+        playdateId: req.params.playdateId,
+        reason: req.body?.message,
+      });
       return res.json({ message: "Playdate cancelled successfully" });
     } catch (error) {
-      console.error("Error cancelling playdate:", error);
-      return res
-        .status(500)
-        .json({ message: "Error cancelling playdate", error });
+      return answer(res, error, "Error cancelling playdate");
     }
   },
 
   async declinePlaydate(req, res) {
-    const { playdateId } = req.params;
     try {
-      let playdate = await Playdate.findById(playdateId);
-      if (!playdate) {
-        return res.status(404).json({ message: "Playdate not found" });
-      }
-
-      if (!playdate.participants.some((participant) => String(participant) === String(req.userId))) {
-        return res.status(403).json({ message: "You were not invited to this" });
-      }
-      if (playdate.status !== "pending") {
-        return res
-          .status(409)
-          .json({ message: `This playdate is already ${playdate.status}` });
-      }
-
-      playdate.status = "declined";
-      playdate.modifiedDate = new Date();
-      await playdate.save();
-
-      // Declining silently left the organiser waiting on an answer that had
-      // already been given.
-      await notify({
-        content: "Your playdate request was declined.",
-        recipientId: playdate.creator,
-        type: "playdateDeclined",
-        creatorId: req.userId,
-        data: { playdateId: playdate._id },
-      });
-
+      await playdates.respond({ userId: req.userId, playdateId: req.params.playdateId, decision: "decline" });
       return res.status(200).json({ message: "Playdate declined" });
     } catch (error) {
-      return res
-        .status(500)
-        .json({ message: "Error declining playdate", error });
+      return answer(res, error, "Error declining playdate");
     }
   },
   /**

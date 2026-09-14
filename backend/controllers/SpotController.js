@@ -3,6 +3,8 @@ const SpotConversation = require("../models/SpotConversation");
 const client = require("../services/spot/client");
 const quota = require("../services/spot/quota");
 const runner = require("../services/spot/runner");
+const context = require("../services/spot/context");
+const { NOTE_LIMIT, NOTE_LENGTH } = context;
 const { emitToUser } = require("../services/realtime");
 
 /**
@@ -17,6 +19,7 @@ const { emitToUser } = require("../services/realtime");
 
 /** Five per owner: starting a sixth deletes the oldest. */
 const MAX_CONVERSATIONS = 5;
+const USAGE_WINDOW_DAYS = 30;
 const MAX_TEXT = 2000;
 /** Base64 of a compressed phone photo; comfortably inside express.json's 1MB. */
 const MAX_IMAGE_CHARS = 900_000;
@@ -36,8 +39,22 @@ const publicMessage = (message) => ({
   attachments: message.attachments ?? [],
   flagged: Boolean(message.flagged),
   source: message.source ?? "model",
+  usage: message.usage ?? null,
   createdAt: message.createdAt,
 });
+
+/** The SDK's usage, as the row stores it. */
+const usageFor = (usage = {}) => ({
+  model: usage.model ?? client.model(),
+  input: usage.input_tokens ?? 0,
+  output: usage.output_tokens ?? 0,
+  cacheRead: usage.cache_read_input_tokens ?? 0,
+  cacheWrite: usage.cache_creation_input_tokens ?? 0,
+  iterations: usage.iterations ?? 0,
+  ms: usage.ms ?? 0,
+});
+
+const publicNote = (note) => ({ _id: note._id, text: note.text, createdAt: note.createdAt });
 
 const publicConversation = (conversation, { withMessages = false } = {}) => ({
   _id: conversation._id,
@@ -237,6 +254,7 @@ const SpotController = {
           history,
           text,
           image,
+          context: await context.gather(req.userId, { utcOffsetMinutes: req.body?.utcOffsetMinutes }),
           readChats: Boolean(user.spot?.readChats),
           onDelta: (delta) =>
             emitToUser(req.userId, "spotDelta", {
@@ -259,6 +277,7 @@ const SpotController = {
         text: answer.text,
         blocks: answer.blocks,
         source: "model",
+        usage: usageFor(answer.usage),
       });
       conversation.messages.push(reply);
       await conversation.save();
@@ -287,6 +306,100 @@ const SpotController = {
         typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : undefined;
       await conversation.save();
       res.json({ flagged: true });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  /** What Spot remembers for this owner, newest last. */
+  async getNotes(req, res) {
+    if (!client.isEnabled()) return disabled(res);
+    try {
+      const user = await User.findById(req.userId).select("spotNotes").lean();
+      res.json((user?.spotNotes ?? []).map(publicNote));
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  /** Adds a note in the owner's words; also how the app undoes a "forget". */
+  async addNote(req, res) {
+    if (!client.isEnabled()) return disabled(res);
+    try {
+      const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0, NOTE_LENGTH) : "";
+      if (!text) return res.status(400).json({ message: "Say what to remember", code: "EMPTY_NOTE" });
+      const user = await User.findById(req.userId).select("spotNotes");
+      if (!user) return res.status(404).json({ message: "No profile for this account yet" });
+      if (user.spotNotes.length >= NOTE_LIMIT) {
+        return res.status(409).json({ message: `Spot keeps up to ${NOTE_LIMIT} notes. Forget one first.`, code: "NOTES_FULL" });
+      }
+      user.spotNotes.push({ text });
+      await user.save();
+      res.status(201).json(publicNote(user.spotNotes[user.spotNotes.length - 1]));
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  async deleteNote(req, res) {
+    if (!client.isEnabled()) return disabled(res);
+    try {
+      const result = await User.updateOne(
+        { _id: req.userId, "spotNotes._id": req.params.noteId },
+        { $pull: { spotNotes: { _id: req.params.noteId } } }
+      );
+      if (result.matchedCount === 0) return notFound(res);
+      res.json({ removed: true });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  /**
+   * What Spot has cost, across accounts, over the last thirty days: turns,
+   * tokens, and an estimate in dollars from the price table in `client.js`.
+   * Safe only because its route carries `requireModerator`; `GUARDED_READS`
+   * checks that it still does.
+   */
+  async getUsage(req, res) {
+    try {
+      const since = new Date(Date.now() - USAGE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+      const rows = await SpotConversation.aggregate([
+        { $unwind: "$messages" },
+        { $match: { "messages.usage": { $exists: true }, "messages.createdAt": { $gte: since } } },
+        {
+          $group: {
+            _id: "$messages.usage.model",
+            turns: { $sum: 1 },
+            owners: { $addToSet: "$owner" },
+            input: { $sum: "$messages.usage.input" },
+            output: { $sum: "$messages.usage.output" },
+            cacheRead: { $sum: "$messages.usage.cacheRead" },
+            cacheWrite: { $sum: "$messages.usage.cacheWrite" },
+            iterations: { $sum: "$messages.usage.iterations" },
+            ms: { $sum: "$messages.usage.ms" },
+          },
+        },
+      ]);
+      const models = rows.map((row) => {
+        const usage = { input: row.input, output: row.output, cacheRead: row.cacheRead, cacheWrite: row.cacheWrite };
+        return {
+          model: row._id,
+          turns: row.turns,
+          owners: row.owners.length,
+          ...usage,
+          iterationsPerTurn: row.turns ? Number((row.iterations / row.turns).toFixed(2)) : 0,
+          msPerTurn: row.turns ? Math.round(row.ms / row.turns) : 0,
+          estimatedUsd: client.costOf(usage, row._id),
+        };
+      });
+      res.json({
+        since,
+        days: USAGE_WINDOW_DAYS,
+        turns: models.reduce((sum, row) => sum + row.turns, 0),
+        estimatedUsd: Number(models.reduce((sum, row) => sum + (row.estimatedUsd ?? 0), 0).toFixed(4)),
+        models,
+      });
     } catch (err) {
       res.status(500).json({ message: err.message });
     }

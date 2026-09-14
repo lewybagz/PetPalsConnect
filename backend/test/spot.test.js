@@ -457,3 +457,82 @@ test("deleting the account deletes the conversations and the usage rows", async 
   assert.equal(await SpotConversation.countDocuments({ owner: alice.user._id }), 0);
   assert.equal(await SpotUsage.countDocuments({ owner: alice.user._id }), 0);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 4: the roster on the message, the cost on the row, notes, usage
+// ---------------------------------------------------------------------------
+
+test("the roster rides on the user turn, and the turn's cost lands on the answer", async () => {
+  const alice = await makeOwner("alice");
+  await User.updateOne({ _id: alice.user._id }, { $push: { spotNotes: { text: "alice-dog hates rain" } } });
+  const id = await startConversation("alice");
+
+  say("Hello.");
+  const res = await send("alice", id, { text: "hi", utcOffsetMinutes: -420 }).expect(201);
+
+  const turn = stub.requests[0].messages.at(-1);
+  assert.equal(turn.role, "user");
+  assert.equal(turn.content[0].text, "hi", "the person's words come first");
+  const note = turn.content[1].text;
+  assert.match(note, /where the owner is/);
+  assert.match(note, new RegExp(`alice-dog \\(petId ${alice.pet._id}\\): dog, Beagle, 3 years, 20 lb`));
+  assert.match(note, /alice-dog hates rain/);
+  assert.ok(!stub.requests[0].system[0].text.includes("alice"), "the system prompt stays frozen");
+
+  assert.deepEqual(res.body.message.usage, {
+    model: client.model(),
+    input: 12,
+    output: 8,
+    cacheRead: 0,
+    cacheWrite: 0,
+    iterations: 1,
+    ms: res.body.message.usage.ms,
+  });
+  const stored = await SpotConversation.findById(id).lean();
+  assert.equal(stored.messages[1].usage.input, 12);
+  assert.equal(stored.messages[0].usage, undefined, "the person's turn costs nothing");
+
+  // Turn two: the history's last message carries the second cache breakpoint.
+  say("Still here.");
+  await send("alice", id, "and again").expect(201);
+  const history = stub.requests[1].messages;
+  assert.equal(history.length, 3);
+  assert.deepEqual(history[1].content[0].cache_control, { type: "ephemeral" });
+  assert.equal(typeof history[0].content, "string");
+});
+
+test("notes are the caller's own, and the usage summary is a moderator's", async () => {
+  const alice = await makeOwner("alice");
+  await makeOwner("bob");
+  await makeOwner("mod");
+  const id = await startConversation("alice");
+  stub.script = async () => ({ text: "Noted.", calls: [{ name: "remember", input: { text: "alice-dog hates rain" } }] });
+  const res = await send("alice", id, "remember that she hates rain").expect(201);
+  const done = res.body.message.blocks.find((block) => block.type === "done");
+  assert.equal(done.undo.kind, "forget");
+
+  const mine = await request(app).get("/api/spot/notes").set(...auth("alice")).expect(200);
+  assert.equal(mine.body.length, 1);
+  assert.equal(mine.body[0].text, "alice-dog hates rain");
+  const theirs = await request(app).get("/api/spot/notes").set(...auth("bob")).expect(200);
+  assert.deepEqual(theirs.body, []);
+  await request(app).delete(`/api/spot/notes/${mine.body[0]._id}`).set(...auth("bob")).expect(404);
+  await request(app).post("/api/spot/notes").set(...auth("bob")).send({ text: "  " }).expect(400);
+  const added = await request(app).post("/api/spot/notes").set(...auth("alice")).send({ text: "vet is on 7th" }).expect(201);
+  assert.equal(added.body.text, "vet is on 7th");
+  await request(app).delete(`/api/spot/notes/${mine.body[0]._id}`).set(...auth("alice")).expect(200);
+  const after = await User.findById(alice.user._id).select("spotNotes").lean();
+  assert.deepEqual(after.spotNotes.map((note) => note.text), ["vet is on 7th"]);
+
+  await request(app).get("/api/spot/usage").set(...auth("alice")).expect(404);
+  process.env.MODERATOR_EMAILS = "mod@example.test";
+  const usage = await request(app).get("/api/spot/usage").set(...auth("mod")).expect(200);
+  assert.equal(usage.body.days, 30);
+  assert.equal(usage.body.turns, 1);
+  assert.equal(usage.body.models.length, 1);
+  assert.equal(usage.body.models[0].model, client.model());
+  assert.equal(usage.body.models[0].owners, 1);
+  assert.equal(usage.body.models[0].input, 12);
+  assert.equal(usage.body.models[0].iterationsPerTurn, 1);
+  assert.equal(usage.body.estimatedUsd, client.costOf({ input: 12, output: 8 }));
+});

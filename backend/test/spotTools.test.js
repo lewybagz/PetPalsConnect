@@ -8,6 +8,14 @@ let Pet;
 let WeightEntry;
 let HealthRecord;
 let ScheduledJob;
+let Playdate;
+let Location;
+let Friend;
+let PetMatch;
+let Favorite;
+let Notification;
+let SupportMessage;
+let blocking;
 let toolsFor;
 let WRITE_TOOLS;
 let blocksFrom;
@@ -28,6 +36,14 @@ test.before(async () => {
   WeightEntry = require("../models/WeightEntry");
   HealthRecord = require("../models/HealthRecord");
   ScheduledJob = require("../models/ScheduledJob");
+  Playdate = require("../models/Playdate");
+  Location = require("../models/Location");
+  Friend = require("../models/Friend");
+  PetMatch = require("../models/PetMatch");
+  Favorite = require("../models/Favorite");
+  Notification = require("../models/Notification");
+  SupportMessage = require("../models/SupportMessage");
+  blocking = require("../services/blocking");
   ({ toolsFor, WRITE_TOOLS } = require("../services/spot/tools"));
   ({ blocksFrom } = require("../services/spot/blocks"));
 });
@@ -69,6 +85,30 @@ const call = async (toolset, name, input = {}) => {
 };
 
 const names = (toolset) => toolset.tools.map((t) => t.name);
+
+const DAY = 24 * 60 * 60 * 1000;
+
+let parkSeq = 0;
+const makePark = () =>
+  Location.create({
+    name: `Park ${(parkSeq += 1)}`,
+    address: "1 Park Lane",
+    placeId: `spot-park-${parkSeq}`,
+    geoLocation: { type: "Point", coordinates: [-112.07, 33.45] },
+  });
+
+/** A pending playdate `organiser` set up with `invitee`. */
+const makePlaydate = async (organiser, invitee, fields = {}) =>
+  Playdate.create({
+    date: new Date(Date.now() + DAY),
+    startTime: new Date(Date.now() + DAY),
+    location: (await makePark())._id,
+    participants: [organiser.user._id, invitee.user._id],
+    petsInvolved: [organiser.pet._id, invitee.pet._id],
+    status: "pending",
+    creator: organiser.user._id,
+    ...fields,
+  });
 
 // ---------------------------------------------------------------------------
 // Reads are the caller's own
@@ -245,6 +285,11 @@ test("every write tool refuses another owner's pet and writes nothing", async ()
     intervalDays: 30,
   });
 
+  const carol = await makeOwner("carol");
+  const playdate = await makePlaydate(carol, alice);
+  await User.updateOne({ _id: alice.user._id }, { $push: { spotNotes: { text: "alice's note" } } });
+  const aliceNote = (await User.findById(alice.user._id).select("spotNotes").lean()).spotNotes[0];
+
   const inputs = {
     log_weight: { petId: String(alice.pet._id), pounds: 30 },
     remove_weight: { petId: String(alice.pet._id), entryId: String(entry._id) },
@@ -254,7 +299,17 @@ test("every write tool refuses another owner's pet and writes nothing", async ()
     // Settings are the caller's own row; the "other owner" case is that the
     // write lands on Bob and never on Alice.
     update_setting: { patch: { units: { distance: "km" } } },
+    // Bob is not on Alice and Carol's playdate.
+    respond_to_playdate: { playdateId: String(playdate._id), decision: "accept" },
+    cancel_playdate: { playdateId: String(playdate._id), reason: "rain" },
+    update_pet: { petId: String(alice.pet._id), breed: "Whippet" },
+    forget: { noteId: String(aliceNote._id) },
+    // These three are the caller's own row, like update_setting.
+    add_pet: { name: "Bob's cat", species: "cat", ageYears: 2, breed: "Tabby", weightPounds: 9 },
+    remember: { text: "bob's note" },
+    contact_support: { message: "help from bob" },
   };
+  const OWN_ROW = new Set(["update_setting", "add_pet", "remember", "contact_support"]);
 
   const untested = WRITE_TOOLS.filter((name) => !inputs[name]);
   assert.deepEqual(untested, [], `write tools with no two-account case: ${untested.join(", ")}`);
@@ -262,10 +317,22 @@ test("every write tool refuses another owner's pet and writes nothing", async ()
   const asBob = toolsFor({ userId: bob.user._id });
   for (const name of WRITE_TOOLS) {
     const result = await call(asBob, name, inputs[name]);
-    if (name !== "update_setting") {
-      assert.ok(result.error, `${name} should refuse another owner's pet`);
+    if (!OWN_ROW.has(name)) {
+      assert.ok(result.error, `${name} should refuse another owner's row`);
     }
   }
+
+  const untouched = await Playdate.findById(playdate._id).lean();
+  assert.equal(untouched.status, "pending");
+  assert.equal((await Pet.findById(alice.pet._id).lean()).breed, "Beagle");
+  const aliceAfter = await User.findById(alice.user._id).select("spotNotes pets").lean();
+  assert.equal(aliceAfter.spotNotes.length, 1);
+  assert.equal(aliceAfter.pets.length, 1);
+  const bobAfter = await User.findById(bob.user._id).select("spotNotes pets").lean();
+  assert.deepEqual(bobAfter.spotNotes.map((note) => note.text), ["bob's note"]);
+  assert.equal(bobAfter.pets.length, 2, "Bob's new cat is Bob's");
+  assert.equal(await SupportMessage.countDocuments({ email: "bob@example.test" }), 1);
+  assert.equal(await SupportMessage.countDocuments({ email: "alice@example.test" }), 0);
 
   const pet = await Pet.findById(alice.pet._id).select("weight").lean();
   assert.equal(pet.weight, 20, "Alice's pet is untouched");
@@ -275,7 +342,11 @@ test("every write tool refuses another owner's pet and writes nothing", async ()
   assert.equal(alice2.units.distance, "mi");
   const bob2 = await User.findById(bob.user._id).select("units").lean();
   assert.equal(bob2.units.distance, "km");
-  assert.equal(blocksFrom(asBob.effects).filter((b) => b.type === "done").length, 1, "only Bob's own setting change is a done block");
+  assert.equal(
+    blocksFrom(asBob.effects).filter((b) => b.type === "done").length,
+    OWN_ROW.size,
+    "only Bob's own writes are done blocks"
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -286,4 +357,260 @@ test("my_chats is not in the tool list until readChats is on", async () => {
   const alice = await makeOwner("alice");
   assert.equal(names(toolsFor({ userId: alice.user._id })).includes("my_chats"), false);
   assert.equal(names(toolsFor({ userId: alice.user._id, readChats: true })).includes("my_chats"), true);
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4 reads
+// ---------------------------------------------------------------------------
+
+test("weight_history describes the change over 30 and 90 days, and only for your own pet", async () => {
+  const alice = await makeOwner("alice");
+  const bob = await makeOwner("bob");
+  const at = (daysAgo, pounds) =>
+    WeightEntry.create({ pet: alice.pet._id, owner: alice.user._id, creator: alice.user._id, pounds, takenAt: new Date(Date.now() - daysAgo * DAY) });
+  await at(100, 20);
+  await at(40, 24);
+  await at(0, 26);
+
+  const result = await call(toolsFor({ userId: alice.user._id }), "weight_history", { petId: String(alice.pet._id) });
+  assert.deepEqual(result.entries.map((entry) => entry.pounds), [26, 24, 20]);
+  assert.equal(result.change30Days, 2);
+  assert.equal(result.change90Days, 6);
+
+  const theirs = await call(toolsFor({ userId: bob.user._id }), "weight_history", { petId: String(alice.pet._id) });
+  assert.ok(theirs.error);
+});
+
+test("my_pals and my_matches name the other pet and owner, and a block removes them", async () => {
+  const alice = await makeOwner("alice");
+  const bob = await makeOwner("bob");
+  const carol = await makeOwner("carol");
+  await Friend.create({
+    status: true,
+    user1: alice.user._id,
+    user2: bob.user._id,
+    pet1: alice.pet._id,
+    pet2: bob.pet._id,
+    creator: alice.user._id,
+  });
+  await PetMatch.create({
+    matchScore: 0.8,
+    pet1: alice.pet._id,
+    pet2: carol.pet._id,
+    relevantToUser: alice.user._id,
+    creator: alice.user._id,
+  });
+  // A match that is somebody else's must not show.
+  await PetMatch.create({
+    matchScore: 0.9,
+    pet1: bob.pet._id,
+    pet2: alice.pet._id,
+    relevantToUser: bob.user._id,
+    creator: bob.user._id,
+  });
+
+  const toolset = toolsFor({ userId: alice.user._id });
+  const pals = await call(toolset, "my_pals");
+  assert.deepEqual(pals.pals, [
+    { username: "bob", petId: String(bob.pet._id), petName: "bob-dog", breed: "Beagle", species: "dog" },
+  ]);
+  const matches = await call(toolset, "my_matches");
+  assert.deepEqual(matches.matches, [
+    { petId: String(carol.pet._id), petName: "carol-dog", breed: "Beagle", species: "dog", username: "carol" },
+  ]);
+
+  await blocking.block({ ownerId: alice.user._id, blockedUserId: carol.user._id });
+  assert.deepEqual((await call(toolset, "my_matches")).matches, []);
+});
+
+test("my_saved_places, whats_new and care_picks are the caller's own", async () => {
+  const alice = await makeOwner("alice");
+  const bob = await makeOwner("bob", { specialNeeds: "diabetic" });
+  const park = await makePark();
+  await Favorite.create({ user: alice.user._id, location: park._id, creator: alice.user._id });
+  await Notification.create({ content: "Rex wants a playdate", recipient: alice.user._id, type: "playdate" });
+  await Notification.create({ content: "sam accepted", recipient: alice.user._id, type: "friendAccepted" });
+  await Notification.create({ content: "old", recipient: alice.user._id, type: "message", readStatus: true });
+  await Notification.create({ content: "not yours", recipient: bob.user._id, type: "playdate" });
+
+  const toolset = toolsFor({ userId: alice.user._id });
+  const saved = await call(toolset, "my_saved_places");
+  assert.deepEqual(saved.places.map((place) => place.name), [park.name]);
+
+  const unread = await call(toolset, "whats_new");
+  assert.deepEqual(unread.unread.map((item) => item.kind).sort(), ["friendAccepted", "playdate"]);
+  const playdate = unread.unread.find((item) => item.kind === "playdate");
+  assert.equal(playdate.screen, "PlaydateDetails", "named, though a row carries no id to open it with");
+  // Only a screen that needs no id becomes a chip; the rest are named for the model.
+  const links = blocksFrom(toolset.effects).find((block) => block.type === "links");
+  const screens = links.items.map((chip) => chip.screen);
+  assert.ok(screens.includes("FriendsList"));
+  assert.ok(!screens.includes("PlaydateDetails"));
+
+  const picks = await call(toolset, "care_picks", { petId: String(alice.pet._id) });
+  assert.equal(picks.seeAVet, false);
+  assert.ok(picks.shelves.length > 0);
+  const web = blocksFrom(toolset.effects).find((block) => block.type === "web");
+  assert.ok(web.items.length > 0 && web.items.length <= 8);
+  assert.ok(web.items.every((item) => item.url.startsWith("https://") && item.label));
+
+  // A special-needs note means the vet shelf, exactly as the hub does it.
+  const asBob = toolsFor({ userId: bob.user._id });
+  const bobPicks = await call(asBob, "care_picks", { petId: String(bob.pet._id) });
+  assert.equal(bobPicks.seeAVet, true);
+  assert.deepEqual(bobPicks.shelves, []);
+  assert.equal(blocksFrom(asBob.effects).find((block) => block.type === "web"), undefined);
+
+  assert.ok((await call(asBob, "care_picks", { petId: String(alice.pet._id) })).error);
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4 writes
+// ---------------------------------------------------------------------------
+
+test("respond_to_playdate answers an invitation once, tells the organiser, and offers no undo", async () => {
+  const alice = await makeOwner("alice");
+  const bob = await makeOwner("bob");
+  const playdate = await makePlaydate(bob, alice);
+
+  const toolset = toolsFor({ userId: alice.user._id });
+  const result = await call(toolset, "respond_to_playdate", { playdateId: String(playdate._id), decision: "accept" });
+  assert.equal(result.status, "accepted");
+  assert.equal(result.notified, "@bob");
+  assert.equal((await Playdate.findById(playdate._id).lean()).status, "accepted");
+  assert.equal(await Notification.countDocuments({ recipient: bob.user._id, type: "playdateAccepted" }), 1);
+
+  const done = blocksFrom(toolset.effects).find((block) => block.type === "done");
+  assert.equal(done.kind, "respondToPlaydate");
+  assert.equal(done.undo, null, "the organiser has been told; nothing to take back");
+  assert.match(done.summary, /@bob has been told/);
+
+  const again = await call(toolset, "respond_to_playdate", { playdateId: String(playdate._id), decision: "decline" });
+  assert.match(again.error, /already accepted/);
+  // The organiser cannot accept their own invitation through Spot either.
+  const asBob = toolsFor({ userId: bob.user._id });
+  assert.match((await call(asBob, "respond_to_playdate", { playdateId: String(playdate._id), decision: "accept" })).error, /organised/);
+});
+
+test("cancel_playdate is for people on it, and tells everyone else", async () => {
+  const alice = await makeOwner("alice");
+  const bob = await makeOwner("bob");
+  const carol = await makeOwner("carol");
+  const playdate = await makePlaydate(bob, alice);
+
+  assert.ok((await call(toolsFor({ userId: carol.user._id }), "cancel_playdate", { playdateId: String(playdate._id) })).error);
+  assert.equal((await Playdate.findById(playdate._id).lean()).status, "pending");
+
+  const toolset = toolsFor({ userId: alice.user._id });
+  const result = await call(toolset, "cancel_playdate", { playdateId: String(playdate._id), reason: "rain" });
+  assert.equal(result.status, "cancelled");
+  const stored = await Playdate.findById(playdate._id).lean();
+  assert.equal(stored.cancellationReason, "rain");
+  assert.equal(await Notification.countDocuments({ recipient: bob.user._id, type: "playdateCancelled" }), 1);
+  assert.equal(await Notification.countDocuments({ recipient: alice.user._id, type: "playdateCancelled" }), 0, "not told about your own cancellation");
+  assert.equal(blocksFrom(toolset.effects).find((block) => block.type === "done").undo, null);
+});
+
+test("update_pet changes only what was passed and the undo carries the old values", async () => {
+  const alice = await makeOwner("alice");
+  const toolset = toolsFor({ userId: alice.user._id });
+
+  const result = await call(toolset, "update_pet", { petId: String(alice.pet._id), breed: "Whippet", ageYears: 5 });
+  assert.deepEqual(result.updated, ["breed", "age"]);
+  const pet = await Pet.findById(alice.pet._id).lean();
+  assert.equal(pet.breed, "Whippet");
+  assert.equal(pet.age, 5);
+  assert.equal(pet.weight, 20, "untouched");
+
+  const done = blocksFrom(toolset.effects).find((block) => block.type === "done");
+  assert.deepEqual(done.undo, { kind: "restorePet", petId: String(alice.pet._id), set: { breed: "Beagle", age: 3 } });
+  assert.ok((await call(toolset, "update_pet", { petId: String(alice.pet._id) })).error, "nothing to change");
+  assert.ok((await call(toolset, "update_pet", { petId: String(alice.pet._id), activityLevel: "frantic" })).error, "the schema's enum holds");
+});
+
+test("add_pet lands on the profile through the onboarding path, and a dog needs a weight", async () => {
+  const alice = await makeOwner("alice");
+  const toolset = toolsFor({ userId: alice.user._id });
+
+  const refused = await call(toolset, "add_pet", { name: "Rex", species: "dog", ageYears: 2 });
+  assert.match(refused.error, /needs a breed and a weight/);
+
+  const result = await call(toolset, "add_pet", { name: "Miso", species: "cat", ageYears: 0, breed: "Tabby", weightPounds: 4.5 });
+  assert.equal(result.name, "Miso");
+  const owner = await User.findById(alice.user._id).select("pets").lean();
+  assert.equal(owner.pets.length, 2);
+  assert.ok(owner.pets.some((id) => String(id) === result.petId));
+  const pet = await Pet.findById(result.petId).lean();
+  assert.equal(String(pet.owner), String(alice.user._id));
+  assert.equal(pet.species, "cat");
+
+  const blocks = blocksFrom(toolset.effects);
+  assert.equal(blocks.find((block) => block.type === "done").undo, null, "Spot never removes a pet");
+  assert.ok(blocks.find((block) => block.type === "links").items.some((chip) => chip.label === "Open Miso"));
+
+  // A bird needs no weight.
+  assert.equal((await call(toolset, "add_pet", { name: "Kiwi", species: "bird", ageYears: 1 })).name, "Kiwi");
+});
+
+test("remember and forget keep a capped list in the owner's words, each undoing the other", async () => {
+  const alice = await makeOwner("alice");
+  const toolset = toolsFor({ userId: alice.user._id });
+
+  const kept = await call(toolset, "remember", { text: "  alice-dog is scared of thunderstorms  " });
+  assert.equal(kept.notes, 1);
+  const stored = await User.findById(alice.user._id).select("spotNotes").lean();
+  assert.equal(stored.spotNotes[0].text, "alice-dog is scared of thunderstorms");
+  const done = blocksFrom(toolset.effects).find((block) => block.type === "done");
+  assert.deepEqual(done.undo, { kind: "forget", noteId: kept.noteId });
+
+  for (let i = 1; i < 20; i += 1) await call(toolset, "remember", { text: `note ${i}` });
+  assert.match((await call(toolset, "remember", { text: "one too many" })).error, /full \(20\)/);
+
+  const forgot = await call(toolset, "forget", { noteId: kept.noteId });
+  assert.equal(forgot.removed, true);
+  const last = blocksFrom(toolset.effects).filter((block) => block.type === "done").at(-1);
+  assert.deepEqual(last.undo, { kind: "remember", text: "alice-dog is scared of thunderstorms" });
+  assert.ok((await call(toolset, "forget", { noteId: kept.noteId })).error, "gone is gone");
+});
+
+test("contact_support files a ticket under the caller's own name and email", async () => {
+  const alice = await makeOwner("alice");
+  const toolset = toolsFor({ userId: alice.user._id });
+  const result = await call(toolset, "contact_support", { message: "The map is blank" });
+  assert.equal(result.sent, true);
+  const ticket = await SupportMessage.findOne({ email: "alice@example.test" }).lean();
+  assert.equal(ticket.name, "alice");
+  assert.equal(ticket.message, "The map is blank");
+  assert.equal(blocksFrom(toolset.effects).find((block) => block.type === "done").undo, null);
+});
+
+test("plan_playdate prefills the form and sends nothing", async () => {
+  const alice = await makeOwner("alice");
+  const bob = await makeOwner("bob");
+  const park = await makePark();
+  const toolset = toolsFor({ userId: alice.user._id });
+
+  const result = await call(toolset, "plan_playdate", {
+    theirPetId: String(bob.pet._id),
+    myPetId: String(alice.pet._id),
+    locationId: String(park._id),
+    date: "2026-10-03",
+    time: "10:00",
+  });
+  assert.deepEqual(result.prefilled, {
+    petId: String(bob.pet._id),
+    myPetId: String(alice.pet._id),
+    locationId: String(park._id),
+    presetDate: "2026-10-03",
+    presetTime: "10:00",
+  });
+  const chip = blocksFrom(toolset.effects).find((block) => block.type === "links").items[0];
+  assert.equal(chip.screen, "SchedulePlaydate");
+  assert.equal(chip.label, "Review and send to bob-dog");
+  assert.equal(await Playdate.countDocuments({}), 0, "nothing was created");
+  assert.equal(await Notification.countDocuments({}), 0, "nobody was told");
+
+  assert.ok((await call(toolset, "plan_playdate", { theirPetId: String(alice.pet._id) })).error, "your own pet is not a guest");
+  assert.ok((await call(toolset, "plan_playdate", { theirPetId: String(bob.pet._id), date: "next friday" })).error);
+  assert.ok((await call(toolset, "plan_playdate", { theirPetId: String(bob.pet._id), myPetId: String(bob.pet._id) })).error, "myPetId has to be yours");
 });

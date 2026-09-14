@@ -41,6 +41,25 @@ const SpotMessageSchema = new Schema({
   flagReason: { type: String, maxlength: 500 },
   /** Whether the model was called for this turn, or software answered. */
   source: { type: String, enum: ["model", "software"], default: "model" },
+  /**
+   * What the turn cost, on the answer it produced. Read by the moderator
+   * usage summary; the decision about a cheaper model is made from a month of
+   * these rather than from a guess.
+   */
+  usage: {
+    type: new Schema(
+      {
+        model: String,
+        input: Number,
+        output: Number,
+        cacheRead: Number,
+        cacheWrite: Number,
+        iterations: Number,
+        ms: Number,
+      },
+      { _id: false }
+    ),
+  },
   createdAt: { type: Date, default: Date.now },
 });
 

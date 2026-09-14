@@ -1,5 +1,4 @@
 const SupportMessage = require("../models/SupportMessage");
-const nodemailer = require("nodemailer");
 
 /**
  * Support tickets.
@@ -20,36 +19,7 @@ const nodemailer = require("nodemailer");
  * gone.
  */
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_EMAIL,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
-
-/** Email is optional in the same way payments are: no credentials, no send. */
-const emailEnabled = () =>
-  Boolean(process.env.GMAIL_EMAIL && process.env.GMAIL_APP_PASSWORD);
-
-const sendEmail = async ({ name, email, message }) => {
-  if (!emailEnabled()) {
-    console.warn("[support] Email not configured; skipping confirmation");
-    return;
-  }
-
-  try {
-    await transporter.sendMail({
-      from: process.env.GMAIL_EMAIL,
-      to: email,
-      subject: "Support Request Received",
-      text: `Thank you for contacting us, ${name}. Your message: "${message}"`,
-    });
-  } catch (error) {
-    // A confirmation that could not be sent must never lose the ticket.
-    console.error("Error sending email:", error);
-  }
-};
+const { emailEnabled, sendConfirmation } = require("../services/supportMail");
 
 const SupportMessageController = {
   async getAllSupportMessages(req, res) {
@@ -98,7 +68,7 @@ const SupportMessageController = {
 
     try {
       await SupportMessage.create({ name, email, message });
-      await sendEmail({ name, email, message });
+      await sendConfirmation({ name, email, message });
 
       res.status(201).json({ message: "Support message sent and saved." });
     } catch (error) {

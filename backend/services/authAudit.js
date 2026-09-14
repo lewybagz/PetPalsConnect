@@ -60,6 +60,8 @@ const GUARDED_READS = {
   "StoreController.fulfilOrder": "requireModerator",
   // Answers people flagged as wrong or harmful, across accounts, for review.
   "SpotController.getFlagged": "requireModerator",
+  // Tokens and cost across accounts, for the person paying the bill.
+  "SpotController.getUsage": "requireModerator",
 };
 
 /**
