@@ -11,6 +11,11 @@ and that first run is also what verifies `fallbacks: "default"` and the
 `server-side-fallback-2026-07-01` beta header against the real API - a 400
 on the first case means the beta name has moved.
 
+**Phase 4 is planned in [spot-phase-4.plan.md](spot-phase-4.plan.md)**:
+more reads and writes, the roster in the message instead of a tool call,
+a history window with a cache breakpoint, usage on the row, the Recent
+conversations list the app never had, and Spot's notes.
+
 Todo 8 as built: the "Spot can read your chats" row is the last section of
 the Privacy screen, off by default, with the sentence that makes it consent
 ("Their messages are sent to Anthropic when it does") in the row itself;
