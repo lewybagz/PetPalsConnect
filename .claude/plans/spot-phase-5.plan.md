@@ -1,6 +1,7 @@
 # Spot, phase 5: noticing, voice, cards, and the router in waiting
 
-Status: **planned, not started.** Written 2026-09-14 against `f2e9af4`, on
+Status: **todos 1 to 7 built** - backend `72625c9`, app `3a28e96` (2026-09-14);
+todo 8 needs a phone and is owed. Written 2026-09-14 against `f2e9af4`, on
 `feat/store-and-tracking`. Follows [spot-phase-4.plan.md](spot-phase-4.plan.md)
 (all eight todos built, three live evals, the last one clean). Brief from
 Lewy: keep going with Spot.
@@ -219,17 +220,45 @@ flowchart LR
 
 | id | content | status |
 | --- | --- | --- |
-| 1 | `noticed.js` pure function with tests for each kind and the priority; `GET /api/spot/noticed`; contract picks up the route | pending |
-| 2 | Home card: fetch, render, tap prefills Spot; `HomeScreen.test.js` cases; board | pending |
-| 3 | `cards` block: three tools emit, `blocksFrom` folds, `spotBlocks.test.js`; app renderer, types, board | pending |
-| 4 | `route.js` with vocabulary tests; runner `model` param; `SPOT_MODEL_LIGHT` in env example; eval `--model` | pending |
-| 5 | Voice in: module + plugin + web stub, `dictation.js` with the disclosure, mic button with interim results, error copy, tests; privacy sentence | pending |
-| 6 | Voice out, step one: `expo-speech` read-aloud control, hands-free mode, tests | pending |
-| 7 | Voice out, step two: adapters (OpenAI default, ElevenLabs), audio route behind `SPOT_VOICE_PROVIDER`, `expo-audio` playback, limiter, privacy row, two-account test on the route | pending |
-| 8 | Development build, on-device pass of the mic and the voices, eval run, boards reviewed, plan record | pending |
+| 1 | `noticed.js` pure function with tests for each kind and the priority; `GET /api/spot/noticed`; contract picks up the route | done `72625c9` + `3a28e96` |
+| 2 | Home card: fetch, render, tap prefills Spot; `HomeScreen.test.js` cases; board | done `72625c9` + `3a28e96` |
+| 3 | `cards` block: three tools emit, `blocksFrom` folds, `spotBlocks.test.js`; app renderer, types, board | done `72625c9` + `3a28e96` |
+| 4 | `route.js` with vocabulary tests; runner `model` param; `SPOT_MODEL_LIGHT` in env example; eval `--model` | done `72625c9` + `3a28e96` |
+| 5 | Voice in: module + plugin + web stub, `dictation.js` with the disclosure, mic button with interim results, error copy, tests; privacy sentence | done `3a28e96` (7: backend in `72625c9`) |
+| 6 | Voice out, step one: `expo-speech` read-aloud control, hands-free mode, tests | done `3a28e96` (7: backend in `72625c9`) |
+| 7 | Voice out, step two: adapters (OpenAI default, ElevenLabs), audio route behind `SPOT_VOICE_PROVIDER`, `expo-audio` playback, limiter, privacy row, two-account test on the route | done `3a28e96` (7: backend in `72625c9`) |
+| 8 | Development build, on-device pass of the mic and the voices, eval run, boards reviewed, plan record | owed: needs a development build and a phone |
 
 1 to 4 are one session on the backend with the app halves of 2 and 3; 5 to
 8 are the second, and 8 needs a phone.
+
+As built, and what differs from the plan above:
+
+- The audio route is a `GET` with the bearer token, not a `POST`: `expo-audio`
+  takes headers on a remote source, so the player opens the route directly
+  and `expo-file-system` was not needed after all (installed, then removed).
+- The Spot limiter's "GETs are free" rule has one exception, the audio route,
+  through `rateLimits.countsAgainstSpot`, tested.
+- Playdate invitations the caller organised are never a notice; the test
+  proves it with two invitations in opposite directions.
+- The dictation error table is looked up with `Object.hasOwn`, because a
+  `null` for "aborted" fell through `??` to the generic sentence - the test
+  written to fail on exactly that did.
+- No `home-noticed` board: the fixture routes carry `/api/spot/noticed`, so
+  the existing `home` boards show the card. `spot-cards` is new. Reviewed
+  in both themes; the mic is in every Spot board's composer.
+- The gallery stub for the speech module never listens; the mic there
+  raises "not-allowed" like a phone that said no.
+- Counts: backend 795 tests green, app 843 green, both device bundles
+  export with the new native modules.
+
+Owed (todo 8): `eas build --profile development`, then on the phone -
+dictate in a noisy place and watch the interim text; deny the permission
+and read the sentence; a hands-free exchange; read one answer with the
+phone's voice and, with `SPOT_VOICE_PROVIDER=openai` and a key, with the AI
+voice; tap a pal's card. Then `npm run eval:spot` on the new prompt-free
+build (nothing in the prompt changed this phase, so the last clean run
+stands until the router is switched on, when `--model` runs first).
 
 ## Env vars and dashboard prerequisites
 
