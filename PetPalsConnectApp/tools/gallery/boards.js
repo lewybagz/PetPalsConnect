@@ -611,7 +611,7 @@ export const BOARDS = [
     id: "support",
     label: "Help & support",
     routes: ROUTES,
-    render: () => <HelpSupportScreen />,
+    render: () => <HelpSupportScreen navigation={navigation} />,
   },
   {
     id: "review",
@@ -859,6 +859,12 @@ export const BOARDS = [
     // Five are kept; for a phase nothing on screen could open them.
     routes: ROUTES,
     render: () => <SpotScreen navigation={navigation} route={{ params: { panel: "recent" } }} />,
+  },
+  {
+    id: "spot-reminders",
+    label: "Spot - the reminders it has set",
+    routes: ROUTES,
+    render: () => <SpotScreen navigation={navigation} route={{ params: { panel: "reminders" } }} />,
   },
   {
     id: "spot-notes",

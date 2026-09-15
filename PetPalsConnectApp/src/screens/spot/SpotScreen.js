@@ -27,7 +27,9 @@ import {
   createConversation,
   deleteConversation,
   deleteNote,
+  deleteReminder,
   fetchConversation,
+  fetchReminders,
   fetchSpotStatus,
   flagSpotMessage,
   giveSpotConsent,
@@ -108,6 +110,7 @@ const SpotScreen = ({ navigation, route }) => {
   const [panel, setPanel] = useState(route?.params?.panel ?? null);
   const [recent, setRecent] = useState(null);
   const [notes, setNotes] = useState(null);
+  const [remindersList, setRemindersList] = useState(null);
   // Voice. `listening` while the phone transcribes; `handsFree` once a
   // question came in by voice, so the answer is read back and the mic
   // re-arms - the car-park case. Typing turns it off. `speakingId` is the
@@ -172,8 +175,8 @@ const SpotScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (!panel || !status?.enabled) return undefined;
     let cancelled = false;
-    const load = panel === "recent" ? listConversations : listNotes;
-    const set = panel === "recent" ? setRecent : setNotes;
+    const load = { recent: listConversations, notes: listNotes, reminders: fetchReminders }[panel];
+    const set = { recent: setRecent, notes: setNotes, reminders: setRemindersList }[panel];
     load()
       .then((rows) => {
         if (!cancelled) set(rows);
@@ -486,6 +489,18 @@ const SpotScreen = ({ navigation, route }) => {
     [conversationId, toast]
   );
 
+  const removeReminder = useCallback(
+    async (id) => {
+      try {
+        await deleteReminder(id);
+        setRemindersList((rows) => (rows ?? []).filter((row) => row.reminderId !== id));
+      } catch {
+        toast.error("Couldn't cancel that.");
+      }
+    },
+    [toast]
+  );
+
   const removeNote = useCallback(
     async (id) => {
       try {
@@ -561,12 +576,15 @@ const SpotScreen = ({ navigation, route }) => {
         {iconButton("bookmark-outline", "What Spot remembers", "spot-open-notes", () =>
           setPanel((current) => (current === "notes" ? null : "notes"))
         )}
+        {iconButton("alarm-outline", "Reminders from Spot", "spot-open-reminders", () =>
+          setPanel((current) => (current === "reminders" ? null : "reminders"))
+        )}
       </View>
 
       {panel ? (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={tailwind("px-lg pb-lg")} testID={`spot-panel-${panel}`}>
           <View style={tailwind("flex-row items-center justify-between mb-sm")}>
-            <Text variant="title">{panel === "recent" ? "Recent" : "What Spot remembers"}</Text>
+            <Text variant="title">{{ recent: "Recent", notes: "What Spot remembers", reminders: "Reminders" }[panel]}</Text>
             {iconButton("close-outline", "Close", "spot-panel-close", () => setPanel(null))}
           </View>
           {panel === "recent" ? (
@@ -597,6 +615,36 @@ const SpotScreen = ({ navigation, route }) => {
                       </Pressable>
                       {iconButton("trash-outline", "Delete conversation", `spot-delete-${row._id}`, () =>
                         removeConversation(row._id)
+                      )}
+                    </View>
+                  </Card>
+                ))
+              )}
+            </>
+          ) : panel === "reminders" ? (
+            <>
+              <Text tone="muted" style={tailwind("mb-md")}>
+                Reminders you asked Spot for. Each one is a notification at its time; tapping it opens Spot.
+              </Text>
+              {remindersList === null ? (
+                <ActivityIndicator color={tokens.primary} />
+              ) : remindersList.length === 0 ? (
+                <Text tone="muted" testID="spot-reminders-empty">
+                  {'Nothing set. Try "remind me on Friday to book the booster".'}
+                </Text>
+              ) : (
+                remindersList.map((reminder) => (
+                  <Card key={reminder.reminderId} testID={`spot-reminder-${reminder.reminderId}`} style={tailwind("mb-sm")}>
+                    <View style={tailwind("flex-row items-center")}>
+                      <View style={tailwind("flex-1")}>
+                        <Text weight="600">{reminder.text}</Text>
+                        <Text variant="caption" tone="faint">
+                          {new Date(reminder.runAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                          {reminder.repeat ? ` · repeats ${reminder.repeat}` : ""}
+                        </Text>
+                      </View>
+                      {iconButton("close-circle-outline", "Cancel reminder", `spot-cancel-${reminder.reminderId}`, () =>
+                        removeReminder(reminder.reminderId)
                       )}
                     </View>
                   </Card>

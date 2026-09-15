@@ -545,7 +545,7 @@ export interface Article {
 export type SpotBlock =
   | { type: "links"; items: { screen: string; params: Record<string, string>; label: string }[] }
   | { type: "done"; kind: string; summary: string; undo: { kind: string; [key: string]: unknown } | null }
-  | { type: "contacts"; items: EmergencyContact[] }
+  | { type: "contacts"; title?: string; items: EmergencyContact[] }
   /** Retailer searches from the picks table, opened in the browser. */
   | { type: "web"; items: { label: string; url: string }[] }
   /** An article, a place or a pal's pet: a picture, a subtitle, and the tap the chip had. */
@@ -553,6 +553,25 @@ export type SpotBlock =
       type: "cards";
       items: { title: string; subtitle: string | null; image: string | null; chip: { screen: string; params: Record<string, string>; label: string } }[];
     };
+
+/** A reminder Spot set: a scheduler job the owner can list and cancel. */
+export interface SpotReminder {
+  reminderId: string;
+  text: string;
+  question: string;
+  runAt: IsoDate;
+  repeat: "daily" | "weekly" | "monthly" | null;
+  petId: string | null;
+}
+
+/** One entry of the help table both the help screen and Spot read. */
+export interface HelpEntry {
+  id: string;
+  topic: string;
+  question: string;
+  answer: string;
+  screen: string | null;
+}
 
 /** One thing Spot noticed, computed by software: a sentence and the question a tap asks. */
 export interface SpotNotice {

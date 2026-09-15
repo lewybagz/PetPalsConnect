@@ -154,19 +154,25 @@ const Web = ({ items = [] }) => {
   );
 };
 
-const Contacts = ({ items = [] }) => {
+/**
+ * Numbers to ring. Without a title it is the helpline card, drawn in the
+ * danger tone; with one ("Your saved places") it is a calm card for the
+ * person's own vet - same rows, same tap, different urgency.
+ */
+const Contacts = ({ items = [], title }) => {
   const tailwind = useTailwind();
   const tokens = useTokens();
   const call = useCallback((phone) => {
     Linking.openURL(`tel:${phone.replace(/[^0-9+]/g, "")}`).catch(() => {});
   }, []);
+  const urgent = !title;
 
   return (
-    <Card testID="spot-contacts" style={tailwind("mt-sm border-danger")}>
+    <Card testID={urgent ? "spot-contacts" : "spot-own-contacts"} style={tailwind(urgent ? "mt-sm border-danger" : "mt-sm")}>
       <View style={tailwind("flex-row items-center mb-xs")}>
-        <Ionicons name="call-outline" size={20} color={tokens.danger} />
+        <Ionicons name="call-outline" size={20} color={urgent ? tokens.danger : tokens.primary} />
         <Text variant="title" style={tailwind("ml-sm")}>
-          Ring somebody now
+          {title ?? "Ring somebody now"}
         </Text>
       </View>
       {items.map((contact) => (
@@ -196,7 +202,7 @@ const Block = ({ block, onNavigate, onUndo }) => {
     case "done":
       return <Done block={block} onUndo={onUndo} />;
     case "contacts":
-      return <Contacts items={block.items} />;
+      return <Contacts items={block.items} title={block.title} />;
     case "web":
       return <Web items={block.items} />;
     case "cards":

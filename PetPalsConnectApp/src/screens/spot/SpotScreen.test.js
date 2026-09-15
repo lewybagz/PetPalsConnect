@@ -14,6 +14,8 @@ import {
   deleteConversation,
   listNotes,
   deleteNote,
+  fetchReminders,
+  deleteReminder,
 } from "../../api/spot";
 import { addWeight, removeWeight } from "../../api/weight";
 import * as Speech from "expo-speech";
@@ -36,6 +38,8 @@ jest.mock("../../api/spot", () => ({
   deleteConversation: jest.fn(),
   listNotes: jest.fn(),
   deleteNote: jest.fn(),
+  fetchReminders: jest.fn(),
+  deleteReminder: jest.fn(),
 }));
 jest.mock("../../api/weight", () => ({ addWeight: jest.fn(), removeWeight: jest.fn() }));
 jest.mock("../../api/health", () => ({
@@ -619,4 +623,60 @@ test("with an AI voice configured, Read aloud streams the answer's audio with th
   await act(async () => onStatus({ didJustFinish: true }));
   await waitFor(() => expect(screen.getByText("Read aloud")).toBeTruthy());
   expect(player.remove).toHaveBeenCalled();
+});
+
+// ---------------------------------------------------------------------------
+// Phase 6: reminders you can see, and your own vet as a calm card
+// ---------------------------------------------------------------------------
+
+test("the Reminders panel lists what Spot set, says when and how often, and cancels one", async () => {
+  fetchReminders.mockResolvedValue([
+    { reminderId: "r1", text: "Book Bella's booster", question: "q", runAt: "2027-01-08T16:00:00.000Z", repeat: null, petId: "p1" },
+    { reminderId: "r2", text: "Clean the tank", question: "q", runAt: "2027-01-10T16:00:00.000Z", repeat: "weekly", petId: null },
+  ]);
+  deleteReminder.mockResolvedValue(true);
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+
+  await fireEvent.press(screen.getByTestId("spot-open-reminders"));
+  await waitFor(() => expect(screen.getByTestId("spot-reminder-r1")).toBeTruthy());
+  expect(screen.getByText("Book Bella's booster")).toBeTruthy();
+  expect(screen.getByText(/repeats weekly/)).toBeTruthy();
+  expect(screen.queryByText(/repeats none/)).toBeNull();
+
+  await fireEvent.press(screen.getByTestId("spot-cancel-r2"));
+  await waitFor(() => expect(screen.queryByTestId("spot-reminder-r2")).toBeNull());
+  expect(deleteReminder).toHaveBeenCalledWith("r2");
+  expect(screen.getByTestId("spot-reminder-r1")).toBeTruthy();
+
+  await fireEvent.press(screen.getByTestId("spot-cancel-r1"));
+  await waitFor(() => expect(screen.getByTestId("spot-reminders-empty")).toBeTruthy());
+});
+
+test("a titled contacts block is a calm card that still dials, beside the helpline's red one", async () => {
+  const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  sendSpotMessage.mockResolvedValue({
+    userMessage: { _id: "m1", role: "user", text: "ring my vet", blocks: [], attachments: [], source: "model" },
+    message: {
+      _id: "m2",
+      role: "assistant",
+      text: "Sunny Vets is saved; tap to ring them.",
+      blocks: [
+        { type: "contacts", title: "Your saved places", items: [{ id: "loc-1", name: "Sunny Vets", phone: "(602) 555-0100", note: "saved place" }] },
+        { type: "contacts", items: CONTACTS },
+      ],
+      attachments: [],
+      source: "model",
+    },
+    quota: { used: 1, limit: 3, premium: false },
+  });
+  await render(<SpotScreen navigation={navigation} route={route} />);
+  await waitFor(() => expect(screen.getByTestId("spot-empty")).toBeTruthy());
+  await type("ring my vet");
+  await waitFor(() => expect(screen.getByTestId("spot-own-contacts")).toBeTruthy());
+  expect(screen.getByText("Your saved places")).toBeTruthy();
+  expect(screen.getByTestId("spot-contacts")).toBeTruthy();
+  expect(screen.getByText("Ring somebody now")).toBeTruthy();
+  await fireEvent.press(screen.getByTestId("spot-call-loc-1"));
+  expect(open).toHaveBeenCalledWith("tel:6025550100");
 });

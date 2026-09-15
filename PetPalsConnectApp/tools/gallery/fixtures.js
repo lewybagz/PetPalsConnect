@@ -867,6 +867,37 @@ export const SPOT_NOTICED = [
   },
 ];
 
+/** Reminders Spot has set, for the panel. */
+export const SPOT_REMINDERS = [
+  {
+    reminderId: "rem-1",
+    text: `Book ${MY_PET.name}'s booster`,
+    question: `You asked me to remind you: Book ${MY_PET.name}'s booster`,
+    runAt: new Date(Date.now() + 3 * 86400e3).toISOString(),
+    repeat: null,
+    petId: MY_PET._id,
+  },
+  {
+    reminderId: "rem-2",
+    text: "Clean the tank",
+    question: "Did the tank get cleaned?",
+    runAt: new Date(Date.now() + 6 * 86400e3).toISOString(),
+    repeat: "weekly",
+    petId: null,
+  },
+];
+
+/** The help table, as the help screen and Spot read it. */
+export const HELP_TABLE = {
+  topics: { discover: "Finding pals", playdates: "Playdates", spot: "Spot" },
+  entries: [
+    { id: "deck-empty-region", topic: "discover", question: "Why is my deck empty?", answer: "PetPals is open in Arizona first. Outside it your deck is honestly empty and you are on the waitlist for your area; the care hub, records and Spot all work anywhere.", screen: "DiscoveryPreferences" },
+    { id: "premium", topic: "discover", question: "What does premium change?", answer: "Premium widens the deck: more dogs to meet and a wider range. The plan screen shows the price for your store.", screen: "ChoosePlan" },
+    { id: "playdate-accept", topic: "playdates", question: "Who can accept a playdate?", answer: "Only the owner who was invited, and only once. Declining tells the organiser straight away.", screen: "MyPlaydates" },
+    { id: "spot-reminders", topic: "spot", question: "Can Spot remind me of things?", answer: "Yes. Say when, and it sends a notification then, once or daily, weekly or monthly; a day with no time is nine in the morning.", screen: null },
+  ],
+};
+
 /** A conversation whose answers carry cards: articles, then pals. */
 export const SPOT_CARDS = {
   _id: "conv-4",
@@ -1034,6 +1065,8 @@ export const ROUTES = {
   "/api/spot/conversations/conv-3": SPOT_ACTIONS,
   "/api/spot/conversations/conv-4": SPOT_CARDS,
   "/api/spot/noticed": SPOT_NOTICED,
+  "/api/spot/reminders": SPOT_REMINDERS,
+  "/api/petcare/help": HELP_TABLE,
   "/api/spot/conversations": [SPOT_ACTIONS, SPOT_CONVERSATION].map(({ messages, ...row }) => ({
     ...row,
     messageCount: messages.length,
