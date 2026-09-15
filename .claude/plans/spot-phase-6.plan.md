@@ -1,7 +1,8 @@
 # Spot, phase 6: later, and knowing PetPals
 
-Status: **planned, not started.** Written 2026-09-14 against `09813b4`, on
-`feat/store-and-tracking`. Follows [spot-phase-5.plan.md](spot-phase-5.plan.md)
+Status: **todos 1 to 6 built** - backend `efe7635`, app `095df73`
+(2026-09-14); todo 7's eval cases are written and the run waits on the key.
+Written 2026-09-14 against `09813b4`, on `feat/store-and-tracking`. Follows [spot-phase-5.plan.md](spot-phase-5.plan.md)
 (todos 1 to 7 built; 8 owed on a phone). Brief from Lewy: "build everything
 you just suggested; I really like the idea of Spot knowing PetPals."
 
@@ -268,17 +269,41 @@ flowchart LR
 
 | id | content | status |
 | --- | --- | --- |
-| 1 | `reminders.js` with `nextRunAt` pure and tested (daily, weekly, monthly, month-end, across a DST change), `create` limits, `cancel` scoping, the handler; `cancelled` on the enum; deletion cascade with its test | pending |
-| 2 | `spotReminder` type in both tables, category and preference switch; `types.test.js` green; handler test proves the push carries `data.prefill` and a repeat re-queues once | pending |
-| 3 | Reminder routes and the three tools with two-account tests; undo kinds in `WRITE_TOOLS` and the app's `UNDO`; prompt rules for hours and the check-in | pending |
-| 4 | `appHelp.js` table written and its test (markdown, prices, "verified", unregistered screens); `GET /api/petcare/help` in `PUBLIC_READS`; `how_petpals_works` with tests on three questions | pending |
-| 5 | Phone on saved places, `contacts` title, calm variant in the app, tests | pending |
-| 6 | App: Reminders panel with tests; `api/help.js` cached like toxins; help screen fetches, groups, chips, Ask Spot; boards reshot | pending |
-| 7 | Eval cases: a reminder, the check-in over two turns, three help questions; run with the key; plan record | pending |
+| 1 | `reminders.js` with `nextRunAt` pure and tested (daily, weekly, monthly, month-end, across a DST change), `create` limits, `cancel` scoping, the handler; `cancelled` on the enum; deletion cascade with its test | done `efe7635` |
+| 2 | `spotReminder` type in both tables, category and preference switch; `types.test.js` green; handler test proves the push carries `data.prefill` and a repeat re-queues once | done `efe7635` |
+| 3 | Reminder routes and the three tools with two-account tests; undo kinds in `WRITE_TOOLS` and the app's `UNDO`; prompt rules for hours and the check-in | done `efe7635` |
+| 4 | `appHelp.js` table written and its test (markdown, prices, "verified", unregistered screens); `GET /api/petcare/help` in `PUBLIC_READS`; `how_petpals_works` with tests on three questions | done `efe7635` |
+| 5 | Phone on saved places, `contacts` title, calm variant in the app, tests | done `095df73` (5's backend in `efe7635`) |
+| 6 | App: Reminders panel with tests; `api/help.js` cached like toxins; help screen fetches, groups, chips, Ask Spot; boards reshot | done `095df73` (5's backend in `efe7635`) |
+| 7 | Eval cases: a reminder, the check-in over two turns, three help questions; run with the key; plan record | cases written; the live run is owed |
 
 Two sessions: 1 to 4 on the backend, 5 to 7 across both. Nothing here
 needs a phone; the reminder can be watched firing with `scheduler.drain()`
 in a test and on the development build from phase 5.
+
+As built, and where it differs from the plan:
+
+- **Daylight saving.** The plan said a weekly reminder holds 09:00 across a
+  DST change. It cannot: only an offset is stored, not a zone, so the UTC
+  hour holds and the local hour moves by an hour until the reminder is set
+  again. The test asserts the UTC hour holds and the `ponytail:` comment
+  names the ceiling; a zone name is the upgrade.
+- The series successor is found by `text` and `owner` among running jobs,
+  so a failure to notify retries the same job rather than forking a series.
+- `remind_me` reads the offset off the ISO timestamp the model sends, so a
+  repeat keeps the owner's clock without a separate parameter.
+- The help table has 36 entries across eight topics. Two entries (picks,
+  insurance) point at no screen because the care hub is a tab, not a route.
+  `Chats`, `Profile`, `AccountInformation` and `LegalPolicies` joined the
+  screens Spot may open so the help chips resolve.
+- Counts: backend 815 green with both audits; app 852 green; contract suites
+  green with the new route and types. Boards `spot-reminders` and `support`
+  reviewed in both themes.
+
+Owed (todo 7): `npm run eval:spot` on this build; the four new cases are a
+reminder, and three help questions graded on a screen being offered and no
+price being named. The check-in over two turns is proven through the stub
+in `spot.test.js`.
 
 ## Env vars and dashboard prerequisites
 
