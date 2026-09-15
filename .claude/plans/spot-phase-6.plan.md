@@ -292,8 +292,12 @@ As built, and where it differs from the plan:
   so a failure to notify retries the same job rather than forking a series.
 - `remind_me` reads the offset off the ISO timestamp the model sends, so a
   repeat keeps the owner's clock without a separate parameter.
-- The help table has 36 entries across eight topics. Two entries (picks,
-  insurance) point at no screen because the care hub is a tab, not a route.
+- The help table has 103 entries across nine topics (expanded from 36 on
+  2026-09-14; every number in an answer is asserted against the code that holds
+  it, and an entry may not point at a screen that needs a pet or chat id, since
+  the help screen's Open sends none). Entries about the care hub, the
+  waitlist, a suspended account and an unavailable tracker point at no screen:
+  the hub is a tab, not a route, and the other three sit outside `AppStack`.
   `Chats`, `Profile`, `AccountInformation` and `LegalPolicies` joined the
   screens Spot may open so the help chips resolve.
 - Counts: backend 815 green with both audits; app 852 green; contract suites
