@@ -7,6 +7,7 @@ const context = require("../services/spot/context");
 const noticed = require("../services/spot/noticed");
 const route = require("../services/spot/route");
 const voice = require("../services/spot/voice");
+const reminders = require("../services/spot/reminders");
 const { Readable } = require("node:stream");
 const { NOTE_LIMIT, NOTE_LENGTH } = context;
 const { emitToUser } = require("../services/realtime");
@@ -363,6 +364,41 @@ const SpotController = {
       Readable.fromWeb(spoken.body).pipe(res);
     } catch (err) {
       if (err.status) return res.status(err.status).json({ message: err.message });
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  /** Reminders Spot has set for this owner, soonest first. */
+  async getReminders(req, res) {
+    if (!client.isEnabled()) return disabled(res);
+    try {
+      res.json(await reminders.list(req.userId));
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  /** Sets one; also how the app undoes a cancel. */
+  async addReminder(req, res) {
+    if (!client.isEnabled()) return disabled(res);
+    try {
+      const { text, question, at, repeat, petId, utcOffsetMinutes } = req.body ?? {};
+      res.status(201).json(
+        await reminders.create({ ownerId: req.userId, text, question, at, repeat: repeat || null, petId, utcOffsetMinutes })
+      );
+    } catch (err) {
+      if (err.status) return res.status(err.status).json({ message: err.message });
+      res.status(500).json({ message: err.message });
+    }
+  },
+
+  async deleteReminder(req, res) {
+    if (!client.isEnabled()) return disabled(res);
+    try {
+      await reminders.cancel({ ownerId: req.userId, reminderId: req.params.reminderId });
+      res.json({ removed: true });
+    } catch (err) {
+      if (err.status === 404) return notFound(res);
       res.status(500).json({ message: err.message });
     }
   },

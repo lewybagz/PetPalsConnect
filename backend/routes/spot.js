@@ -13,6 +13,9 @@ router.get("/flagged", requireModerator, SpotController.getFlagged);
 router.get("/usage", requireModerator, SpotController.getUsage);
 
 router.get("/noticed", SpotController.getNoticed);
+router.get("/reminders", SpotController.getReminders);
+router.post("/reminders", SpotController.addReminder);
+router.delete("/reminders/:reminderId", SpotController.deleteReminder);
 router.get("/notes", SpotController.getNotes);
 router.post("/notes", SpotController.addNote);
 router.delete("/notes/:noteId", SpotController.deleteNote);

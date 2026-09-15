@@ -38,6 +38,8 @@ export const TYPES = {
   orderShipped: { screen: "OrderDetail", param: "orderId" },
   trackingShared: { screen: "PetTracking", param: "petId" },
   petProfileIncomplete: { screen: "PetDetails", param: "petId" },
+  // A reminder the person asked Spot for; the tap opens Spot with the question in the box.
+  spotReminder: { screen: "Spot", param: "prefill" },
   general: { screen: "Notifications", param: null },
 };
 

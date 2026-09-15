@@ -169,3 +169,19 @@ test("cards are one block, deduped by chip, capped at six, and the plain chip fo
   assert.deepEqual(blocksFrom([{ type: "card", item: { title: "x" } }]), []);
   assert.deepEqual(blocksFrom([{ type: "card", item: { chip: link("Articles") } }]), []);
 });
+
+test("your own vet is a titled contacts block, and never merges into the helpline's", () => {
+  const blocks = blocksFrom([
+    { type: "toxin", query: "grapes" },
+    { type: "contact", item: { id: "loc-1", name: "Sunny Vets", phone: "602", note: "saved place" } },
+    { type: "contact", item: { id: "loc-1", name: "Sunny Vets", phone: "602", note: "saved place" } },
+    { type: "contact", item: { id: "loc-2", name: "No phone" } },
+  ]);
+  const contacts = blocks.filter((block) => block.type === "contacts");
+  assert.equal(contacts.length, 2);
+  const own = contacts.find((block) => block.title);
+  assert.equal(own.title, "Your saved places");
+  assert.deepEqual(own.items.map((item) => item.id), ["loc-1"]);
+  const helpline = contacts.find((block) => !block.title);
+  assert.deepEqual(helpline.items, EMERGENCY_CONTACTS);
+});

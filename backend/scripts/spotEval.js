@@ -57,6 +57,10 @@ const CASES = [
   { kind: "write", text: "we got a kitten called Miso, 9 weeks old, a tabby, about 2 pounds" },
   { kind: "write", text: "accept the playdate invitation from sam" },
   { kind: "link", text: "set up a playdate with sam-dog next Saturday at 10 in the morning", screen: "SchedulePlaydate" },
+  { kind: "write", text: "remind me on Friday to book Bella's booster" },
+  { kind: "help", text: "why is my deck empty?", expect: [/Arizona|range|dog/i], never: /\$\s?\d/ },
+  { kind: "help", text: "what does premium do?", expect: [/wider|more dogs|deck|range/i], never: /\$\s?\d|\d+(\.\d+)? (a|per) (month|year)/i },
+  { kind: "help", text: "how do I delete my account?", expect: [/settings|account/i] },
   { kind: "health", text: "what is wrong with him?", photo: "animal.jpg" },
   { kind: "toxin", text: "he just ate some of this", photo: "packet.jpg" },
 ];
@@ -126,6 +130,10 @@ const problemsWith = (testCase, result) => {
       problems.push(`took ${result.usage?.iterations} iterations for a question the roster answers`);
     }
     if (testCase.never?.test(result.text)) problems.push("hedged a plain fact towards a vet");
+  }
+  if (testCase.kind === "help") {
+    if (testCase.never?.test(result.text)) problems.push("named a price, which the store owns");
+    if (!result.blocks.some((block) => block.type === "links")) problems.push("no screen offered for an app question");
   }
   if (testCase.kind === "link") {
     const links = result.blocks.find((block) => block.type === "links");

@@ -141,6 +141,25 @@ export const deleteNote = async (noteId) => {
   return Boolean(data?.removed);
 };
 
+/** Reminders Spot has set for this account, soonest first. */
+export const fetchReminders = async () => {
+  const { data } = await api.get("/api/spot/reminders").catch(rethrow);
+  return Array.isArray(data) ? data : [];
+};
+
+/** Sets one; also how a cancel is undone. */
+export const createReminder = async ({ text, question, at, repeat, petId }) => {
+  const { data } = await api
+    .post("/api/spot/reminders", { text, question, at, repeat: repeat ?? null, petId: petId ?? null, utcOffsetMinutes: utcOffsetMinutes() })
+    .catch(rethrow);
+  return data;
+};
+
+export const deleteReminder = async (reminderId) => {
+  const { data } = await api.delete(`/api/spot/reminders/${reminderId}`).catch(rethrow);
+  return Boolean(data?.removed);
+};
+
 /** Puts a pet's fields back; the same call `PetPhotosScreen` makes to save photos. */
 const restorePet = async (petId, set) => {
   const { data } = await api.put(`/api/pets/${petId}`, set);
@@ -178,6 +197,8 @@ export const UNDO = {
   restorePet: ({ petId, set }) => restorePet(petId, set),
   forget: ({ noteId }) => deleteNote(noteId),
   remember: ({ text }) => addNote(text),
+  cancelReminder: ({ reminderId }) => deleteReminder(reminderId),
+  restoreReminder: ({ text, question, at, repeat, petId }) => createReminder({ text, question, at, repeat, petId }),
 };
 
 /** Runs the undo on a `done` block, or throws if the kind is unknown. */

@@ -636,3 +636,28 @@ test("with a light model set, the software router picks the model per turn and t
   await send("alice", fresh, "when is my next playdate?").expect(201);
   assert.equal(stub.requests.at(-1).model, client.model(), "unset means the default for everything");
 });
+
+test("a check-in the person said yes to becomes a reminder whose tap asks how the pet is", async () => {
+  const alice = await makeOwner("alice");
+  const id = await startConversation("alice");
+  say("Vomiting since morning needs your vet today. Want me to check in tomorrow morning?");
+  const first = await send("alice", id, { text: "she has been vomiting since this morning", utcOffsetMinutes: -420 }).expect(201);
+  assert.ok(!first.body.message.blocks.some((block) => block.type === "done"), "nothing set until a yes");
+
+  const tomorrow = new Date();
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const at = `${tomorrow.toISOString().slice(0, 10)}T09:00:00-07:00`;
+  stub.script = async () => ({
+    text: "I'll check in tomorrow morning.",
+    calls: [{ name: "remind_me", input: { text: "check in on alice-dog", at, question: "How is alice-dog today?", petId: String(alice.pet._id) } }],
+  });
+  const second = await send("alice", id, "yes please").expect(201);
+  const done = second.body.message.blocks.find((block) => block.type === "done");
+  assert.equal(done.kind, "remindMe");
+  assert.equal(done.undo.kind, "cancelReminder");
+
+  const ScheduledJob = require("../models/ScheduledJob");
+  const job = await ScheduledJob.findById(done.undo.reminderId).lean();
+  assert.equal(job.payload.question, "How is alice-dog today?");
+  assert.equal(job.runAt.toISOString(), `${tomorrow.toISOString().slice(0, 10)}T16:00:00.000Z`, "09:00 in Phoenix");
+});

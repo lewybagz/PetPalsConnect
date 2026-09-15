@@ -102,6 +102,15 @@ const TYPES = {
     screen: "PetDetails",
     param: "petId",
   },
+  /**
+   * A reminder the person asked Spot for, or a check-in they said yes to.
+   * The tap opens Spot with the follow-up question already in the box.
+   */
+  spotReminder: {
+    title: "Spot",
+    screen: "Spot",
+    param: "prefill",
+  },
   general: {
     title: "PetPals Connect",
     screen: "Notifications",
@@ -157,6 +166,9 @@ const CATEGORY_OF = {
   // "everything else" - somebody who has muted matches has said enough.
   petProfileIncomplete: "matches",
   trackingShared: "friendRequests",
+  // Asked for by name, so it gets a switch of its own rather than riding on
+  // "everything else".
+  spotReminder: "spotReminders",
   general: "appUpdates",
 };
 
@@ -167,6 +179,7 @@ const CATEGORIES = [
   { key: "playdateReminders", label: "Playdates and reminders" },
   { key: "friendRequests", label: "Friend requests" },
   { key: "appUpdates", label: "Everything else" },
+  { key: "spotReminders", label: "Spot's reminders" },
 ];
 
 const isType = (type) => Object.prototype.hasOwnProperty.call(TYPES, type);

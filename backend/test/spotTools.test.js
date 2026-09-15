@@ -289,6 +289,11 @@ test("every write tool refuses another owner's pet and writes nothing", async ()
   const playdate = await makePlaydate(carol, alice);
   await User.updateOne({ _id: alice.user._id }, { $push: { spotNotes: { text: "alice's note" } } });
   const aliceNote = (await User.findById(alice.user._id).select("spotNotes").lean()).spotNotes[0];
+  const aliceReminder = await require("../services/spot/reminders").create({
+    ownerId: alice.user._id,
+    text: "alice's reminder",
+    at: new Date(Date.now() + 86400000).toISOString(),
+  });
 
   const inputs = {
     log_weight: { petId: String(alice.pet._id), pounds: 30 },
@@ -308,8 +313,10 @@ test("every write tool refuses another owner's pet and writes nothing", async ()
     add_pet: { name: "Bob's cat", species: "cat", ageYears: 2, breed: "Tabby", weightPounds: 9 },
     remember: { text: "bob's note" },
     contact_support: { message: "help from bob" },
+    remind_me: { text: "bob's reminder", at: new Date(Date.now() + 86400000).toISOString() },
+    cancel_reminder: { reminderId: String(aliceReminder.reminderId) },
   };
-  const OWN_ROW = new Set(["update_setting", "add_pet", "remember", "contact_support"]);
+  const OWN_ROW = new Set(["update_setting", "add_pet", "remember", "contact_support", "remind_me"]);
 
   const untested = WRITE_TOOLS.filter((name) => !inputs[name]);
   assert.deepEqual(untested, [], `write tools with no two-account case: ${untested.join(", ")}`);
@@ -328,6 +335,9 @@ test("every write tool refuses another owner's pet and writes nothing", async ()
   const aliceAfter = await User.findById(alice.user._id).select("spotNotes pets").lean();
   assert.equal(aliceAfter.spotNotes.length, 1);
   assert.equal(aliceAfter.pets.length, 1);
+  const ScheduledJob = require("../models/ScheduledJob");
+  assert.equal((await ScheduledJob.findById(aliceReminder.reminderId).lean()).status, "pending", "Alice's reminder stands");
+  assert.equal(await ScheduledJob.countDocuments({ "payload.owner": String(bob.user._id), status: "pending" }), 1, "Bob's reminder is Bob's");
   const bobAfter = await User.findById(bob.user._id).select("spotNotes pets").lean();
   assert.deepEqual(bobAfter.spotNotes.map((note) => note.text), ["bob's note"]);
   assert.equal(bobAfter.pets.length, 2, "Bob's new cat is Bob's");
@@ -642,4 +652,85 @@ test("pals, articles and places come back as cards with a photo, a subtitle and 
   const links = blocksFrom(toolset.effects).find((block) => block.type === "links");
   assert.ok(!links.items.some((chip) => chip.screen === "ArticleDetail"), "no duplicate chip beside the card");
   assert.ok(links.items.some((chip) => chip.screen === "FriendsList"), "the list chip stays");
+});
+
+// ---------------------------------------------------------------------------
+// Phase 6: later, knowing PetPals, ringing your vet
+// ---------------------------------------------------------------------------
+
+test("remind_me sets a reminder at the owner's offset with an undo, and cancel_reminder undoes back", async () => {
+  const alice = await makeOwner("alice");
+  const toolset = toolsFor({ userId: alice.user._id });
+
+  const set = await call(toolset, "remind_me", {
+    text: "book Bella's booster",
+    at: "2027-01-08T09:00:00-07:00",
+    petId: String(alice.pet._id),
+  });
+  assert.equal(new Date(set.runAt).toISOString(), "2027-01-08T16:00:00.000Z");
+  const ScheduledJob = require("../models/ScheduledJob");
+  const job = await ScheduledJob.findById(set.reminderId).lean();
+  assert.equal(job.payload.utcOffsetMinutes, -420, "the offset in the timestamp is what a repeat keeps");
+  assert.equal(job.payload.question, "You asked me to remind you: book Bella's booster");
+  const done = blocksFrom(toolset.effects).find((block) => block.type === "done");
+  assert.deepEqual(done.undo, { kind: "cancelReminder", reminderId: set.reminderId });
+
+  const listed = await call(toolset, "my_reminders");
+  assert.deepEqual(listed.reminders.map((r) => r.text), ["book Bella's booster"]);
+
+  const ended = await call(toolset, "cancel_reminder", { reminderId: set.reminderId });
+  assert.equal(ended.removed, true);
+  const last = blocksFrom(toolset.effects).filter((block) => block.type === "done").at(-1);
+  assert.equal(last.undo.kind, "restoreReminder");
+  assert.equal(last.undo.text, "book Bella's booster");
+  assert.equal(new Date(last.undo.at).toISOString(), "2027-01-08T16:00:00.000Z");
+  assert.ok((await call(toolset, "remind_me", { text: "x", at: "yesterday" })).error, "a bad time is an error the model can read");
+  assert.ok((await call(toolset, "remind_me", { text: "x", at: "2027-01-08T09:00:00-07:00", petId: "000000000000000000000000" })).error);
+});
+
+test("how_petpals_works answers from the table and offers the screen; the route serves it whole", async () => {
+  const alice = await makeOwner("alice");
+  const toolset = toolsFor({ userId: alice.user._id });
+  const result = await call(toolset, "how_petpals_works", { query: "why is my deck empty" });
+  assert.equal(result.entries[0].question, "Why is my deck empty?");
+  assert.match(result.entries[0].answer, /Arizona/);
+  const links = blocksFrom(toolset.effects).find((block) => block.type === "links");
+  assert.ok(links.items.some((chip) => chip.screen === "DiscoveryPreferences"));
+  const miss = await call(toolset, "how_petpals_works", { query: "zzzz" });
+  assert.deepEqual(miss.entries, []);
+  assert.match(miss.note, /Help & support/);
+
+  const request = require("supertest");
+  const { app } = require("../Server");
+  const res = await request(app).get("/api/petcare/help").set("Authorization", `Bearer ${harness.issueToken("alice")}`).expect(200);
+  assert.equal(res.body.entries.length, require("../services/appHelp").HELP.length);
+  assert.equal(res.body.topics.spot, "Spot");
+});
+
+test("a saved place with a phone becomes a calm contacts card; one without says why", async () => {
+  const alice = await makeOwner("alice");
+  const vet = await Location.create({
+    name: "Sunny Vets",
+    address: "2 Vet Row",
+    placeId: "vet-1",
+    phone: "(602) 555-0100",
+    categories: ["vet"],
+    geoLocation: { type: "Point", coordinates: [-112.07, 33.45] },
+  });
+  const park = await makePark();
+  await Favorite.create({ user: alice.user._id, location: vet._id, creator: alice.user._id });
+  await Favorite.create({ user: alice.user._id, location: park._id, creator: alice.user._id });
+
+  const toolset = toolsFor({ userId: alice.user._id });
+  const result = await call(toolset, "my_saved_places");
+  assert.deepEqual(
+    result.places.map((place) => [place.name, place.phone]).sort(),
+    [["Sunny Vets", "(602) 555-0100"], [park.name, null]].sort()
+  );
+  assert.match(result.note, /not been opened/);
+  const blocks = blocksFrom(toolset.effects);
+  const contacts = blocks.filter((block) => block.type === "contacts");
+  assert.equal(contacts.length, 1);
+  assert.equal(contacts[0].title, "Your saved places");
+  assert.deepEqual(contacts[0].items, [{ id: String(vet._id), name: "Sunny Vets", phone: "(602) 555-0100", note: "saved place" }]);
 });

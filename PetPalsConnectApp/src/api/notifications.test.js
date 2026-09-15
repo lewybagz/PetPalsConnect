@@ -75,3 +75,10 @@ describe("notification destinations", () => {
     expect(routeForNotification(message)).toEqual(destinationFor(message.data));
   });
 });
+
+test("a reminder from Spot opens Spot with its question in the box, from the row and from the push alike", () => {
+  const row = { type: "spotReminder", content: "book Bella's booster", data: { prefill: "You asked me to remind you: book Bella's booster" } };
+  expect(destinationFor(row)).toEqual(["Spot", { prefill: "You asked me to remind you: book Bella's booster" }]);
+  const push = { type: "spotReminder", prefill: "How is Bella today?" };
+  expect(destinationFor(push)).toEqual(["Spot", { prefill: "How is Bella today?" }]);
+});

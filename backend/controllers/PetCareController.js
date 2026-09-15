@@ -5,6 +5,7 @@ const { CATEGORIES: PICK_CATEGORIES } = require("../services/petCare/picks");
 const { CARE_CATEGORIES, OUT_CATEGORIES } = require("../services/placeCategories");
 const { EMERGENCY_CONTACTS } = require("../services/petCare/emergency");
 const toxins = require("../services/petCare/toxins");
+const appHelp = require("../services/appHelp");
 const { LOST_PET_STEPS } = require("../services/petCare/lostPet");
 const reading = require("../services/petCare/reading");
 const { DESTINATIONS } = require("../services/destinations");
@@ -95,6 +96,15 @@ const PetCareController = {
    * No user data is touched, so there is nothing to scope: it is the same
    * table for everybody, like the articles.
    */
+  /** How the app works, whole: the help screen and Spot read the same table. */
+  getHelp: async (_req, res) => {
+    try {
+      res.json({ topics: appHelp.TOPICS, entries: appHelp.all() });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  },
+
   getToxins: async (_req, res) => {
     try {
       res.json({

@@ -42,13 +42,30 @@ test("each undo goes through the ordinary API module", async () => {
   await undo({ undo: { kind: "remember", text: "Bella hates storms" } });
   expect(api.post).toHaveBeenCalledWith("/api/spot/notes", { text: "Bella hates storms" });
 
+  api.delete.mockResolvedValue({ data: { removed: true } });
+  await undo({ undo: { kind: "cancelReminder", reminderId: "r1" } });
+  expect(api.delete).toHaveBeenCalledWith("/api/spot/reminders/r1");
+
+  api.post.mockResolvedValue({ data: { reminderId: "r2" } });
+  await undo({ undo: { kind: "restoreReminder", text: "walk", question: "Walked?", at: "2027-01-08T16:00:00.000Z", repeat: "daily", petId: null } });
+  expect(api.post).toHaveBeenCalledWith("/api/spot/reminders", {
+    text: "walk",
+    question: "Walked?",
+    at: "2027-01-08T16:00:00.000Z",
+    repeat: "daily",
+    petId: null,
+    utcOffsetMinutes: expect.any(Number),
+  });
+
   await expect(undo({ undo: { kind: "explode" } })).rejects.toThrow(/Cannot undo/);
   expect(Object.keys(UNDO).sort()).toEqual([
+    "cancelReminder",
     "forget",
     "remember",
     "removeHealthRecord",
     "removeWeight",
     "restorePet",
+    "restoreReminder",
     "updateSetting",
   ]);
 });

@@ -45,6 +45,10 @@ const SCREENS = {
   },
   Map: { param: null, label: "Nearby" },
   Chat: { param: "chatId", label: "Open chat" },
+  Chats: { param: null, label: "Chats" },
+  Profile: { param: null, label: "Your profile" },
+  AccountInformation: { param: null, label: "Account" },
+  LegalPolicies: { param: null, label: "Terms and privacy" },
   GroupChat: { param: "chatId", label: "Open group" },
   FriendsList: { param: null, label: "Pals" },
   FriendRequests: { param: null, label: "Friend requests" },
@@ -82,6 +86,9 @@ const key = (chip) => `${chip.screen}:${JSON.stringify(chip.params)}`;
  *
  * - Every `toxin` effect adds the contacts, once, whatever it found: a miss
  *   is an answer and it still ends at a phone number.
+ * - A `contact` effect (a saved place with a phone) is its own contacts
+ *   block with a title, so "your vet" is drawn calmly and the helpline red
+ *   stays the helpline's.
  * - `link` effects are deduped and gathered into one `links` block.
  * - `web` effects (a retailer search from the picks table) are deduped by url
  *   into one `web` block, capped, and the app opens them in the browser.
@@ -99,6 +106,7 @@ const blocksFrom = (effects = []) => {
   const chips = new Map();
   const web = new Map();
   const cards = new Map();
+  const own = new Map();
   let contacts = false;
 
   for (const effect of effects) {
@@ -107,6 +115,7 @@ const blocksFrom = (effects = []) => {
     if (effect.type === "card" && effect.item?.chip && effect.item.title && cards.size < CARD_LIMIT) {
       cards.set(key(effect.item.chip), effect.item);
     }
+    if (effect.type === "contact" && effect.item?.phone && effect.item.name) own.set(effect.item.id, effect.item);
     if (effect.type === "web" && effect.item?.url && web.size < WEB_LIMIT) web.set(effect.item.url, effect.item);
     if (effect.type === "done") {
       blocks.push({
@@ -122,6 +131,7 @@ const blocksFrom = (effects = []) => {
   if (cards.size > 0) blocks.push({ type: "cards", items: [...cards.values()] });
   if (chips.size > 0) blocks.push({ type: "links", items: [...chips.values()] });
   if (web.size > 0) blocks.push({ type: "web", items: [...web.values()] });
+  if (own.size > 0) blocks.push({ type: "contacts", title: "Your saved places", items: [...own.values()] });
   if (contacts) blocks.push({ type: "contacts", items: EMERGENCY_CONTACTS });
 
   return blocks;

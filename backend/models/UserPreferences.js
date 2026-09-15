@@ -29,6 +29,9 @@ const UserPreferencesSchema = new Schema({
     playdateReminders: { type: Boolean, default: true },
     friendRequests: { type: Boolean, default: true },
     appUpdates: { type: Boolean, default: true },
+    // Reminders the person asked Spot for. Their own switch: muting matches
+    // or messages must not silence a thing they set by name.
+    spotReminders: { type: Boolean, default: true },
   },
 
   /**

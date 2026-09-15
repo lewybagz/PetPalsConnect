@@ -35,6 +35,8 @@ const pets = require("../pets");
 const recommend = require("../petCare/recommend");
 const notificationTypes = require("../notificationTypes");
 const supportMail = require("../supportMail");
+const reminders = require("./reminders");
+const appHelp = require("../appHelp");
 const { SCREENS, link } = require("./blocks");
 const { NOTE_LIMIT, NOTE_LENGTH } = require("./context");
 
@@ -757,13 +759,19 @@ const toolsFor = ({ userId, readChats = false }) => {
       inputSchema: object({}),
       run: guard(async () => {
         const rows = await Favorite.find({ user: userId, location: { $ne: null } })
-          .populate("location", "name address categories")
+          .populate("location", "name address categories phone")
           .sort({ createdDate: -1 })
           .limit(10)
           .lean();
         const saved = rows.filter((row) => row.location);
         for (const row of saved.slice(0, 5)) {
           effects.push({ type: "link", chip: link("PotentialPlaydateLocation", row.location._id, row.location.name) });
+          if (row.location.phone) {
+            effects.push({
+              type: "contact",
+              item: { id: String(row.location._id), name: row.location.name, phone: row.location.phone, note: "saved place" },
+            });
+          }
         }
         return json({
           places: saved.map((row) => ({
@@ -771,7 +779,11 @@ const toolsFor = ({ userId, readChats = false }) => {
             name: row.location.name,
             address: row.location.address ?? null,
             categories: row.location.categories ?? [],
+            phone: row.location.phone ?? null,
           })),
+          note: saved.some((row) => !row.location.phone)
+            ? "A saved place with no phone here has not been opened in the app yet; opening it fetches the number."
+            : null,
         });
       }),
     }),
@@ -1014,6 +1026,90 @@ const toolsFor = ({ userId, readChats = false }) => {
       }),
     }),
 
+
+    betaTool({
+      name: "remind_me",
+      description:
+        "Sets a reminder the owner asked for: a notification at that time whose tap opens you with the question. `at` is an ISO date-time with the owner's offset, resolved from the note's clock - a day with no time is 09:00, 'tomorrow morning' is 09:00, 'tonight' is 20:00; ask once if no day was named. Repeats daily, weekly or monthly, or not at all. For a check-in the owner said yes to, pass question as 'How is <pet> today?'. Never set one the owner did not ask for.",
+      inputSchema: object(
+        {
+          text: { type: "string", minLength: 1, maxLength: 140, description: "What to remind them of, in their words" },
+          at: { type: "string", description: "ISO 8601 date-time with offset" },
+          repeat: { type: "string", enum: reminders.REPEATS },
+          question: { type: "string", maxLength: 200, description: "What the tap asks you; omit for a plain reminder" },
+          petId: { type: "string" },
+        },
+        ["text", "at"]
+      ),
+      run: guard(async ({ text, at, repeat, question, petId }) => {
+        if (petId) await weights.ownPet(userId, petId, "owner");
+        const offset = -new Date(at).getTimezoneOffset();
+        const match = String(at).match(/([+-])(\d{2}):?(\d{2})$/);
+        const utcOffsetMinutes = match ? (match[1] === "-" ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3])) : offset;
+        const reminder = await reminders.create({ ownerId: userId, text, question, at, repeat, petId, utcOffsetMinutes });
+        done({
+          kind: "remindMe",
+          summary: `Reminder set for ${new Date(reminder.runAt).toISOString().slice(0, 16).replace("T", " ")}${reminder.repeat ? `, ${reminder.repeat}` : ""} (UTC): ${reminder.text}`,
+          undo: { kind: "cancelReminder", reminderId: reminder.reminderId },
+        });
+        return json({ reminderId: reminder.reminderId, runAt: reminder.runAt, repeat: reminder.repeat });
+      }),
+    }),
+
+    betaTool({
+      name: "my_reminders",
+      description: "The owner's pending reminders, soonest first, with ids for cancel_reminder.",
+      inputSchema: object({}),
+      run: guard(async () => json({ reminders: await reminders.list(userId) })),
+    }),
+
+    betaTool({
+      name: "cancel_reminder",
+      description: "Ends one of the owner's reminders, or a whole repeating series, by reminderId.",
+      inputSchema: object({ reminderId: { type: "string" } }, ["reminderId"]),
+      run: guard(async ({ reminderId }) => {
+        const ended = await reminders.cancel({ ownerId: userId, reminderId });
+        done({
+          kind: "cancelReminder",
+          summary: `Cancelled the reminder: ${ended.text}`,
+          undo: {
+            kind: "restoreReminder",
+            text: ended.text,
+            question: ended.question,
+            at: ended.runAt,
+            repeat: ended.repeat,
+            petId: ended.petId,
+          },
+        });
+        return json({ removed: true });
+      }),
+    }),
+
+    betaTool({
+      name: "how_petpals_works",
+      description:
+        "PetPals' own help table: how the app works, in its own words - the deck, matches, premium (what it changes, never a price), playdates, chats, blocking, health records, photos, the care hub, the account, and you. Call it for any question about using PetPals, say what it says in your words, and offer the screen.",
+      inputSchema: object({ query: { type: "string", minLength: 1 } }, ["query"]),
+      run: guard(async ({ query }) => {
+        const entries = appHelp.search(query);
+        for (const entry of entries) {
+          if (entry.screen && entry.screen !== "Spot") {
+            const chip = link(entry.screen);
+            if (chip) effects.push({ type: "link", chip });
+          }
+        }
+        return json({
+          entries: entries.map((entry) => ({
+            topic: appHelp.TOPICS[entry.topic],
+            question: entry.question,
+            answer: entry.answer,
+            screen: entry.screen,
+          })),
+          note: entries.length ? null : "Nothing in the help table matches. Say so, and offer the Help & support screen.",
+        });
+      }),
+    }),
+
     betaTool({
       name: "open_screen",
       description: `Offers the person a button to a screen in the app. Screens: ${Object.keys(SCREENS).join(", ")}. Pass the id the screen needs (petId, articleId, playdateId, orderId, locationId, userId) as value.`,
@@ -1096,6 +1192,8 @@ const WRITE_TOOLS = [
   "remember",
   "forget",
   "contact_support",
+  "remind_me",
+  "cancel_reminder",
 ];
 
 module.exports = { toolsFor, WRITE_TOOLS };

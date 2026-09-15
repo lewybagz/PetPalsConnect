@@ -99,6 +99,9 @@ const deleteAccountData = async (user, firebaseUid) => {
   // What was said to Spot, and how much of it. Photos were never stored.
   await SpotConversation.deleteMany({ owner: userId });
   await SpotUsage.deleteMany({ owner: userId });
+  // Reminders are scheduler jobs keyed by owner in their payload; the job
+  // model carries no ref, so the cascade test cannot force this line.
+  await require("./spot/reminders").removeAllFor(userId);
 
   // A location history has no reason to outlive the account, and neither do
   // the shares - in either direction: a share *to* this account is a row that

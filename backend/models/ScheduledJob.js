@@ -18,7 +18,9 @@ const scheduledJobSchema = new mongoose.Schema(
     runAt: { type: Date, required: true, index: true },
     status: {
       type: String,
-      enum: ["pending", "running", "completed", "failed"],
+      // `cancelled` is a reminder its owner ended; it keeps its history and
+      // the drain never claims it.
+      enum: ["pending", "running", "completed", "failed", "cancelled"],
       default: "pending",
       index: true,
     },
