@@ -26,6 +26,10 @@ Standing rule, unchanged: never assign to AI what software can do. The card
 is software, the router is software, the phone transcribes, and the first
 voice out is the phone's.
 
+**Phase 6 is planned in [spot-phase-6.plan.md](spot-phase-6.plan.md)**:
+reminders and check-ins through the scheduler, a help table Spot and the
+help screen share, and ringing your own vet.
+
 ## What each piece is, and why this shape
 
 ### 1. "Spot noticed" on Home
