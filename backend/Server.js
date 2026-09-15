@@ -61,6 +61,17 @@ app.use("/api", limits.general);
 // below, or that mount would claim the path first.
 app.use("/api/tracking/ingest", require("./routes/trackingIngest"));
 
+// The marketing site's waitlist form. Outside `authenticate` because the
+// caller is a website visitor with no account - that is the entire reason it
+// exists separately from /api/waitlist, whose row is a ref to a `User`.
+//
+// This is the only unauthenticated write a *person* can reach (the other two
+// are a webhook and a device), so it is the narrowest thing here: one POST,
+// no read path at all, everything validated in the controller, and a tight
+// per-address limit on the route itself. Registered before the authenticated
+// /api/waitlist mount below, or that mount would claim the path first.
+app.use("/api/waitlist/public", require("./routes/publicWaitlist"));
+
 // ---------------------------------------------------------------------------
 // Health check - unauthenticated, used by hosting platforms and smoke tests.
 // ---------------------------------------------------------------------------
@@ -277,7 +288,7 @@ const start = async () => {
   cron.schedule("30 4 * * *", async () => {
     try {
       const result = await retention.purgeExpired();
-      if (result.reports || result.support || result.orders) {
+      if (result.reports || result.support || result.orders || result.waitlist) {
         console.log("[cron] retention:", result);
       }
     } catch (error) {

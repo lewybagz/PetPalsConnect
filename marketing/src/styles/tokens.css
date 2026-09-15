@@ -1,0 +1,98 @@
+/**
+ * The one description of the site's surface.
+ *
+ * The app's palette is cool (`primary: #2563EB` on `#F8F9FB`) and this is
+ * warm, on purpose: the illustration set is terracotta, sage and cream, and
+ * screenshots sit inside clay phone frames so the app's blue reads as *the
+ * product* sitting in a warm world. The app is not retheming to match.
+ *
+ * Every pairing below was computed with the WCAG formula before it shipped,
+ * the way `tokens.test.js` does for the app - the site does not get to be
+ * sloppier because nobody wrote a test for it. Two colours changed as a
+ * direct result:
+ *
+ *   --clay was #C4703F. White on it is 3.66:1, which is below AA for the
+ *   label on the most-pressed control on the page. That is the identical
+ *   defect the app already fixed once (white on #007bff sat at 3.98:1).
+ *   #A8542A is 5.29:1 white-on-fill and 4.62:1 as text on cream.
+ *
+ *   --sage was #6B7F5E: 3.80:1 on cream, so it could never carry a word.
+ *   #5C6F50 is 4.77:1.
+ *
+ * The original brighter pair survives as --clay-bright / --sage-bright, for
+ * illustration fills and borders ONLY - shapes, never text, never a fill with
+ * a label on it. Anything carrying a word uses the darker pair.
+ */
+:root {
+  /* Grounds */
+  --cream: #f5efe3; /* the page */
+  --surface: #fff9f0; /* cards lifted off it */
+  --surface-sunk: #efe7d8; /* wells, inputs, the footer */
+
+  /* Ink. 12.97:1 and 5.28:1 on cream. */
+  --ink: #2e2620;
+  --ink-muted: #6b6158;
+
+  /* Accents that carry text or take a label. */
+  --clay: #a8542a; /* 4.62:1 on cream; white on it 5.29:1 */
+  --sage: #5c6f50; /* 4.77:1 on cream; white on it 5.46:1 */
+
+  /* Illustration only. Never text, never a fill with a label. */
+  --clay-bright: #c4703f;
+  --sage-bright: #6b7f5e;
+
+  --on-accent: #ffffff;
+
+  /* Lines and tints. `--border-strong` is the line on every input and on
+     the secondary button, which WCAG 1.4.11 holds to 3:1 as a UI boundary;
+     the first pick, #c9b99f, sat at 1.68:1 on cream and was caught by the
+     arithmetic, not by eye. */
+  --border: #e2d7c4;
+  --border-strong: #8c7f69;
+  --clay-soft: #f3e2d6;
+  --sage-soft: #e4e9df;
+
+  /* A 4-point spacing scale, as the app has. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-12: 48px;
+  --s-16: 64px;
+  --s-24: 96px;
+  --s-32: 128px;
+
+  /* Three radii. Cards 16, controls pill, small things 8. */
+  --r-sm: 8px;
+  --r-md: 16px;
+  --r-lg: 28px;
+  --r-pill: 999px;
+
+  /* Shadows are tinted to the ground, never pure black on a warm page. */
+  --shadow-sm: 0 1px 2px rgb(70 52 36 / 0.06), 0 2px 8px rgb(70 52 36 / 0.04);
+  --shadow-md: 0 4px 12px rgb(70 52 36 / 0.08), 0 12px 32px rgb(70 52 36 / 0.06);
+  --shadow-lg: 0 12px 28px rgb(70 52 36 / 0.1), 0 32px 64px rgb(70 52 36 / 0.08);
+
+  /* Type. Nunito carries display and headings, matching the app's own
+     display role; body copy stays on the system stack, which is what the app
+     does. Self-hosted via @fontsource - a Google Fonts request is a
+     third-party request the privacy policy would have to describe. */
+  --font-display: "Nunito", ui-rounded, "Segoe UI", system-ui, sans-serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --page-max: 1180px;
+  --prose-max: 62ch;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* The site is light, and locked. Not a theme oversight: the whole visual
+     idea is warm clay on cream under soft studio light, and there is no
+     honest dark version of that ground - a dark mode would be a different
+     brand rather than the same one at night. The screenshots still show the
+     app in both themes, because that is the app's choice and not the
+     site's. */
+  color-scheme: light;
+}

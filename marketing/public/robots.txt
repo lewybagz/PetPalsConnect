@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://petpalsconnectapp.com/sitemap.xml

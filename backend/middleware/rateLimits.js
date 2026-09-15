@@ -176,6 +176,25 @@ const analytics = make({
   message: "You're doing that too quickly. Give it a moment.",
 });
 
+/**
+ * The website's waitlist form. Keyed by address, because there is no account
+ * and never will be one - this is the whole point of the endpoint.
+ *
+ * Tight on purpose: a person fills this in once. Anything above a handful is
+ * a script filling the table, and unlike every other limit here there is no
+ * legitimate caller who could ever approach it.
+ */
+const publicWaitlist = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  skip: () => !enabled,
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip)}`,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: (req, res) =>
+    res.status(429).json({ message: "Too many sign-ups from here. Try again later.", code: "RATE_LIMITED" }),
+});
+
 module.exports = {
   countsAgainstSpot,
   setEnabled,
@@ -187,5 +206,6 @@ module.exports = {
   outreach,
   ingest,
   spot,
+  publicWaitlist,
   byUserOrIp,
 };

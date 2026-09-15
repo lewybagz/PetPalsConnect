@@ -1,0 +1,873 @@
+/* ---------------------------------------------------------------------------
+   Navigation. One line at desktop, 68px tall, a disclosure menu below 760px.
+   --------------------------------------------------------------------------- */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgb(245 239 227 / 0.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s var(--ease);
+}
+
+.nav[data-scrolled="true"] {
+  border-bottom-color: var(--border);
+}
+
+.nav__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-6);
+  height: 68px;
+}
+
+.nav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--ink);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.nav__mark {
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+
+.nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--s-6);
+  list-style: none;
+  padding: 0;
+}
+
+.nav__links a {
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.975rem;
+}
+
+.nav__links a:hover,
+.nav__links a[aria-current="page"] {
+  color: var(--ink);
+}
+
+/* Written at the specificity of `.nav__links a` above, which would otherwise
+   win and paint the label muted grey on the clay fill. */
+.nav__links .nav__cta,
+.nav__links .nav__cta:hover {
+  padding-inline: var(--s-6);
+  min-height: 42px;
+  color: var(--on-accent);
+}
+
+.nav__toggle {
+  display: none;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: var(--s-2) var(--s-4);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .nav__toggle {
+    display: inline-flex;
+  }
+
+  .nav__menu {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 68px;
+    padding: var(--s-4) var(--s-6) var(--s-6);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav__menu[data-open="true"] {
+    display: block;
+  }
+
+  .nav__links {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .nav__links a {
+    display: block;
+    padding-block: var(--s-3);
+    font-size: 1.05rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav__cta {
+    margin-top: var(--s-4);
+    width: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Illustrations. `<picture class="art">` from the build, or an `.art-slot`
+   standing in for one that has not arrived. The slot is deliberately loud:
+   a missing picture has to look missing, not like a design choice.
+   --------------------------------------------------------------------------- */
+
+.art img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-lg);
+}
+
+.art-slot {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: var(--s-6);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--surface-sunk),
+    var(--surface-sunk) 12px,
+    #e7dcc9 12px,
+    #e7dcc9 24px
+  );
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.art-slot[data-ratio="4/3"] {
+  aspect-ratio: 4 / 3;
+}
+.art-slot[data-ratio="3/2"] {
+  aspect-ratio: 3 / 2;
+}
+.art-slot[data-ratio="1/1"] {
+  aspect-ratio: 1 / 1;
+}
+.art-slot[data-ratio="16/9"] {
+  aspect-ratio: 16 / 9;
+}
+
+/* ---------------------------------------------------------------------------
+   Hero. Asymmetric split: copy left, art right, collapsing to one column.
+   The copy column is the wider one so an eight-word h1 holds to two lines.
+   --------------------------------------------------------------------------- */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding-top: clamp(var(--s-12), 7vw, var(--s-24));
+  padding-bottom: clamp(var(--s-16), 8vw, var(--s-24));
+}
+
+/* Warm studio light behind the art, rather than a flat ground. */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -30% -10% auto auto;
+  width: min(70vw, 820px);
+  aspect-ratio: 1;
+  background: radial-gradient(
+    circle at 62% 38%,
+    rgb(196 112 63 / 0.16),
+    rgb(196 112 63 / 0.05) 42%,
+    transparent 68%
+  );
+  pointer-events: none;
+}
+
+.hero__grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  align-items: center;
+  gap: clamp(var(--s-8), 5vw, var(--s-16));
+}
+
+.hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--s-1) var(--s-4);
+  margin-bottom: 20px;
+  background: var(--clay-soft);
+  border-radius: var(--r-pill);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+  /* Darker than --clay: on its own tint the accent sits at 4.17:1. */
+  color: #8b401a;
+}
+
+.hero h1 {
+  margin-bottom: var(--s-4);
+}
+
+.hero__lede {
+  margin-bottom: var(--s-8);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+@media (max-width: 880px) {
+  .hero__grid {
+    grid-template-columns: 1fr;
+    gap: var(--s-8);
+  }
+
+  .hero__art {
+    order: -1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Sections
+   --------------------------------------------------------------------------- */
+
+.section--sage {
+  background: var(--sage-soft);
+}
+
+.section--surface {
+  background: var(--surface);
+}
+
+.section__head {
+  max-width: 44ch;
+  margin-bottom: clamp(var(--s-8), 4vw, var(--s-12));
+}
+
+.section__head h2 + p {
+  margin-top: var(--s-4);
+}
+
+/* A two-column split, image one side and copy the other. Appears at most
+   twice in a row on any page; the pre-flight check counts them. */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(var(--s-8), 5vw, var(--s-16));
+}
+
+.split--flip .split__art {
+  order: -1;
+}
+
+@media (max-width: 880px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+  .split--flip .split__art {
+    order: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Bento. Exactly as many cells as there is content for: four ideas, four
+   cells. Two carry a tint and two carry an illustration, so it is never
+   four white boxes with text in them.
+   --------------------------------------------------------------------------- */
+
+.bento {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--s-4);
+}
+
+.bento__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: clamp(var(--s-6), 3vw, var(--s-8));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.bento__cell--wide {
+  grid-column: span 4;
+}
+
+.bento__cell--narrow {
+  grid-column: span 2;
+}
+
+.bento__cell--half {
+  grid-column: span 3;
+}
+
+.bento__cell--clay {
+  background: var(--clay-soft);
+  border-color: #e8cdb9;
+}
+
+.bento__cell--sage {
+  background: var(--sage-soft);
+  border-color: #d3dccb;
+}
+
+/* An illustration beside the words rather than above them. */
+.bento__cell--media {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-6);
+}
+
+.bento__cell--media .bento__media {
+  flex: 0 0 168px;
+}
+
+.bento__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.bento__cell p {
+  color: var(--ink-muted);
+  font-size: 1rem;
+}
+
+.bento__media .art img,
+.bento__media .art-slot {
+  border-radius: var(--r-md);
+}
+
+@media (max-width: 880px) {
+  .bento {
+    grid-template-columns: 1fr;
+  }
+  .bento__cell--wide,
+  .bento__cell--narrow,
+  .bento__cell--half {
+    grid-column: span 1;
+  }
+  .bento__cell--media {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .bento__cell--media .bento__media {
+    flex-basis: auto;
+    max-width: 220px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The clay phone frame. A faceted shell so a screenshot belongs to the
+   illustration world rather than sitting on the page as a rectangle.
+   --------------------------------------------------------------------------- */
+
+.phone {
+  position: relative;
+  width: min(100%, 280px);
+  padding: 11px;
+  background: linear-gradient(158deg, #d98d5f 0%, var(--clay-bright) 34%, #9d4f27 100%);
+  border-radius: 34px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* The facet: one lit plane catching the studio light from upper left. */
+.phone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    148deg,
+    rgb(255 255 255 / 0.34) 0%,
+    rgb(255 255 255 / 0.06) 26%,
+    transparent 48%
+  );
+  pointer-events: none;
+}
+
+.phone img {
+  width: 100%;
+  height: auto;
+  border-radius: 24px;
+  background: var(--surface);
+}
+
+.phone--tilt {
+  transform: rotate(-2.5deg);
+}
+
+.phone--tilt-right {
+  transform: rotate(2.5deg);
+}
+
+/* Two phones overlapping: two owners, two screens, one match. */
+.phones {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.phones .phone:nth-child(2) {
+  margin-left: -84px;
+  margin-top: 44px;
+  width: min(100%, 250px);
+}
+
+@media (max-width: 560px) {
+  .phones {
+    flex-direction: column;
+  }
+  .phones .phone:nth-child(2) {
+    margin-left: 0;
+    margin-top: var(--s-6);
+  }
+  .phone--tilt,
+  .phone--tilt-right {
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The poster: the Arizona band. Art, then words, then the form, all centred
+   on the sage ground. Its own family rather than a third split in a row.
+   --------------------------------------------------------------------------- */
+
+.poster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: clamp(var(--s-8), 4vw, var(--s-12));
+}
+
+.poster__art {
+  width: min(100%, 600px);
+}
+
+.poster__copy {
+  max-width: 58ch;
+}
+
+.poster__copy .lede {
+  margin: var(--s-4) auto 0;
+}
+
+.poster__copy p + p {
+  margin-top: var(--s-4);
+}
+
+/* The accent is 4.29:1 on the sage ground; a link there is ink, underlined. */
+.poster__copy a {
+  color: var(--ink);
+}
+
+.poster__copy a:hover {
+  color: #8b401a;
+}
+
+.poster .waitlist {
+  width: min(100%, 640px);
+  text-align: left;
+}
+
+/* ---------------------------------------------------------------------------
+   The strip: the safety section. An illustration and three statements on
+   a rule, no cards.
+   --------------------------------------------------------------------------- */
+
+.strip {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: clamp(var(--s-8), 5vw, var(--s-16));
+  align-items: start;
+}
+
+.strip__items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-8);
+}
+
+.strip__item {
+  padding-top: var(--s-4);
+  border-top: 2px solid var(--clay);
+}
+
+.strip__item h3 {
+  margin-bottom: var(--s-2);
+}
+
+.strip__item p {
+  color: var(--ink-muted);
+  font-size: 1rem;
+}
+
+@media (max-width: 880px) {
+  .strip {
+    grid-template-columns: 1fr;
+  }
+  .strip__art {
+    max-width: 220px;
+  }
+  .strip__items {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The close: the install section. Art across the top, words underneath.
+   --------------------------------------------------------------------------- */
+
+.close {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: clamp(var(--s-8), 4vw, var(--s-12));
+}
+
+.close__art {
+  width: min(100%, 900px);
+}
+
+.close__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-6);
+  max-width: 52ch;
+}
+
+.close__copy .lede {
+  margin-inline: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   The waitlist form
+   --------------------------------------------------------------------------- */
+
+.waitlist {
+  padding: clamp(var(--s-6), 4vw, var(--s-12));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.waitlist h3 {
+  margin-bottom: var(--s-2);
+}
+
+.waitlist__intro {
+  margin-bottom: 20px;
+}
+
+.waitlist__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+@media (max-width: 620px) {
+  .waitlist__fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+/* Label above the input, always. Never a placeholder standing in for one. */
+.field label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.field input {
+  min-height: 48px;
+  padding: var(--s-3) var(--s-4);
+  font: inherit;
+  color: var(--ink);
+  background: var(--cream);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+}
+
+/* The muted ink, 5.28:1 on the input's own ground, so the hint is readable
+   rather than a grey suggestion of one. */
+.field input::placeholder {
+  color: var(--ink-muted);
+  opacity: 1;
+}
+
+.field input:focus-visible {
+  border-color: var(--clay);
+  outline: 3px solid rgb(168 84 42 / 0.28);
+  outline-offset: 1px;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: #9a3324;
+}
+
+.field__hint {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}
+
+.field__error {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #9a3324;
+}
+
+.field__error:empty {
+  display: none;
+}
+
+.waitlist__note {
+  margin-top: var(--s-4);
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}
+
+.waitlist__status {
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  border-radius: var(--r-sm);
+  font-weight: 600;
+}
+
+.waitlist__status p {
+  margin-top: var(--s-2);
+  font-weight: 400;
+}
+
+.waitlist__status--ok {
+  background: var(--sage-soft);
+  color: #3f4d36;
+}
+
+.waitlist__status--error {
+  background: #fbe9e4;
+  color: #8a2e20;
+}
+
+.btn[aria-busy="true"] {
+  opacity: 0.75;
+  cursor: progress;
+}
+
+/* ---------------------------------------------------------------------------
+   Store badges. Text only until the listings are live: Apple and Google
+   both require their own badge artwork on a live link, and a hand-drawn
+   logo on a dead one is the worst of both.
+   --------------------------------------------------------------------------- */
+
+.stores {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-4);
+}
+
+.store-badge {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 56px;
+  min-width: 168px;
+  padding: var(--s-2) var(--s-6);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  font-family: var(--font-display);
+  line-height: 1.2;
+  text-align: left;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.store-badge[aria-disabled="true"] {
+  background: var(--surface-sunk);
+  color: var(--ink-muted);
+  cursor: default;
+}
+
+.store-badge__small {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.store-badge__big {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------------------- */
+
+.footer {
+  padding-block: var(--s-16) var(--s-12);
+  background: var(--surface-sunk);
+  border-top: 1px solid var(--border);
+}
+
+.footer__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+  gap: var(--s-8);
+  margin-bottom: var(--s-12);
+}
+
+@media (max-width: 760px) {
+  .footer__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.footer__blurb {
+  margin-top: var(--s-3);
+  max-width: 34ch;
+  font-size: 0.975rem;
+  color: var(--ink-muted);
+}
+
+.footer h2 {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  margin-bottom: var(--s-3);
+}
+
+.footer ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.footer a {
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.975rem;
+}
+
+.footer a:hover {
+  color: var(--clay);
+  text-decoration: underline;
+}
+
+.footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--border-strong);
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Sub-pages: a quieter hero, and a definition grid for the places a list of
+   five would otherwise be a bulleted dump.
+   --------------------------------------------------------------------------- */
+
+.page-hero {
+  padding-top: clamp(var(--s-12), 6vw, var(--s-16));
+  padding-bottom: clamp(var(--s-8), 4vw, var(--s-12));
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.page-hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: clamp(var(--s-8), 5vw, var(--s-16));
+  align-items: center;
+}
+
+.page-hero .lede {
+  margin-top: var(--s-4);
+}
+
+@media (max-width: 880px) {
+  .page-hero__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
+  gap: var(--s-4);
+}
+
+.fact {
+  padding: var(--s-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.fact h3 {
+  margin-bottom: var(--s-2);
+}
+
+.fact p {
+  color: var(--ink-muted);
+  font-size: 1rem;
+}
+
+.fact__value {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.1rem);
+  line-height: 1.1;
+  color: var(--clay);
+  margin-bottom: var(--s-2);
+}

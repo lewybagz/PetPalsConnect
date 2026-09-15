@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.vercel
+
+# Generated at build time. `scripts/screens.mjs` copies the gallery output
+# from the app; `scripts/art.mjs` encodes the sources in art/. Committing
+# either would be a second copy that drifts.
+public/screens/
+public/art/
+public/og.png

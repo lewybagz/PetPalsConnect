@@ -2,6 +2,7 @@ const Report = require("../models/Report");
 const SupportMessage = require("../models/SupportMessage");
 const Order = require("../models/Order");
 const AnalyticsEvent = require("../models/AnalyticsEvent");
+const PublicWaitlist = require("../models/PublicWaitlist");
 
 /**
  * The retention windows the privacy policy promises, enforced.
@@ -42,6 +43,17 @@ const ORDER_RETENTION_DAYS = 7 * 365;
  */
 const ANALYTICS_RETENTION_DAYS = 90;
 
+/**
+ * Two years for a website waitlist address.
+ *
+ * An email given by somebody who never signed up is still personal data, and
+ * it is the one kind here that belongs to a person the app has no other
+ * relationship with - there is no account to delete, so nothing else would
+ * ever remove it. Two years is long enough for a launch to reach them and
+ * short enough that a list nobody ever mailed does not become permanent.
+ */
+const PUBLIC_WAITLIST_RETENTION_DAYS = 2 * 365;
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const cutoffFor = (now = new Date(), days = RETENTION_DAYS) =>
@@ -51,20 +63,24 @@ const purgeExpired = async (now = new Date()) => {
   const cutoff = cutoffFor(now);
   const orderCutoff = cutoffFor(now, ORDER_RETENTION_DAYS);
   const analyticsCutoff = cutoffFor(now, ANALYTICS_RETENTION_DAYS);
-  const [reports, support, orders, analytics] = await Promise.all([
+  const waitlistCutoff = cutoffFor(now, PUBLIC_WAITLIST_RETENTION_DAYS);
+  const [reports, support, orders, analytics, waitlist] = await Promise.all([
     Report.deleteMany({ createdDate: { $lt: cutoff } }),
     SupportMessage.deleteMany({ createdAt: { $lt: cutoff } }),
     Order.deleteMany({ createdDate: { $lt: orderCutoff } }),
     AnalyticsEvent.deleteMany({ at: { $lt: analyticsCutoff } }),
+    PublicWaitlist.deleteMany({ createdDate: { $lt: waitlistCutoff } }),
   ]);
   return {
     reports: reports.deletedCount,
     support: support.deletedCount,
     orders: orders.deletedCount,
     analytics: analytics.deletedCount,
+    waitlist: waitlist.deletedCount,
     cutoff,
     orderCutoff,
     analyticsCutoff,
+    waitlistCutoff,
   };
 };
 
@@ -72,6 +88,7 @@ module.exports = {
   RETENTION_DAYS,
   ORDER_RETENTION_DAYS,
   ANALYTICS_RETENTION_DAYS,
+  PUBLIC_WAITLIST_RETENTION_DAYS,
   cutoffFor,
   purgeExpired,
 };

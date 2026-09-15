@@ -9,6 +9,8 @@ the current shape of the code.
 - `PetPalsConnectApp/` — Expo app. Node 22.13+.
 - `backend/` — Express 5 API, CommonJS.
 - `data-fetch-scripts/` — one-off seeding scripts, not part of either build.
+- `marketing/` — the public site at petpalsconnectapp.com. Vite + vanilla TS,
+  static, deployed to Vercel. Imports nothing from the other two.
 
 ## Hard rules
 
@@ -520,6 +522,55 @@ converted file silently drops out of the check.
   present in the source. Nine create paths were dead this way. `npm run
   check:schemas` compares every create site to its model; it also runs as a
   test and warns at boot outside production.
+
+### The marketing site
+
+**`marketing/` is the public site, and it is the first thing in this repo
+written for people who are not users yet.** Vite and vanilla TypeScript,
+four static pages, one form. Its job is the Arizona waitlist now and installs
+when the stores are live. It never imports from `PetPalsConnectApp/` or
+`backend/` - the same hard rule the other two hold to each other - and it has
+its own CI job with its own `npm audit`, because the last extra `package.json`
+in this repo was a stale copy carrying 43 advisories.
+
+**The site is warm and the app is cool, on purpose.** The illustration set is
+terracotta, sage and cream; the app is `#2563EB` on `#F8F9FB`. Screenshots sit
+inside faceted clay phone frames so the app's blue reads as *the product*
+sitting in a warm world. The app is not retheming. Two of the palette's
+colours were darkened before shipping because the WCAG arithmetic said so:
+white on the original clay sat at 3.66:1, the identical defect `tokens.ts`
+already fixed once. The reasoning is in `src/styles/tokens.css`.
+
+**Screenshots are copied in at build time by an explicit list**
+(`scripts/screens.mjs`), never imported. A file copy is not a module edge. The
+list names exactly what a page renders and a missing board fails the build: a
+landing page showing a screen the app no longer has is the same class of lie
+as a stale legal document. `scripts/art.mjs` does the same for the
+illustrations in `art/`, except that a missing piece renders as a labelled
+slot rather than failing - the art is supplied by hand and the page has to be
+buildable before the set is complete.
+
+**`POST /api/waitlist/public` is the API's only unauthenticated write a person
+can reach.** The in-app waitlist could not be reused: `Waitlist.user` is a
+required, unique ref to a `User`, and a website visitor has no account. So
+`PublicWaitlist` is its own model with no `User` ref, mounted outside
+`authenticate` beside the two webhooks, rate-limited per address on the route
+itself, with no read path at all - an endpoint answering "is this email
+waiting?" is an existence oracle. `region` is derived from the ZIP, never
+taken from the body, for the same reason the in-app one copies it from the
+profile. Retention removes a row after two years; account deletion does not,
+because the row was never owned by an account. `docs/privacy.html` says both.
+
+**`CORS_ORIGINS` has to name both hostnames.** Unset, the API reflects any
+origin and the form works in development; set to anything that is not the
+site, it stops working in production. `.env.example` carries both.
+
+**The legal pages do not move.** The site links to the GitHub Pages URLs in
+`docs/`; a copy would be a second document that drifts.
+
+**The store badges are text until the listings exist.** Apple and Google both
+require their own badge artwork on a live link. `STORES` in `src/config.ts` is
+the launch-day flip.
 
 ### Editorial content
 
@@ -1597,6 +1648,10 @@ cd backend && npm run lint && npm run check:schemas && npm run check:auth && npm
 # App: lint, types, the colour ban, tests, then both bundles
 cd PetPalsConnectApp && npm run lint && npm run typecheck && npm run check:colours && npm test
 
+# Marketing site: lint, types, then the build - which encodes the images and
+# fails on a screenshot the app no longer produces
+cd marketing && npm run lint && npm run typecheck && npm run build
+
 # Content: validates articles.json with no database and no dependencies
 node data-fetch-scripts/articles/seedArticles.js --dry-run
 
@@ -1715,9 +1770,9 @@ disagrees.
 
 ## Dependencies and advisories
 
-**There are three packages, and the repo root is not one of them.**
-`PetPalsConnectApp/`, `backend/` and the seeding scripts. A fourth
-`package.json` sat at the repo root with no name, no scripts and no CI step -
+**There are four packages, and the repo root is not one of them.**
+`PetPalsConnectApp/`, `backend/`, `marketing/` and the seeding scripts. A
+fifth `package.json` sat at the repo root with no name, no scripts and no CI step -
 a stale copy of the app's dependency list, still pinning `react-native-copilot`
 and `nativewind` months after both were removed from the app. Nothing installed
 it and nothing could; it carried 43 advisories, two of them critical. Deleted.
@@ -1733,7 +1788,7 @@ looking for it.
 
 **An advisory is triaged by reachability, and closed by an override when the
 override is provably safe.** As of the last audit there are **no critical and no
-high advisories** in any of the three packages: **0 in `backend`**, 8 moderates
+high advisories** in any of the packages: **0 in `backend`**, 8 moderates
 in `PetPalsConnectApp`, 0 in the seeding scripts. Those 8 are one advisory
 counted once per package that depends on it.
 
